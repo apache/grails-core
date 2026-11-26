@@ -167,7 +167,8 @@ class ValidationErrorsContent {
                 .addProperty('title', new StringSchema().description('A summary of the problem, Validation failed'))
                 .addProperty('status', new IntegerSchema().description('The status of the response'))
                 .addProperty('detail', new StringSchema().description('How many errors the request has'))
-                .addProperty('instance', new StringSchema().format('uri-reference').description('The path the request was made to'))
+                .addProperty('instance', new StringSchema().format('uri-reference')
+                        .description('Identifies the occurrence of the problem, where the application gives one'))
                 .addProperty('errors', new ArraySchema().items(mapperError(true)))
         problem.setRequired(['title', 'status', 'detail', 'errors'])
         problem

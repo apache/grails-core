@@ -18,9 +18,9 @@
  */
 package org.apache.grails.core.aot
 
-import org.springframework.aot.generate.ClassNameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.InMemoryGeneratedFiles
+import org.springframework.aot.generate.NameGenerator
 import org.springframework.aot.hint.MemberCategory
 import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.predicate.RuntimeHintsPredicates
@@ -62,7 +62,7 @@ class BeanReflectionBeanFactoryInitializationAotProcessorSpec extends Specificat
     private RuntimeHints hints() {
         def contribution = new BeanReflectionBeanFactoryInitializationAotProcessor().processAheadOfTime(context.beanFactory)
         def generation = new DefaultGenerationContext(
-                new ClassNameGenerator(ClassName.get('com.example', 'Hints')), new InMemoryGeneratedFiles())
+                new NameGenerator(ClassName.get('com.example', 'Hints')), new InMemoryGeneratedFiles())
         contribution.applyTo(generation, Mock(BeanFactoryInitializationCode))
         generation.runtimeHints
     }

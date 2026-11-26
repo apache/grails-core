@@ -110,8 +110,23 @@ class SbomPluginSpec extends Specification {
 
     void "JLine 4 Maven jars use the BSD-3-Clause correction for new versions"() {
         expect:
-        SbomPlugin.pickLicense(LOGGER, 'grails-console', 'grails-console',
-                'pkg:maven/org.jline/jansi@4.3.1?type=jar', bsd4Choice()).id == 'BSD-3-Clause'
+        SbomPlugin.pickLicense(LOGGER, 'grails-console', 'grails-console', bomRef, bsd4Choice()).id == 'BSD-3-Clause'
+
+        where:
+        bomRef << [
+                'pkg:maven/org.jline/jansi@4.3.1?type=jar',
+                'pkg:maven/org.jline/jline@4.4.5?type=jar',
+                'pkg:maven/org.jline/jline-shell@4.4.5?type=jar'
+        ]
+    }
+
+    void "org.json resolved through Jedis uses the public domain license approved in LEGAL-666"() {
+        given:
+        List publicDomainChoice = [[license: [name: 'Public Domain', url: 'https://github.com/stleary/JSON-java/blob/master/LICENSE']]]
+
+        expect:
+        SbomPlugin.pickLicense(LOGGER, 'grails-redis', 'grails-redis',
+                'pkg:maven/org.json/json@20260719?type=jar', publicDomainChoice).name == 'Public Domain'
     }
 
     void "JLine 4 license correction is limited to JLine 4 Maven jars"() {
@@ -125,7 +140,8 @@ class SbomPluginSpec extends Specification {
         where:
         bomRef << [
                 'pkg:maven/com.example/jansi@4.3.1?type=jar',
-                'pkg:maven/org.jline/jansi@3.3.1?type=jar'
+                'pkg:maven/org.jline/jansi@3.3.1?type=jar',
+                'pkg:maven/org.jline/jline@3.30.16?type=jar'
         ]
     }
 

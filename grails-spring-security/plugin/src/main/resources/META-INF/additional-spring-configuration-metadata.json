@@ -729,7 +729,7 @@
     {
       "name": "grails.plugin.springsecurity.fii.alwaysReauthenticate",
       "type": "java.lang.Boolean",
-      "description": "If true, re-authenticates when there is an Authentication in the SecurityContext.",
+      "description": "If true, re-authenticates the Authentication in the SecurityContext for every request to a secured URL, unless its credentials were erased once it was authenticated, as providerManager.eraseCredentialsAfterAuthentication does by default.",
       "group": "grails.plugin.springsecurity.authentication"
     },
     {

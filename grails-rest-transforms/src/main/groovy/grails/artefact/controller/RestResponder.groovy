@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.http.HttpStatus
+import org.springframework.http.InvalidMediaTypeException
 import org.springframework.http.MediaType
 import org.springframework.http.ProblemDetail
 import org.springframework.validation.BeanPropertyBindingResult
@@ -50,6 +51,7 @@ import org.grails.plugins.web.rest.render.SelectiveRenderer
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
+import org.grails.web.mime.GrailsContentNegotiationStrategy
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 
@@ -169,6 +171,8 @@ trait RestResponder {
         List<String> formats = calculateFormats(webRequest.actionName, value, args)
         final response = webRequest.getCurrentResponse()
         MimeType[] mimeTypes = getResponseFormat(response)
+        // with grails.mime.negotiation.spring, a wildcard such as text/* is a type of the all format too
+        boolean springNegotiation = GrailsContentNegotiationStrategy.forRequest(webRequest.currentRequest).springNegotiation
         def registry = rendererRegistry
         if (registry == null) {
             // a controller Spring did not create, such as one a test creates with new, responds with the registry an
@@ -209,7 +213,9 @@ trait RestResponder {
         }
 
         // The response is in the first type the client accepts, in its order, that the action responds in and a renderer
-        // renders the value in; a client that accepts any type is answered in the first of the action's formats that is
+        // renders the value in; a client that accepts any type is answered in the first of the action's formats that is,
+        // and one that accepts a wildcard such as text/*, which grails.mime.negotiation.spring resolves to a type of the
+        // all format, in the first of them with a type compatible with it, as Spring MVC answers it
         MimeType matched = null
         boolean negotiating = true
         while (negotiating) {
@@ -217,10 +223,11 @@ trait RestResponder {
             negotiation:
             for (MimeType accepted in mimeTypes) {
                 List<MimeType> candidates = [accepted]
-                if (accepted == MimeType.ALL && formats) {
+                if ((accepted == MimeType.ALL || (springNegotiation && accepted.extension == 'all')) && formats) {
                     final allMimeTypes = MimeType.getConfiguredMimeTypes()
-                    candidates = formats.collect { String format -> allMimeTypes.find { MimeType mt -> mt.extension == format } }
-                            .findAll { MimeType mt -> mt != null }
+                    candidates = formats.collect { String format ->
+                        allMimeTypes.find { MimeType mt -> mt.extension == format && compatible(accepted, mt) }
+                    }.findAll { MimeType mt -> mt != null }
                 }
                 for (MimeType mimeType in candidates) {
                     if (!formats.contains(mimeType.extension)) {
@@ -330,6 +337,22 @@ trait RestResponder {
             return
         }
         callRender([status: statusCode ?: HttpStatus.NOT_ACCEPTABLE.value() ])
+    }
+
+    /**
+     * Whether a configured type is compatible with a type of the {@code all} format a client accepts: any is with
+     * {@code *&#47;*}, and a wildcard such as {@code text/*} is with the types Spring MVC finds compatible with it.
+     */
+    private static boolean compatible(MimeType accepted, MimeType configured) {
+        if (accepted.name == MimeType.ALL.name) {
+            return true
+        }
+        try {
+            return MediaType.parseMediaType(accepted.name).isCompatibleWith(MediaType.parseMediaType(configured.name))
+        }
+        catch (InvalidMediaTypeException ignored) {
+            return false
+        }
     }
 
     /**

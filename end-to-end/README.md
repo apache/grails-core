@@ -81,6 +81,12 @@ else checks that a plugin's configuration reaches one. On a JVM the file is foun
 classes, in its JAR; an image has no JARs, so there it is found only through the copy the build makes
 of it under the plugin's name.
 
+And it calls a method of a JDK class that nothing but its `src/native/resources/META-INF/native-image/reachability-metadata.json`
+registers, which is the file `traceNativeMetadata` merges what it records into. Nothing else checks that what a trace
+recorded reaches an image, and an image built without it starts and fails only on the requests that needed it. The class is
+named by a property, because GraalVM resolves a reflective lookup of a constant name while it builds the image, which needs no
+metadata and would pass whatever this file held.
+
 ```bash
 cd end-to-end
 ./gradlew :native-i18n:check                 # the JVM half, part of `check`
@@ -142,7 +148,7 @@ neither the core build nor a contributor's default environment inherits a second
 
 | Where | JDK | Why |
 |---|---|---|
-| `legacy-g7-command-plugin/.sdkmanrc` | 17, Gradle 8.14.6 | What Grails 7 pins, so the fixture is built the way a Grails 7 plugin actually was. `gradle-bootstrap` generates this wrapper from that file via its `legacyG7Wrapper` task, rather than copying the shared one. |
+| `legacy-g7-command-plugin/.sdkmanrc` | 17, Gradle 8.14.8 | What Grails 7 pins, so the fixture is built the way a Grails 7 plugin actually was. `gradle-bootstrap` generates this wrapper from that file via its `legacyG7Wrapper` task, rather than copying the shared one. |
 | the repository's root `.sdkmanrc` | 21 | The Grails 8 baseline. This build consumes artifacts from the core build, so it runs on whatever the core build runs on — it deliberately does not re-pin that. |
 
 ## Running locally

@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +37,7 @@ import org.hibernate.criterion.Order;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.proxy.HibernateProxy;
 import org.slf4j.Logger;
@@ -231,6 +233,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             String sortHead = sort.substring(0, firstDotPos);
             String sortTail = sort.substring(firstDotPos + 1);
             PersistentProperty property = getGrailsDomainClassProperty(datastore, targetClass, sortHead);
+            if (property == null && !isAlias(c, sortHead)) {
+                // neither a property of the queried class nor an alias that the criteria define, so a sort by it
+                // can only be a mistake
+                throw new IllegalArgumentException("Invalid sort property");
+            }
             if (property instanceof Embedded) {
                 // embedded objects cannot reference entities (at time of writing), so no more recursion needed
                 addOrder(c, sort, order, ignoreCase);
@@ -241,6 +248,31 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
+    }
+
+    /**
+     * Whether a name is an alias that the criteria define: the alias of the queried class, or the alias of a join.
+     */
+    private static boolean isAlias(Criteria criteria, String name) {
+        Criteria root = criteria;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            if (name.equals(root.getAlias())) {
+                return true;
+            }
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        if (name.equals(root.getAlias())) {
+            return true;
+        }
+        if (root instanceof CriteriaImpl) {
+            Iterator<CriteriaImpl.Subcriteria> subcriteria = ((CriteriaImpl) root).iterateSubcriteria();
+            while (subcriteria.hasNext()) {
+                if (name.equals(subcriteria.next().getAlias())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

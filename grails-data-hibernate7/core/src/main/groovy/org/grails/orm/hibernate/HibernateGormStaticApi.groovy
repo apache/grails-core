@@ -59,6 +59,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import grails.orm.HibernateCriteriaBuilder
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -132,6 +133,15 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     GormStaticApi<D> getApi(String qualifier) {
         (GormStaticApi<D>) HibernateGormEnhancer.findStaticApi(persistentClass, qualifier)
+    }
+
+    /**
+     * Hibernate saves an instance through the datastore this API is bound to, inside a tenant block as well, so this
+     * is that datastore's listener.
+     */
+    @Override
+    AutoTimestampEventListener getAutoTimestampEventListener() {
+        autoTimestampEventListenerOf(getDatastore())
     }
 
     @Override
@@ -429,14 +439,23 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D findWhere(Map queryMap, Map args) {
+        validateWhereSort(args)
         if (!queryMap) return null
         executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
     }
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
+        validateWhereSort(args)
         if (!queryMap) return null
         executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
+    }
+
+    private void validateWhereSort(Map args) {
+        if (args?.containsKey(HibernateQueryArgument.SORT.value())) {
+            // These calls declare no aliases, including when an empty example returns before querying.
+            new HqlListQueryBuilder((GrailsHibernatePersistentEntity) persistentEntity, [sort: args.sort]).buildListHql()
+        }
     }
 
     private GormQuery prepareWhereHqlQuery(Map queryMap, Map<String, Object> querySettings) {

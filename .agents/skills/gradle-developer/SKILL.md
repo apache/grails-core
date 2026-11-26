@@ -11,7 +11,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Write and change Gradle build scripts the way **this repository** already does them on `8.0.x` (Gradle **9.8.x**).
+- Write and change Gradle build scripts the way **this repository** already does them on `8.0.x` (Gradle **9.9.x**).
 - Keep agents off generic Gradle "best practice" when it conflicts with established monorepo patterns.
 - Cover composite builds (`build-logic`, `grails-gradle`, `grails-forge`, `end-to-end`), convention plugins, BOM/`platform()` dependency management, test wiring, publishing hooks, and Gradle 9 task-configuration traps learned from recent PRs.
 - Make Gradle changes boring, copy-paste consistent, and correct on the first try.
@@ -36,8 +36,7 @@ Related skills (do not substitute this one):
 | CodeNarc / Checkstyle / PMD / SpotBugs reports | `violation-fixer` |
 | Failing tests / aggregate reports | `test-fixer` |
 | Merging an external plugin repo into the monorepo | `mono-repo-integration` |
-| App-facing Grails 8 upgrade guidance | `grails-8-upgrade` |
-| App-facing Grails 9 upgrade guidance | `grails-9-upgrade` |
+| App-facing Grails upgrade guidance | `grails-upgrade` |
 
 ---
 
@@ -137,7 +136,7 @@ Presence-based flags (property **present**, value optional) match `skipFunctiona
 
 ## Gradle Version Sync (Hard Rule)
 
-Current line: **Gradle 9.8.2** (`distributionUrl` + `gradleToolingApiVersion=9.8.2`). Upstream may already ship a newer 9.8.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
+Current line: **Gradle 9.9.2** (`distributionUrl` + `gradleToolingApiVersion=9.9.2`). Upstream may already ship a newer 9.9.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
 
 **Two Groovy stacks:** Gradle itself embeds **Groovy 4** for build logic. Application/runtime code on 8.0.x is **Groovy 5**. That is why `dependencies.gradle` keeps separate maps:
 
@@ -149,13 +148,14 @@ Never unify those casually.
 ### Preferred bump workflow
 
 1. Set the new Gradle version in **`.sdkmanrc`** (`gradle=…`).
-2. Run the bootstrap project (uses a system `gradle` to regenerate shared wrappers from `.sdkmanrc`):
+2. Run the bootstrap project with a system `gradle` **of the new version** to regenerate shared wrappers from `.sdkmanrc`. The `wrapper` task copies the jar from the Gradle that runs it, so an older `gradle` writes its own jar next to the new `distributionUrl`:
 
    ```bash
+   sdk env install   # installs any missing versions .sdkmanrc names, then switches this shell to them
    gradle -p gradle-bootstrap
    ```
 
-   Bootstrap generates the wrapper under `gradle-bootstrap/`, **copies** it to **grails-forge**, **grails-gradle**, and **end-to-end**, then **moves** the generated wrapper into the **repository root**. It also runs `legacyG7Wrapper` so **`end-to-end/legacy-g7-command-plugin` stays on its pinned Grails 7 Gradle version** (currently 8.x - do **not** force it to 9). Root is therefore bootstrap-covered; do not re-list it as a manual step.
+   Bootstrap overwrites the shared `gradle-wrapper.properties` files, which drops the "keep synced" comments at the top of some of them; restore those. Bootstrap generates the wrapper under `gradle-bootstrap/`, **copies** it to **grails-forge**, **grails-gradle**, and **end-to-end**, then **moves** the generated wrapper into the **repository root**. It also runs `legacyG7Wrapper` so **`end-to-end/legacy-g7-command-plugin` stays on its pinned Grails 7 Gradle version** (currently 8.x - do **not** force it to 9). Root is therefore bootstrap-covered; do not re-list it as a manual step.
 
 3. Manually refresh the locations bootstrap does **not** cover. For each tree, keep the **full** wrapper set in sync (`gradle-wrapper.properties`, `gradle-wrapper.jar`, `gradlew`, `gradlew.bat`) - not properties alone:
 
@@ -366,6 +366,7 @@ A module the parent manages through an imported BOM belongs to the property the 
 3. Use the unversioned coordinate in module `dependencies {}`.
 4. Run `./gradlew :that-module:validateDependencyVersions` (and affected consumers).
 5. Security overrides: comment with CVE and previous Boot version (see existing httpcore5/jackson/logback pins).
+6. Hibernate ORM 7 has no pin: `grails-hibernate7-bom` reads the version `spring-boot-dependencies` manages and strictly re-declares `hibernateOrmModules` at it. To move ahead of a Spring Boot that lags behind, set `hibernate7VersionOverride` in `dependencies.gradle`; the BOM then strictly re-declares at it every `org.hibernate.orm` module `spring-boot-dependencies` manages in its own POM (`PomVersions.managedArtifactIds`), not only `hibernateOrmModules`, so `enforcedPlatform` consumers move the whole family as a Maven consumer setting `hibernate.version` does. `validateHibernateVersion` fails while it is not newer than Spring Boot's version, so a Boot bump that catches up forces its removal. It also fails when `hibernate-models.version` differs from the version the managed Hibernate ORM release depends on. Configuring the project reads only `spring-boot-dependencies`' own entry for `hibernate-core` (`PomVersions.managedVersion`), never the BOMs it imports, so a task that resolves none of them does not fail when one is missing from the cache; both checks resolve in the task's inputs, and `check` and the BOM's POM generation run it.
 
 ### Exclusions
 
@@ -560,7 +561,7 @@ Verify a change with:
 # "Configuration cache entry reused"
 ```
 
-The report is `build/reports/configuration-cache/*/*/configuration-cache-report.html`; its JSON between `// begin-report-data` and `// end-report-data` names the class, closure and field behind each problem.
+The report is `build/reports/configuration-cache/*/*/configuration-cache-report.html`; the JSON in its `<script type="application/json" id="diagnostics">` block names the class, closure and field behind each problem. Gradle treats that data as internal and changed its format in 9.9, so expect to adjust anything that reads it.
 
 The `grails-gradle` TestKit specs run every fixture build with the configuration cache and `problems=fail` (`GradleSpecification` writes it into the TestKit Gradle user home). Fixture tasks that inspect the model must read it into providers while configuring and only print in `doLast`; pass `--no-configuration-cache` only to test behavior without it.
 
@@ -664,16 +665,16 @@ Develocity: `https://develocity.apache.org` - build scans publish when authentic
 
 Use official docs for API signatures and deprecations (pin URLs to the version you are bumping toward):
 
-- [Gradle 9.8 release notes](https://docs.gradle.org/9.8.2/release-notes.html)
-- [Upgrading major version 9](https://docs.gradle.org/9.8.2/userguide/upgrading_major_version_9.html)
-- [Upgrading within Gradle 9.x](https://docs.gradle.org/9.8.2/userguide/upgrading_version_9.html)
-- [Java Library plugin](https://docs.gradle.org/9.8.2/userguide/java_library_plugin.html)
-- [Java Platform / BOM](https://docs.gradle.org/9.8.2/userguide/java_platform_plugin.html)
-- [Platforms](https://docs.gradle.org/9.8.2/userguide/platforms.html)
-- [Sharing build logic via included builds](https://docs.gradle.org/9.8.2/userguide/sharing_build_logic_between_subprojects.html)
-- [Task configuration avoidance](https://docs.gradle.org/9.8.2/userguide/task_configuration_avoidance.html)
-- [Configuration cache](https://docs.gradle.org/9.8.2/userguide/configuration_cache.html) and its [requirements](https://docs.gradle.org/9.8.2/userguide/configuration_cache_requirements.html)
-- [Version catalogs](https://docs.gradle.org/9.8.2/userguide/version_catalogs.html) (docs like them - **this repo does not**)
+- [Gradle 9.9 release notes](https://docs.gradle.org/9.9.2/release-notes.html)
+- [Upgrading major version 9](https://docs.gradle.org/9.9.2/userguide/upgrading_major_version_9.html)
+- [Upgrading within Gradle 9.x](https://docs.gradle.org/9.9.2/userguide/upgrading_version_9.html)
+- [Java Library plugin](https://docs.gradle.org/9.9.2/userguide/java_library_plugin.html)
+- [Java Platform / BOM](https://docs.gradle.org/9.9.2/userguide/java_platform_plugin.html)
+- [Platforms](https://docs.gradle.org/9.9.2/userguide/platforms.html)
+- [Sharing build logic via included builds](https://docs.gradle.org/9.9.2/userguide/sharing_build_logic_between_subprojects.html)
+- [Task configuration avoidance](https://docs.gradle.org/9.9.2/userguide/task_configuration_avoidance.html)
+- [Configuration cache](https://docs.gradle.org/9.9.2/userguide/configuration_cache.html) and its [requirements](https://docs.gradle.org/9.9.2/userguide/configuration_cache_requirements.html)
+- [Version catalogs](https://docs.gradle.org/9.9.2/userguide/version_catalogs.html) (docs like them - **this repo does not**)
 
 ### Docs say X - we do Y
 

@@ -27,6 +27,7 @@ import spock.lang.Specification
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMapping
 import grails.web.mapping.UrlMappingInfo
+import org.grails.web.mapping.mvc.ActionReturnValues
 
 /**
  * Covers the URL mappings being evaluated and used in an image: the types Groovy dispatches on, and the
@@ -47,6 +48,14 @@ class UrlMappingRuntimeHintsSpec extends Specification {
                         .withMemberCategories(MemberCategory.INVOKE_DECLARED_METHODS, MemberCategory.INVOKE_PUBLIC_METHODS)
                         .test(hints)
             }
+    }
+
+    void 'the method a problem is written as the return value of can be found'() {
+        given: 'the method the class looks up'
+            def method = ActionReturnValues.getDeclaredMethod('returnedErrorResponse')
+
+        expect:
+            hints.reflection().getTypeHint(TypeReference.of(ActionReturnValues)).methods().anyMatch { it.name == method.name }
     }
 
     void 'the builder a URL mappings closure is delegated to can be called and read'() {

@@ -88,7 +88,7 @@ import static java.nio.charset.StandardCharsets.UTF_8
 
 class DefaultJsonRendererSpec extends Specification {
 
-    void 'an explicit ProblemDetail controls the status content type and instance for status #status'() {
+    void 'an explicit ProblemDetail controls the status and content type for status #status'() {
         given:
         def renderer = new DefaultJsonRenderer<Object>(Object)
         renderer.springHttpMessageConvertersSupplier = { [new JacksonJsonHttpMessageConverter()] }
@@ -102,10 +102,30 @@ class DefaultJsonRendererSpec extends Specification {
         then:
         webRequest.response.status == status
         webRequest.response.contentType.startsWith('application/problem+json')
-        webRequest.response.contentAsString.contains('"instance":"/books"')
+
+        and: 'a problem without an instance is written without one, as Spring MVC writes it'
+        !(new JsonSlurper().parseText(webRequest.response.contentAsString) as Map).containsKey('instance')
 
         where: 'a problem may carry a status that has no HttpStatus constant'
         status << [422, 499, 299, 599]
+    }
+
+    void 'a ProblemDetail is written with the instance the application gives it'() {
+        given:
+        def renderer = new DefaultJsonRenderer<Object>(Object)
+        renderer.springHttpMessageConvertersSupplier = { [new JacksonJsonHttpMessageConverter()] }
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def context = new ServletRenderContext(webRequest)
+        context.resourcePath = '/books'
+        def problem = ProblemDetail.forStatus(409)
+        problem.instance = URI.create('urn:uuid:5c3e1d2a-8f4b-4e7a-9d61-0a2b3c4d5e6f')
+
+        when:
+        renderer.render(problem, context)
+
+        then:
+        (new JsonSlurper().parseText(webRequest.response.contentAsString) as Map).instance ==
+                'urn:uuid:5c3e1d2a-8f4b-4e7a-9d61-0a2b3c4d5e6f'
     }
 
     void 'a status argument of #argument decides the status of a problem response, as the status of a ResponseEntity does in Spring MVC'() {

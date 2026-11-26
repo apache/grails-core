@@ -26,8 +26,7 @@ This section is about AI as a development tool. Using AI models from the applica
 | Skill | Coordinates | Use
 
 | `grails-developer` | `org.apache.grails.skills:grails-developer` | Building Grails applications: controllers, services, GORM, views, plugins, and testing with Spock and Geb
-| `grails-8-upgrade` | `org.apache.grails.skills:grails-8-upgrade` | Upgrading an application from Grails 7 to Grails 8
-| `grails-9-upgrade` | `org.apache.grails.skills:grails-9-upgrade` | Upgrading an application from Grails 8 to Grails 9
+| `grails-upgrade` | `org.apache.grails.skills:grails-upgrade` | Upgrading an application from Grails 8 to Grails 9, and from one Grails 9 release to a later one
 | `grails-ai-developer` | `org.apache.grails.skills:grails-ai-developer` | Using AI models from an application: providers, the chat client, streamed answers, configuration and testing, see <<usingAi,Using AI in Your Application>>
 |===
 
@@ -47,7 +46,7 @@ plugins {
 
 dependencies {
     skill 'org.apache.grails.skills:grails-developer'
-    skill 'org.apache.grails.skills:grails-9-upgrade'
+    skill 'org.apache.grails.skills:grails-upgrade'
 }
 
 skillsjars {
@@ -87,13 +86,13 @@ dependencies {
 
 ==== Applications on the Previous Major Version
 
-An upgrade skill is for applications still on the previous major version, such as `grails-9-upgrade` for an application on Grails 8. They apply the SkillsJars Gradle plugin as above, but their Grails BOM does not manage the skill, so they name the version:
+The `grails-upgrade` skill is also for applications still on the previous major version. Every release line publishes the skill under the same coordinates, and the skill of a release covers the upgrade to that release. An application on Grails 8 applies the SkillsJars Gradle plugin as above and names the version of the Grails 9 skill, since its own Grails BOM manages the upgrade skill of Grails 8:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
 dependencies {
-    skill 'org.apache.grails.skills:grails-9-upgrade:{version}'
+    skill 'org.apache.grails.skills:grails-upgrade:{version}'
 }
 ----
 

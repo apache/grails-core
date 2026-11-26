@@ -20,7 +20,6 @@ package org.apache.grails.core.aot
 
 import java.util.function.LongBinaryOperator
 
-import org.springframework.aot.generate.ClassNameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.InMemoryGeneratedFiles
 import org.springframework.aot.hint.MemberCategory
@@ -37,6 +36,7 @@ import com.example.nativeapp.AuditedOrderFixture
 import com.example.nativeapp.NativeApplicationFixture
 import com.example.nativeapp.OrderStatusFixture
 import com.example.nativeapp.TotalsFixture
+import org.springframework.aot.generate.NameGenerator
 
 /**
  * Covers what Groovy does reflectively on behalf of an application's own classes being possible in an image.
@@ -56,7 +56,7 @@ class ApplicationBytecodeBeanFactoryInitializationAotProcessorSpec extends Speci
         def contribution = new ApplicationBytecodeBeanFactoryInitializationAotProcessor()
                 .processAheadOfTime(context.beanFactory)
         def generation = new DefaultGenerationContext(
-                new ClassNameGenerator(ClassName.get('com.example', 'Hints')), new InMemoryGeneratedFiles())
+                new NameGenerator(ClassName.get('com.example', 'Hints')), new InMemoryGeneratedFiles())
         contribution.applyTo(generation, Mock(BeanFactoryInitializationCode))
         generation.runtimeHints
     }

@@ -52,7 +52,6 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
                 'dataSource.dialect': H2Dialect.name,
                 'dataSource.formatSql': 'true',
                 'hibernate.flush.mode': 'COMMIT',
-                'hibernate.cache.queries': 'true',
                 'hibernate.hbm2ddl.auto': 'create',
                 'dataSources.books.url':"jdbc:h2:mem:books;LOCK_TIMEOUT=10000",
                 'dataSources.moreBooks.url':"jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000"

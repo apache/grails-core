@@ -29,10 +29,10 @@ import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import jakarta.annotation.Resource
 
-import org.springframework.aot.generate.ClassNameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.GeneratedFiles
 import org.springframework.aot.generate.InMemoryGeneratedFiles
+import org.springframework.aot.generate.NameGenerator
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.beans.factory.config.BeanDefinition
@@ -303,7 +303,7 @@ class GeneratedArtifactsInjectionSpec extends Specification {
 
         InMemoryGeneratedFiles generatedFiles = new InMemoryGeneratedFiles()
         DefaultGenerationContext generationContext = new DefaultGenerationContext(
-                new ClassNameGenerator(ClassName.get(getClass().packageName, 'Injection')), generatedFiles)
+                new NameGenerator(ClassName.get(getClass().packageName, 'Injection')), generatedFiles)
         ClassName initializer = new ApplicationContextAotGenerator().processAheadOfTime(generating, generationContext)
         generationContext.writeGeneratedContent()
         generating.close()

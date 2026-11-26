@@ -28,6 +28,8 @@ import org.springframework.cache.Cache
 
 import grails.plugins.Plugin
 import org.grails.plugin.cache.GrailsCacheManager
+import org.grails.plugin.cache.GrailsCacheManagerAliasRegistrar
+import org.grails.plugin.cache.GrailsCacheManagerDependencyRegistrar
 
 /**
  * Configures the cache plugin.
@@ -79,6 +81,12 @@ class CacheGrailsPlugin extends Plugin {
         bean('grailsCacheConfiguration', CachePluginConfiguration)
 
         bean(CustomCacheKeyGenerator).conditionalOnMissingBeanName()
+
+        // For a cache-aware class compiled against Grails 8, whose field has no qualifier: Spring takes
+        // grailsCacheManager for it beside a second cache manager, such as the one cacheUsers defines,
+        // where it cannot otherwise choose.
+        bean(GrailsCacheManagerAliasRegistrar).staticMethod()
+        bean(GrailsCacheManagerDependencyRegistrar).staticMethod()
 
         bean(GrailsCacheManager).conditionalOnMissingBeanName() { CachePluginConfiguration grailsCacheConfiguration ->
             if (cacheManagerType == 'GrailsConcurrentLinkedMapCacheManager') {

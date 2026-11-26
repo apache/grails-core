@@ -133,6 +133,12 @@
             "defaultValue": false
         },
         {
+            "name": "grails.mime.negotiation.spring",
+            "type": "java.lang.Boolean",
+            "description": "Whether request.format, response.format, withFormat and the format respond writes in are resolved with Spring MVC's content negotiation manager, mapping the media types it resolves to the formats grails.mime.types gives them, rather than by the Grails rules. The format parameter, URL extensions and the grails.mime Accept header settings are kept, as strategies of Spring MVC's manager that also apply to what Spring MVC writes for the requests a URL mapping handles. Grails 10 makes it the default.",
+            "defaultValue": false
+        },
+        {
             "name": "grails.converters.encoding",
             "type": "java.lang.String",
             "description": "The character encoding for converter output (JSON or XML), for render json: and for the response content types stamped by the default renderers used by respond().",

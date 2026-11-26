@@ -18,15 +18,35 @@
  */
 package grails.plugin.cache
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
+import jakarta.annotation.Priority
+
+import org.springframework.beans.factory.BeanCreationException
+import org.springframework.beans.factory.BeanCurrentlyInCreationException
+import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.FactoryBean
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.BeanDefinitionCustomizer
+import org.springframework.cache.CacheManager
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager
+import org.springframework.context.SmartLifecycle
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
+import org.springframework.core.NestedExceptionUtils
 import org.springframework.core.env.MapPropertySource
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 
 import org.grails.plugin.cache.GrailsCacheManager
+import org.grails.plugin.cache.GrailsCacheManagerAware
 
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -144,6 +164,383 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
+    void 'a grailsCacheManager the application defines is used beside another cache manager'() {
+        given: 'a cache manager of the application\'s own as grailsCacheManager, and Spring Security\'s beside it'
+        GrailsCacheManager mine = Mock(GrailsCacheManager)
+        AnnotationConfigApplicationContext context = buildContext([:], mine, [cacheManager: new ConcurrentMapCacheManager()])
+
+        expect: 'where Spring cannot choose, the cache-aware beans get it, so the context starts and caches with it'
+        context.getBean(CacheAware).grailsCacheManager.is(mine)
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(mine)
+
+        cleanup:
+        context.close()
+    }
+
+    @Unroll
+    void 'a grailsCacheManager built from a cache-aware bean does not start, as that bean asks for it while it is created: beside a cache manager #preferred'() {
+        given: 'the application\'s grailsCacheManager, created from a bean that has grailsCacheManager injected'
+        AnnotationConfigApplicationContext context = builtFromCacheAware(preferred, preferred == 'marked primary')
+
+        when:
+        context.refresh()
+
+        then:
+        BeanCreationException e = thrown()
+        NestedExceptionUtils.getMostSpecificCause(e) instanceof BeanCurrentlyInCreationException
+
+        cleanup:
+        context?.close()
+
+        where:
+        preferred << ['with a priority', 'marked primary', 'with a priority only on the object its factory returns',
+                      'that a factory bean naming only CacheManager makes, with a priority',
+                      'with a priority, which the key generator creates as the cache-aware bean is injected']
+    }
+
+    /** The application's grailsCacheManager, created from a cache-aware bean, beside the cache manager described, created first. */
+    private static AnnotationConfigApplicationContext builtFromCacheAware(String preferred, boolean markedPrimary) {
+        GrailsCacheManager mine = new GrailsConcurrentMapCacheManager()
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        BeanDefinitionCustomizer primary = { BeanDefinition definition -> definition.primary = markedPrimary } as BeanDefinitionCustomizer
+        if (preferred == 'with a priority') {
+            context.registerBean('preferredCacheManager', HighPriorityCacheManager, primary)
+        }
+        else if (preferred == 'with a priority only on the object its factory returns') {
+            context.registerBean('preferredCacheManager', CacheManager, { -> new HighPriorityCacheManager() } as Supplier<CacheManager>, primary)
+        }
+        else if (preferred == 'that a factory bean naming only CacheManager makes, with a priority') {
+            context.registerBean('preferredCacheManager', PriorityProductFactoryBean, primary)
+        }
+        else if (preferred == 'with a priority, which the key generator creates as the cache-aware bean is injected') {
+            BeanDefinitionCustomizer lazy = { BeanDefinition definition -> definition.lazyInit = true } as BeanDefinitionCustomizer
+            context.registerBean('preferredCacheManager', CacheManager,
+                    { -> new HighPriorityCacheManager() } as Supplier<CacheManager>, lazy, primary)
+            context.registerBean('customCacheKeyGenerator', GrailsCacheKeyGenerator, { ->
+                context.getBean('preferredCacheManager')
+                new CustomCacheKeyGenerator()
+            } as Supplier<GrailsCacheKeyGenerator>, lazy)
+        }
+        else {
+            context.registerBean('preferredCacheManager', ConcurrentMapCacheManager, primary)
+        }
+        context.registerBean('grailsCacheManager', GrailsCacheManager, { ->
+            context.getBean(CacheAware)
+            mine
+        } as Supplier<GrailsCacheManager>)
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+        context
+    }
+
+    @Unroll
+    void 'a grailsCacheManager that is cache-aware itself is given itself, as Spring gives a bean its only candidate, with circular references #circular'() {
+        given:
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        context.allowCircularReferences = circular == 'allowed'
+        context.registerBean('grailsCacheManager', CacheAwareGrailsCacheManager)
+        CacheManager other = new ConcurrentMapCacheManager()
+        context.registerBean('other', CacheManager, { -> other } as Supplier<CacheManager>)
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+
+        when:
+        boolean started = true
+        try {
+            context.refresh()
+        }
+        catch (BeanCreationException ignored) {
+            started = false
+        }
+
+        then: 'it starts where a bean may be given itself, and the cache-aware beans get grailsCacheManager'
+        started == (circular == 'allowed')
+        !started || context.getBean('grailsCacheManager', GrailsCacheManagerAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        !started || context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+
+        cleanup:
+        context?.close()
+
+        where:
+        circular << ['allowed', 'not allowed']
+    }
+
+    void 'a cache-aware bean given grailsCacheManager depends on it, so it stops while that cache manager still runs'() {
+        given: 'a grailsCacheManager stopped in a later phase than the cache-aware bean, and another cache manager'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        context.registerBean('grailsCacheManager', LifecycleGrailsCacheManager)
+        context.registerBean('cacheManager', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
+        context.registerBean('service', LifecycleService)
+        context.register(CacheAutoConfiguration)
+        context.refresh()
+        LifecycleService service = context.getBean('service', LifecycleService)
+
+        expect: 'it is given grailsCacheManager, and registered as depending on it, as an injection registers it'
+        service.grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        'service' in context.beanFactory.getDependentBeans('grailsCacheManager')
+
+        when:
+        context.close()
+
+        then: 'it stops first, while grailsCacheManager still runs'
+        service.stoppedWhileCacheManagerRan
+    }
+
+    void 'a cache manager the application names grailsCacheManager by an alias is used beside another cache manager'() {
+        given: 'a cache provider\'s manager under a name of its own, aliased grailsCacheManager, and Spring Security\'s beside it'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        GrailsCacheManager provider = Mock(GrailsCacheManager)
+        context.registerBean('providerCacheManager', GrailsCacheManager, { -> provider } as Supplier<GrailsCacheManager>)
+        context.registerAlias('providerCacheManager', 'grailsCacheManager')
+        context.registerBean('cacheManager', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+
+        when:
+        context.refresh()
+
+        then: 'the plugin\'s default backs off, and where Spring cannot choose, the cache-aware beans get the aliased one'
+        context.getBeanNamesForType(GrailsConcurrentMapCacheManager).length == 0
+        context.getBean(CacheAware).grailsCacheManager.is(provider)
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(provider)
+        'cacheAutoConfigurationSpec.CacheAware' in context.beanFactory.getDependentBeans('providerCacheManager')
+
+        cleanup:
+        context.close()
+    }
+
+    void 'another cache manager in the context, such as the one Spring Security caches users with, is not taken for the Grails one'() {
+        given: 'Spring Security defines cacheManager when cacheUsers is set'
+        CacheManager other = new ConcurrentMapCacheManager()
+        AnnotationConfigApplicationContext context = buildContext([:], null, [cacheManager: other])
+
+        expect: 'the context starts, and what the plugin caches with is its own cache manager'
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+
+        cleanup:
+        context.close()
+    }
+
+    void 'an autowired method of a cache-aware bean has its cache manager #others, as Spring injects the field before the method'() {
+        given: 'a service that uses its cache manager from an autowired method, as when it warms its caches at startup'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        if (others == 'beside another one') {
+            context.registerBean('cacheManager', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
+        }
+        context.registerBean(WarmedOnStartup)
+        context.register(CacheAutoConfiguration)
+
+        when:
+        context.refresh()
+
+        then:
+        context.getBean(WarmedOnStartup).warmedWith.is(context.getBean('grailsCacheManager'))
+
+        cleanup:
+        context.close()
+
+        where:
+        others << ['alone', 'beside another one']
+    }
+
+    void 'with caching disabled, the cache annotations have no cache manager, beside #others'() {
+        given: 'cache managers of the application\'s own, and none named grailsCacheManager'
+        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null, managers, primary)
+
+        expect:
+        context.getBean(CacheAware).grailsCacheManager == null
+
+        cleanup:
+        context.close()
+
+        where:
+        others                    | managers                                                                                        | primary
+        'one'                     | [cacheManager: new ConcurrentMapCacheManager()]                                                 | null
+        'several, one primary'    | [cacheManager: new ConcurrentMapCacheManager(), primaryCacheManager: new ConcurrentMapCacheManager()] | 'primaryCacheManager'
+    }
+
+    void 'with caching disabled, a cache manager of the application\'s own named grailsCacheManager is used'() {
+        given:
+        GrailsCacheManager mine = Mock(GrailsCacheManager)
+        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], mine,
+                [cacheManager: new ConcurrentMapCacheManager()], 'cacheManager')
+
+        expect:
+        context.getBean(CacheAware).grailsCacheManager.is(mine)
+
+        cleanup:
+        context.close()
+    }
+
+    void 'grailsCacheManager is used beside a cache manager #preferred'() {
+        given: 'an application\'s own cache manager, preferred by Spring for an injection by type'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        if (preferred == 'marked primary') {
+            context.registerBean('cacheManager', ConcurrentMapCacheManager,
+                    { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
+        }
+        else if (preferred == 'with a priority') {
+            context.registerBean('cacheManager', HighPriorityCacheManager)
+        }
+        else {
+            context.register(QualifiedPrimaryConfiguration)
+        }
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+        context.refresh()
+
+        expect: 'the cache annotations, like the cache tags, use grailsCacheManager'
+        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+
+        cleanup:
+        context.close()
+
+        where:
+        preferred << ['marked primary', 'with a priority',
+                      // Spring matches a field qualified with @Qualifier('grailsCacheManager') to it too, and prefers it
+                      'marked primary, whose @Bean method declares @Qualifier(\'grailsCacheManager\')']
+    }
+
+    void 'with caching disabled, a cache manager whose @Bean method declares @Qualifier(\'grailsCacheManager\') is not taken for the cache annotations'() {
+        given: 'no bean named grailsCacheManager'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        context.environment.propertySources.addFirst(new MapPropertySource('test', ['grails.cache.enabled': 'false']))
+        context.register(QualifiedPrimaryConfiguration)
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+        context.refresh()
+
+        expect:
+        !context.containsBean('grailsCacheManager')
+        context.getBean(CacheAware).grailsCacheManager == null
+
+        cleanup:
+        context.close()
+    }
+
+    void 'a lazy cache manager is not created to find the Grails one'() {
+        given: 'a lazy cache manager whose store is down, beside the plugin\'s'
+        AnnotationConfigApplicationContext context = buildContext([:], null, [:], null, [unreachableCacheManager: STORE_DOWN])
+
+        expect: 'the context starts, and the Grails cache manager is used'
+        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+
+        cleanup:
+        context.close()
+    }
+
+    void 'a lazy cache manager is not created where there is no Grails one'() {
+        given:
+        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null,
+                [primaryCacheManager: new ConcurrentMapCacheManager()], 'primaryCacheManager', [unreachableCacheManager: STORE_DOWN])
+
+        expect: 'the context starts, and the cache annotations have no cache manager'
+        context.getBean(CacheAware).grailsCacheManager == null
+
+        cleanup:
+        context.close()
+    }
+
+    private static final Supplier<CacheManager> STORE_DOWN = { ->
+        throw new IllegalStateException('the cache store is down')
+    } as Supplier<CacheManager>
+
+    /** An application's own cache manager, marked primary, whose {@code @Bean} method declares Spring's qualifier {@code grailsCacheManager}. */
+    @Configuration(proxyBeanMethods = false)
+    static class QualifiedPrimaryConfiguration {
+        @Bean
+        @Primary
+        @Qualifier('grailsCacheManager')
+        CacheManager cacheManager() {
+            new ConcurrentMapCacheManager()
+        }
+    }
+
+    /** A cache manager Spring prefers over others by the priority of its class. */
+    @Priority(1)
+    static class HighPriorityCacheManager extends ConcurrentMapCacheManager {
+    }
+
+    /** A factory bean that names only CacheManager as its type, and makes a cache manager with a priority. */
+    static class PriorityProductFactoryBean implements FactoryBean<CacheManager> {
+
+        @Override
+        CacheManager getObject() {
+            new HighPriorityCacheManager()
+        }
+
+        @Override
+        Class<?> getObjectType() {
+            CacheManager
+        }
+    }
+
+    /** A grailsCacheManager that is cache-aware itself. */
+    static class CacheAwareGrailsCacheManager extends GrailsConcurrentMapCacheManager implements GrailsCacheManagerAware {
+    }
+
+    /** A grailsCacheManager with a lifecycle, stopped in a later phase than {@link LifecycleService}. */
+    static class LifecycleGrailsCacheManager extends GrailsConcurrentMapCacheManager implements SmartLifecycle {
+
+        boolean running
+
+        @Override
+        void start() {
+            running = true
+        }
+
+        @Override
+        void stop() {
+            running = false
+        }
+
+        @Override
+        int getPhase() {
+            100
+        }
+    }
+
+    /** A cache-aware bean with a lifecycle, which records whether its cache manager ran when it stopped. */
+    static class LifecycleService implements GrailsCacheManagerAware, SmartLifecycle {
+
+        boolean running
+
+        boolean stoppedWhileCacheManagerRan
+
+        @Override
+        void start() {
+            running = true
+        }
+
+        @Override
+        void stop() {
+            stoppedWhileCacheManagerRan = ((LifecycleGrailsCacheManager) grailsCacheManager).running
+            running = false
+        }
+
+        @Override
+        int getPhase() {
+            0
+        }
+    }
+
+    /** A cache-aware service that uses its cache manager from an autowired method. */
+    static class WarmedOnStartup implements GrailsCacheManagerAware {
+        CacheManager warmedWith
+
+        @Autowired
+        void warmUp(BeanFactory beanFactory) {
+            warmedWith = grailsCacheManager
+        }
+    }
+
+    /** A class the cache transformations make cache-aware, as they do a service with a cached method. */
+    static class CacheAware implements GrailsCacheManagerAware {
+    }
+
     /**
      * A plugin wired the way the runtime wires it: with the application context and with a
      * GrailsApplication carrying the same configuration. Both matter - reading the property back out
@@ -160,12 +557,25 @@ class CacheAutoConfigurationSpec extends Specification {
 
     @CompileStatic
     private static AnnotationConfigApplicationContext buildContext(
-            Map<String, Object> properties, GrailsCacheManager userCacheManager = null) {
+            Map<String, Object> properties, GrailsCacheManager userCacheManager = null,
+            Map<String, CacheManager> otherCacheManagers = [:], String primary = null,
+            Map<String, Supplier<CacheManager>> lazyCacheManagers = [:]) {
         def context = new AnnotationConfigApplicationContext()
         context.environment.propertySources.addFirst(new MapPropertySource('test', properties))
         if (userCacheManager != null) {
             context.registerBean('grailsCacheManager', GrailsCacheManager, () -> userCacheManager)
         }
+        otherCacheManagers.each { String name, CacheManager cacheManager ->
+            context.registerBean(name, CacheManager, () -> cacheManager) { BeanDefinition definition ->
+                definition.primary = name == primary
+            }
+        }
+        lazyCacheManagers.each { String name, Supplier<CacheManager> cacheManager ->
+            context.registerBean(name, CacheManager, cacheManager) { BeanDefinition definition ->
+                definition.lazyInit = true
+            }
+        }
+        context.registerBean(CacheAware)
         context.register(CacheAutoConfiguration)
         context.refresh()
         return context

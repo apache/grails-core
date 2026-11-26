@@ -62,6 +62,10 @@ dependencies {
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
+    // Test-only: ContentSecurityPolicyNonceSpec reads the nonce Spring Security's own nonce filter
+    // generates. Not a main/runtime dependency - the nonce is read through Spring Security's public
+    // interface without depending on it.
+    testImplementation 'org.springframework.security:spring-security-web'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

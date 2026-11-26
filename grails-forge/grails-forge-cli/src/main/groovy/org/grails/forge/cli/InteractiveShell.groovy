@@ -29,7 +29,6 @@ import org.jline.reader.impl.DefaultParser
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import picocli.CommandLine
-import picocli.shell.jline3.PicocliJLineCompleter
 import java.util.function.BiFunction
 import java.util.function.Consumer
 
@@ -63,11 +62,10 @@ class InteractiveShell {
 
     void start() {
         try {
-            PicocliJLineCompleter picocliCommands = new PicocliJLineCompleter(commandLine.getCommandSpec())
             Terminal terminal = TerminalBuilder.terminal()
             LineReader reader = LineReaderBuilder.builder()
                     .terminal(terminal)
-                    .completer(picocliCommands)
+                    .completer(new CommandLineCompleter(commandLine.commandSpec))
                     .parser(new DefaultParser())
                     .variable(LineReader.LIST_MAX, 50)   // max tab completion candidates
                     .build()

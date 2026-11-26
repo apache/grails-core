@@ -23,6 +23,7 @@ import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -198,6 +199,15 @@ class GormApiResolver {
 @Slf4j
 class PreferredDatastoreSelector {
 
+    /**
+     * @return whether a lookup for the entity follows the tenant bound on the thread: a multi-tenant entity does, and
+     * so does a lookup that names no entity; any other entity keeps its own datastore inside a tenant block
+     */
+    @PackageScope
+    static boolean followsTenant(Class entity) {
+        return entity == null || MultiTenant.isAssignableFrom(entity)
+    }
+
     @CompileDynamic
     Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String qualifier, String className, int depth, GormApiResolver resolver) {
         Datastore preferred = stateRegistry.getPreferredDatastore()
@@ -216,11 +226,11 @@ class PreferredDatastoreSelector {
 
         boolean isDefaultQualifier = qualifier == null || ConnectionSource.DEFAULT.equals(qualifier)
         if (isDefaultQualifier) {
-            if (preferred instanceof MultiTenantCapableDatastore) {
+            if (preferred instanceof MultiTenantCapableDatastore && followsTenant(entity)) {
                 MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) preferred
                 try {
                     Serializable tid = CurrentTenantHolder.get((Datastore) mtds)
-                    if (tid == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
+                    if (tid == null && entity != null) {
                         tid = mtds.tenantResolver.resolveTenantIdentifier()
                     }
                     if (tid != null && !ConnectionSource.DEFAULT.equals(tid.toString())) {
@@ -232,7 +242,7 @@ class PreferredDatastoreSelector {
                         }
                     }
                 } catch (Throwable e) {
-                    if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
+                    if (entity != null && e instanceof TenantNotFoundException) {
                         throw e
                     }
                 }
@@ -423,13 +433,13 @@ class DefaultDatastoreSelector {
     @CompileDynamic
     Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String className, int depth, GormApiResolver resolver) {
         Datastore defaultDs = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
-        if (defaultDs instanceof MultiTenantCapableDatastore) {
+        if (defaultDs instanceof MultiTenantCapableDatastore && PreferredDatastoreSelector.followsTenant(entity)) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDs
             boolean isDatabaseMode = multiTenantCapableDatastore.getMultiTenancyMode() ==
                     MultiTenancySettings.MultiTenancyMode.DATABASE
             try {
                 Serializable currentTenantId = CurrentTenantHolder.get(defaultDs)
-                if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
+                if (currentTenantId == null && entity != null) {
                     currentTenantId = multiTenantCapableDatastore.tenantResolver.resolveTenantIdentifier()
                 }
 
@@ -446,7 +456,7 @@ class DefaultDatastoreSelector {
                     }
                 }
             } catch (Throwable e) {
-                if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
+                if (entity != null && e instanceof TenantNotFoundException) {
                     if (isDatabaseMode || multiTenantCapableDatastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
                         throw e
                     }

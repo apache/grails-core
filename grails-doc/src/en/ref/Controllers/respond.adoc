@@ -89,7 +89,8 @@ Supported `arguments`:
 A Spring `ProblemDetail` is written as Spring MVC writes one that a handler method returns: `respond` hands it to the
 handler Spring MVC's handler adapter writes a `ResponseEntity` with, so the application's `ResponseBodyAdvice` beans
 apply to it as to a method of the controller, and its `ErrorResponse.Interceptor` beans see it. The response has the
-status the problem carries, and an absent `instance` is set to the current resource path. A `status` argument decides
+status the problem carries, and a problem without an `instance` is written without one, as Spring MVC writes it; set the
+`instance` where the application identifies the occurrence of a problem. A `status` argument decides
 the status of the response, as the status of a `ResponseEntity` does in Spring MVC: a problem that carries another keeps
 its own, and Spring MVC logs a warning. Its properties are written by the mapper of Spring Boot's converter, as a Spring
 MVC controller writes them: a domain class instance, validation errors or a value that leads back to itself among them is

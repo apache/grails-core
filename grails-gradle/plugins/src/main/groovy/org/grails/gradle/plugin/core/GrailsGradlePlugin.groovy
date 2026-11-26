@@ -115,6 +115,8 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
     private static final String ASSET_PIPELINE_PLUGIN = 'cloud.wondrify.asset-pipeline'
 
+    private static final String WAR_PLUGIN = 'war'
+
     private static final int TRAINING_PORT = 18080
 
     /** Not the training port: a trace and a training run are both a started application. */
@@ -1232,11 +1234,15 @@ ${importStatements}
                 .extensions.create('nativeMetadata', NativeMetadataExtension)
         extension.paths.convention(['/'])
         extension.forms.convention([])
+        extension.requests.convention([])
         extension.jvmArguments.convention(['-Dgrails.env=production'])
         extension.port.convention(TRACING_PORT)
         extension.startTimeoutSeconds.convention(TRAINING_START_TIMEOUT_SECONDS)
         extension.outputDirectory.convention(project.layout.projectDirectory
                 .dir('src/native/resources/META-INF/native-image'))
+        project.pluginManager.withPlugin(NATIVE_IMAGE_PLUGIN) {
+            addTracedMetadataToNativeImageClasspath(project, extension)
+        }
 
         project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
             TaskProvider<?> bootJar = project.tasks.named('bootJar')
@@ -1254,11 +1260,43 @@ ${importStatements}
                 task.jvmArguments.set(extension.jvmArguments)
                 task.paths.set(extension.paths)
                 task.forms.set(extension.forms)
+                task.requests.set(extension.requests)
                 task.port.set(extension.port)
                 task.startTimeoutSeconds.set(extension.startTimeoutSeconds)
                 task.outputDirectory.set(extension.outputDirectory)
             }
         }
+    }
+
+    /**
+     * Puts what {@code traceNativeMetadata} recorded on the classpath the image is built from, without which
+     * recording it changes nothing: the image is built, starts, and fails on the first request that needs it.
+     *
+     * <p>Dynamically, for the reason {@link #addToNativeImageClasspath} is.</p>
+     */
+    @CompileDynamic
+    private static void addTracedMetadataToNativeImageClasspath(Project project, NativeMetadataExtension extension) {
+        def graalvm = project.extensions.findByName('graalvmNative')
+        graalvm?.binaries?.configureEach { binary ->
+            binary.classpath(extension.outputDirectory.map { Directory directory -> nativeMetadataRoot(directory.asFile) })
+        }
+    }
+
+    /**
+     * The classpath entry the metadata in a directory is read from: {@code native-image} looks for it under
+     * {@code META-INF/native-image} of each entry, so a directory anywhere else would never be read.
+     */
+    private static File nativeMetadataRoot(File directory) {
+        File metaInf = directory
+        while (metaInf != null && metaInf.name != 'META-INF') {
+            metaInf = metaInf.parentFile
+        }
+        if (metaInf?.parentFile == null) {
+            throw new GradleException("grails.nativeMetadata.outputDirectory is ${directory}, which an image cannot " +
+                    'read metadata from. Use a directory under META-INF/native-image, as the default ' +
+                    'src/native/resources/META-INF/native-image is.')
+        }
+        metaInf.parentFile
     }
 
     protected void configureBootRunPidFile(Project project) {
@@ -1530,6 +1568,9 @@ ${importStatements}
      * archive is extracted, the extracted application is run and asked for its pages, and what the
      * run recorded is left beside it. An application asks for this with
      * {@code grails.aotCache.enabled}, and says which of its pages matter.</p>
+     *
+     * <p>The archive is the executable war where the application applies the war plugin, as a
+     * generated application does, and the executable jar otherwise.</p>
      */
     protected void configureAotCache(Project project) {
         AotCacheExtension extension = ((ExtensionAware) project.extensions.getByName('grails'))
@@ -1541,7 +1582,6 @@ ${importStatements}
         extension.startTimeoutSeconds.convention(TRAINING_START_TIMEOUT_SECONDS)
 
         project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
-            TaskProvider<?> bootJar = project.tasks.named('bootJar')
             Provider<Directory> application = project.layout.buildDirectory.dir('aot-cache/application')
             Provider<JavaLauncher> launcher = trainingLauncher(project)
 
@@ -1550,7 +1590,7 @@ ${importStatements}
                 task.group = BasePlugin.BUILD_GROUP
                 task.description = 'Extracts the application, which is the form the cache is read against'
                 task.onlyIf { extension.enabled.get() }
-                task.archiveFile.set(archiveFileOf(bootJar))
+                task.archiveFile.set(archiveFileOf(executableArchive(project)))
                 // The launcher rather than its path: this task is cacheable, and a path is where a
                 // JDK happens to live on the machine that ran the build. Set as the provider it is,
                 // so the toolchain is not resolved -- and a JDK not provisioned -- by every build
@@ -1565,7 +1605,8 @@ ${importStatements}
                 task.onlyIf { extension.enabled.get() }
                 task.dependsOn(extract)
                 task.applicationDirectory.set(application)
-                task.archiveFileName.set(archiveFileOf(bootJar).map { RegularFile file -> file.asFile.name })
+                task.archiveFileName.set(archiveFileNameOf(executableArchive(project))
+                        .map { String name -> ExtractApplicationTask.applicationFileName(name) })
                 // Beside the extracted application rather than inside it. Inside, the cache and its
                 // metadata land in the directory this task declares as its input, so writing them
                 // changes that input and the task can never be up to date -- every build would run
@@ -1599,8 +1640,37 @@ ${importStatements}
      * task resolved while the build is configured is one every build pays for whether or not it
      * asked for an archive.</p>
      */
-    private static Provider<RegularFile> archiveFileOf(TaskProvider<?> bootJar) {
-        bootJar.flatMap { Task task -> (Provider<RegularFile>) task.property('archiveFile') }
+    private static Provider<RegularFile> archiveFileOf(TaskProvider<?> archive) {
+        archive.flatMap { Task task -> (Provider<RegularFile>) task.property('archiveFile') }
+    }
+
+    /** The name of the archive a task builds, which is known before the task has run, unlike its file. */
+    private static Provider<String> archiveFileNameOf(TaskProvider<?> archive) {
+        archive.flatMap { Task task -> (Provider<String>) task.property('archiveFileName') }
+    }
+
+    /**
+     * The executable archive the application ships: the war where it applies the war plugin, as a
+     * generated application does, and the jar otherwise.
+     *
+     * <p>Spring Boot extracts a war as of 4.2: its provided libraries, the embedded container among
+     * them, beside its own, and what sits outside {@code WEB-INF}, {@code src/main/webapp} included,
+     * in the extracted jar's {@code META-INF/resources}. The jar leaves {@code src/main/webapp} out,
+     * so a cache trained against the jar of an application that ships its war was trained against
+     * an application missing what the war serves. An application that switches its war off ships
+     * the jar.</p>
+     *
+     * <p>Read as a task that consumes the archive is configured, by which time the build has applied
+     * its plugins and configured its archives.</p>
+     */
+    private static TaskProvider<?> executableArchive(Project project) {
+        if (project.pluginManager.hasPlugin(WAR_PLUGIN)) {
+            TaskProvider<?> bootWar = project.tasks.named('bootWar')
+            if (bootWar.get().enabled) {
+                return bootWar
+            }
+        }
+        project.tasks.named('bootJar')
     }
 
     /**

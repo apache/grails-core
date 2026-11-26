@@ -22,6 +22,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 
+import grails.web.mapping.UrlMapping
 import grails.web.mapping.UrlMappingInfo
 import grails.web.mapping.UrlMappingsHolder
 import grails.web.mime.MimeType
@@ -260,5 +261,25 @@ class ReflectionUtilsSpec extends AbstractUnitSpec {
 
         then:
         matchedWith == 'POST'
+    }
+
+    void 'url mappings are matched on any version for a request that accepts no configured type'() {
+        given: 'a request for which no type is resolved, as grails.mime.negotiation.spring resolves none for it'
+        def request = new MockHttpServletRequest(method: 'GET', requestURI: '/book')
+        request.addHeader('Accept', 'image/png')
+        def grailsRequest = new GrailsWebRequest(request, new MockHttpServletResponse(), servletContext)
+
+        String matchedVersion = null
+        def holder = [matchAll: { String uri, String httpMethod, String version ->
+            matchedVersion = version
+            new UrlMappingInfo[0]
+        }] as UrlMappingsHolder
+
+        when:
+        ReflectionUtils.matchAllUrlMappings(holder, '/book', grailsRequest,
+                [getMimeTypeForRequest: { Object... a -> null }] as HttpServletResponseExtension)
+
+        then:
+        matchedVersion == UrlMapping.ANY_VERSION
     }
 }

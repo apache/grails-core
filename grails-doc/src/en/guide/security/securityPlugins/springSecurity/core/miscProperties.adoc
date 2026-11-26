@@ -27,7 +27,7 @@ under the License.
 
 |active
 |`true`
-|Whether the plugin is enabled
+|Whether the plugin is enabled. When `false` the plugin defines none of its beans and every `sec:` tag renders nothing, so a GSP that uses them still renders
 
 |printStatusMessages
 |`true`
@@ -72,6 +72,10 @@ under the License.
 |requestCache.createSession
 |`true`
 |Whether caching `SavedRequest` can trigger the creation of a session
+
+|requestCache.ignoredPatterns
+|`['/favicon.*', '/apple-touch-icon*.png', '/manifest.json', '/manifest.webmanifest', '/browserconfig.xml', '/.well-known/appspecific/com.chrome.devtools.json']`
+|Path patterns, relative to the context path, of requests that are never saved as the page to redirect to after a login. Browsers and their tools request these on their own, so a denied one would otherwise replace the page the user asked for. Set to `[]` to save every request
 
 |roleHierarchy
 |_none_

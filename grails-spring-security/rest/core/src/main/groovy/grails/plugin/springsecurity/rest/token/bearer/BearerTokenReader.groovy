@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 
 import jakarta.servlet.http.HttpServletRequest
 
+import org.springframework.http.InvalidMediaTypeException
 import org.springframework.http.MediaType
 
 import grails.plugin.springsecurity.rest.token.AccessToken
@@ -64,6 +65,16 @@ class BearerTokenReader implements TokenReader {
     }
 
     private boolean isFormEncoded(HttpServletRequest servletRequest) {
-        servletRequest.contentType && MediaType.parseMediaType(servletRequest.contentType).isCompatibleWith(MediaType.APPLICATION_FORM_URLENCODED)
+        String contentType = servletRequest.contentType
+        if (!contentType) {
+            return false
+        }
+        try {
+            // Only the type matters here. Spring rejects a parameter it cannot read, and a client decides what it sends.
+            return MediaType.parseMediaType(contentType.split(';', 2)[0]).isCompatibleWith(MediaType.APPLICATION_FORM_URLENCODED)
+        }
+        catch (InvalidMediaTypeException ignored) {
+            return false
+        }
     }
 }

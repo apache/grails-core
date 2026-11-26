@@ -65,12 +65,32 @@ class GrailsStartupProgressSpec extends ApplicationContextSpec implements Comman
         applicationType << [ApplicationType.WEB, ApplicationType.REST_API]
     }
 
+    void "test an application generated with grails-startup-progress opens a browser under bootRun"(ApplicationType applicationType) {
+        when:
+        final String gradleProperties = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), [GrailsStartupProgress.FEATURE_NAME])['gradle.properties']
+
+        then: 'the property bootRun hands to the application is set in the project, where a developer can override it'
+        gradleProperties.readLines().contains('grails.startup.progress.openBrowser=true')
+
+        and: 'the comment above it says how to turn it off for everyone, and for one developer without changing the application'
+        gradleProperties.contains('''\
+            # Opens a browser on the startup progress page under bootRun. Delete this line to turn it off for everyone;
+            # for yourself, set it to false in ~/.gradle/gradle.properties or run: ./gradlew bootRun -Pgrails.startup.progress.openBrowser=false
+            grails.startup.progress.openBrowser=true
+            '''.stripIndent())
+
+        where:
+        applicationType << [ApplicationType.WEB, ApplicationType.REST_API]
+    }
+
     void "test an application generated without grails-startup-progress does not depend on it"(ApplicationType applicationType) {
         when:
-        final String buildGradle = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))['build.gradle']
+        final Map<String, String> output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
+        final String buildGradle = output['build.gradle']
 
         then:
         !buildGradle.contains('grails-startup-progress')
+        !output['gradle.properties'].contains('grails.startup.progress')
 
         where:
         applicationType << ApplicationType.values()

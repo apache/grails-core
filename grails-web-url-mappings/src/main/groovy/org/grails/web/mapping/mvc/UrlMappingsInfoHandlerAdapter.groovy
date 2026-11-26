@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationRegistry
+import jakarta.servlet.DispatcherType
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -82,7 +83,9 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
 
         GrailsWebRequest webRequest = GrailsWebRequest.lookup(request)
 
-        boolean isAsyncRequest = WebUtils.isAsync(request) && !WebUtils.isError(request)
+        // the dispatch that returns the result of asynchronous processing, not a forward or include made during it,
+        // which carries the same request attributes
+        boolean isAsyncRequest = request.dispatcherType == DispatcherType.ASYNC && !WebUtils.isError(request)
         if (isAsyncRequest) {
             Object modelAndView = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
             if (modelAndView instanceof ModelAndView resolvedModelAndView) {
