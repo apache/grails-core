@@ -132,3 +132,10 @@ This release carries the changes of <<grails-7-1-7,Grails 7.1.7>>. It has no upg
 === Grails 7.2.5
 
 This release carries the changes of <<grails-7-1-8,Grails 7.1.8>>. It has no upgrade notes of its own.
+
+[[grails-7-2-6]]
+=== Grails 7.2.6
+
+==== An aggregate on the right of a comparison in the `@Where` of a data service runs as a subquery
+
+As of Grails 7.2.6, a comparison with an aggregate of the entity, such as `qty > avg(qty)`, in the `@Where` of a data service runs the aggregate as a subquery over the entity, as the same comparison in a `where` query does, with `avg`, `max`, `min`, `sum` and `count` (issue https://github.com/apache/grails-core/issues/16807[#16807]). Such a method failed before, with a `GroovyCastException` or an `SQLGrammarException`, so no working code changes.

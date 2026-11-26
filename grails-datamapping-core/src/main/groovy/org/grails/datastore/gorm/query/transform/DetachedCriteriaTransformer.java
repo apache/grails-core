@@ -152,6 +152,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             ">=", "sizeGe",
             "<=", "sizeLe");
 
+    private static final Set<String> CRITERIA_AGGREGATES = new HashSet<>(Arrays.asList("avg", "max", "min", "sum"));
+
     private static final Map<String, String> AGGREGATE_FUNCTIONS = (Map<String, String>) newMap(
             "avg", "avg",
             "max", "max",
@@ -1259,15 +1261,24 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
                             boolean validProperty = aggregatePropertyName != null && propertyNames.contains(aggregatePropertyName);
                             if (validProperty) {
-                                ClosureAndArguments closureAndArguments = new ClosureAndArguments(variableScope);
-                                BlockStatement currentBody = closureAndArguments.getCurrentBody();
+                                if ("property".equals(aggregateFunctionName)) {
+                                    ClosureAndArguments closureAndArguments = new ClosureAndArguments(variableScope);
+                                    addProjectionToCurrentBody(closureAndArguments.getCurrentBody(), aggregateFunctionName, aggregatePropertyName, variableScope);
+                                    rightExpression = closureAndArguments.getClosureExpression();
 
-                                addProjectionToCurrentBody(currentBody, aggregateFunctionName, aggregatePropertyName, variableScope);
-
-                                rightExpression = closureAndArguments.getClosureExpression();
-
-                                if ("property".equals(aggregateFunctionName) && METHOD_TO_SUBQUERY_MAP.containsKey(methodToCall)) {
-                                    methodToCall = methodToCall + "All";
+                                    if (METHOD_TO_SUBQUERY_MAP.containsKey(methodToCall)) {
+                                        methodToCall = methodToCall + "All";
+                                    }
+                                } else if (CRITERIA_AGGREGATES.contains(aggregateFunctionName)) {
+                                    // The subquery is a new criteria of the entity, and the aggregate is added by its own
+                                    // method rather than in a closure: the @Where of a data service is compiled
+                                    // statically, and there the calls of such a closure resolve to the enclosing
+                                    // criteria, so the aggregate was added to the outer query.
+                                    rightExpression = newSubquery(aggregateFunctionName, new ArgumentListExpression(new ConstantExpression(aggregatePropertyName)));
+                                } else {
+                                    // countDistinct has no method of its own on the criteria: the closure takes the new
+                                    // criteria as its parameter and calls projections on it.
+                                    rightExpression = newSubquery("build", new ArgumentListExpression(projectionsOnParameter(aggregateFunctionName, aggregatePropertyName, variableScope)));
                                 }
                             } else {
                                 sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot use aggregate function " + aggregateFunctionName + " on property \"" + aggregatePropertyName + "\" - no such property on class " + this.currentClassNode.getName() + " exists.", Token.newString(propertyName, aggregateMethodCall.getLineNumber(), aggregateMethodCall.getColumnNumber()), sourceUnit));
@@ -1385,6 +1396,39 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         VariableExpression thisExpression = new VariableExpression("this");
         projectionsBody.getCurrentBody().addStatement(new ExpressionStatement(new MethodCallExpression(thisExpression, functionName, aggregateArgs)));
         currentBody.addStatement(new ExpressionStatement(new MethodCallExpression(thisExpression, "projections", projectionsBody.getArguments())));
+    }
+
+    /**
+     * A closure that adds the aggregate to the criteria it is called with: {@code { DetachedCriteria c -> c.projections { fn(property) } }}.
+     */
+    private ClosureExpression projectionsOnParameter(String functionName, String aggregatePropertyName, VariableScope variableScope) {
+        Parameter criteria = new Parameter(getParameterizedDetachedCriteriaClassNode(null), "$subquery");
+        VariableScope scope = new VariableScope(variableScope);
+        scope.putDeclaredVariable(criteria);
+        ClosureAndArguments projectionsBody = new ClosureAndArguments(scope);
+        projectionsBody.getCurrentBody().addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("this"), functionName,
+                new ArgumentListExpression(new ConstantExpression(aggregatePropertyName)))));
+        MethodCallExpression projections = new MethodCallExpression(new VariableExpression(criteria), "projections", projectionsBody.getArguments());
+        projections.setImplicitThis(false);
+        BlockStatement body = new BlockStatement();
+        body.addStatement(new ExpressionStatement(projections));
+        ClosureExpression closure = new ClosureExpression(new Parameter[]{criteria}, body);
+        closure.setVariableScope(scope);
+        return closure;
+    }
+
+    /**
+     * A call on a new criteria of the current entity. The call is marked as not on {@code this}: a method call
+     * expression is implicitly on {@code this} when created, and the static compiler, which compiles the
+     * {@code @Where} of a data service, then calls the method on the closure's owner and drops the new criteria.
+     */
+    private MethodCallExpression newSubquery(String methodName, ArgumentListExpression arguments) {
+        MethodCallExpression call = new MethodCallExpression(
+                new ConstructorCallExpression(getParameterizedDetachedCriteriaClassNode(null),
+                        new ArgumentListExpression(new ClassExpression(this.currentClassNode))),
+                methodName, arguments);
+        call.setImplicitThis(false);
+        return call;
     }
 
     @Override
