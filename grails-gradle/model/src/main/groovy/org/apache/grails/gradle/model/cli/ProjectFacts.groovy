@@ -42,9 +42,9 @@ import org.yaml.snakeyaml.resolver.Resolver
  * than {@link #MAX_BYTES} bytes and for no more than {@link #MAX_FEATURES} features, and reading
  * never fails: a file that is not there, is not a regular file, is larger, is not YAML of plain
  * mappings, lists and texts, names a type of application that does not exist or a feature whose name
- * is not lower-case letters, digits and hyphens is no record, and so is one of another format than
- * {@link #FORMAT}. Whether the record is the one the command line wrote, untouched, is not checked:
- * the command line does that.</p>
+ * is not one the command line writes ({@link #isFeatureName}) is no record, and so is one of another
+ * format than {@link #FORMAT}. Whether the record is the one the command line wrote, untouched, is not
+ * checked: the command line does that.</p>
  *
  * @since 9.0
  */
@@ -69,7 +69,9 @@ final class ProjectFacts {
     /** What is known of a project without a record. */
     public static final ProjectFacts NONE = new ProjectFacts(false, null, Collections.<String> emptyList())
 
-    private static final Pattern FEATURE_NAME = Pattern.compile('[a-z0-9][a-z0-9-]{0,63}')
+    // what the command line takes for the name of a feature, which includes the features of the packs of other
+    // plugins: the rule of the reader of the record of the command line, held to it by the names of feature-names.json
+    private static final Pattern FEATURE_NAME = Pattern.compile('[A-Za-z0-9][A-Za-z0-9._:#+-]{0,199}')
 
     private static final int MAX_DEPTH = 8
 
@@ -86,6 +88,15 @@ final class ProjectFacts {
         this.recorded = recorded
         this.applicationType = applicationType
         this.features = Collections.unmodifiableList(new ArrayList<String>(features))
+    }
+
+    /**
+     * @param name what a record names a feature
+     * @return whether it is the name of a feature the command line writes: an ASCII letter or digit,
+     * then at most 199 ASCII letters, digits and the characters {@code . _ : # + -}
+     */
+    static boolean isFeatureName(String name) {
+        name != null && FEATURE_NAME.matcher(name).matches()
     }
 
     /**
@@ -155,7 +166,7 @@ final class ProjectFacts {
         List<String> features = new ArrayList<String>()
         for (Object each : (List) listed) {
             Object name = each instanceof Map ? ((Map) each).get('name') : null
-            if (!(name instanceof String) || !FEATURE_NAME.matcher((String) name).matches()) {
+            if (!(name instanceof String) || !isFeatureName((String) name)) {
                 return NONE
             }
             if (!features.contains(name)) {

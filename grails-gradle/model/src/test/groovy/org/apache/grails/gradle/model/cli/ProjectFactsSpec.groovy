@@ -134,9 +134,10 @@ class ProjectFactsSpec extends Specification {
         'has a feature that is a text'               | 'format: 1\napplicationType: web\nfeatures:\n- gsp\n'
         'has a feature without a name'               | 'format: 1\napplicationType: web\nfeatures:\n- source: bundled-pack\n'
         'has a feature with a list for a name'       | 'format: 1\napplicationType: web\nfeatures:\n- name: [gsp]\n'
-        'has a feature with an upper-case name'      | RECORD.replace('name: gsp', 'name: Gsp')
-        'has a feature with a name of 65 characters' | RECORD.replace('name: gsp', 'name: ' + ('a' * 65))
+        'has a feature with a space in its name'     | RECORD.replace('name: gsp', 'name: "views json"')
+        'has a feature with a name of 201 characters' | RECORD.replace('name: gsp', 'name: ' + ('a' * 201))
         'has a feature whose name starts with a hyphen' | RECORD.replace('name: gsp', 'name: "-gsp"')
+        'has a feature with a slash in its name'     | RECORD.replace('name: gsp', 'name: "views/json"')
         'has a feature with a line break in its name' | RECORD.replace('name: gsp', 'name: "gsp\\nviews"')
         'has more than 1024 features'                | 'format: 1\napplicationType: web\nfeatures:\n' + (0..1024).collect { "- name: f${it}\n" }.join()
         'has a key twice'                            | RECORD + 'applicationType: rest-api\n'
@@ -161,9 +162,38 @@ class ProjectFactsSpec extends Specification {
         ProjectFacts.parse('format: 1\napplicationType: web\nfeatures:\n- name: 12\n- name: on\n- name: 1e3\n- name: on\n'.getBytes('UTF-8')).features == ['12', 'on', '1e3']
     }
 
+    def "a feature of a pack of another plugin, whose name has upper-case letters and the coordinates of the pack, is read"() {
+        expect:
+        with(ProjectFacts.parse(RECORD.replace('name: views-json', 'name: "org.example:acme-pack#Acme.Feature_2+"').getBytes('UTF-8'))) {
+            recorded
+            features == ['gsp', 'org.example:acme-pack#Acme.Feature_2+']
+        }
+    }
+
+    @Unroll
+    def "the name #name is #verdict by the record of tools as by the record of the command line"() {
+        given: 'a record that names the feature, as the command line writes a name that is not plain text'
+        String record = RECORD.replace('name: views-json', "name: ${StrictJson.write(name)}")
+
+        expect:
+        ProjectFacts.isFeatureName(name) == (verdict == 'accepted')
+        ProjectFacts.parse(record.getBytes('UTF-8')).recorded == (verdict == 'accepted')
+        verdict != 'accepted' || ProjectFacts.parse(record.getBytes('UTF-8')).features == ['gsp', name].unique()
+
+        where:
+        [verdict, name] << featureNames()
+    }
+
+    def "the names of features the two readers are held to are both accepted and refused ones"() {
+        expect:
+        featureNames().count { it[0] == 'accepted' } >= 10
+        featureNames().count { it[0] == 'refused' } >= 10
+        featureNames().every { it[0] in ['accepted', 'refused'] }
+    }
+
     def "a record with as many features as a record names, each with the longest name, is read"() {
         given:
-        List<String> names = (1..1024).collect { String.format('f%04d', it) + ('a' * 59) }
+        List<String> names = (1..1024).collect { String.format('f%04d', it) + ('a' * 195) }
 
         expect:
         ProjectFacts.parse(('format: 1\napplicationType: plugin\nfeatures:\n' + names.collect { "- name: ${it}\n" }.join()).getBytes('UTF-8')).features == names
@@ -211,6 +241,16 @@ class ProjectFactsSpec extends Specification {
         file.parentFile.mkdirs()
         file.setText(record, 'UTF-8')
         project
+    }
+
+    // the names of project-record-sample/feature-names.txt, which the reader of the command line is held to as well
+    private static List<List<String>> featureNames() {
+        URL resource = ProjectFactsSpec.getResource('/project-record-sample/feature-names.txt')
+        assert resource != null
+        resource.getText('US-ASCII').readLines().findAll { String line -> line && !line.startsWith('#') }.collect { String line ->
+            int space = line.indexOf(' ')
+            [line.substring(0, space), (String) StrictJson.parse(line.substring(space + 1), 1)]
+        }
     }
 
     private static File sample(String type) {

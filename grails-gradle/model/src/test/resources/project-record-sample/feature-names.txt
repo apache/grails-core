@@ -1,0 +1,82 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# Names of features, and whether the record of the grails command line can name a feature so. The
+# reader tools are given the record with (ProjectFacts of grails-gradle-model) and the reader of the
+# command line itself (the record of Forge) are each held to every line of this file by a spec, so that
+# the two accept the same names. A line is "accepted" or "refused", a space, and the name as a JSON
+# string. Lines that start with # and empty lines are not names.
+accepted "gsp"
+accepted "views-json"
+accepted "a"
+accepted "A"
+accepted "9"
+accepted "Gsp"
+accepted "gorm-hibernate5"
+accepted "spring-boot-starter-tomcat"
+accepted "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+accepted "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+accepted "org.example:acme-pack#acme-feature"
+accepted "com.example:pack#feature"
+accepted "feature_1"
+accepted "c++"
+accepted "v1.2.3"
+accepted "0start"
+accepted "x:y"
+accepted "a#b"
+accepted "a+b"
+accepted "a.b"
+accepted "a-"
+accepted "a_"
+accepted "a."
+accepted "MixedCase-Name.1"
+refused ""
+refused "-gsp"
+refused ".gsp"
+refused "_gsp"
+refused ":gsp"
+refused "#gsp"
+refused "+gsp"
+refused "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+refused "with space"
+refused " leading"
+refused "trailing "
+refused "tab\there"
+refused "line\nbreak"
+refused "slash/name"
+refused "back\\slash"
+refused "\u00e9t\u00e9"
+refused "a$b"
+refused "a@b"
+refused "a,b"
+refused "a;b"
+refused "a*b"
+refused "a=b"
+refused "a\"b"
+refused "a'b"
+refused "a!b"
+refused "a?b"
+refused "a~b"
+refused "a%b"
+refused "a&b"
+refused "a(b)"
+refused "a[b]"
+refused "a{b}"
+refused "a|b"
+refused "a<b>"
+refused "\u0661"
+refused "a\u0000b"
