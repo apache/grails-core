@@ -52,8 +52,17 @@ class GrailsJacocoPlugin implements Plugin<Project> {
 
     static final String AGGREGATE_TASK_NAME = 'jacocoAggregateReport'
 
-    /** The source set of a cli companion, the name GrailsCliArtifactGradlePlugin.CLI_SOURCE_SET_NAME in grails-gradle uses. */
+    /** The source set of the tools the build runs ({@code src/cli}), ToolBuildNames.CLI_SOURCE_SET in grails-gradle-model. */
     static final String CLI_SOURCE_SET_NAME = 'cli'
+
+    /**
+     * The source set of the tools that run as a process of their own ({@code src/standalone}),
+     * ToolBuildNames.STANDALONE_SOURCE_SET in grails-gradle-model.
+     */
+    static final String STANDALONE_SOURCE_SET_NAME = 'standalone'
+
+    /** The source sets of production code beside {@code main}, whose classes the aggregate reports as well. */
+    static final List<String> TOOL_SOURCE_SET_NAMES = [CLI_SOURCE_SET_NAME, STANDALONE_SOURCE_SET_NAME].asImmutable()
 
     /** What the name of the directory with the execution data of the JVMs a test task's tests started ends with. */
     static final String FORKS_DIRECTORY_SUFFIX = '-forks'
@@ -170,16 +179,17 @@ class GrailsJacocoPlugin implements Plugin<Project> {
                     it.sourceDirectories.from(mainSourceSet.map { it.allSource.srcDirs })
                     it.classDirectories.from(mainSourceSet.map { it.output.classesDirs })
                 }
-                // A cli companion (src/cli, added by the grails-plugin-cli plugin) is production code with its
-                // own testCli phase. Its exec data is wired in above like any other test task's; without its
-                // classes here the report has nothing to match that data against, and the whole tier is
-                // missing from Codecov. Both file collections are live: a directory the source set gains after
-                // the aggregate task is realized is still reported, where a snapshot of srcDirs would miss it.
-                sourceSets.matching { SourceSet sourceSet -> sourceSet.name == CLI_SOURCE_SET_NAME }
-                        .configureEach { SourceSet cliSourceSet ->
+                // The tools (src/cli and src/standalone, the source sets of the grails-plugin-cli plugin) are
+                // production code, tested by the testCli phase. Their exec data is wired in above like any other
+                // test task's; without their classes here the report has nothing to match that data against, and
+                // the tools are missing from Codecov. Both file collections are live: a directory a source set
+                // gains after the aggregate task is realized is still reported, where a snapshot of srcDirs
+                // would miss it.
+                sourceSets.matching { SourceSet sourceSet -> sourceSet.name in TOOL_SOURCE_SET_NAMES }
+                        .configureEach { SourceSet toolSourceSet ->
                             aggregateTask.configure {
-                                it.sourceDirectories.from(cliSourceSet.allSource.sourceDirectories)
-                                it.classDirectories.from(cliSourceSet.output.classesDirs)
+                                it.sourceDirectories.from(toolSourceSet.allSource.sourceDirectories)
+                                it.classDirectories.from(toolSourceSet.output.classesDirs)
                             }
                         }
             }

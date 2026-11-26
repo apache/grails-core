@@ -220,6 +220,51 @@ class GrailsJacocoPluginSpec extends Specification {
         reported(result.output, 'SOURCE_DIR', 'app-module/src/extra-cli')
     }
 
+    def "jacocoAggregateReport includes a subproject's standalone source set, the tools that run on their own"() {
+        given: "a subproject with both source sets of tools, as the grails-plugin-cli plugin adds them, and a third one that is not production code"
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            tasks.register('printAggregateDirs') {
+                doLast {
+                    def aggregate = tasks.getByName('jacocoAggregateReport')
+                    aggregate.classDirectories.files.each { println "CLASS_DIR \${it}" }
+                    aggregate.sourceDirectories.files.each { println "SOURCE_DIR \${it}" }
+                }
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.gradle.grails-jacoco'
+            }
+            repositories { mavenCentral() }
+            sourceSets {
+                cli
+                standalone
+                fixtures
+            }
+        """
+
+        when: "listing the directories the aggregate reports on"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('printAggregateDirs')
+                .withPluginClasspath()
+                .build()
+
+        then: "the classes and sources of both kinds of tool are reported beside main's"
+        reported(result.output, 'CLASS_DIR', 'app-module/build/classes/groovy/standalone')
+        reported(result.output, 'SOURCE_DIR', 'app-module/src/standalone/groovy')
+        reported(result.output, 'CLASS_DIR', 'app-module/build/classes/groovy/cli')
+        reported(result.output, 'CLASS_DIR', 'app-module/build/classes/groovy/main')
+
+        and: "a source set of another name is not production code"
+        !reported(result.output, 'CLASS_DIR', 'app-module/build/classes/groovy/fixtures')
+        !reported(result.output, 'SOURCE_DIR', 'app-module/src/fixtures/groovy')
+    }
+
     def "a JVM that a test starts itself is counted, in a file of its own that the reports read"() {
         given: "a class that only a process of its own runs, and a test that starts that process with the agent the test task hands it"
         testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"

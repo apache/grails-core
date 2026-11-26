@@ -72,6 +72,42 @@ class PublishPluginSpec extends Specification {
         files.size() == 3
     }
 
+    void "the artifacts of both companions with the tools of a plugin are checksummed and listed with their coordinates"() {
+        given: "a plugin publishing itself, the companion with the tools the build runs and the one with those that run on their own"
+        Project project = ProjectBuilder.builder().withName('grails-scaffolding').build()
+        PublishingExtension publishing = publishingOf(project)
+
+        File mainJar = artifact('grails-scaffolding-1.0.jar')
+        File cliJar = artifact('grails-scaffolding-cli-1.0.jar')
+        File standaloneJar = artifact('grails-scaffolding-cli-standalone-1.0.jar')
+        File standaloneSources = artifact('grails-scaffolding-cli-standalone-1.0-sources.jar')
+
+        [maven: ['grails-scaffolding', [mainJar]], cli: ['grails-scaffolding-cli', [cliJar]],
+         cliStandalone: ['grails-scaffolding-cli-standalone', [standaloneJar, standaloneSources]]].each { String name, List publication ->
+            publishing.publications.create(name, MavenPublication) { MavenPublication pub ->
+                pub.groupId = 'org.apache.grails'
+                pub.artifactId = publication[0]
+                pub.version = '1.0'
+                (publication[1] as List<File>).each { File file ->
+                    pub.artifact(file) { it.classifier = file.name.endsWith('-sources.jar') ? 'sources' : null }
+                }
+            }
+        }
+
+        when:
+        List<File> checksummed = PublishPlugin.collectChecksumInputFiles(project, publishing)
+        Map<String, String> coordinates = PublishPlugin.collectPublishedArtifactCoordinates(publishing)
+
+        then: "nothing selects the artifacts by a pattern of their names, so the second companion is not left out"
+        checksummed.toSet() == [mainJar, cliJar, standaloneJar, standaloneSources].toSet()
+        coordinates == [
+                (mainJar.absolutePath)          : 'org.apache.grails:grails-scaffolding:1.0',
+                (cliJar.absolutePath)           : 'org.apache.grails:grails-scaffolding-cli:1.0',
+                (standaloneJar.absolutePath)    : 'org.apache.grails:grails-scaffolding-cli-standalone:1.0',
+                (standaloneSources.absolutePath): 'org.apache.grails:grails-scaffolding-cli-standalone:1.0:sources',
+        ]
+    }
+
     void "collectChecksumInputFiles excludes the plugin metadata sidecar"() {
         given: "a publication carrying a jar alongside the plugin descriptor sidecar"
         Project project = ProjectBuilder.builder().withName('grails-core').build()

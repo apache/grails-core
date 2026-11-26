@@ -53,9 +53,17 @@ class CompilePlugin implements Plugin<Project> {
             'grailsAutoConfigurationImportsInputRegistered'
 
     static final String GRAILS_FACTORIES_PATH = 'src/main/resources/META-INF/grails.factories'
+
+    /**
+     * The hand-authored factories files of the tools: of the project's sources, of the tools the build runs
+     * ({@code src/cli}) and of the tools that run as a process of their own ({@code src/standalone}), the
+     * folders {@code ToolBuildNames.CLI_SOURCE_FOLDER} and {@code ToolBuildNames.STANDALONE_SOURCE_FOLDER}
+     * of grails-gradle-model name.
+     */
     static final List<String> CLI_FACTORIES_PATHS = [
             'src/main/resources/META-INF/grails-cli.factories',
             'src/cli/resources/META-INF/grails-cli.factories',
+            'src/standalone/resources/META-INF/grails-cli.factories',
     ].asImmutable()
     private static final String GRAILS_FACTORIES_INPUT_REGISTERED = 'grailsFactoriesInputRegistered'
     private static final String CLI_FACTORIES_INPUT_REGISTERED = 'grailsCliFactoriesInputRegistered'
@@ -234,7 +242,8 @@ class CompilePlugin implements Plugin<Project> {
     /**
      * Mirrors {@code FactoriesCompileInput} from the Grails Gradle plugins, which is not on build-logic's
      * classpath, and marks the task the same way, so a module that also applies those plugins registers
-     * each input once. A cli tier's compilation is covered by the plugin that creates it.
+     * each input once. The compilations of the tools' own source sets are covered by the plugin that
+     * creates them.
      */
     static void registerFactoriesInputs(Project project, GroovyCompile task) {
         if (!task.extensions.extraProperties.has(GRAILS_FACTORIES_INPUT_REGISTERED)) {
