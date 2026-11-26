@@ -35,8 +35,9 @@ import spock.lang.Unroll
  * compiles it, and the tool is run in the application. As {@code create-tool} writes it, the tool says
  * what it was given and succeeds. Once the build has compiled the project the catalog is current, also for a
  * tool added since. A tool in the deprecated folder grails-app/commands that extends another is listed by a name it runs by:
- * the name it has when it runs, when the compiler can read it, and the name its class gives otherwise, and is run after a
- * warning that the folder is deprecated.
+ * the name it has when it runs, when the compiler can read it, and the name its class gives otherwise. The build warns that
+ * the folder is deprecated when it compiles it, and the command line warns again before it runs a tool whose descriptor
+ * says that its source is in that folder; a tool without a descriptor has the warning of the build only.
  *
  * <p>The build compiles src/cli and runs a tool with the task runTool where the Gradle plugin of the checkout has the folders
  * of tools; the specification runs there.</p>
@@ -45,6 +46,10 @@ import spock.lang.Unroll
 @Requires({ ToolsOfTheBuild.hasToolFolders() })
 @Timeout(900)
 class GeneratedApplicationToolSpec extends CommandSpec implements CommandFixture {
+
+    /** What the build says, as a warning, each time it compiles grails-app/commands. */
+    static final String LEGACY_FOLDER_COMPILED = 'grails-app/commands is deprecated: the classes in it are compiled and run as before, ' +
+            'and are no longer packaged with the application. Move them to src/cli/groovy, as they are; a new tool is written there by: grails create-tool'
 
     // the Gradle daemon of the builds of the application is one of this specification, which ends it
     @Shared
@@ -149,14 +154,20 @@ class GeneratedApplicationToolSpec extends CommandSpec implements CommandFixture
         exit == 0
         ((List<Map>) catalog().tools).findAll { it.origin == 'application' }.collect { [it.name, it.registration] } == [[listed, registration]]
         err.toString().contains("| Running the tool ${listed} of the application, with the Gradle task runTool")
-        err.toString().contains("| Warning ${listed} is in grails-app/commands, which is deprecated: move it to src/cli/groovy")
         out.toString().readLines().contains('Ran import-data with the arguments [orders.csv]')
 
+        and: 'the build said that the folder is deprecated when it compiled it'
+        out.toString().readLines().contains(LEGACY_FOLDER_COMPILED)
+
+        and: 'the command line says it again before the tool runs where the descriptor of the tool says where its source is; a tool without one has the line of the build only'
+        warnedWhenRun ? err.toString().readLines().contains("| Warning ${listed} is in grails-app/commands, which is deprecated: move it to src/cli/groovy".toString()) :
+                !err.toString().contains(' is in grails-app/commands, which is deprecated')
+
         where:
-        how                                                      | members                                                                                                         || listed          | registration
-        'its constructor sets the name'                          | "    LegacyImportCommand() {\n        name = 'import-data'\n    }"                                                 || 'import-data'   | 'descriptor'
-        'its constructor calls a helper that sets the name'      | "    LegacyImportCommand() {\n        rename()\n    }\n\n    private void rename() {\n        name = 'import-data'\n    }" || 'import-data' | 'descriptor'
-        'its name is worked out, and it is listed by its class'  | "    LegacyImportCommand() {\n        name = System.getProperty('import.name', 'import-data')\n    }"             || 'legacy-import' | 'factories'
+        how                                                      | members                                                                                                         || listed          | registration | warnedWhenRun
+        'its constructor sets the name'                          | "    LegacyImportCommand() {\n        name = 'import-data'\n    }"                                                 || 'import-data'   | 'descriptor' | true
+        'its constructor calls a helper that sets the name'      | "    LegacyImportCommand() {\n        rename()\n    }\n\n    private void rename() {\n        name = 'import-data'\n    }" || 'import-data' | 'descriptor' | true
+        'its name is worked out, and it is listed by its class'  | "    LegacyImportCommand() {\n        name = System.getProperty('import.name', 'import-data')\n    }"             || 'legacy-import' | 'factories'  | false
     }
 
     private Map catalog() {
