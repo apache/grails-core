@@ -20,6 +20,7 @@ package org.grails.plugins.codecs
 
 import org.springframework.util.ClassUtils
 
+import org.apache.grails.core.plugins.PluginUtils
 import org.grails.plugins.converters.ConvertersGrailsPlugin
 import spock.lang.Specification
 
@@ -30,7 +31,7 @@ class XMLCodecSpec extends Specification {
 
     void 'the converters plugin provides the XML codec, so an application without grails-xml can escape XML'() {
         expect:
-        new ConvertersGrailsPlugin().providedArtefacts.contains(XMLCodec)
+        PluginUtils.definitionOf(ConvertersGrailsPlugin).providedArtefacts.contains(XMLCodec.name)
     }
 
     void 'text is escaped for XML'() {

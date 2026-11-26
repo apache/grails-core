@@ -42,5 +42,4 @@ import org.grails.encoder.impl.RawCodec
                 URLCodec,
                 RawCodec
         ])
-class CodecsGrailsPlugin extends Plugin {
-}
+class CodecsGrailsPlugin extends Plugin {}

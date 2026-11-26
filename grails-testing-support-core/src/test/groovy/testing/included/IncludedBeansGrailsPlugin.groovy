@@ -25,6 +25,7 @@ import org.springframework.core.env.Environment
 
 import grails.compiler.beans.GrailsBeans
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * A plugin whose {@code beans} block reaches a unit test through its generated
@@ -36,9 +37,8 @@ import grails.plugins.Plugin
 // transform moves it onto the generated IncludedBeansAutoConfiguration
 @GrailsBeans
 @AutoConfiguration
+@GrailsPluginDescriptor
 class IncludedBeansGrailsPlugin extends Plugin {
-
-    String version = '1.0'
 
     def beans = {
         bean(IncludedGreeting).conditionalOnMissingBean()

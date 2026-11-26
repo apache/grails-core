@@ -28,5 +28,4 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  * discovers reports the logical {@code nativeMessages}.
  */
 @GrailsPluginDescriptor
-class NativeMessagesGrailsPlugin extends Plugin {
-}
+class NativeMessagesGrailsPlugin extends Plugin {}

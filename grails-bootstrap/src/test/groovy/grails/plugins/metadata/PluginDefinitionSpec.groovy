@@ -25,7 +25,7 @@ class PluginDefinitionSpec extends Specification {
     void 'a declaration and its published form give consumers the same resolved constraints'() {
         given:
         def definition = new PluginDefinition.Builder(
-                pluginName: 'data-source', pluginVersion: '9.0.1',
+                pluginName: 'data-source', pluginClass: 'example.DataSourceGrailsPlugin', pluginVersion: '9.0.1',
                 grailsVersionRange: '${plugin.version} > *',
                 dependsOn: [core: '${plugin.version}'], loadAfter: ['some-plugin']
         ).build()
@@ -51,18 +51,18 @@ class PluginDefinitionSpec extends Specification {
             grailsVersion=9.0 > *
             dependsOn.other-plugin=2.0 > *
             artefacts.Service=missing.ExampleService
-            metadata.complete=true
         '''))
 
         then:
         definition.pluginName == 'catalogProbe'
-        definition.providedPlugins == ['missing.CatalogPlugin']
+        definition.pluginClass == 'missing.CatalogPlugin'
+        definition.pluginVersion == '3.7'
+        definition.providedClasses == ['missing.ExampleService']
         definition.dependsOn == [otherPlugin: '2.0 > *']
         definition.grailsVersionRange == '9.0 > *'
-        definition.metadataComplete
 
         when:
-        definition.providedArtefactsByType.Service.clear()
+        definition.artefactsByType.Service.clear()
 
         then:
         thrown(UnsupportedOperationException)
@@ -80,7 +80,7 @@ class PluginDefinitionSpec extends Specification {
         line                      | field
         'format.version=2'        | 'format'
         'enabled=nope'            | 'enabled'
-        'metadata.complete=nope'  | 'metadata.complete'
+        'name=probe'              | 'names no plugin class'
         'name=mistake'            | 'name'
     }
 }

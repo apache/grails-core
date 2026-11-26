@@ -36,5 +36,4 @@ import grails.plugins.metadata.GrailsPluginDescriptor
 @AutoConfiguration
 @Import(ForgeCoreConfiguration)
 @GrailsPluginDescriptor
-class ForgeGrailsPlugin extends Plugin {
-}
+class ForgeGrailsPlugin extends Plugin {}

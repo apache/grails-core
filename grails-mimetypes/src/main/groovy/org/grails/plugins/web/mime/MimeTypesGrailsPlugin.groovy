@@ -29,5 +29,4 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  * @since 1.0
  */
 @GrailsPluginDescriptor(dependsOn = ['core:${plugin.version}', 'controllers:${plugin.version}'], observe = ['controllers'])
-class MimeTypesGrailsPlugin extends Plugin {
-}
+class MimeTypesGrailsPlugin extends Plugin {}

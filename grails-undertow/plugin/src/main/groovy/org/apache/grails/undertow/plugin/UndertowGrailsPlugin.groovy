@@ -35,5 +35,4 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  */
 @CompileStatic
 @GrailsPluginDescriptor
-class UndertowGrailsPlugin extends Plugin {
-}
+class UndertowGrailsPlugin extends Plugin {}

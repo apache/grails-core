@@ -53,12 +53,11 @@ class DataSourceGrailsPluginSpec extends Specification {
         PluginDefinition definition = resource.withReader('UTF-8') { PluginDefinition.read('dataSource', it) }
 
         then:
-        definition.metadataComplete
+        definition.pluginClass == DataSourceGrailsPlugin.name
         definition.pluginVersion
         definition.grailsVersionRange == definition.pluginVersion + ' > *'
         definition.dependsOn == [core: definition.pluginVersion]
-        new DefaultGrailsPlugin(DataSourceGrailsPlugin, null,
-                new DefaultGrailsApplication()).getDependentVersion('core') == definition.pluginVersion
+        new DefaultGrailsPlugin(DataSourceGrailsPlugin, new DefaultGrailsApplication()).getDependentVersion('core') == definition.pluginVersion
     }
 
     void "test data sources Grails plugin Spring configuration"() {

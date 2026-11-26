@@ -21,6 +21,8 @@ package loadsecond
 
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPluginManager
+import grails.util.GrailsUtil
+import org.apache.grails.core.plugins.PluginDiscovery
 import grails.testing.mixin.integration.Integration
 import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.Specification
@@ -38,6 +40,9 @@ class PluginLoadOrderSpec extends Specification {
 
     @Autowired
     GrailsPluginManager pluginManager
+
+    @Autowired
+    PluginDiscovery pluginDiscovery
 
     // ========== Plugin Manager Tests ==========
 
@@ -72,13 +77,12 @@ class PluginLoadOrderSpec extends Specification {
     }
 
     def "loadAfter is declared correctly"() {
-        when: "getting plugin instance"
+        when: "getting plugin"
         def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
 
         then: "loadAfter contains loadfirst"
-        instance != null
-        instance.loadAfter?.contains('loadfirst')
+        plugin != null
+        plugin.loadAfterNames.toList() == ['loadfirst']
     }
 
     // ========== All Plugins Tests ==========
@@ -111,24 +115,12 @@ class PluginLoadOrderSpec extends Specification {
         plugin.version != null
     }
 
-    def "plugin grails version constraint is set"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
+    def "plugin grails version constraint defaults to the Grails version it was compiled with"() {
+        when: "getting the definition the compiler published for the plugin"
+        def definition = pluginDiscovery.findPlugin('loadsecond').metadata.definition
 
-        then: "grails version constraint exists"
-        instance != null
-        instance.grailsVersion != null
-    }
-
-    def "plugin profiles are configured"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
-
-        then: "profiles are set"
-        instance != null
-        instance.profiles?.contains('web')
+        then: "the grails version constraint is the compiling Grails version or later"
+        definition.grailsVersionRange == "${GrailsUtil.grailsVersion} > *"
     }
 
     // ========== Plugin State Tests ==========
@@ -158,14 +150,12 @@ class PluginLoadOrderSpec extends Specification {
     // ========== Plugin Exclusions Tests ==========
 
     def "plugin excludes are configured"() {
-        when: "getting plugin instance"
+        when: "getting plugin"
         def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
 
         then: "exclusions are defined"
-        instance != null
-        instance.pluginExcludes != null
-        instance.pluginExcludes.contains('grails-app/views/error.gsp')
+        plugin != null
+        plugin.pluginExcludes == ['grails-app/views/error.gsp']
     }
 
     // ========== Plugin API Tests ==========
@@ -183,40 +173,5 @@ class PluginLoadOrderSpec extends Specification {
     def "getGrailsPlugin returns null for non-existent plugin"() {
         expect: "null is returned"
         pluginManager.getGrailsPlugin('nonExistentPlugin') == null
-    }
-
-    // ========== Plugin Title and Description Tests ==========
-
-    def "plugin title is set"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
-
-        then: "title is available"
-        instance != null
-        instance.title == 'Loadsecond'
-    }
-
-    def "plugin description is set"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
-
-        then: "description is available"
-        instance != null
-        instance.description != null
-        instance.description.contains('loadfirst')
-    }
-
-    // ========== Plugin Documentation Tests ==========
-
-    def "plugin documentation URL is set"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
-
-        then: "documentation URL is available"
-        instance != null
-        instance.documentation != null
     }
 }

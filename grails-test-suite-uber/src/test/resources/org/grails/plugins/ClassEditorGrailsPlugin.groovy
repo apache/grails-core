@@ -17,12 +17,11 @@
  *  under the License.
  */
 
-package org.grails.plugins;
-class ClassEditorGrailsPlugin {
+package org.grails.plugins
 
-    def version = 1.1
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
-    def withSpring() {}
-
-    def withApplicationContext(ctx) {}
+@GrailsPluginDescriptor
+class ClassEditorGrailsPlugin extends Plugin {
 }

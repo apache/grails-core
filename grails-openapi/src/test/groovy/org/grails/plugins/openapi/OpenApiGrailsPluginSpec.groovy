@@ -51,6 +51,7 @@ import grails.plugins.GrailsPluginManager
 import grails.util.Holders
 import grails.web.mapping.UrlMappingsHolder
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginUtils
 import org.grails.config.PropertySourcesConfig
 import org.grails.support.MockApplicationContext
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
@@ -189,9 +190,13 @@ class OpenApiGrailsPluginSpec extends Specification {
         Holders.setGrailsApplication(previous)
     }
 
-    void 'declares a dependency on the URL mappings plugin'() {
-        expect:
-        new OpenApiGrailsPlugin().dependsOn.containsKey('urlMappings')
+    void 'declares a dependency on the URL mappings plugin of its own version'() {
+        when:
+        def definition = PluginUtils.definitionOf(OpenApiGrailsPlugin)
+
+        then:
+        definition.pluginVersion
+        definition.dependsOn == [urlMappings: definition.pluginVersion]
     }
 
     private static DefaultListableBeanFactory register(Map<String, Object> config = [:]) {
@@ -211,7 +216,7 @@ class OpenApiGrailsPluginSpec extends Specification {
     private static UrlMappingsHolder urlMappingsWith(Map<String, Object> config) {
         def context = new GenericApplicationContext()
         context.refresh()
-        def application = new DefaultGrailsApplication(([CatchAllUrlMappings] + new OpenApiGrailsPlugin().providedArtefacts) as Class[])
+        def application = new DefaultGrailsApplication(([CatchAllUrlMappings] + PluginUtils.definitionOf(OpenApiGrailsPlugin).providedArtefacts.collect { String name -> Class.forName(name) }) as Class[])
         application.config = new PropertySourcesConfig(config)
         application.initialise()
         Holders.setGrailsApplication(application)

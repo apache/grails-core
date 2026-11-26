@@ -24,5 +24,4 @@ import grails.plugins.*
 import grails.plugins.metadata.GrailsPluginDescriptor
 
 @GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
-class ExplodedGrailsPlugin extends Plugin {
-}
+class ExplodedGrailsPlugin extends Plugin {}

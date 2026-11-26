@@ -26,21 +26,26 @@ import spock.lang.Specification
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 
+import grails.plugins.metadata.PluginDefinition
+import org.apache.grails.core.plugins.PluginUtils
 import org.apache.grails.undertow.core.autoconfigure.servlet.UndertowServletWebServerAutoConfiguration
 import org.apache.grails.undertow.core.servlet.UndertowServletWebServerFactory
 
 class UndertowGrailsPluginSpec extends Specification {
 
-    void 'plugin descriptor declares expected metadata'() {
+    void 'the compiler publishes the plugin descriptor with the build version'() {
         given:
-        def plugin = new UndertowGrailsPlugin()
+        def resource = UndertowGrailsPlugin.classLoader.getResource(PluginUtils.getPluginDescriptorPath('undertow'))
 
-        expect:
-        plugin.title == 'Undertow for Grails'
-        plugin.author == 'Grails Core Team'
-        plugin.description
-        plugin.documentation
-        plugin.grailsVersion
+        when:
+        PluginDefinition definition = resource.withReader('UTF-8') { PluginDefinition.read('undertow', it) }
+
+        then:
+        definition.pluginName == 'undertow'
+        definition.pluginClass == UndertowGrailsPlugin.name
+        definition.pluginVersion
+        definition.grailsVersionRange == definition.pluginVersion + ' > *'
+        PluginUtils.definitionOf(UndertowGrailsPlugin).pluginVersion == definition.pluginVersion
     }
 
     void 'undertow autoconfiguration provides the servlet web server factory in a servlet web application'() {

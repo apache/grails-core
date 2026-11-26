@@ -28,5 +28,4 @@ import grails.plugins.metadata.PluginSource
 @PluginSource
 @CompileStatic
 @GrailsPluginDescriptor
-class GebGrailsPlugin extends Plugin {
-}
+class GebGrailsPlugin extends Plugin {}

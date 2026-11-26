@@ -22,5 +22,4 @@ import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
 @GrailsPluginDescriptor
-class LegacyCommandsPluginGrailsPlugin extends Plugin {
-}
+class LegacyCommandsPluginGrailsPlugin extends Plugin {}

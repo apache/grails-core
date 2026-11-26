@@ -40,25 +40,27 @@ class PluginLoadOrderTests {
         def gcl = new GroovyClassLoader()
 
         gcl.parseClass '''
-class FiveGrailsPlugin {
-    def version = 0.1
-    def loadAfter = ['one']
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+@GrailsPluginDescriptor(loadAfter = ['one'])
+class FiveGrailsPlugin extends Plugin {
 }
 
-class FourGrailsPlugin {
-    def version = 0.1
-    def loadAfter = ['two']
+@GrailsPluginDescriptor(loadAfter = ['two'])
+class FourGrailsPlugin extends Plugin {
 }
-class OneGrailsPlugin {
-    def version = 0.1
-    def loadBefore = ['two']
+
+@GrailsPluginDescriptor(loadBefore = ['two'])
+class OneGrailsPlugin extends Plugin {
 }
-class TwoGrailsPlugin {
-    def version = 0.1
-    def loadAfter = ['three']
+
+@GrailsPluginDescriptor(loadAfter = ['three'])
+class TwoGrailsPlugin extends Plugin {
 }
-class ThreeGrailsPlugin {
-    def version = 0.1
+
+@GrailsPluginDescriptor
+class ThreeGrailsPlugin extends Plugin {
 }
 '''
 

@@ -21,6 +21,7 @@ package org.grails.web.gsp.io
 import org.springframework.core.env.StandardEnvironment
 
 import grails.core.DefaultGrailsApplication
+import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPlugin
 import grails.util.GrailsUtil
 import grails.util.GrailsWebMockUtil
@@ -228,7 +229,7 @@ class GrailsConventionGroovyPageLocatorSpec extends Specification {
 
     GrailsConventionGroovyPageLocator getPageLocator() {
         GrailsConventionGroovyPageLocator locator = new GrailsConventionGroovyPageLocator()
-        def str = '''format=1
+        def str = '''format.version=1
 name=testBinary
 version=1.0
 class=org.grails.web.gsp.io.TestBinaryGrailsPlugin
@@ -236,7 +237,9 @@ artefacts.Resource=org.grails.web.gsp.io.TestBinaryResource
 '''
 
         def resource = new MockBinaryPluginResource(str.bytes)
-        def descriptor = new PluginDescriptor(resource, ['org.grails.web.gsp.io.TestBinaryGrailsPlugin'], ['org.grails.web.gsp.io.TestBinaryResource'])
+        def properties = new Properties()
+        properties.load(new StringReader(str))
+        def descriptor = PluginDescriptor.fromProperties('testBinary', resource, properties)
         resource.relativesResources['static/css/main.css'] = new ByteArrayResource(''.bytes)
         def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
         GroovyPageParser gpp = new GroovyPageParser("binaryView", "/test/binaryView.gsp", "/test/binaryView.gsp", new ByteArrayInputStream("hello world".bytes), "UTF-8", "HTML", null)
@@ -262,9 +265,11 @@ artefacts.Resource=org.grails.web.gsp.io.TestBinaryResource
     }
 }
 
-class TestBinaryGrailsPlugin {
-
-    def version = 1.0
+/**
+ * A binary plugin described by the descriptor the test builds. It carries no annotation, so that no other
+ * test discovers it from the class path.
+ */
+class TestBinaryGrailsPlugin extends Plugin {
 }
 
 class TestBinaryResource {}

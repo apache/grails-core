@@ -79,6 +79,19 @@ class GrailsApplicationSpec extends ApplicationContextSpec implements CommandOut
         output.containsKey('src/main/groovy/example/grails/FooGrailsPlugin.groovy')
         def pluginGroovy = output.get("src/main/groovy/example/grails/FooGrailsPlugin.groovy")
 
+        and: 'the plugin is an annotated Plugin subclass whose metadata lives in the annotation'
+        pluginGroovy.contains('import grails.plugins.metadata.GrailsPluginDescriptor')
+        pluginGroovy.contains("@GrailsPluginDescriptor(\n        // Files left out of the plugin's packaged artefacts\n        pluginExcludes = ['grails-app/views/error.gsp']")
+        pluginGroovy.contains('class FooGrailsPlugin extends Plugin {')
+        pluginGroovy.contains('BeanRegistrar beanRegistrar() {')
+        pluginGroovy.contains('void onShutdown(Map<String, Object> event) {')
+
+        and: 'no reflective metadata property or closure-valued hook is generated'
+        !pluginGroovy.contains('def version')
+        !pluginGroovy.contains('def grailsVersion')
+        !pluginGroovy.contains('def pluginExcludes')
+        !pluginGroovy.contains('def doWithSpring')
+
         where:
         applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN]
     }

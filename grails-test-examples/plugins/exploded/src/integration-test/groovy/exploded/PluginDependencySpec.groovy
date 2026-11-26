@@ -46,14 +46,12 @@ class PluginDependencySpec extends Specification {
     // ========== Plugin Dependency Declaration Tests ==========
 
     def "exploded plugin declares loadAfter dependency"() {
-        when: "getting plugin instance"
+        when: "getting plugin"
         def plugin = pluginManager.getGrailsPlugin('exploded')
-        def instance = plugin?.instance
 
         then: "loadAfter is declared"
-        instance != null
-        instance.loadAfter != null
-        instance.loadAfter.contains('springSecurityCore')
+        plugin != null
+        plugin.loadAfterNames.toList() == ['springSecurityCore']
     }
 
     def "plugin manager respects loadAfter declarations"() {
@@ -148,18 +146,6 @@ class PluginDependencySpec extends Specification {
         services != null
     }
 
-    // ========== Plugin Profiles Tests ==========
-
-    def "plugin profiles are configured"() {
-        when: "getting plugin"
-        def plugin = pluginManager.getGrailsPlugin('exploded')
-        def instance = plugin?.instance
-
-        then: "profiles are set"
-        instance != null
-        instance.profiles?.contains('web')
-    }
-
     // ========== Multi-Plugin Interaction Tests ==========
 
     def "multiple plugins can be loaded simultaneously"() {
@@ -194,11 +180,11 @@ class PluginDependencySpec extends Specification {
     def "exploded plugin metadata is correct"() {
         when: "getting exploded plugin"
         def plugin = pluginManager.getGrailsPlugin('exploded')
-        def instance = plugin?.instance
 
-        then: "metadata is set"
-        instance != null
-        instance.title == 'Exploded Plugin'
+        then: "it is the annotated plugin class, with the build version the compiler recorded"
+        plugin != null
+        plugin.instance instanceof ExplodedGrailsPlugin
+        plugin.version
     }
 
     // ========== Dynamic Plugin Discovery Tests ==========
