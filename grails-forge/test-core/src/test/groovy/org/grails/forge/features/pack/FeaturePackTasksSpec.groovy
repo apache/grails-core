@@ -152,7 +152,7 @@ class FeaturePackTasksSpec extends CommandSpec {
     }
 
     @IgnoreIf({ os.windows })
-    void 'a directory of the pack that is a link is checked as the pack it leads to, and is not put into the jar'() {
+    void 'a directory of the pack that is a link is refused by every task of the pack, with the real Forge on the class path'() {
         given:
         pluginWithPack()
         File pack = new File(dir, 'src/main/forge')
@@ -161,15 +161,28 @@ class FeaturePackTasksSpec extends CommandSpec {
         Files.createSymbolicLink(pack.toPath(), elsewhere.toPath())
 
         when:
-        BuildResult checked = executeGradle('checkForgePack')
-        BuildResult jar = fail('jar')
+        Map<String, BuildResult> failed = ['checkForgePack', 'forgePackTest', 'copyForgePack', 'jar'].collectEntries { String task ->
+            [(task): fail(task)]
+        }
 
-        then: 'Forge reads the directory it is given, through the link'
-        checked.task(':checkForgePack').outcome == TaskOutcome.SUCCESS
-
-        and: 'the plugin refuses to stage it'
-        jar.output.contains('src/main/forge is a link, which the directory of a feature pack cannot be')
+        then: 'no task reads the pack through the link: Forge is not started, and nothing is staged or put into a jar'
+        failed.every { String task, BuildResult result ->
+            result.output.contains('src/main/forge is a link, which the directory of a feature pack cannot be')
+        }
+        failed.checkForgePack.task(':checkForgePack').outcome == TaskOutcome.FAILED
+        failed.forgePackTest.task(':forgePackTest').outcome == TaskOutcome.FAILED
+        failed.copyForgePack.task(':copyForgePack').outcome == TaskOutcome.FAILED
+        !new File(dir, 'build/grails/forge-pack-check/checked').exists()
+        !new File(dir, 'build/forge-pack-fixtures').exists()
         !new File(dir, 'build/libs').exists()
+
+        when: 'the pack is in the directory itself again'
+        assert pack.delete()
+        assert elsewhere.renameTo(pack)
+        BuildResult checked = executeGradle('checkForgePack')
+
+        then:
+        checked.task(':checkForgePack').outcome == TaskOutcome.SUCCESS
     }
 
     /**
