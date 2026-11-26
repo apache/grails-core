@@ -38,6 +38,7 @@ enum GradleConfiguration implements Ordered {
     COMPILE_ONLY('compileOnly', 5),
     CONSOLE('console', 6),
     GRAILS_CLI('grailsCli', 6),
+    GRAILS_CLI_STANDALONE('grailsCliStandalone', 6),
     DEVELOPMENT_ONLY('developmentOnly', 2),
     TEST_AND_DEVELOPMENT_ONLY('testAndDevelopmentOnly', 2),
     RUNTIME_ONLY('runtimeOnly', 7),
@@ -94,6 +95,9 @@ enum GradleConfiguration implements Ordered {
                 }
                 if (scope.getPhases().contains(Phase.GRAILS_CLI)) {
                     return Optional.of(GradleConfiguration.GRAILS_CLI)
+                }
+                if (scope.getPhases().contains(Phase.GRAILS_CLI_STANDALONE)) {
+                    return Optional.of(GradleConfiguration.GRAILS_CLI_STANDALONE)
                 }
                 if (scope.getPhases().contains(Phase.RUNTIME)) {
                     if (scope.getPhases().contains(Phase.COMPILATION)) {

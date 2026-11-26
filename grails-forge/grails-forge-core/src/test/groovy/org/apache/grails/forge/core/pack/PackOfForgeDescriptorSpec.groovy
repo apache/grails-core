@@ -283,7 +283,7 @@ build:
         where:
         text                                                                              | problem
         'dependencies:\n  - scope: implementation\n    coordinates: com.acme:a\n    when: gsp\n' | "dependencies[0].when: must be a condition, a mapping with one of the keys ${CONDITION_KEYS}, but is 'gsp'"
-        'dependencies:\n  - scope: api\n    coordinates: com.acme:a\n'                    | "dependencies[0].scope: must be one of [implementation, compileOnly, runtimeOnly, developmentOnly, grailsCli, testImplementation, testCompileOnly, testRuntimeOnly, testAndDevelopmentOnly, integrationTestImplementationTestFixtures, buildscript], but is 'api'"
+        'dependencies:\n  - scope: api\n    coordinates: com.acme:a\n'                    | "dependencies[0].scope: must be one of [implementation, compileOnly, runtimeOnly, developmentOnly, grailsCli, grailsCliStandalone, testImplementation, testCompileOnly, testRuntimeOnly, testAndDevelopmentOnly, integrationTestImplementationTestFixtures, buildscript], but is 'api'"
         'buildPlugins:\n  - id: a.b\n    apply: false\n'                                  | 'buildPlugins[0].apply: must be true or be left out, but is the value false'
         'buildPlugins:\n  - id: a.b\n    when: { feature: }\n'                            | 'buildPlugins[0].when.feature: must be text, but is empty'
         'files:\n  - from: a.gsp\n    to: a.txt\n    template: true\n'                    | 'files[0].template: must be false or be left out, but is the value true'

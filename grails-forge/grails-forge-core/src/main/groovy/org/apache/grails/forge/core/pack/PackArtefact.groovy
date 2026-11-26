@@ -78,7 +78,7 @@ final class PackArtefact {
     public static final Set<String> RESERVED = Collections.unmodifiableSet(new LinkedHashSet<String>([
             'app', 'webapp', 'web-app', 'restapi', 'rest-api', 'plugin', 'web-plugin', 'rest-api-plugin',
             'controller', 'service', 'domain-class', 'taglib', 'tag-lib', 'interceptor', 'job', 'unit-test', 'integration-test',
-            'functional-test', 'restful-controller', 'domain-resource', 'command',
+            'functional-test', 'restful-controller', 'domain-resource', 'tool', 'command',
             'script', 'profile', 'creator-command', 'generator-command', 'gradle-command', 'feature', 'template',
     ]))
 

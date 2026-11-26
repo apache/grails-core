@@ -26,16 +26,17 @@ description: The Scaffolding Plugin simplifies generating CRUD interfaces for do
 guideOfGrails: guide/scaffolding.html
 applicationTypes: [web, web-plugin, rest-api, rest-api-plugin]
 default: { applicationType: [web, web-plugin] }
-# a REST API has JSON views and no GSP, which is how the commands of the plugin tell that it is given JSON views
+# a REST API has JSON views and no GSP, which is how the tools of the plugin tell from the record that it is given JSON views
 adds:
   - feature: gsp
     when: { applicationType: [web, web-plugin] }
-# a web application has the plugin, which also scaffolds pages at run time; a REST API has its commands and their
-# templates only, which generate sources: the plugin, GSP and the fields plugin stay off the class path it runs with
+# a web application has the plugin, which also scaffolds pages at run time; a REST API has its tools and their templates
+# only, which generate sources and run as a process of their own: the companion -cli-standalone does not depend on the
+# plugin, so the plugin, GSP and the fields plugin stay off every class path of the application, its tests and its tools
 dependencies:
   - scope: implementation
     coordinates: org.apache.grails:grails-scaffolding
     when: { applicationType: [web, web-plugin] }
-  - scope: grailsCli
-    coordinates: org.apache.grails:grails-scaffolding-cli
+  - scope: grailsCliStandalone
+    coordinates: org.apache.grails:grails-scaffolding-cli-standalone
     when: { applicationType: [rest-api, rest-api-plugin] }

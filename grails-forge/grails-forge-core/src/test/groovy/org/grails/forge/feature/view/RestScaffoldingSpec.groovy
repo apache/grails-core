@@ -28,8 +28,9 @@ import org.grails.forge.fixture.CommandOutputFixture
  * The scaffolding feature in a REST API application and a REST API plugin, where the commands of the scaffolding
  * plugin generate a REST controller and JSON views: they do so where the application has the JSON views plugin
  * and no GSP, so the feature must not bring the GSP feature and its pages there as it does in a web application.
- * Nor does it bring the plugin itself: a REST API has the commands of the plugin, which generate sources, on the class
- * path a command is run with, and nothing of the plugin on the class path it runs with.
+ * Nor does it bring the plugin itself: a REST API has the tools of the plugin that run as a process of their own, which
+ * generate sources, in the scope grailsCliStandalone, whose companion does not depend on the plugin, and nothing of the
+ * plugin on any class path of the application, its tests or its tools.
  */
 class RestScaffoldingSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
@@ -38,14 +39,16 @@ class RestScaffoldingSpec extends ApplicationContextSpec implements CommandOutpu
         when:
         Map<String, String> output = generate(type, ['scaffolding'])
 
-        then: 'the commands of the plugin, for the class path a command is run with only'
-        output['build.gradle'].contains('    grailsCli "org.apache.grails:grails-scaffolding-cli"\n')
+        then: 'the standalone tools of the plugin, for the class path such a tool is run with only'
+        output['build.gradle'].contains('    grailsCliStandalone "org.apache.grails:grails-scaffolding-cli-standalone"\n')
+        !output['build.gradle'].contains('grails-scaffolding-cli"')
+        !output['build.gradle'].contains('grailsCli "')
 
         and: 'not the plugin itself, which would bring GSP and the fields plugin to the class path the application runs with'
         !output['build.gradle'].contains('"org.apache.grails:grails-scaffolding"')
         !output['build.gradle'].contains('"org.apache.grails:grails-fields"')
 
-        and: 'what the commands take for a REST API: the JSON views plugin, and no GSP in the views'
+        and: 'what the tools take for a REST API: the JSON views plugin, and no GSP in the views'
         output['build.gradle'].contains('implementation "org.apache.grails:grails-views-gson"')
         !output['build.gradle'].contains('"org.apache.grails:grails-gsp"')
         !output.keySet().any { it.startsWith('grails-app/views/') && it.endsWith('.gsp') }
