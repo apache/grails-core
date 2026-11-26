@@ -38,6 +38,7 @@ import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.PropertyNode;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.VariableScope;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
@@ -170,6 +171,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         this.sourceUnit = sourceUnit;
     }
 
+    /** Whether a where closure of the method being visited was rewritten, so its variable scopes are computed again. */
+    private boolean closureTransformed;
+
     @Override
     public void visitClass(ClassNode node) {
         try {
@@ -185,15 +189,53 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
     @Override
     public void visitMethod(MethodNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
         try {
             super.visitMethod(node);
+            if (closureTransformed && currentClassNode != null) {
+                // the where closures of the method were rewritten after the variable scopes were computed: a closure
+                // that no longer uses a variable still listed it, and one the transform creates had no scope of its own,
+                // so the class generator looked for a variable that the closure around it did not capture
+                AstUtils.processVariableScopes(sourceUnit, currentClassNode, node);
+            }
         } finally {
+            closureTransformed = transformedBefore;
             detachedCriteriaVariables.clear();
         }
     }
 
     @Override
     public void visitField(FieldNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
+        try {
+            visitFieldNode(node);
+            if (closureTransformed) {
+                // as for a method: the initializer of a field is scoped with its class
+                AstUtils.processVariableScopes(sourceUnit, node.getOwner(), null);
+            }
+        } finally {
+            closureTransformed = transformedBefore;
+        }
+    }
+
+    @Override
+    public void visitProperty(PropertyNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
+        try {
+            // the initializer of a property, such as a static where query declared without a modifier, is visited here
+            super.visitProperty(node);
+            if (closureTransformed) {
+                AstUtils.processVariableScopes(sourceUnit, node.getDeclaringClass(), null);
+            }
+        } finally {
+            closureTransformed = transformedBefore;
+        }
+    }
+
+    private void visitFieldNode(FieldNode node) {
         ClassNode classNode = node.getOwner();
         if (node.isStatic() && AstUtils.isDomainClass(classNode)) {
             Expression initialExpression = node.getInitialExpression();
@@ -627,6 +669,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             if (!newCode.getStatements().isEmpty()) {
                 closureExpression.putNodeMetaData(TRANSFORMED_MARKER, Boolean.TRUE);
                 closureExpression.setCode(newCode);
+                closureTransformed = true;
             }
         } finally {
             this.currentClassNode = previousClassNode;

@@ -132,3 +132,10 @@ This release carries the changes of <<grails-7-1-7,Grails 7.1.7>>. It has no upg
 === Grails 7.2.5
 
 This release carries the changes of <<grails-7-1-8,Grails 7.1.8>>. It has no upgrade notes of its own.
+
+[[grails-7-2-6]]
+=== Grails 7.2.6
+
+==== A where query with a subquery that uses the enclosing alias inside `||` or `&&` compiles
+
+As of Grails 7.2.6, a `where` query such as `name == 'x' || exists(Club.where { id == t.club }.property('name'))`, where `t` is an alias of the enclosing query declared with `def t = Team`, compiles (issue https://github.com/apache/grails-core/issues/17177[#17177]). It failed to compile with a `NullPointerException` from the Groovy class generator, with `||` and `&&` alike and in a method or a static property, so no working code changes. An explicit `or { }` or `and { }` block was not affected.
