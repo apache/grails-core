@@ -70,16 +70,36 @@ dependencies {
 
 An application that keeps the default never ships the module. The same dependency is needed, whatever the application's own setting, for a library that was compiled with classic call sites, because Groovy 6 can load such a class only with the module: `org.testcontainers:testcontainers-spock` is one, so declare the module as `testRuntimeOnly` next to it.
 
-==== Modernized Plugin Descriptors, Packaging, and Starter Plugins
+==== One Plugin Contract
 
-Grails 9 replaces compile-time `META-INF/grails-plugin.xml` generation with a build-time, collision-free plugin layout designed for Gradle caching, fat JARs, and GraalVM native images:
+A Grails plugin now has one way to say what it is: a `Plugin` subclass annotated with `@GrailsPluginDescriptor`.
 
-* **Build-time descriptor & discovery index:** Instead of mutating XML during `compileGroovy`, the Gradle plugin scans compiled bytecode in a cacheable task and emits `META-INF/grails/plugins.imports` (matching Spring Boot's `AutoConfiguration.imports`) alongside per-plugin `META-INF/grails/plugins/<name>/plugin.properties`.
-* **Namespaced plugin resources:** Plugin configuration (`plugin.yml` or `plugin.groovy`) and precompiled plugin GSP manifests (`views.properties`) are packaged under `META-INF/grails/plugins/<name>/`, eliminating collisions at the JAR root and `gsp/views.properties` in shadow JARs and native images.
-* **Descriptor-less starter plugins:** A Spring Boot-style plugin can opt in with `grails { plugin { starter = true } }` in `build.gradle` and use its project name and version without writing a `*GrailsPlugin` class at all.
-* **Typed Java and `@CompileStatic` descriptors:** Annotate any Java or Groovy class with `@GrailsPluginDescriptor` (`grails.plugins.metadata.GrailsPluginDescriptor`) to provide plugin metadata without the `*GrailsPlugin` suffix or reflective instantiation during discovery.
+[source,groovy]
+----
+@GrailsPluginDescriptor(
+        loadAfter = ['controllers', 'services'],
+        dependsOn = ['core:${plugin.version}'],
+        watchedResources = ['file:./grails-app/jobs/**/*Job.groovy'])
+class QuartzGrailsPlugin extends Plugin {
+    ...
+}
+----
 
-Existing `*GrailsPlugin` classes continue to work when rebuilt against Grails 9. See xref:plugins#creatingAndInstallingPlugins[Creating and Installing Plugins] and xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}].
+* **Typed metadata.** Name, Grails range, dependencies, ordering, environments, watched resources and provided artefacts
+  are annotation constants, checked by the compiler and readable by tools from bytecode or from the published
+  descriptor. The version is the project's, and `${plugin.version}` names it in a dependency range.
+* **One generator, everywhere.** The compiler writes `META-INF/grails/plugins.imports` and
+  `META-INF/grails/plugins/<name>/plugin.properties` beside the classes it compiles, so a plugin is described the same
+  way when Gradle, an IDE or `groovyc` builds it, in a plugin project, an application or a test source set. A Java plugin
+  gets the same from the Grails annotation processor.
+* **Discovery without creating plugins.** Grails filters and orders plugins from their descriptors, without loading or
+  instantiating a plugin class to find out what it is, and stops at a broken descriptor instead of skipping the plugin.
+* **Namespaced plugin resources.** A plugin's `plugin.yml` or `plugin.groovy`, and its precompiled GSP manifest, sit
+  under `META-INF/grails/plugins/<name>/`, so plugins never collide at the jar root in executable jars, shaded jars and
+  native images.
+
+Plugins built for Grails 8 have to be changed and rebuilt. See xref:plugins#creatingAndInstallingPlugins[Creating and
+Installing Plugins] and xref:upgrading#upgradingPluginDescriptors[the upgrade guide].
 
 ==== Spring Boot 4.2 and Spring Framework 7.1
 

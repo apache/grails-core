@@ -61,95 +61,113 @@ grails run-app
 
 NOTE: Plugin projects don't provide an index.gsp by default since most plugins don't need it. So, if you try to view the plugin running in a browser right after creating it, you will receive a page not found error. You can easily create a `grails-app/views/index.gsp` for your plugin if you'd like.
 
-The structure of a Grails plugin is very nearly the same as a Grails application project's. A plugin can declare its metadata in one of three ways:
+The structure of a Grails plugin is very nearly the same as a Grails application project's, except that a plugin
+declares itself with a plugin class.
 
-1. *Descriptor-less starter plugin (recommended for Spring Boot auto-configuration plugins):* Apply the `org.apache.grails.gradle.grails-plugin` Gradle plugin, expose Spring beans via `@AutoConfiguration` (registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`), and declare the starter in `build.gradle`:
-+
+==== The Plugin Class
+
+A plugin is a concrete subclass of `grails.plugins.Plugin` annotated with `grails.plugins.metadata.GrailsPluginDescriptor`,
+written in Groovy or Java. Nothing else is a plugin: a class that does not extend `Plugin`, or that carries no
+annotation, is never discovered, whatever its name.
+
 [source,groovy]
 ----
-grails {
-    plugin {
-        starter = true
-        name = 'example'
-        grailsVersion = '9.0.0 > *'
-        loadAfter = ['core']
-    }
-}
-----
-2. *Typed `@GrailsPluginDescriptor` class (Java or `@CompileStatic` Groovy):* Annotate a class with `grails.plugins.metadata.GrailsPluginDescriptor` (no `*GrailsPlugin` suffix is required):
-+
-[source,groovy]
-----
+package example
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
 import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
 @GrailsPluginDescriptor(
-    name = 'example',
-    grailsVersion = '9.0.0 > *',
-    loadAfter = ['core']
-)
-class ExamplePlugin extends Plugin {
-    ...
-}
-----
-3. *Traditional `*GrailsPlugin` class:* Place a Groovy class ending in `GrailsPlugin` under `src/main/groovy`:
-+
-[source,groovy]
-----
-import grails.plugins.Plugin
-
+        loadAfter = ['controllers', 'services'],
+        dependsOn = ['core'],
+        observe = ['controllers'],
+        watchedResources = ['file:./grails-app/jobs/**/*Job.groovy'],
+        pluginExcludes = ['grails-app/views/error.gsp'])
 class ExampleGrailsPlugin extends Plugin {
-    ...
+
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            registry.registerBean('exampleService', ExampleService)
+        } as BeanRegistrar
+    }
 }
 ----
 
-At build time, Grails generates `META-INF/grails/plugins.imports` and `META-INF/grails/plugins/<name>/plugin.properties` containing the plugin's metadata and contributed artefacts, and packages `plugin.yml` / `plugin.groovy` and precompiled GSP `views.properties` under the same per-plugin namespace.
+The annotation declares everything known before the plugin runs, as constants:
 
-You can also provide additional information about your plugin using several special properties:
+[cols="1,3"]
+|===
+|Attribute |Meaning
 
-* `title` - short one-sentence description of your plugin
-* `grailsVersion` - The version range of Grails that the plugin supports. eg. "1.2 > *" (indicating 1.2 or higher)
-* `author` - plugin author's name
-* `authorEmail` - plugin author's contact e-mail
-* `developers` - Any additional developers beyond the author specified above.
-* `description` - full multi-line description of plugin's features
-* `documentation` - URL of the plugin's documentation
-* `license` - License of the plugin
-* `issueManagement` - Issue Tracker of the plugin
-* `scm` - Source code management location of the plugin
+|`name`
+|The logical name. By default it is the class name without a `GrailsPlugin` suffix, in property form:
+`ExampleGrailsPlugin` is `example`, `SpringSecurityCoreGrailsPlugin` is `springSecurityCore`.
 
-Here is a slimmed down example from the Quartz Grails plugin:
+|`grailsVersion`
+|The range of Grails versions the plugin supports, such as `'9.0.0 > *'`. By default it is the version of Grails the
+plugin is compiled against and any later version.
 
-[source,groovy]
-----
-package quartz
+|`dependsOn`
+|Plugins that must be present, as `'name'` or `'name:range'`. `${plugin.version}` stands for the plugin's own version,
+so `'core:${plugin.version}'` requires the version of `core` the plugin is released with.
 
-@Slf4j
-class QuartzGrailsPlugin extends Plugin {
-    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "3.0.0.BUILD-SNAPSHOT > *"
-    // resources that are excluded from plugin packaging
-    def pluginExcludes = [
-            "grails-app/views/error.gsp"
-    ]
-    def title = "Quartz" // Headline display name of the plugin
-    def author = 'Apache Grails Team'
-    def authorEmail = "zzz@yyy.com"
-    def description = '''\
-Adds Quartz job scheduling features
-'''
-    def profiles = ['web']
-    List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
-    def documentation = "https://apache.github.io/grails-quartz/latest/"
-    def license = "APACHE"
-    def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartz/issues" ]
-    def developers = [
-            [ name: "Joe Dev", email: "joedev@example.com" ]
-    ]
-    def scm = [ url: "https://github.com/apache/grails-quartz" ]
+|`loadAfter`, `loadBefore`
+|Plugins this one is loaded after or before, when they are present.
 
-    BeanRegistrar beanRegistrar()......
-----
+|`observe`
+|Plugins whose change events this plugin receives in its `onChange` method, or `'*'` for all plugins.
+
+|`evict`
+|Plugins this one replaces: they are not loaded when it is.
+
+|`environmentsIncludes`, `environmentsExcludes`
+|The environments the plugin is loaded in.
+
+|`watchedResources`
+|Ant patterns of the files whose changes are passed to `onChange` while the application runs in development.
+
+|`providedArtefacts`
+|Artefact classes the plugin contributes beyond those compiled with it, such as a tag library from a library it uses.
+
+|`pluginExcludes`
+|Ant patterns of compiled artefacts left out of the plugin's descriptor.
+
+|`enabled`
+|Whether the plugin is enabled. `true` by default.
+|===
+
+The plugin's version is not declared: it is the version of the project that builds it. The description, license,
+developers and source locations of a plugin are the publication's, declared in the `grailsPublish` block of
+`build.gradle` and written to its POM.
+
+The plugin's behaviour is the `Plugin` methods it overrides: `beanRegistrar()` (or `doWithSpring()`),
+`doWithApplicationContext()`, `doWithDynamicMethods()`, `onChange(Map)`, `onConfigChange(Map)`, `onStartup(Map)` and
+`onShutdown(Map)`, described in <<hookingIntoRuntimeConfiguration>> and <<participatingInAutoReloadEvents>>.
+
+==== The Plugin Descriptor
+
+The compiler writes the plugin's descriptor beside its classes, so a plugin is described the same way however it is
+built: by the Grails Gradle plugin, by an IDE, or by `groovyc`, in a plugin project, inside an application, or in a test
+source set.
+
+* `META-INF/grails/plugins.imports` lists the names of the plugins in the jar.
+* `META-INF/grails/plugins/<name>/plugin.properties` holds the annotation's metadata, the plugin's version and the
+  artefacts compiled with it, by type.
+* `META-INF/grails/plugins/<name>/plugin.yml` (or `plugin.groovy`) is the plugin's configuration, copied from
+  `grails-app/conf`.
+
+Grails discovers plugins by reading those files, so it filters and orders them without loading or creating them. A
+descriptor that cannot be read, that names a class missing from the class path, or a class that is not a `Plugin`
+stops the application from starting: the jar it came from is broken.
+
+The Grails Gradle plugin gives the compiler the project version and the location of `grails-app/conf`. A plugin compiled
+without them, such as one in a test source set, has no version and no configuration file; an unknown version satisfies
+every `dependsOn` range. A plugin written in Java has its descriptor written by the Grails annotation processor, which
+it runs by adding `grails-core` to its `annotationProcessor` configuration.
 
 ==== Plugin Configuration
 
@@ -307,7 +325,7 @@ Within the `build.gradle` of the plugin, apply the gradle plugin `org.apache.gra
 apply plugin: 'org.apache.grails.gradle.grails-exploded'
 ----
 
-NOTE: During development, `bootRun` uses the plugin's main source set output directories. These include compiled Java and Groovy classes, processed resources, and generated files such as the plugin descriptor and its namespaced configuration.
+NOTE: During development, `bootRun` uses the plugin's main source set output directories. These include the compiled Java and Groovy classes, with the plugin descriptor and its namespaced configuration beside them, and the processed resources.
 
 *Step 5: Run the application*
 
@@ -364,14 +382,13 @@ Although the link:{commandLineRef}create-plugin.html[create-plugin] command crea
 
 When developing a plugin you may create test classes and sources that are used during the development and testing of the plugin but should not be exported to the application.
 
-To exclude test sources you need to modify the `pluginExcludes` property of the plugin descriptor AND exclude the resources inside your `build.gradle` file. For example say you have some classes under the `com.demo` package that are in your plugin source tree but should not be packaged in the application. In your plugin descriptor you should exclude these:
+To exclude test sources you need to set the `pluginExcludes` of the plugin's `@GrailsPluginDescriptor` AND exclude the resources inside your `build.gradle` file. For example say you have some classes under the `com.demo` package that are in your plugin source tree but should not be packaged in the application. In your plugin descriptor you should exclude these:
 
 [source,groovy]
 ----
-// resources that should be loaded by the plugin once installed in the application
-  def pluginExcludes = [
-    '**/com/demo/**'
-  ]
+@GrailsPluginDescriptor(pluginExcludes = ['**/com/demo/**'])
+class ExampleGrailsPlugin extends Plugin {
+}
 ----
 
 And in your `build.gradle` you should exclude the compiled classes from the JAR file:
@@ -448,95 +465,9 @@ Being a regular Grails project has a number of benefits in that you can immediat
 
 NOTE: Plugin projects don't provide an index.gsp by default since most plugins don't need it. So, if you try to view the plugin running in a browser right after creating it, you will receive a page not found error. You can easily create a `grails-app/views/index.gsp` for your plugin if you'd like.
 
-The structure of a Grails plugin is very nearly the same as a Grails application project's. A plugin can declare its metadata in one of three ways:
-
-1. *Descriptor-less starter plugin (recommended for Spring Boot auto-configuration plugins):* Apply the `org.apache.grails.gradle.grails-plugin` Gradle plugin, expose Spring beans via `@AutoConfiguration` (registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`), and declare the starter in `build.gradle`:
-+
-[source,groovy]
-----
-grails {
-    plugin {
-        starter = true
-        name = 'example'
-        grailsVersion = '9.0.0 > *'
-        loadAfter = ['core']
-    }
-}
-----
-2. *Typed `@GrailsPluginDescriptor` class (Java or `@CompileStatic` Groovy):* Annotate a class with `grails.plugins.metadata.GrailsPluginDescriptor` (no `*GrailsPlugin` suffix is required):
-+
-[source,groovy]
-----
-import grails.plugins.Plugin
-import grails.plugins.metadata.GrailsPluginDescriptor
-
-@GrailsPluginDescriptor(
-    name = 'example',
-    grailsVersion = '9.0.0 > *',
-    loadAfter = ['core']
-)
-class ExamplePlugin extends Plugin {
-    ...
-}
-----
-3. *Traditional `*GrailsPlugin` class:* Place a Groovy class ending in `GrailsPlugin` under `src/main/groovy`:
-+
-[source,groovy]
-----
-import grails.plugins.Plugin
-
-class ExampleGrailsPlugin extends Plugin {
-    ...
-}
-----
-
-At build time, Grails generates `META-INF/grails/plugins.imports` and `META-INF/grails/plugins/<name>/plugin.properties` containing the plugin's metadata and contributed artefacts, and packages `plugin.yml` / `plugin.groovy` and precompiled GSP `views.properties` under the same per-plugin namespace.
-
-You can also provide additional information about your plugin using several special properties:
-
-* `title` - short one-sentence description of your plugin
-* `grailsVersion` - The version range of Grails that the plugin supports. eg. "1.2 > *" (indicating 1.2 or higher)
-* `author` - plugin author's name
-* `authorEmail` - plugin author's contact e-mail
-* `developers` - Any additional developers beyond the author specified above.
-* `description` - full multi-line description of plugin's features
-* `documentation` - URL of the plugin's documentation
-* `license` - License of the plugin
-* `issueManagement` - Issue Tracker of the plugin
-* `scm` - Source code management location of the plugin
-
-Here is a slimmed down example from the https://github.com/apache/grails-quartz[Quartz Grails plugin]:
-
-[source,groovy]
-----
-package quartz
-
-@Slf4j
-class QuartzGrailsPlugin extends Plugin {
-    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "3.0.0.BUILD-SNAPSHOT > *"
-    // resources that are excluded from plugin packaging
-    def pluginExcludes = [
-            "grails-app/views/error.gsp"
-    ]
-    def title = "Quartz" // Headline display name of the plugin
-    def author = 'Apache Grails Team'
-    def authorEmail = "zzz@yyy.com"
-    def description = '''\
-Adds Quartz job scheduling features
-'''
-    def profiles = ['web']
-    List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
-    def documentation = "https://apache.github.io/grails-quartz/latest/"
-    def license = "APACHE"
-    def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartzissues" ]
-    def developers = [
-            [ name: "Joe Dev", email: "joedev@example.com" ]
-    ]
-    def scm = [ url: "https://github.com/apache/grails-quartz" ]
-
-    BeanRegistrar beanRegistrar()......
-----
+The structure of a Grails plugin is very nearly the same as a Grails application project's, except that a plugin
+declares itself with a plugin class: a `Plugin` subclass annotated with `@GrailsPluginDescriptor`. See
+<<creatingAndInstallingPlugins>> above for the plugin class, its metadata and the descriptor the compiler writes for it.
 
 === Plugin Configuration
 

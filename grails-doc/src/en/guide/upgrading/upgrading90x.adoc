@@ -360,8 +360,8 @@ Without the Jackson XML dependency, `grails-xml` still renders XML through the G
 their own Spring XML message converter or OXM/JAXB infrastructure through public Spring configuration
 APIs.
 
-This change does not affect Grails plugin descriptors. Plugin metadata continues to be generated and
-published in its existing descriptor format; `grails-xml` concerns application HTTP payloads only.
+`grails-xml` concerns application HTTP payloads only; Grails plugin descriptors are not XML (see
+<<upgradingPluginDescriptors>>).
 
 ==== 7. Opt Into Spring JSON Conversion
 
@@ -1647,51 +1647,78 @@ If the application replaces GORM's default EL implementation, supply an EL 6-com
 explicit EL 5 version overrides. Applications using the default dependencies need no code changes.
 
 [[upgradingPluginDescriptors]]
-==== 35. Modernized Plugin Descriptors, Namespaced Packaging, and Optional Plugin Classes
+==== 35. One Plugin Contract: `@GrailsPluginDescriptor`
 
-Grails 9 replaces the legacy `META-INF/grails-plugin.xml` descriptor with a collision-free, build-time-generated layout
-under `META-INF/grails/`:
+Grails 9 replaces the way a plugin describes itself. Every plugin, Grails' own included, has to be changed and rebuilt;
+a plugin built for Grails 8 is not discovered.
 
-* *Plugin discovery index.* Every plugin JAR declares its logical plugin name(s) in `META-INF/grails/plugins.imports`
-  (one per line, matching Spring Boot's `AutoConfiguration.imports` convention).
-* *Per-plugin properties descriptor.* Each plugin's metadata and contributed artefacts (grouped by artefact type) are
-  written to `META-INF/grails/plugins/<name>/plugin.properties`.
-* *Plugins inside applications or built without the Grails Gradle plugin.* Compiling a Groovy plugin source file
-  with the Grails compiler transforms on the classpath and a class output directory generates its discovery metadata
-  beside its classes. This also applies to plugin sources in test source sets. A `*GrailsPlugin` class is a plugin
-  there only when it is declared in a source file of its own name, so a helper plugin a specification declares beside
-  itself is not discovered by every other test; annotate it with `@GrailsPluginDescriptor` to register it. A build applying the Grails Gradle
-  plugin assembles the main source set's descriptors from all compiled classes, including Java classes.
-* *Namespaced plugin configuration and view manifests.* A plugin's `grails-app/conf/plugin.yml` (or `plugin.groovy`) is
-  packaged at `META-INF/grails/plugins/<name>/plugin.yml` instead of the JAR root, and precompiled plugin GSP views write
-  their manifest to `META-INF/grails/plugins/<name>/views.properties` instead of `gsp/views.properties`. This prevents
-  path collisions in executable archives, shaded JARs, and GraalVM native images.
-* *Descriptor-less starter plugins.* A plugin built with `org.apache.grails.gradle.grails-plugin` no longer requires a
-  `*GrailsPlugin` Groovy class. Plugins that wire beans via Spring Boot `@AutoConfiguration` and contribute artefacts,
-  views, or `plugin.yml` can omit the descriptor class completely by declaring the starter through the Gradle DSL:
-+
+A plugin is a concrete subclass of `grails.plugins.Plugin` annotated with `grails.plugins.metadata.GrailsPluginDescriptor`,
+and nothing else is:
+
+* The class name no longer matters. A `*GrailsPlugin` class without the annotation is not a plugin, and an annotated class
+  may have any name.
+* A plugin class must extend `Plugin`. Plugin classes that declared their hooks as closure properties
+  (`def doWithSpring = { ... }`, `def onChange = { event -> ... }`) override the `Plugin` methods instead.
+* Every piece of metadata Grails needs before it creates the plugin is an attribute of the annotation, as a constant:
+  `name`, `grailsVersion`, `dependsOn`, `loadAfter`, `loadBefore`, `observe`, `evict`, `environmentsIncludes`,
+  `environmentsExcludes`, `watchedResources`, `providedArtefacts`, `pluginExcludes` and `enabled`. The plugin class's
+  properties of those names are no longer read.
+* The version is the project version. A plugin no longer declares one, and a dependency range may name it as
+  `${plugin.version}`.
+* `grailsVersion` defaults to the version of Grails the plugin is compiled against and any later version.
+* The informational properties `title`, `author`, `authorEmail`, `description`, `documentation`, `license`,
+  `organization`, `developers`, `issueManagement`, `scm` and `profiles` are not read by anything. Remove them; the
+  publication's POM, from the `grailsPublish` block, carries that information.
+
 [source,groovy]
-.build.gradle
+.Grails 8
 ----
-grails {
-    plugin {
-        starter = true
-        name = 'my-starter'
-        grailsVersion = '9.0.0 > *'
-        loadAfter = ['core']
-        dependsOn = [i18n: '9.0.0 > *']
-    }
+class AuditGrailsPlugin extends Plugin {
+    def version = '2.1.0'
+    def grailsVersion = '8.0.0 > *'
+    def title = 'Audit'
+    def loadAfter = ['controllers', 'services']
+    def dependsOn = [core: '8.0.0 > *']
+    def watchedResources = 'file:./grails-app/audits/**/*Audit.groovy'
+
+    void onChange(Map<String, Object> event) { ... }
 }
 ----
-* *Typed `@GrailsPluginDescriptor` annotation.* Plugin classes written in Java or statically-compiled Groovy may annotate
-  a class with `grails.plugins.metadata.GrailsPluginDescriptor` (without requiring the `*GrailsPlugin` class name suffix)
-  to declare `name`, `version`, `grailsVersion`, `loadAfter`, `loadBefore`, `dependsOn`, `evict`, `observe`,
-  `environmentsIncludes`, `environmentsExcludes`, `pluginExcludes`, and `enabled` directly on the class. Build tooling
-  and runtime discovery read this metadata without reflective instantiation.
+
+[source,groovy]
+.Grails 9
+----
+@GrailsPluginDescriptor(
+        loadAfter = ['controllers', 'services'],
+        dependsOn = ['core:9.0.0 > *'],
+        watchedResources = ['file:./grails-app/audits/**/*Audit.groovy'])
+class AuditGrailsPlugin extends Plugin {
+
+    void onChange(Map<String, Object> event) { ... }
+}
+----
+
+The compiler writes the plugin's descriptor beside its classes, whatever builds it:
+
+* `META-INF/grails/plugins.imports` lists the plugin names of the jar.
+* `META-INF/grails/plugins/<name>/plugin.properties` holds the annotation's metadata, the version and the artefacts
+  compiled with the plugin.
+* `META-INF/grails/plugins/<name>/plugin.yml` (or `plugin.groovy`) is the plugin's configuration from `grails-app/conf`,
+  which is no longer packaged at the root of the jar. Precompiled GSP views list themselves in
+  `META-INF/grails/plugins/<name>/views.properties`.
+
+`META-INF/grails-plugin.xml` is neither written, nor published as an extra artifact, nor read. Discovery reads the
+descriptors only, and it no longer creates a plugin to find out what it is. A descriptor that cannot be read, that names
+a class missing from the class path, or a class that is not a `Plugin`, stops the application from starting instead of
+the plugin being skipped.
 
 ===== Required Actions
 
-* Rebuild and republish Grails plugins with Grails 9 so they emit `META-INF/grails/plugins.imports` and
-  `META-INF/grails/plugins/<name>/plugin.properties`. Published Gradle archives also include an XML projection for catalog and IDE consumers.
-  For a multi-plugin archive, the modern definitions carry each plugin's individual compatibility range.
+* Annotate each plugin class with `@GrailsPluginDescriptor`, make it extend `grails.plugins.Plugin`, move its metadata
+  properties into the annotation, and delete `version`, the informational properties and `profiles`.
+* Replace closure-valued hooks with the `Plugin` methods they stand for.
+* Write `dependsOn` as a list of `'name'` or `'name:range'` strings rather than a map.
+* Rebuild and republish the plugin with Grails 9.
+* A plugin written in Java adds `grails-core` to its `annotationProcessor` configuration, so the Grails annotation
+  processor writes its descriptor.
 * Merge the lines of `META-INF/grails/plugins.imports` when combining plugin archives into a single JAR.

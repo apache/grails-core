@@ -21,35 +21,34 @@ under the License.
 ==== Controlling Plugin Dependencies
 
 
-Plugins often depend on the presence of other plugins and can adapt depending on the presence of others. This is implemented with two properties. The first is called `dependsOn`. For example, take a look at this snippet from the Hibernate plugin:
+Plugins often depend on the presence of other plugins and can adapt depending on the presence of others. A plugin
+declares both in its `@GrailsPluginDescriptor`. The first is `dependsOn`. For example, take a look at this snippet
+from the Hibernate plugin:
 
 [source,groovy]
 ----
-class HibernateGrailsPlugin {
-
-    def version = "1.0"
-
-    def dependsOn = [dataSource: "1.0",
-                     domainClass: "1.0",
-                     i18n: "1.0",
-                     core: "1.0"]
+@GrailsPluginDescriptor(dependsOn = ['dataSource', 'domainClass', 'i18n', 'core'])
+class HibernateGrailsPlugin extends Plugin {
 }
 ----
 
-The Hibernate plugin is dependent on the presence of four plugins: the `dataSource`, `domainClass`, `i18n` and `core` plugins.
+The Hibernate plugin is dependent on the presence of four plugins: the `dataSource`, `domainClass`, `i18n` and `core`
+plugins.
 
-The dependencies will be loaded before the Hibernate plugin and if all dependencies do not load, then the plugin will not load.
+The dependencies will be loaded before the Hibernate plugin and if all dependencies do not load, then the plugin will
+not load.
 
-The `dependsOn` property also supports a mini expression language for specifying version ranges. A few examples of the syntax can be seen below:
+A dependency can name a range of versions after a colon, in a mini expression language:
 
 [source,groovy]
 ----
-def dependsOn = [foo: "* > 1.0"]
-def dependsOn = [foo: "1.0 > 1.1"]
-def dependsOn = [foo: "1.0 > *"]
+@GrailsPluginDescriptor(dependsOn = ['foo:* > 1.0'])
+@GrailsPluginDescriptor(dependsOn = ['foo:1.0 > 1.1'])
+@GrailsPluginDescriptor(dependsOn = ['foo:1.0 > *'])
 ----
 
-When the wildcard * character is used it denotes "any" version. The expression syntax also excludes any suffixes such as -BETA, -ALPHA etc. so for example the expression "1.0 > 1.1" would match any of the following versions:
+When the wildcard * character is used it denotes "any" version. The expression syntax also excludes any suffixes such
+as -BETA, -ALPHA etc. so for example the expression "1.0 > 1.1" would match any of the following versions:
 
 * 1.1
 * 1.0
@@ -57,18 +56,26 @@ When the wildcard * character is used it denotes "any" version. The expression s
 * 1.0.3-SNAPSHOT
 * 1.1-BETA2
 
+`${plugin.version}` stands for the plugin's own version, which is the version of the project that builds it. Plugins
+released together, as the Grails framework's are, require one another at that version:
+`dependsOn = ['core:${plugin.version}']`. A plugin compiled outside a build that sets the version, such as one in a
+test source set, has no version, and an unknown version satisfies every range.
+
 
 ==== Controlling Load Order
 
 
-Using `dependsOn` establishes a "hard" dependency in that if the dependency is not resolved, the plugin will give up and won't load.  It is possible though to have a weaker dependency using the `loadAfter` and `loadBefore` properties:
+Using `dependsOn` establishes a "hard" dependency in that if the dependency is not resolved, the plugin will give up
+and won't load. It is possible though to have a weaker dependency using `loadAfter` and `loadBefore`:
 
 [source,groovy]
 ----
-def loadAfter = ['controllers']
+@GrailsPluginDescriptor(loadAfter = ['controllers'])
 ----
 
-Here the plugin will be loaded after the `controllers` plugin if it exists, otherwise it will just be loaded. The plugin can then adapt to the presence of the other plugin, for example the Hibernate plugin has this code in its `doWithSpring` closure:
+Here the plugin will be loaded after the `controllers` plugin if it exists, otherwise it will just be loaded. The
+plugin can then adapt to the presence of the other plugin, for example the Hibernate plugin has this code in its
+`doWithSpring` closure:
 
 [source,groovy]
 ----
@@ -81,73 +88,46 @@ if (manager?.hasGrailsPlugin("controllers")) {
 }
 ----
 
-Here the Hibernate plugin will only register an `OpenSessionInViewInterceptor` if the `controllers` plugin has been loaded. The `manager` variable is an instance of the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager] interface and it provides methods to interact with other plugins.
+Here the Hibernate plugin will only register an `OpenSessionInViewInterceptor` if the `controllers` plugin has been
+loaded. The `manager` variable is an instance of the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager]
+interface and it provides methods to interact with other plugins.
 
-You can also use the `loadBefore` property to specify one or more plugins that your plugin should load before:
-
-[source,groovy]
-----
-def loadBefore = ['rabbitmq']
-----
-
-
-==== Scopes and Environments
-
-
-It's not only plugin load order that you can control. You can also specify which environments your plugin should be loaded in and which scopes (stages of a build). Simply declare one or both of these properties in your plugin descriptor:
+You can also use `loadBefore` to specify one or more plugins that your plugin should load before:
 
 [source,groovy]
 ----
-def environments = ['development', 'test', 'myCustomEnv']
+@GrailsPluginDescriptor(loadBefore = ['rabbitmq'])
+----
+
+
+==== Environments
+
+
+It's not only plugin load order that you can control. You can also specify which environments your plugin should be
+loaded in:
+
+[source,groovy]
+----
+@GrailsPluginDescriptor(environmentsIncludes = ['development', 'test', 'myCustomEnv'])
 ----
 
 In this example, the plugin will only load in the 'development', 'test' and 'myCustomEnv' environments.
-
-The properties can be one of:
-
-* a string - a sole inclusion
-* a list - a list of environments to include
-* a map - for full control, with 'includes' and/or 'excludes' keys that can have string or list values
-
-For example,
+`environmentsExcludes` names the environments the plugin is not loaded in instead:
 
 [source,groovy]
 ----
-def environments = "test"
+@GrailsPluginDescriptor(environmentsExcludes = ['production'])
 ----
-
-will only include the plugin in the test environment, whereas
-
-[source,groovy]
-----
-def environments = ["development", "test"]
-----
-
-will include it in both the development _and_ test environments. Finally,
-
-[source,groovy]
-----
-def environments = [includes: ["development", "test"]]
-----
-
-will do the same thing.
 
 ==== Reading a published plugin definition
 
 Tools can read the UTF-8 `META-INF/grails/plugins/<name>/plugin.properties` file with
-`grails.plugins.metadata.PluginDefinition.read(name, reader)`. This returns an immutable definition
-with symbolic class names, the plugin version, Grails compatibility, dependency version constraints,
-ordering, and contributed artefacts. Reading the definition requires no classes from the plugin.
-A true `metadataComplete` value means Grails can determine eligibility and ordering from the
-published definition before constructing the lifecycle implementation.
+`grails.plugins.metadata.PluginDefinition.read(name, reader)`. This returns an immutable definition with symbolic class
+names: the plugin's class, version, Grails compatibility, dependency version constraints, ordering, environments,
+watched resources and contributed artefacts. Reading the definition requires no classes from the plugin, and it is
+everything Grails knows about a plugin before it creates it.
 
-When two plugins are released together, an annotated plugin can declare
-`dependsOn = 'core:${plugin.version}'`. The build writes the resolved plugin version into the
-dependency constraint. The same placeholder is available in `grailsVersion` for plugins released
-with the framework.
-
-For a Java-only plugin built directly with `javac`, put Grails and its dependencies on the processor
-path and select `-processor org.grails.compiler.injection.JavaPluginDescriptorProcessor`.
-Compile to a class directory with `-d`. Supply `-Agrails.plugin.version=1.0` if the annotation
-inherits the project version. Package the complete output directory. The Grails Gradle plugin
-already performs this reconciliation for joint Java and Groovy builds.
+For a Java plugin built directly with `javac`, put Grails and its dependencies on the processor path, so that the
+`org.grails.compiler.injection.JavaPluginDescriptorProcessor` it registers runs, compile to a class directory with
+`-d`, and supply the version with `-Agrails.plugin.version=1.0`. Package the complete output directory. With Gradle, add
+`grails-core` to the `annotationProcessor` configuration; the Grails Gradle plugin passes the version.

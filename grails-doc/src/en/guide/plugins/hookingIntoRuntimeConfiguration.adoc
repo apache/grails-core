@@ -34,10 +34,10 @@ import org.springframework.web.servlet.i18n.CookieLocaleResolver
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
+@GrailsPluginDescriptor
 class I18nGrailsPlugin extends Plugin {
-
-    def version = "0.1"
 
     @Override
     BeanRegistrar beanRegistrar() {
@@ -71,9 +71,8 @@ import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import grails.plugins.*
 
+@GrailsPluginDescriptor
 class I18nGrailsPlugin extends Plugin {
-
-    def version = "0.1"
 
     Closure doWithSpring() {{->
         messageSource(ReloadableResourceBundleMessageSource) {
@@ -99,9 +98,8 @@ import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import grails.plugins.*
 import grails.spring.BeanBuilder
 
+@GrailsPluginDescriptor
 class I18nGrailsPlugin extends Plugin {
-
-    def version = "0.1"
 
     @Override
     void doWithSpring(BeanBuilder beans) {
@@ -126,7 +124,7 @@ A plugin may override either `doWithSpring()` or `doWithSpring(BeanBuilder)`, bu
 
 The link:{api}grails/compiler/beans/GrailsBeans.html[GrailsBeans] annotation lets you author bean definitions with DSL syntax similar to the classic Beans DSL, while compiling them at build time into genuine `@Bean` factory methods on a plain `AutoConfiguration` class — no closures, and nothing DSL-specific, survive into the compiled bytecode. Declare a class whose `beans` property is a closure of `bean(["name", ] Type) { ... }` statements:
 
-NOTE: On a `*GrailsPlugin.groovy` plugin descriptor or an application's `Application` class the annotation is implicit — a `beans` property is compiled automatically, the same way `doWithSpring` and `watchedResources` are conventions rather than annotated members. `@GrailsBeans` is written out only on a standalone class, as in the first example below. A class with no `beans` property is untouched.
+NOTE: On a plugin class (a `Plugin` subclass annotated with `@GrailsPluginDescriptor`) or an application's `Application` class the annotation is implicit — a `beans` property is compiled automatically. `@GrailsBeans` is written out only on a standalone class, as in the first example below. A class with no `beans` property is untouched.
 
 [source,groovy]
 ----
@@ -261,15 +259,15 @@ The DSL still covers a narrower surface than `doWithSpring(BeanBuilder)`:
 * Dependencies on other beans are expressed through typed closure parameters, autowired by type; there is no `ref('beanName')` lookup. Where the type alone is ambiguous, select by name with a parameter annotation — `@Qualifier('beanName')` — as `DomainClassGrailsPlugin` does with `@Qualifier('grailsDomainClassMappingContext') MappingContext mappingContext`.
 * A `bean(...)`/`method(...)` closure body cannot reach members of the `Plugin` it was written in. The body is relocated verbatim onto the generated sibling, which extends `Object` and holds no reference to the plugin instance, so reading `config`, `grailsApplication` or `applicationContext` from a body fails — at compile time under `@CompileStatic`, and otherwise not until Spring invokes the factory method during startup. This is the one habit worth unlearning when converting from `doWithSpring`, whose closures can read plugin state freely: take injected configuration through `field(...)`, and a `GrailsApplication` (or any other bean) through a typed closure parameter.
 
-===== Using @GrailsBeans directly on a *GrailsPlugin.groovy class
+===== Using @GrailsBeans directly on a plugin class
 
-`@GrailsBeans` may also be applied directly to a `Plugin` subclass, so bean definitions can live in the familiar `*GrailsPlugin.groovy` file instead of a separate class:
+`@GrailsBeans` may also be applied directly to a plugin class, so bean definitions can live in the plugin class instead of a separate class:
 
 [source,groovy]
 ----
 import grails.compiler.beans.GrailsBeans
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
@@ -280,9 +278,8 @@ import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 
 @GrailsBeans
 @AutoConfiguration(before = [MessageSourceAutoConfiguration, WebMvcAutoConfiguration])
+@GrailsPluginDescriptor
 class I18nGrailsPlugin extends Plugin {
-
-    def version = GrailsUtil.getGrailsVersion()
 
     def beans = {
         bean('messageSource', ReloadableResourceBundleMessageSource) {
@@ -305,7 +302,7 @@ class I18nGrailsPlugin extends Plugin {
 }
 ----
 
-A `Plugin` subclass is instantiated by `DefaultGrailsPlugin` via plain reflection, never as a Spring bean, so it cannot itself carry `@Bean` methods or a meaningful `@AutoConfiguration`/`@Conditional*` annotation. When `@GrailsBeans` is applied to a `Plugin` subclass, the compiled `@Bean` methods land on a generated sibling class instead, in the plugin's own package by default. Its name follows the Grails plugin-descriptor convention: a class named `*GrailsPlugin` swaps that suffix for `AutoConfiguration` — the example above produces both `I18nGrailsPlugin` (with `beans` stripped, `doWithApplicationContext` untouched) and a separate `I18nAutoConfiguration` class carrying the three `@Bean` methods, exactly the name the hand-written class it replaces would have had. Any other class name appends `AutoConfiguration` (`FooPlugin` → `FooPluginAutoConfiguration`). Everything else about the plugin class — `version`, `watchedResources`, `doWithApplicationContext`, `onChange`, and so on — works exactly as it does without `@GrailsBeans`.
+A `Plugin` subclass is instantiated by `DefaultGrailsPlugin` via plain reflection, never as a Spring bean, so it cannot itself carry `@Bean` methods or a meaningful `@AutoConfiguration`/`@Conditional*` annotation. When `@GrailsBeans` is applied to a `Plugin` subclass, the compiled `@Bean` methods land on a generated sibling class instead, in the plugin's own package by default. Its name follows the Grails plugin-descriptor convention: a class named `*GrailsPlugin` swaps that suffix for `AutoConfiguration` — the example above produces both `I18nGrailsPlugin` (with `beans` stripped, `doWithApplicationContext` untouched) and a separate `I18nAutoConfiguration` class carrying the three `@Bean` methods, exactly the name the hand-written class it replaces would have had. Any other class name appends `AutoConfiguration` (`FooPlugin` → `FooPluginAutoConfiguration`). Everything else about the plugin class — its `@GrailsPluginDescriptor`, `doWithApplicationContext`, `onChange`, and so on — works exactly as it does without `@GrailsBeans`.
 
 Every annotation on the plugin class that only makes sense on whatever Spring Boot actually evaluates moves onto that sibling too, since none of them has any effect on a class Spring never processes as a bean: `@AutoConfiguration`, the whole `@Conditional*` family, `@Import`/`@ImportAutoConfiguration`/`@ImportResource`, `@ComponentScan`, `@EnableConfigurationProperties`, `@PropertySource`/`@PropertySources`, and `@AutoConfigureOrder`/`Before`/`After`. This also recognises a *composed* annotation built on top of any of these — for example a project-specific `@ConditionalOnFeature` that is itself meta-annotated with Spring Boot's `@ConditionalOnProperty` (rather than `@Conditional` directly), or a custom `@EnableSomething` meta-annotated with `@Import` — so it isn't limited to Spring's own built-in annotation types. An annotation *outside* that set (one neither listed nor meta-annotated with anything listed) stays on the plugin class, where Spring never sees it — for those, name them explicitly with `@GrailsBeans(moveAnnotations = [SomeVendorAnnotation])` and they move like the recognised ones do.
 
@@ -321,6 +318,7 @@ package com.example
 
 @GrailsBeans(autoConfigurationName = 'com.example.web.ExampleAutoConfiguration')
 @AutoConfiguration
+@GrailsPluginDescriptor
 class ExampleGrailsPlugin extends Plugin {
     def beans = { /* ... */ }
 }
@@ -396,14 +394,12 @@ NOTE: Spring Boot registers the character encoding filter at `Ordered.HIGHEST_PR
 ==== Doing Post Initialisation Configuration
 
 
-Sometimes it is useful to be able do some runtime configuration after the Spring {springapi}org/springframework/context/ApplicationContext.html[ApplicationContext] has been built. In this case you can define a `doWithApplicationContext` closure property.
+Sometimes it is useful to be able do some runtime configuration after the Spring {springapi}org/springframework/context/ApplicationContext.html[ApplicationContext] has been built. In this case you can override the `doWithApplicationContext` method.
 
 [source,groovy]
 ----
-class SimplePlugin extends Plugin{
-
-    def name = "simple"
-    def version = "1.1"
+@GrailsPluginDescriptor(name = 'simple')
+class SimplePlugin extends Plugin {
 
     @Override
     void doWithApplicationContext() {
