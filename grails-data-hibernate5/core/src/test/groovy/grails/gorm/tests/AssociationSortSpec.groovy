@@ -130,6 +130,30 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
     }
 
+    void '#api sorted by the identifier of a nested association applies the inner join that the query requests for the association'() {
+        when:
+        final List<Player> results = query.call()
+
+        then: 'the player whose team has no club is left out, and the others are in the order of the identifiers of their clubs'
+        results*.name == ['MU Player', 'Arsenal Player', 'Chelsea Player']
+
+        where:
+        api                       | query
+        'a where query with sort' | { Player.where { name ==~ '%Player%' }.sort('team.club.id').list(fetch: ['team.club': JoinType.INNER]) }
+        'a where query'           | { Player.where { name ==~ '%Player%' }.list(sort: 'team.club.id', fetch: ['team.club': JoinType.INNER]) }
+        'a detached criteria'     | { new DetachedCriteria(Player).like('name', '%Player%').join('team.club', JoinType.INNER).list(sort: 'team.club.id') }
+        'a dynamic finder'        | { Player.findAllByNameLike('%Player%', [sort: 'team.club.id', fetch: ['team.club': JoinType.INNER]]) }
+    }
+
+    void 'the total of a paged where query sorted by the identifier of a nested association applies the inner join that it requests'() {
+        when:
+        final results = Player.where { name ==~ '%Player%' }.list(sort: 'team.club.id', max: 2, fetch: ['team.club': JoinType.INNER])
+
+        then:
+        results*.name == ['MU Player', 'Arsenal Player']
+        results.totalCount == 3
+    }
+
     void 'list sorted by a map sorts by every entry of the map before paging'() {
         given:
         new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)

@@ -32,10 +32,16 @@ import org.hibernate.Hibernate;
 import org.hibernate.LockMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.Subqueries;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.sql.JoinType;
@@ -215,6 +221,25 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return FlushMode.valueOf(String.valueOf(object));
     }
 
+    private static CriteriaImpl getRootCriteria(Criteria criteria) {
+        Criteria root = criteria;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        return root instanceof CriteriaImpl ? (CriteriaImpl) root : null;
+    }
+
+    private static FetchMode getRequestedFetchMode(Criteria root, String associationPath) {
+        CriteriaImpl criteria = getRootCriteria(root);
+        if (criteria == null) {
+            return null;
+        }
+        // Hibernate records a fetch mode under the path from the alias of the root criteria
+        String rootAlias = criteria.getAlias();
+        String path = rootAlias != null && !associationPath.startsWith(rootAlias + '.') ? rootAlias + '.' + associationPath : associationPath;
+        return criteria.getFetchMode(path);
+    }
+
     /**
      * Whether a sort by a property of an association joins the association with a left join, so that the
      * sort keeps the instances whose association is null. That is the case when the
@@ -228,6 +253,62 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     public static boolean isLeftJoinAssociationSort(PersistentEntity entity) {
         return entity != null && entity.getMappingContext() instanceof HibernateMappingContext &&
                 ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort();
+    }
+
+    /**
+     * Asks the criteria to fetch, with a join, the associations before the last one on a path that a
+     * join type is requested for, unless they request another fetch mode for them. Hibernate fetches
+     * an association by its fetch mode only when it fetches the associations before it, and a
+     * collection on the path is fetched with all of its elements, since nothing restricts them: the
+     * requested join type only decides which instances the query returns.
+     *
+     * @param criteria The criteria of the query
+     * @param associationPath The path from the root entity
+     */
+    public static void fetchAssociationsBefore(Criteria criteria, String associationPath) {
+        int dot = associationPath.indexOf('.');
+        while (dot > 0) {
+            String path = associationPath.substring(0, dot);
+            if (getRequestedFetchMode(criteria, path) == null) {
+                criteria.setFetchMode(path, FetchMode.JOIN);
+            }
+            dot = associationPath.indexOf('.', dot + 1);
+        }
+    }
+
+    /**
+     * Returns a restriction to the instances of an entity for which an inner join of an association
+     * path returns a row. The path is joined in a subquery, which is correlated with the query by the
+     * identifier of the entity.
+     * <p>
+     * A join through a collection returns an instance once for each element of the collection. That
+     * multiplies the rows that a row limit and a count work on, and a collection that is fetched from
+     * those rows lacks the elements that the rest of the path leaves out. A subquery restricts the
+     * query to the same instances without either effect. Unlike a check that a collection is not
+     * empty, its joins apply the filters that are enabled for the session, such as the one of
+     * discriminator based multi-tenancy.
+     *
+     * @param entityName The name of the entity that the query returns
+     * @param rootAlias The alias of the root of the query
+     * @param associationPath The path of the association from the entity
+     * @return The restriction
+     */
+    public static Criterion joinedInSubquery(String entityName, String rootAlias, String associationPath) {
+        // Hibernate uses this alias as it is in the SQL of the subquery, so it is not made from the
+        // association path, which can be longer than a database allows an identifier to be. It is made
+        // from the alias of the root, so that an alias in the subquery cannot hide the root that it refers to
+        String subqueryAlias = rootAlias + "_sub";
+        DetachedCriteria subquery = DetachedCriteria.forEntityName(entityName, subqueryAlias);
+        String parentAlias = subqueryAlias;
+        int level = 0;
+        for (String association : associationPath.split("\\.")) {
+            String alias = subqueryAlias + level++;
+            subquery.createAlias(parentAlias + '.' + association, alias, JoinType.INNER_JOIN);
+            parentAlias = alias;
+        }
+        subquery.add(Restrictions.eqProperty(subqueryAlias + ".id", rootAlias + ".id"));
+        subquery.setProjection(Projections.id());
+        return Subqueries.exists(subquery);
     }
 
     /**

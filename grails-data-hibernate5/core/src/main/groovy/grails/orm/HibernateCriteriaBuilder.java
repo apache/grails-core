@@ -244,6 +244,11 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
             Map<String, FetchType> fetchStrategies = abstractDetachedCriteria.getFetchStrategies();
             for (Entry<String, FetchType> entry : fetchStrategies.entrySet()) {
                 String property = entry.getKey();
+                jakarta.persistence.criteria.JoinType supersededJoinType = abstractDetachedCriteria.getSupersededJoinTypes().get(property);
+                if (supersededJoinType != null) {
+                    // requested before the fetch mode below, which replaces it
+                    query.join(property, supersededJoinType);
+                }
                 switch (entry.getValue()) {
                     case EAGER:
                         jakarta.persistence.criteria.JoinType gormJoinType = abstractDetachedCriteria.getJoinTypes().get(property);
