@@ -95,6 +95,9 @@ class CompilePlugin implements Plugin<Project> {
             it.options.encoding = StandardCharsets.UTF_8.name()
             it.options.fork = true
             it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
+            if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
+                it.options.compilerArgs += ['-Xlint:-removal']
+            }
         }
 
         project.plugins.withId('groovy') {
@@ -107,6 +110,9 @@ class CompilePlugin implements Plugin<Project> {
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
                 it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
+                if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
+                    it.options.compilerArgs += ['-Xlint:-removal']
+                }
             }
         }
     }

@@ -215,10 +215,14 @@ class DomainModelServiceSpec extends Specification implements MocksDomain {
         PersistentProperty persistentProperty2 = Mock(PersistentProperty)
         DomainProperty bar = Stub(DomainProperty) {
             getName() >> "bar"
-            getConstrained() >> Mock(Constrained) { 1 * isDisplay() >> true }
+            getConstrained() >> Stub(Constrained) {
+                getDisplayType() >> null
+                isDisplay() >> true
+            }
         }
         DomainProperty version = Stub(DomainProperty) {
             getName() >> "version"
+            getConstrained() >> null
         }
         domainModelService.domainPropertyFactory = Mock(DomainPropertyFactoryImpl) {
             1 * build(persistentProperty1) >> bar

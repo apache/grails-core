@@ -54,8 +54,8 @@ class ComplexField extends Field<ComplexField> implements ComplexTyped<ComplexFi
 
     @Override
     void validate() {
-    	super.validate()
-    	if (typeName == null) {
+        super.validate()
+        if (typeName == null) {
             throw new IllegalArgumentException('The type name must be specified for fields with a complex type')
         }
         if (fields.empty) {

@@ -83,8 +83,8 @@ A base64-encoded JSON like:
 
 ==== Signature
 
-Depends on the algorithm specified on the header, it can be a digital signature of the base64-encoded header and claims,
-or an encryption of them using RSA.
+A digital signature of the base64-encoded header and claims, made with the algorithm specified in the header. An
+encrypted JWT holds such a signed JWT in encrypted form, see <<rest-jwt-encrypted>>.
 
 === Signed JWT's
 
@@ -110,6 +110,7 @@ the algorithm used is HMAC SHA-256 with a specified shared secret. The relevant 
 |`(No Expiration)`
 |===
 
+[[rest-jwt-encrypted]]
 === Encrypted JWT's
 
 [NOTE]
@@ -131,8 +132,18 @@ Base 64.
 
 If the claims contains sensitive information, you can use a
 https://tools.ietf.org/html/draft-ietf-jose-json-web-encryption[JSON Web Encryption] algorithm to prevent them to be decoded.
-Particularly, this plugin uses RSAES OAEP for key encryption and AES GCM (Galois/Counter Mode) algorithm with a 256 bit key
+By default, this plugin uses RSAES OAEP for key encryption and AES GCM (Galois/Counter Mode) algorithm with a 128 bit key
 for content encryption.
+
+The plugin signs the claims with the RSA private key, using RS256 (RSASSA-PKCS1-v1_5 with SHA-256), and encrypts the
+signed JWT with the RSA public key, which https://tools.ietf.org/html/rfc7519#section-5.2[RFC 7519] calls a nested JWT.
+The header of the encrypted JWT has the content type `JWT`. The plugin accepts an encrypted JWT only when it decrypts
+with the private key and holds a JWT whose signature verifies with the public key. An application that generates or
+validates encrypted JWT's therefore needs both keys, and the private key must be at least 2048 bits long. Use the key
+pair for these tokens only: the plugin accepts any JWT that is signed with the private key and encrypted with the public
+key, whatever issued it. With encrypted JWT's enabled, the plugin accepts no signed JWT's, and with signed JWT's, it
+accepts no encrypted JWT's. An encrypted JWT whose key is encrypted with `RSA1_5` is accepted only when
+`grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`.
 
 By default, RSA public/private keys are generated every time the application runs. This means that  generated tokens
 won't be decrypted across executions of the application. So better create your own key pair using OpenSSL:

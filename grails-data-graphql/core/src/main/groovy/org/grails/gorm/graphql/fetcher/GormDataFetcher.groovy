@@ -28,7 +28,7 @@ import graphql.schema.DataFetcher
  * @author James Kleeh
  * @since 1.0.0
  */
-interface GormDataFetcher extends DataFetcher {
+interface GormDataFetcher<T> extends DataFetcher<T> {
 
     boolean supports(GraphQLDataFetcherType type)
 }

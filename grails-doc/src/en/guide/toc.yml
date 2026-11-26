@@ -34,12 +34,15 @@ gettingStarted:
   creatingArtefacts: Creating Artefacts
   generatingAnApplication: Generating an Application
   developmentReloading: Development Reloading
+  agentSkills: Agent Skills
 upgrading:
   title: Upgrading from the previous versions
-  upgrading60x: Upgrading from Grails 6 to Grails 7
-  upgrading50x: Upgrading from Grails 5 to Grails 6
-  upgrading40x: Upgrading from Grails 4 to Grails 5
-  upgrading33x: Upgrading from Grails 3.3.x to Grails 4
+  upgrading72x: Upgrading from Grails 7.1 to Grails 7.2
+  upgrading71x: Upgrading from Grails 7.0 to Grails 7.1
+  upgrading70x: Upgrading from Grails 6 to Grails 7.0
+  upgrading60x: Upgrading from Grails 5 to Grails 6
+  upgrading50x: Upgrading from Grails 4 to Grails 5
+  upgrading40x: Upgrading from Grails 3.3.x to Grails 4
 conf:
   title: Configuration
   config:
@@ -51,6 +54,7 @@ conf:
         title: Logging
         loggerName: Logger Names
         maskingRequestParametersFromStacktraceLogs: Masking Request Parameters From Stacktrace Logs
+        loggingFullStackTraces: Logging Full Stack Traces
         externalLoggingConfiguration: External Configuration File
     configGORM: GORM
     proxyConfig: Configuring an HTTP proxy
@@ -304,6 +308,7 @@ testing:
     usefulProperties: Useful Properties
   integrationTesting: Integration Testing
   functionalTesting: Functional Testing
+  testPhases: Custom Test Phases
   testingMongodb: Testing GORM for MongoDB
 bestPractices:
   title: Building a Successful Application
