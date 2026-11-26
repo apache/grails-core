@@ -24,13 +24,16 @@ if (!rootProject.ext.has('substitutableFunctionalTestProjectsCache')) {
             .collect { subproject ->
                 // Ensure the target project is evaluated before we attempt to substitute it.
                 // This is necessary because it may not have been evaluated yet, and we need to
-                // ensure that the artifactId and cliArtifactId properties are available for substitution.
+                // ensure that the artifactId and the artifact ids of its companions with tools (cliArtifactId,
+                // cliStandaloneArtifactId) are available for substitution.
                 project.evaluationDependsOn(subproject.path)
                 return [
                         name: subproject.name,
                         group: subproject.group,
                         artifactId: subproject.findProperty('pomArtifactId') ?: subproject.name,
-                        cliArtifactId: subproject.findProperty('cliArtifactId'),
+                        companionArtifactIds: ['cliArtifactId', 'cliStandaloneArtifactId']
+                                .collect { String property -> subproject.findProperty(property) }
+                                .findAll(),
                         hasTestFixtures: subproject.plugins.hasPlugin('java-test-fixtures')
                 ]
             }
@@ -61,16 +64,16 @@ configurations.configureEach {
                 substitute module(substitutedArtifact) using project(":${substitutionInfo.name}")
             }
 
-            // companion cli artifacts are additional publications of the same project,
-            // reachable locally through the project's cli capability
-            if (substitutionInfo.cliArtifactId) {
-                def cliCoordinate = "${substitutionInfo.group}:${substitutionInfo.cliArtifactId}" as String
-                def cliReplacement = substitution.variant(project(":${substitutionInfo.name}")) { details ->
+            // the companions with the tools of a plugin (-cli, -cli-standalone) are additional publications of
+            // the same project, reachable locally through the capability of the companion
+            for (def companionArtifactId : substitutionInfo.companionArtifactIds) {
+                def companionCoordinate = "${substitutionInfo.group}:${companionArtifactId}" as String
+                def companionReplacement = substitution.variant(project(":${substitutionInfo.name}")) { details ->
                     details.capabilities { handler ->
-                        handler.requireCapability(cliCoordinate)
+                        handler.requireCapability(companionCoordinate)
                     }
                 }
-                substitute module(cliCoordinate) using cliReplacement
+                substitute module(companionCoordinate) using companionReplacement
             }
         }
     }

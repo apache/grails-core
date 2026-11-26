@@ -44,6 +44,9 @@ ext {
     isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
     // This BOM publishes the application versions; validateBomProperties fails for any of them no entry uses
     bomVersionProperties = bomDependencyVersions
+    // The extra properties a project has, with the artifact id as the value, for each companion with tools it
+    // publishes (`<artifactId>-cli`, `<artifactId>-cli-standalone`): the names ToolBuildNames of grails-gradle-model holds
+    companionArtifactIdProperties = ['cliArtifactId', 'cliStandaloneArtifactId']
     // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
     gradleBuildProjects = [
             'grails-gradle-plugins':'org.apache.grails',
@@ -128,9 +131,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
         rootProject.subprojects.each { p ->
             artifactIdMappings[p.name] = p.findProperty('pomArtifactId') ?: p.name
 
-            String cliArtifactId = p.findProperty('cliArtifactId')
-            if (cliArtifactId) {
-                artifactIdMappings[cliArtifactId] = cliArtifactId
+            for (String companionProperty : project.ext.companionArtifactIdProperties) {
+                String companionArtifactId = p.findProperty(companionProperty)
+                if (companionArtifactId) {
+                    artifactIdMappings[companionArtifactId] = companionArtifactId
+                }
             }
         }
 
@@ -148,9 +153,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
             String baseVersionName = artifactId.replaceAll('[.]', '-')
             projectCoordinates["${p.group}:${ artifactId}:${p.version}" as String] = baseVersionName
 
-            String cliArtifactId = p.findProperty('cliArtifactId')
-            if (cliArtifactId) {
-                projectCoordinates["${p.group}:${cliArtifactId}:${p.version}" as String] = cliArtifactId
+            for (String companionProperty : project.ext.companionArtifactIdProperties) {
+                String companionArtifactId = p.findProperty(companionProperty)
+                if (companionArtifactId) {
+                    projectCoordinates["${p.group}:${companionArtifactId}:${p.version}" as String] = companionArtifactId
+                }
             }
         }
 
@@ -203,9 +210,11 @@ Provider<PropertyNameCalculator> bomPropertyNames = provider {
         propertyNameCalculator.addProject('org.apache.grails.gradle', gradleArtifactId, project.version as String, gradleArtifactId)
     }
     for (Project p : rootProject.subprojects) {
-        String cliArtifactId = p.findProperty('cliArtifactId')
-        if (cliArtifactId) {
-            propertyNameCalculator.addProject(p.group as String, cliArtifactId, p.version as String, cliArtifactId)
+        for (String companionProperty : project.ext.companionArtifactIdProperties) {
+            String companionArtifactId = p.findProperty(companionProperty)
+            if (companionArtifactId) {
+                propertyNameCalculator.addProject(p.group as String, companionArtifactId, p.version as String, companionArtifactId)
+            }
         }
     }
     propertyNameCalculator
