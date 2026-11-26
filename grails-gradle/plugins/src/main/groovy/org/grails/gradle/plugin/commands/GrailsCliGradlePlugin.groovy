@@ -37,10 +37,12 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.attributes.Category
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
@@ -125,6 +127,19 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * dependencies and by what {@code grailsCli} brings
      */
     public static final String GRAILS_CLI_STANDALONE_DETECT_CONFIGURATION = 'grailsCliStandaloneDetect'
+
+    /**
+     * The internal bucket that gives every class path of the tools the versions the project manages:
+     * the platforms and the dependency constraints declared on the configurations of the main source
+     * set, and none of their dependencies.
+     */
+    public static final String GRAILS_TOOL_VERSIONS_CONFIGURATION = 'grailsToolVersions'
+
+    /** The resolvable configurations of the tools that have the versions of {@link #GRAILS_TOOL_VERSIONS_CONFIGURATION}. */
+    public static final List<String> TOOL_CLASSPATH_CONFIGURATIONS = [
+            ToolBuildNames.GRAILS_CLI_CLASSPATH_CONFIGURATION, ToolBuildNames.GRAILS_CLI_STANDALONE_CLASSPATH_CONFIGURATION,
+            'cliCompileClasspath', 'cliRuntimeClasspath', 'standaloneCompileClasspath', 'standaloneRuntimeClasspath',
+    ].asImmutable()
 
     /** What {@code runCommand}, the deprecated other name of {@code runTool}, says each time it runs. */
     public static final String RUN_COMMAND_DEPRECATED = 'runCommand is deprecated: use runTool'
@@ -343,6 +358,9 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * are on the class paths of the tests and of {@code src/cli}, and {@code grailsCliStandalone}
      * alone on that of {@code src/standalone}. Neither is on the main compile class path or on
      * {@code runtimeClasspath}, and therefore in {@code bootRun}, {@code bootJar} or {@code bootWar}.
+     * Every class path of the tools has the platforms and dependency constraints of the main
+     * configurations ({@link #declareVersionsOfMain}), so their dependencies are declared without a
+     * version, as those of the application are.
      */
     protected void configureGrailsCliConfiguration(Project project) {
         ConfigurationContainer configurations = project.configurations
@@ -388,6 +406,20 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         grailsCliStandaloneClasspath.canBeConsumed = false
         grailsCliStandaloneClasspath.description = 'Resolvable view of grailsCliStandalone alone: the dependencies a standalone tool is started with.'
 
+        // a dependency of a tool is written without a version, as every other dependency of the project is: the class
+        // paths of the tools have the platforms and constraints of the main configurations, but not their dependencies
+        Configuration toolVersions = configurations.create(GRAILS_TOOL_VERSIONS_CONFIGURATION)
+        toolVersions.canBeResolved = false
+        toolVersions.canBeConsumed = false
+        toolVersions.description = 'Internal: the platforms and dependency constraints of the main configurations, without their dependencies, ' +
+                'for the class paths of the tools.'
+        toolVersions.withDependencies { DependencySet dependencies ->
+            declareVersionsOfMain(project, toolVersions, dependencies)
+        }
+        configurations.matching { Configuration it -> it.name in TOOL_CLASSPATH_CONFIGURATIONS }.configureEach { Configuration it ->
+            it.extendsFrom(toolVersions)
+        }
+
         Configuration grailsCliDetect = configurations.create(GRAILS_CLI_DETECT_CONFIGURATION)
         grailsCliDetect.canBeResolved = true
         grailsCliDetect.canBeConsumed = false
@@ -414,6 +446,52 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         grailsCliStandalone.withDependencies { DependencySet dependencies ->
             autoProvisionStandaloneDependencies(project, dependencies)
         }
+    }
+
+    /**
+     * Declares on {@link #GRAILS_TOOL_VERSIONS_CONFIGURATION}, when a class path of the tools is first
+     * resolved, the versions the project manages: a copy of every platform (and enforced platform)
+     * declared on a configuration the main compile or run time class path is made of, and the
+     * dependency constraints declared there. The dependencies of those configurations themselves are
+     * not declared: a standalone tool is started without the dependencies of the application.
+     *
+     * @param project the project
+     * @param toolVersions the bucket the class paths of the tools extend
+     * @param dependencies the dependencies of the bucket
+     */
+    protected static void declareVersionsOfMain(Project project, Configuration toolVersions, DependencySet dependencies) {
+        SourceSetContainer sourceSets = project.extensions.findByType(SourceSetContainer)
+        SourceSet main = sourceSets?.findByName(SourceSet.MAIN_SOURCE_SET_NAME)
+        if (main == null) {
+            return
+        }
+        Set<Configuration> declaredOnMain = new LinkedHashSet<Configuration>()
+        for (String classpath : [main.compileClasspathConfigurationName, main.runtimeClasspathConfigurationName]) {
+            Configuration configuration = project.configurations.findByName(classpath)
+            if (configuration != null) {
+                declaredOnMain.addAll(configuration.hierarchy)
+            }
+        }
+        for (Configuration configuration : declaredOnMain) {
+            if (!configuration.canBeDeclared || configuration.is(toolVersions)) {
+                continue
+            }
+            for (Dependency dependency : configuration.dependencies) {
+                if (isPlatform(dependency)) {
+                    dependencies.add(dependency.copy())
+                }
+            }
+            toolVersions.dependencyConstraints.addAll(configuration.dependencyConstraints)
+        }
+    }
+
+    /** Whether the dependency is a platform, declared with {@code platform()} or {@code enforcedPlatform()}. */
+    private static boolean isPlatform(Dependency dependency) {
+        if (!(dependency instanceof ModuleDependency)) {
+            return false
+        }
+        Category category = ((ModuleDependency) dependency).attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
+        category != null && (category.name == Category.REGULAR_PLATFORM || category.name == Category.ENFORCED_PLATFORM)
     }
 
     /**
