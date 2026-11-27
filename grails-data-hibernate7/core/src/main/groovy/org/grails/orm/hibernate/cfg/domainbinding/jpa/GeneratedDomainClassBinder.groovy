@@ -191,7 +191,7 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         generator = new GrailsDomainGenerator(
                 namingStrategy,
                 new ColumnNameForPropertyAndPathFetcher(
-                        namingStrategy, new DefaultColumnNameFetcher(namingStrategy, backticksRemover), backticksRemover),
+                        namingStrategy, new DefaultColumnNameFetcher(namingStrategy, backticksRemover), backticksRemover, buildingContext),
                 new ColumnConfigToColumnBinder(),
                 new StringColumnConstraintsBinder(),
                 new NumericColumnConstraintsBinder(jdbcEnvironment.dialect),
