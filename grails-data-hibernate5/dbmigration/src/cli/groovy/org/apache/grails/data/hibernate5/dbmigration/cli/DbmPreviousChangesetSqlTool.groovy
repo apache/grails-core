@@ -57,7 +57,7 @@ class DbmPreviousChangesetSqlTool implements ApplicationTool, ApplicationContext
         String skip = optionValue('skip') ?: '0'
 
         if (!skip.isNumber()) {
-            throw new DatabaseMigrationException("The change set skip argument '$count' isn't a number")
+            throw new DatabaseMigrationException("The change set skip argument '$skip' isn't a number")
         }
 
         configureLiquibase()

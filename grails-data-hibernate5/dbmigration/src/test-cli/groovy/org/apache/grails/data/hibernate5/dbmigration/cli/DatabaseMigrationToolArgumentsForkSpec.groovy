@@ -114,6 +114,15 @@ databaseChangeLog:
         ['--dataSource=reports', 'changelog.yml', 'converted'] || 'converted-reports.groovy'
     }
 
+    def "dbm-previous-changeset-sql says which value of --skip is not a number"() {
+        when:
+        Map result = run([], 'dbm-previous-changeset-sql', '--skip=two', '1', DatabaseMigrationForkApplication.name)
+
+        then:
+        result.exit == 1
+        result.err.contains("The change set skip argument 'two' isn't a number")
+    }
+
     @Unroll
     def "#tool #arguments is refused before the application is started for it, and the JVM ends with 2"() {
         when:

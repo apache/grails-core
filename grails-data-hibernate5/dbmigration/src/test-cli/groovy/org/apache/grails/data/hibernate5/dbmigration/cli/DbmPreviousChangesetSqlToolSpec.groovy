@@ -90,6 +90,15 @@ class DbmPreviousChangesetSqlToolSpec extends ApplicationContextDatabaseMigratio
         e.message == 'The change set number argument \'one\' isn\'t a number'
     }
 
+    void "an error occurs if the skip option is not a number, which names the value it was given"() {
+        when:
+        command.handle(getExecutionContext('1', '--skip=two'))
+
+        then:
+        def e = thrown(DatabaseMigrationException)
+        e.message == 'The change set skip argument \'two\' isn\'t a number'
+    }
+
 
     static final String CHANGE_LOG_CONTENT = '''
 databaseChangeLog = {
