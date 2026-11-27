@@ -44,6 +44,9 @@ class ToolLocationEnforcementSpec extends Specification {
     private static final String SUPPORT = 'org.apache.grails.core.cli.ToolSupport'
     private static final String HANDLE = 'boolean handle(org.apache.grails.core.cli.ExecutionContext executionContext) { true }'
 
+    // a tool without a description is warned of too (ToolChecksSpec), which the features about other warnings leave out
+    private static final String DESCRIBED = "String description = 'Renders the old way';"
+
     private static final String NOT_READ = 'startsApplication of RenderTool has to be the constant true or false, where it is declared ' +
             'or in every constructor: the build reads it without running the tool.'
 
@@ -183,7 +186,8 @@ class ToolLocationEnforcementSpec extends Specification {
     @Unroll
     def "a class that implements #type itself compiles with a warning that names what to implement instead"() {
         when:
-        Compiled compiled = compile('src/cli/groovy/example/OldTool.groovy', "${abstractness}class OldTool implements org.apache.grails.core.cli.${type} { ${members} }")
+        Compiled compiled = compile('src/cli/groovy/example/OldTool.groovy',
+                "${abstractness}class OldTool implements org.apache.grails.core.cli.${type} { ${DESCRIBED} ${members} }")
 
         then:
         compiled.errors.isEmpty()
@@ -212,14 +216,14 @@ class ToolLocationEnforcementSpec extends Specification {
 
         where:
         what                                               | folder            | source
-        'an application tool'                              | 'src/cli/groovy'  | "class OldTool implements ${APPLICATION}, ${SUPPORT} { boolean handle() { true } }"
+        'an application tool'                              | 'src/cli/groovy'  | "class OldTool implements ${APPLICATION}, ${SUPPORT} { ${DESCRIBED} boolean handle() { true } }"
         'a deprecated type in a folder of tests'           | 'src/test/groovy' | "class OldTool implements org.apache.grails.core.cli.GrailsApplicationCommand { boolean handle() { true } }"
     }
 
     def "of a class that implements a deprecated type and one that extends it, the first is warned of"() {
         when:
         Compiled compiled = compile('src/cli/groovy/example/OldTool.groovy',
-                "abstract class BaseTool implements org.apache.grails.core.cli.ApplicationCommand { }\nclass OldTool extends BaseTool { ${HANDLE} }")
+                "abstract class BaseTool implements org.apache.grails.core.cli.ApplicationCommand { }\nclass OldTool extends BaseTool { ${DESCRIBED} ${HANDLE} }")
 
         then:
         compiled.errors.isEmpty()

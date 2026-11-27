@@ -22,6 +22,7 @@ import java.lang.reflect.Modifier
 import java.nio.charset.StandardCharsets
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.InnerClassNode
@@ -75,6 +76,13 @@ import org.apache.grails.gradle.model.cli.ToolDescriptor
  *
  * <p>What is deprecated about how the tool is written goes into the descriptor as it is given.</p>
  *
+ * <p>What the tool declares goes into the descriptor too ({@link ToolDeclarationReader}): its options
+ * and parameters, its hints, {@code readsInput} when it is {@code true}, which is read as
+ * {@code startsApplication} is ({@link #readsInput}), and what the tool lacks of what describes it,
+ * {@code incomplete}: a description that is a constant of one line, the declaration of the arguments
+ * its own code reads ({@link ToolCodeReader}), and its hints. A tool whose declarations break a rule, or
+ * do not fit in a descriptor, gets none; the compilation fails with an error for each ({@link ToolRules}).</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -87,6 +95,12 @@ class ToolDescriptorWriter {
     private static final String IS_STARTS_APPLICATION = 'isStartsApplication'
 
     private static final String GET_STARTS_APPLICATION = 'getStartsApplication'
+
+    private static final String READS_INPUT = 'readsInput'
+
+    private static final String IS_READS_INPUT = 'isReadsInput'
+
+    private static final String GET_READS_INPUT = 'getReadsInput'
 
     private static final Object UNKNOWN = new Object()
 
@@ -117,29 +131,7 @@ class ToolDescriptorWriter {
             return false
         }
         File descriptor = new File(compilationTargetDirectory, location)
-        // a class without a name of its own is nothing that can be typed
-        if (classNode instanceof InnerClassNode && ((InnerClassNode) classNode).isAnonymous()) {
-            descriptor.delete()
-            return false
-        }
-        Object declaredName = declared(classNode, 'name')
-        if (declaredName.is(UNKNOWN)) {
-            descriptor.delete()
-            return false
-        }
-        String name = declaredName == null ? ToolDescriptor.conventionName(classNode.name) : (String) declaredName
-        Object declaredDescription = declared(classNode, 'description')
-        String description = declaredDescription.is(UNKNOWN) ? null :
-                declaredDescription == null ? name : (String) declaredDescription
-        String target = target(classNode)
-        Boolean startsApplication = target == ToolDescriptor.TARGET_APPLICATION ? startsApplication(classNode) : Boolean.FALSE
-        if (startsApplication == null) {
-            descriptor.delete()
-            return false
-        }
-        // nothing is written that the reader of a descriptor refuses: a name that is not the name of a
-        // command gets no descriptor, and a description that is not one line that can be shown is left out
-        String json = ToolDescriptor.describe(classNode.name, name, description, target, startsApplication, deprecated)
+        String json = describe(classNode, deprecated).json
         if (json == null) {
             descriptor.delete()
             return false
@@ -147,6 +139,112 @@ class ToolDescriptorWriter {
         descriptor.parentFile.mkdirs()
         descriptor.setBytes(json.getBytes(StandardCharsets.US_ASCII))
         true
+    }
+
+    /**
+     * How the description of a tool is found in its source.
+     */
+    @PackageScope
+    static enum DescriptionFound {
+
+        /** One line that can be shown, declared as a constant. */
+        DECLARED,
+
+        /** Nothing declares one, or it is empty. */
+        MISSING,
+
+        /** One is declared, and is not a constant. */
+        NOT_CONSTANT,
+
+        /** A constant is declared that is not one line that can be shown. */
+        NOT_ONE_LINE
+    }
+
+    /**
+     * What the source of a tool says of it, from which its descriptor is written and its checks are made.
+     */
+    @PackageScope
+    static final class Description {
+
+        /** The name of the tool, or {@code null} when it cannot be read from the source. */
+        String name
+
+        /** How the description of the tool was found. */
+        DescriptionFound descriptionFound
+
+        /** Whether the application is started around the tool, or {@code null} when it cannot be read. */
+        Boolean startsApplication
+
+        /** Whether the tool reads what is typed, or {@code null} when it cannot be read. */
+        Boolean readsInput
+
+        /** What the tool declares of its command line and of what it does. */
+        ToolDeclarationReader.Read declared
+
+        /** Whether the tool reads its arguments without declaring them. */
+        boolean readsArgumentsUndeclared
+
+        /** What the tool lacks of what describes it. */
+        List<String> incomplete
+
+        /** The descriptor, or {@code null} when the tool gets none. */
+        String json
+
+        /** Whether the declarations of the tool need more than a descriptor holds. */
+        boolean tooLarge
+    }
+
+    /**
+     * Reads what the source of a tool says of it, and writes its descriptor in memory.
+     *
+     * @param classNode the tool class
+     * @param deprecated what is deprecated about how the tool is written
+     * @return what was found
+     */
+    @PackageScope
+    static Description describe(ClassNode classNode, List<String> deprecated) {
+        Description described = new Description()
+        described.declared = ToolDeclarationReader.read(classNode)
+        described.readsArgumentsUndeclared = !described.declared.declaring && ToolCodeReader.readsArguments(classNode)
+        Object declaredDescription = declared(classNode, 'description')
+        described.descriptionFound = declaredDescription == null || (declaredDescription instanceof String && ((String) declaredDescription).trim().isEmpty()) ?
+                DescriptionFound.MISSING : declaredDescription.is(UNKNOWN) ? DescriptionFound.NOT_CONSTANT :
+                !ToolDescriptor.isDescription((String) declaredDescription) ? DescriptionFound.NOT_ONE_LINE : DescriptionFound.DECLARED
+        List<String> incomplete = []
+        if (described.descriptionFound != DescriptionFound.DECLARED) {
+            incomplete << ToolDescriptor.INCOMPLETE_DESCRIPTION
+        }
+        if (described.readsArgumentsUndeclared) {
+            incomplete << ToolDescriptor.INCOMPLETE_ARGUMENTS
+        }
+        if (described.declared.hints == null) {
+            incomplete << ToolDescriptor.INCOMPLETE_HINTS
+        }
+        described.incomplete = incomplete
+        String target = target(classNode)
+        described.startsApplication = target == ToolDescriptor.TARGET_APPLICATION ? startsApplication(classNode) : Boolean.FALSE
+        described.readsInput = readsInput(classNode)
+        // a class without a name of its own is nothing that can be typed
+        if (classNode instanceof InnerClassNode && ((InnerClassNode) classNode).isAnonymous()) {
+            return described
+        }
+        Object declaredName = declared(classNode, 'name')
+        if (declaredName.is(UNKNOWN)) {
+            return described
+        }
+        described.name = declaredName == null ? ToolDescriptor.conventionName(classNode.name) : (String) declaredName
+        String description = declaredDescription.is(UNKNOWN) ? null :
+                declaredDescription == null ? described.name : (String) declaredDescription
+        ToolDescriptor.Declarations declarations = described.declared.declarations(described.readsInput == Boolean.TRUE, incomplete)
+        if (described.startsApplication == null || described.readsInput == null || declarations == null) {
+            return described
+        }
+        // nothing is written that the reader of a descriptor refuses: a name that is not the name of a
+        // command gets no descriptor, and a description that is not one line that can be shown is left out
+        described.json = ToolDescriptor.describe(classNode.name, described.name, description, target, described.startsApplication, deprecated, declarations)
+        described.tooLarge = described.json == null &&
+                ToolDescriptor.describe(classNode.name, described.name, description, target, described.startsApplication, deprecated) != null
+        described
     }
 
     /**
@@ -211,6 +309,52 @@ class ToolDescriptorWriter {
             current = current.superClass
         }
         Boolean.TRUE
+    }
+
+    /**
+     * @param classNode a tool class
+     * @return whether the tool reads what is typed, which is what the property {@code readsInput} is once
+     * an instance of the tool is made, read as {@link #startsApplication} is: from {@code isReadsInput()}
+     * where a class of the tool writes one that returns a constant, from the property where one of them
+     * declares it, and otherwise from the property of {@code GrailsTool}, which is {@code false} unless
+     * code compiled with the tool names it and sets it. {@code null} when that cannot be known from the source
+     */
+    static Boolean readsInput(ClassNode classNode) {
+        ClassNode current = classNode
+        while (current != null && current != ClassHelper.OBJECT_TYPE) {
+            MethodNode reader = ownMethod(current, IS_READS_INPUT)
+            if (reader != null) {
+                Object returned = returnedConstant(reader, Boolean)
+                return returned.is(UNKNOWN) ? null : (Boolean) returned
+            }
+            if (ownMethod(current, GET_READS_INPUT) != null) {
+                return null
+            }
+            PropertyNode propertyNode = current.getProperty(READS_INPUT)
+            if (propertyNode != null && !propertyNode.isStatic()) {
+                if (Modifier.isFinal(propertyNode.modifiers) && !ConstructionReader.setsInConstructor(current, READS_INPUT)) {
+                    Object declared = constant(propertyNode.initialExpression, Boolean)
+                    return declared.is(UNKNOWN) ? null : (Boolean) declared
+                }
+                return ConstructionReader.readBoolean(classNode, current, READS_INPUT)
+            }
+            MethodNode bridge = current.getDeclaredMethod(IS_READS_INPUT, Parameter.EMPTY_ARRAY)
+            if (bridge != null && !bridge.isStatic()) {
+                if (ConstructionReader.bridgedTrait(bridge) != CommandFactoriesTransformation.GRAILS_TOOL_CLASS.name) {
+                    return null
+                }
+                // the property of GrailsTool: false unless code compiled with the tool names it. What sets properties
+                // by names that are worked out, and a class compiled elsewhere that the tool extends, are taken not to
+                // set it, unlike startsApplication, so that every tool written before readsInput compiles as it did.
+                if (!ToolCodeReader.names(classNode, READS_INPUT) || !ConstructionReader.writes(classNode, READS_INPUT)) {
+                    return Boolean.FALSE
+                }
+                return current.isPrimaryClassNode() ?
+                        ConstructionReader.readTraitBoolean(classNode, current, READS_INPUT, CommandFactoriesTransformation.GRAILS_TOOL_CLASS.name, false) : null
+            }
+            current = current.superClass
+        }
+        Boolean.FALSE
     }
 
     // a method without parameters the class writes itself, and not a trait for it

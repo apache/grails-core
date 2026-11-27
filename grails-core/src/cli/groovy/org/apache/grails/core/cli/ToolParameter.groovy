@@ -44,6 +44,16 @@ import java.lang.annotation.Target
  * <p>The members have to be constants: the compiler reads them from the source, without running the
  * tool.</p>
  *
+ * <p>Before the tool runs, the field of a parameter is set to the value it was given, its number or its
+ * enum constant, or, for the last parameter of the type {@code List<String>}, the values after the
+ * parameters before it. A parameter that is not given leaves its field as it starts. The rules, which
+ * the compiler holds a declaration to with an error that names the field: a label that is an upper-case
+ * letter followed by at most 31 upper-case letters, digits and hyphens, which no other parameter of the
+ * tool has; a description of one line of at most 512 characters; indexes from 0 without gaps; only the
+ * last parameter takes any number of values; a parameter that has to be given comes before those that
+ * can be left out; on the class, an arity of {@code '1'} or {@code '1..*'}, and {@code '0..1'} or
+ * {@code '0..*'} only with {@code required = false}; at most 16 parameters.</p>
+ *
  * @since 9.0
  */
 @Documented

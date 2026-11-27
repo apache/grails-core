@@ -20,8 +20,10 @@ package org.apache.grails.core.cli.compiler
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.InnerClassNode
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.control.messages.WarningMessage
@@ -33,8 +35,11 @@ import org.apache.grails.gradle.model.cli.ToolDescriptor
 /**
  * What a tool has to be, which the compiler checks where it writes the descriptor of the tool: a tool
  * is either an {@code ApplicationTool} or a {@code StandaloneTool}, its source is in the folder of its
- * kind, and whether it starts the application is a constant. A class that does otherwise does not
- * compile. A class that implements a deprecated type compiles, with a warning.
+ * kind, whether it starts the application and whether it reads what is typed are constants, and its
+ * {@code @ToolOption}, {@code @ToolParameter} and {@code @ToolHints} keep their rules and fit in its
+ * descriptor. A class that does otherwise does not compile. A class that implements a deprecated type
+ * compiles, with a warning; so does a tool without a description, one that reads its arguments without
+ * declaring them, and one that reads what is typed without saying so: warnings never fail a build.
  *
  * <p>Nothing of this is checked for a source in a folder of tests ({@link ToolSource#isExempt()}),
  * and the compiler does not see a source without a file.</p>
@@ -111,6 +116,50 @@ final class ToolRules {
             error(source, classNode, "startsApplication of ${name} has to be the constant true or false, " +
                     'where it is declared or in every constructor: the build reads it without running the tool.')
         }
+        ToolDescriptorWriter.Description described = ToolDescriptorWriter.describe(classNode, deprecations(classNode, located))
+        if (described.readsInput == null) {
+            error(source, classNode, "readsInput of ${name} has to be the constant true or false, " +
+                    'where it is declared or in every constructor: the build reads it without running the tool.')
+        }
+        for (ToolDeclarationReader.Breach breach : described.declared.breaches) {
+            error(source, breach.node.lineNumber > 0 ? breach.node : classNode, breach.message)
+        }
+        if (described.tooLarge) {
+            error(source, classNode, "${name} declares more than its descriptor can hold (${ToolDescriptor.MAX_BYTES} bytes, " +
+                    'where each character outside ASCII takes 6): shorten the descriptions of its options and parameters.')
+        }
+        if (classNode instanceof InnerClassNode && ((InnerClassNode) classNode).isAnonymous()) {
+            return
+        }
+        warnOfIncomplete(classNode, described, source)
+    }
+
+    // what a tool lacks of what describes it, which leaves help, completion and agents without it; never an error
+    private static void warnOfIncomplete(ClassNode classNode, ToolDescriptorWriter.Description described, SourceUnit source) {
+        String name = classNode.nameWithoutPackage
+        switch (described.descriptionFound) {
+            case ToolDescriptorWriter.DescriptionFound.MISSING:
+                warning(source, classNode, "${name} has no description: help and agents show only its name. Set description = '...'")
+                break
+            case ToolDescriptorWriter.DescriptionFound.NOT_CONSTANT:
+                warning(source, classNode, "${name} has no description that can be read without running it: help and agents show only its name. " +
+                        "Set description = '...' to a constant")
+                break
+            case ToolDescriptorWriter.DescriptionFound.NOT_ONE_LINE:
+                warning(source, classNode, "${name} has a description that is not one line of at most ${ToolDescriptor.MAX_DESCRIPTION_LENGTH} " +
+                        "characters that can be shown: help and agents show only its name. Set description = '...' to one line")
+                break
+            default:
+                break
+        }
+        if (described.readsArgumentsUndeclared) {
+            warning(source, classNode, "${name} reads its arguments without declaring them: declare them with @ToolOption and @ToolParameter, " +
+                    'so that help, completion and agents know them')
+        }
+        if (described.readsInput == Boolean.FALSE && ToolCodeReader.readsTyped(classNode)) {
+            warning(source, classNode, "${name} reads what is typed: declare boolean readsInput = true, " +
+                    'so that --non-interactive and agents do not run it without input')
+        }
     }
 
     /**
@@ -170,9 +219,9 @@ final class ToolRules {
         false
     }
 
-    private static void error(SourceUnit source, ClassNode classNode, String message) {
+    private static void error(SourceUnit source, ASTNode node, String message) {
         source.errorCollector.addError(new SyntaxErrorMessage(
-                new SyntaxException(message, classNode.lineNumber, classNode.columnNumber), source), false)
+                new SyntaxException(message, node.lineNumber, node.columnNumber), source), false)
     }
 
     // a warning of the compilation, which a build that does not show those, as Gradle, shows from the standard error

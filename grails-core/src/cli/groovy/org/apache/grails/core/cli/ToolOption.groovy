@@ -45,6 +45,28 @@ import java.lang.annotation.Target
  * <p>The members have to be constants: the compiler reads them from the source, without running the
  * tool.</p>
  *
+ * <p>Before the tool runs, the field of an option is set to what the option was given: {@code true} for
+ * a switch, the value, its number or its enum constant, or the values of an option given more than
+ * once. An option that is not given leaves its field as it starts, unless {@link #defaultValue()} is
+ * given, which the field is then set to. A tool that declares an option or a parameter is held to its
+ * declarations: arguments that are not what it declares are refused, with exit code 2, before it runs.</p>
+ *
+ * <p>The rules, which the compiler holds a declaration to with an error that names the field:</p>
+ * <ul>
+ *   <li>at least one long name, two hyphens and a lower-case letter followed by letters, digits and
+ *       single hyphens, at most 32 characters, as {@code --since} or {@code --dataSource}; at most one
+ *       short name, a hyphen and one letter; at most four names; none of {@code --help},
+ *       {@code --version} and {@code -D}; no name another option of the tool has;</li>
+ *   <li>a description of one line of at most 512 characters, and a label of an upper-case letter
+ *       followed by at most 31 upper-case letters, digits and hyphens;</li>
+ *   <li>a switch is neither required nor has it a label or a default; a default is one line of at most
+ *       128 characters, a whole number for a whole number and one of the choices for an enum, and an
+ *       option that is required or can be given more than once has none;</li>
+ *   <li>an enum has 1 to 64 constants, each of at most 64 ASCII letters, digits, {@code _} and {@code $};</li>
+ *   <li>the field is neither static nor final, and is not a parameter as well;</li>
+ *   <li>a tool declares at most 32 options.</li>
+ * </ul>
+ *
  * @since 9.0
  */
 @Documented

@@ -132,6 +132,11 @@ class ConstructionReader {
     // the trait of the command contract whose accessors read and write a field and do nothing else
     private static final String APPLICATION_TOOL = 'org.apache.grails.core.cli.ApplicationTool'
 
+    // the trait of every tool, of whose accessors those of readsInput read and write its field and do nothing else
+    private static final String GRAILS_TOOL = 'org.apache.grails.core.cli.GrailsTool'
+
+    private static final List<String> GRAILS_TOOL_ACCESSORS = ['isReadsInput', 'getReadsInput', 'setReadsInput'].asImmutable()
+
     // how deep calls are followed, and how many calls one property is read through
     private static final int DEEPEST_CALL = 16
 
@@ -351,9 +356,13 @@ class ConstructionReader {
         types
     }
 
-    // a getter or a setter the trait whose accessors do nothing else adds to a class
+    // a getter or a setter the trait whose accessors do nothing else adds to a class, or one of readsInput, which GrailsTool adds
     private static boolean isContractAccessor(MethodNode method) {
-        if (bridgedTrait(method) != APPLICATION_TOOL) {
+        String trait = bridgedTrait(method)
+        if (trait == GRAILS_TOOL) {
+            return method.name in GRAILS_TOOL_ACCESSORS && method.parameters.length == (method.name.startsWith('set') ? 1 : 0)
+        }
+        if (trait != APPLICATION_TOOL) {
             return false
         }
         int count = method.parameters.length

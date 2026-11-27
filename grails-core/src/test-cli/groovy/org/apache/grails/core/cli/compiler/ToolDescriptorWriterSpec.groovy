@@ -60,7 +60,7 @@ class ToolDescriptorWriterSpec extends Specification {
         then: 'the bytes are these, so that the same source gives the same jar'
         descriptorFile('example.BackupDatabaseCommand').getText('US-ASCII') ==
                 '{"format":1,"class":"example.BackupDatabaseCommand","name":"backup-database",' +
-                '"description":"backup-database","target":"application","startsApplication":true}\n'
+                '"description":"backup-database","target":"application","startsApplication":true,"incomplete":["description","hints"]}\n'
 
         and: 'it is the name the command has when it runs'
         compiledName('example.BackupDatabaseCommand') == 'backup-database'
@@ -327,7 +327,7 @@ class ToolDescriptorWriterSpec extends Specification {
                 tools      : [
                         [name: 'audit', aliases: [], description: 'Writes the audit report', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor'],
                         [name: 'greet', aliases: [], description: 'Greets someone', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor',
-                         deprecated: ['folder']],
+                         deprecated: ['folder'], incomplete: ['hints']],
                 ],
         ]
         apart.build() == together.build()
@@ -720,7 +720,8 @@ class ToolDescriptorWriterSpec extends Specification {
         GrailsTool found = withCompiledCommands { new ApplicationContextCommandRegistry().findCommand((String) listed[0].name) }
 
         then:
-        listed == [[name: 'import-data', aliases: [], description: 'import-data', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor']]
+        listed == [[name: 'import-data', aliases: [], description: 'import-data', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor',
+                    incomplete: ['description', 'hints']]]
         found?.getClass()?.name == 'example.ImportDataCommand'
     }
 
@@ -863,10 +864,13 @@ class ToolDescriptorWriterSpec extends Specification {
         descriptorFile(className).isFile() ? descriptor(className).name : null
     }
 
+    // the descriptor without what the tool lacks of what describes it, which ToolChecksSpec is about
     private Map descriptor(String className) {
         // whatever the compiler writes, the reader of a descriptor takes
         ToolDescriptor.read(className, descriptorFile(className).bytes)
-        (Map) new JsonSlurper().parse(descriptorFile(className), 'US-ASCII')
+        Map described = (Map) new JsonSlurper().parse(descriptorFile(className), 'US-ASCII')
+        described.remove(ToolDescriptor.MEMBER_INCOMPLETE)
+        described
     }
 
     private List<String> registered() {
