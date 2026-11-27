@@ -60,7 +60,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.validation.Errors;
 
+import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.GormValidateable;
+import org.grails.datastore.gorm.GormValidationApi;
 import org.grails.datastore.gorm.support.BeforeValidateHelper.BeforeValidateEventTriggerCaller;
 import org.grails.datastore.gorm.support.EventTriggerCaller;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
@@ -110,11 +112,22 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
     private final boolean isMultiTenant;
     private final boolean failOnErrorEnabled;
     private final Map validateParams;
+    private final String connectionName;
 
     private Field actionQueueUpdatesField;
     private Field entityUpdateActionStateField;
 
     public ClosureEventListener(PersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
+        this(persistentEntity, failOnError, failOnErrorPackages, null);
+    }
+
+    /**
+     * @param connectionName the name of the connection of the datastore that flushes: the entity is validated at a flush
+     *                       through the validation API of that connection, as {@code ValidationEventListener} does, and not
+     *                       through the API of the default connection; null validates through the instance, as before
+     */
+    public ClosureEventListener(PersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages, String connectionName) {
+        this.connectionName = connectionName;
         this.persistentEntity = persistentEntity;
         Class domainClazz = persistentEntity.getJavaClass();
         this.domainMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(domainClazz);
@@ -299,11 +312,19 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
         beforeValidateEventListener.call(event.getEntityObject(), event.getValidatedFields());
     }
 
+    @SuppressWarnings("unchecked")
+    private boolean validate(GormValidateable validateable, Object entity) {
+        if (connectionName == null) {
+            return validateable.validate(validateParams);
+        }
+        GormValidationApi<Object> validationApi = GormEnhancer.findValidationApi((Class<Object>) persistentEntity.getJavaClass(), connectionName);
+        return validationApi.validate(entity, validateParams);
+    }
+
     protected boolean doValidate(Object entity) {
         boolean evict = false;
         GormValidateable validateable = (GormValidateable) entity;
-        if (!validateable.shouldSkipValidation() &&
-                !validateable.validate(validateParams)) {
+        if (!validateable.shouldSkipValidation() && !validate(validateable, entity)) {
             evict = true;
             if (failOnErrorEnabled) {
                 Errors errors = validateable.getErrors();

@@ -1406,3 +1406,12 @@ only shows in a schema that Hibernate creates: an application that manages its s
 keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
 The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
 enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
+
+==== A `unique` Constraint Checks the Connection a Save Names
+
+For a domain class mapped to several data sources, a `save()` that names a connection, such as `book.second.save()`, `Book.second.save(book)` or `Book.second.insert(book)`, checked the `unique` constraint against the *default* data source, whichever connection it named.
+
+* A value that existed only on the default data source was reported as a duplicate while saving to the second, and one that existed only on the second was not found, so the save failed at the unique index with a `DuplicateKeyException` (or, with MongoDB, stored a second copy).
+* `validate()` called through the API of a connection was checked on the default data source in the same way.
+
+The check now runs on the connection the save names, and on the default connection for a save that names none. Unqualified calls inside a connection block, such as `Book.second.withTransaction { }`, still go to the default connection on 7.0.x, so the check does too. If you relied on one value being unique across every data source, enforce that yourself, for example with a check in a service that queries each connection.

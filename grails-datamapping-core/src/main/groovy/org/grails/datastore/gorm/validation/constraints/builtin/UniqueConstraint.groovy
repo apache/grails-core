@@ -25,8 +25,10 @@ import org.springframework.context.MessageSource
 import org.springframework.validation.Errors
 
 import grails.gorm.DetachedCriteria
+import org.grails.datastore.gorm.AbstractGormApi
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.validation.constraints.AbstractConstraint
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -95,6 +97,13 @@ class UniqueConstraint extends AbstractConstraint {
 
         // Re-create the detached criteria based on the new constraint class
         detachedCriteria = new DetachedCriteria(constraintClass)
+        // a save or a validation that names a connection, such as book.third.save(), checks that connection
+        // and an entity that is not mapped to it, such as a child of the saved instance that validation cascades to, is
+        // checked on its own connection
+        String namedConnection = AbstractGormApi.validationConnection()
+        if (namedConnection != null && targetEntity != null && ConnectionSourcesSupport.usesConnectionSource(targetEntity, namedConnection)) {
+            detachedCriteria = detachedCriteria.withConnection(namedConnection)
+        }
 
         if (targetEntity == null) {
             throw new IllegalStateException("Cannot validate object [$target]. It is not a persistent entity")

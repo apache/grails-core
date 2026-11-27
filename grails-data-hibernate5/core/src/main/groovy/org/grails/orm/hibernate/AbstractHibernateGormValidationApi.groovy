@@ -76,19 +76,23 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
 
         evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
 
-        fireEvent(instance, validatedFieldsList)
+        // the listeners of the event run on the connection this API names, as the validation does
+        inConnection { fireEvent(instance, validatedFieldsList) }
 
         hibernateTemplate.execute { Session session ->
 
             def previous = readPreviousFlushMode(session)
             applyManualFlush(session)
             try {
-                if (validator instanceof CascadingValidator) {
-                    ((CascadingValidator) validator).validate(instance, errors, deepValidate)
-                } else if (validator instanceof grails.gorm.validation.CascadingValidator) {
-                    ((grails.gorm.validation.CascadingValidator) validator).validate(instance, errors, deepValidate)
-                } else {
-                    validator.validate(instance, errors)
+                // on the connection this API names, which a connection block around the call does not decide
+                inConnection {
+                    if (validator instanceof CascadingValidator) {
+                        ((CascadingValidator) validator).validate(instance, errors, deepValidate)
+                    } else if (validator instanceof grails.gorm.validation.CascadingValidator) {
+                        ((grails.gorm.validation.CascadingValidator) validator).validate(instance, errors, deepValidate)
+                    } else {
+                        validator.validate(instance, errors)
+                    }
                 }
             } finally {
                 if (!errors.hasErrors()) {

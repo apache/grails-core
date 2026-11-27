@@ -936,6 +936,14 @@ With GORM for Hibernate, a where query, a detached criteria, a dynamic finder or
 - To keep the previous result of a query, remove the join type that it requests, or request `JoinType.LEFT`.
 - Check queries that store a sort with `sort()` before passing a `fetch` argument to `list` or `find`. `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])` now also returns books without an author. Request `JoinType.INNER` to keep leaving them out; nested paths follow the same rule.
 
+## `unique` constraint and a save that names a connection
+
+For a domain class mapped to several data sources, a `save()` that names a connection (`book.second.save()`, `Book.second.save(book)`, `Book.second.insert(book)`) checked the `unique` constraint against the default data source, whichever connection it named. As of 7.0.19 the check runs on the connection the save names, and on the default connection for a save that names none.
+
+- A value that existed only on the default data source is no longer reported as a duplicate while saving to the second, and one that existed only on the second is now found, where the save used to fail at the unique index or, with MongoDB, store a second copy.
+- Unqualified calls inside a connection block, such as `Book.second.withTransaction { }`, still go to the default connection on 7.0.x, so their check does too.
+- Search for code that relied on one value being unique across every data source and enforce that yourself, for example with a check in a service that queries each connection.
+
 # After the Upgrade
 
 ## Verification Checklist
