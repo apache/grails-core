@@ -231,6 +231,94 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
+     * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
+     */
+    private static void addOrderPossiblyNested(AbstractHibernateDatastore datastore, Criteria c, Class<?> targetClass, String sort, String order, boolean ignoreCase) {
+        Criteria criteria = c;
+        Class<?> currentClass = targetClass;
+        String associationPath = null;
+        String property = sort;
+        int firstDotPos;
+        while ((firstDotPos = property.indexOf('.')) != -1) {
+            String sortHead = property.substring(0, firstDotPos);
+            PersistentProperty persistentProperty = getGrailsDomainClassProperty(datastore, currentClass, sortHead);
+            if (persistentProperty == null && associationPath == null) {
+                // an alias that the criteria give an association: the rest of the path starts from that association
+                CriteriaImpl root = getRootCriteria(c);
+                Criteria aliased = root != null ? findCriteriaByAlias(root, sortHead) : null;
+                String aliasedPath = aliased instanceof CriteriaImpl.Subcriteria ? getWholePath(root, (CriteriaImpl.Subcriteria) aliased) : null;
+                Class<?> aliasedClass = aliasedPath != null ? getAssociatedClass(datastore, targetClass, aliasedPath) : null;
+                if (aliasedClass != null) {
+                    criteria = aliased;
+                    associationPath = aliasedPath;
+                    currentClass = aliasedClass;
+                    property = property.substring(firstDotPos + 1);
+                    continue;
+                }
+            }
+            if (persistentProperty instanceof Embedded) {
+                // embedded objects cannot reference entities (at time of writing), so the rest is a component path
+                break;
+            }
+            if (!(persistentProperty instanceof Association)) {
+                return;
+            }
+            associationPath = associationPath == null ? sortHead : associationPath + '.' + sortHead;
+            criteria = getOrCreateSortCriteria(c, criteria, associationPath, sortHead,
+                    persistentProperty instanceof ToMany || !isLeftJoinAssociationSort(persistentProperty.getOwner()));
+            currentClass = ((Association) persistentProperty).getAssociatedEntity().getJavaClass();
+            GrailsHibernateUtil.cacheCriteriaByMapping(datastore, currentClass, criteria);
+            property = property.substring(firstDotPos + 1);
+        }
+        addOrder(criteria, property, order, ignoreCase);
+    }
+
+    /**
+     * Returns the class at the end of an association path from the given class, or null when the path
+     * does not consist of associations only.
+     */
+    private static Class<?> getAssociatedClass(AbstractHibernateDatastore datastore, Class<?> targetClass, String associationPath) {
+        Class<?> currentClass = targetClass;
+        for (String token : associationPath.split("\\.")) {
+            PersistentProperty persistentProperty = getGrailsDomainClassProperty(datastore, currentClass, token);
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded) {
+                return null;
+            }
+            currentClass = ((Association) persistentProperty).getAssociatedEntity().getJavaClass();
+        }
+        return currentClass;
+    }
+
+    /**
+     * Returns the criteria that joins an association for a sort: the one the query already has for the
+     * association path or, failing that, a new one. A new one is created from the root criteria,
+     * because the count of a paged list recreates each join from the root criteria by its path, and
+     * an association after the first one on the path is joined through the alias of the join before
+     * it, so that Hibernate does not read the first association of the path as an alias of the same
+     * name. With the <code>grails.gorm.leftJoinAssociationSort</code> setting it is a left join, so
+     * that the sort keeps the rows where the association is null, and without it an inner join. A
+     * collection is always joined with an inner join: Hibernate would fetch it through a left join.
+     */
+    private static Criteria getOrCreateSortCriteria(Criteria root, Criteria parent, String associationPath, String associationName, boolean innerJoin) {
+        Criteria existing = findCriteria(root, associationPath);
+        if (existing != null) {
+            return existing;
+        }
+        return root.createCriteria(getJoinPath(parent, associationPath, associationName), newJoinAlias(root, associationPath, "_sort"),
+                innerJoin ? JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN);
+    }
+
+    /**
+     * Returns the path to create the join of an association with from the root criteria: the alias of
+     * the join of the association before it, followed by its name, or the whole path when the
+     * association follows the root, or a join without an alias.
+     */
+    private static String getJoinPath(Criteria parent, String associationPath, String associationName) {
+        String parentAlias = parent instanceof CriteriaImpl.Subcriteria ? ((CriteriaImpl.Subcriteria) parent).getAlias() : null;
+        return parentAlias != null ? parentAlias + '.' + associationName : associationPath;
+    }
+
+    /**
      * Returns an alias for a join that the criteria do not use yet.
      */
     private static String newJoinAlias(Criteria root, String associationPath, String suffix) {
@@ -252,6 +340,22 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return root instanceof CriteriaImpl ? (CriteriaImpl) root : null;
     }
 
+    /**
+     * Returns the alias of the join that the criteria have for an association path, whichever part
+     * of the query made the join.
+     *
+     * @param root The root criteria
+     * @param associationPath The path of the association from the root entity
+     * @return The alias, or null when the criteria do not join the association or join it without an alias
+     */
+    public static String getJoinAlias(Criteria root, String associationPath) {
+        CriteriaImpl.Subcriteria existing = findCriteria(root, associationPath);
+        return existing != null ? existing.getAlias() : null;
+    }
+
+    /**
+     * Returns the criteria that the root criteria have for an association path, or null.
+     */
     private static CriteriaImpl.Subcriteria findCriteria(Criteria root, String associationPath) {
         CriteriaImpl criteria = getRootCriteria(root);
         if (criteria != null) {
@@ -521,41 +625,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         subquery.add(Restrictions.eqProperty(subqueryAlias + ".id", rootAlias + ".id"));
         subquery.setProjection(Projections.id());
         return Subqueries.exists(subquery);
-    }
-
-    /**
-     * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
-     */
-    private static void addOrderPossiblyNested(AbstractHibernateDatastore datastore, Criteria c, Class<?> targetClass, String sort, String order, boolean ignoreCase) {
-        int firstDotPos = sort.indexOf(".");
-        if (firstDotPos == -1) {
-            addOrder(c, sort, order, ignoreCase);
-        } else { // nested property
-            String sortHead = sort.substring(0, firstDotPos);
-            String sortTail = sort.substring(firstDotPos + 1);
-            PersistentProperty property = getGrailsDomainClassProperty(datastore, targetClass, sortHead);
-            if (property instanceof Embedded) {
-                // embedded objects cannot reference entities (at time of writing), so no more recursion needed
-                addOrder(c, sort, order, ignoreCase);
-            } else if (property instanceof Association) {
-                // with the leftJoinAssociationSort setting, a left join, so that the sort keeps the rows where the
-                // association is null; a collection is joined with an inner join, since Hibernate would fetch it
-                // through a left join
-                // a join that the criteria already have for the association, such as the one of a requested join
-                // type, is used for the sort as well
-                CriteriaImpl root = getRootCriteria(c);
-                String sortPath = c instanceof CriteriaImpl.Subcriteria ?
-                        getWholePath(root, (CriteriaImpl.Subcriteria) c) + '.' + sortHead : sortHead;
-                Criteria subCriteria = findCriteria(root, sortPath);
-                if (subCriteria == null) {
-                    subCriteria = c.createCriteria(sortHead, property instanceof ToMany || !isLeftJoinAssociationSort(property.getOwner()) ?
-                            JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN);
-                }
-                Class<?> propertyTargetClass = ((Association) property).getAssociatedEntity().getJavaClass();
-                GrailsHibernateUtil.cacheCriteriaByMapping(datastore, propertyTargetClass, subCriteria);
-                addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
-            }
-        }
     }
 
     /**
