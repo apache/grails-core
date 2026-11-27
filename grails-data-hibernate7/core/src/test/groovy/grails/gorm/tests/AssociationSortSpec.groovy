@@ -645,6 +645,41 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'a where query' | { AssociationSortLeague.where { name ==~ '%' }.list(max: 10, sort: 'owners.scores.score') }
     }
 
+    void 'a page of #api that fetches a collection and is sorted by another one counts the instances that it returns'() {
+        given:
+        saveLeagues()
+
+        when:
+        final page = query.call()
+
+        then: 'the fetch lists each league once, and the inner join of the owners leaves out the league without one'
+        page*.name.sort() == ['Premier', 'Third']
+        page.totalCount == 2
+
+        where:
+        api                 | query
+        'a where query'     | { AssociationSortLeague.where { name ==~ '%' }.list(max: 10, sort: 'owners.name', fetch: [pets: 'join']) }
+        'a detached query'  | { new DetachedCriteria(AssociationSortLeague).join('pets').list(max: 10, sort: 'owners.name') }
+        'a criteria query'  | { AssociationSortLeague.createCriteria().list(max: 10) { join('pets', JoinType.LEFT); order('owners.name') } }
+        'a list'            | { AssociationSortLeague.list(max: 10, sort: 'owners.name', fetch: [pets: 'join']) }
+    }
+
+    void 'a page that fetches a collection counts what an inner join that it requests for its sort path leaves out'() {
+        given: 'a league whose mascot has no owner, and one without a mascot'
+        saveLeagues()
+
+        when:
+        final page = AssociationSortLeague.createCriteria().list(max: 10) {
+            join('pets', JoinType.LEFT)
+            join('mascot.owner', JoinType.INNER)
+            order('mascot.owner.name')
+        }
+
+        then:
+        page*.name == ['Premier']
+        page.totalCount == 1
+    }
+
     protected void saveArsenalPlayers() {
         final arsenal = Team.findByName('Arsenal First Team')
         new Player(name: 'Aaron', team: arsenal, contract: new Contract(salary: 2)).save(failOnError: true)

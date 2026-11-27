@@ -327,16 +327,12 @@ public class JpaCriteriaQueryCreator<T> {
 
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context, boolean countOnly) {
-        // A count joins a collection that only the sort uses, to count the rows that the list pages through. A
-        // list that fetches a collection returns each instance once, so its count has no such rows
-        boolean joinCollections = countOnly && !fetchesCollection();
-        if (countOnly && !joinCollections && entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
-                mappingContext.isLeftJoinAssociationSort()) {
-            // With the leftJoinAssociationSort setting a sort joins an association to a single instance with a left
-            // join, which leaves out no instance, and a list that fetches a collection returns each instance once, so
-            // its count needs none of those joins
-            return;
-        }
+        // A count makes the joins of the sort, to count the rows that the list pages through, and joins a collection
+        // that only the sort uses. A list that fetches a collection returns each instance once, so the count of its
+        // instances counts them once, and the fetch join of the collection, which the sort of the list goes through,
+        // leaves out no instance. The count of a query with projections has no fetch
+        Set<String> fetchPaths = countOnly && cq != null && fetchesCollection() ? fetchPaths() : Collections.emptySet();
+        boolean joinedCollection = false;
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
         if (countOnly && hibernateQuery != null) {
             // the orders that the count cleared still join what they sort by
@@ -354,12 +350,16 @@ public class JpaCriteriaQueryCreator<T> {
                 // a distinct or grouped query can only be ordered by what it selects, so an order by what a
                 // projection selects sorts by the expression of the projection and not through a join of its own
                 expression = context.getFullyQualifiedExpression(propertyName);
+            } else if (sortsThroughFetchedCollection(propertyName, fetchPaths)) {
+                // the list sorts through the fetch join, which leaves out no instance
+                continue;
             } else {
-                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context), joinCollections);
+                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context), countOnly);
             }
             if (countOnly) {
                 // Keep the joins of the sort without ordering the aggregate: they decide the rows that the
                 // list pages through, so the count has a row for each element of a collection that it sorts by
+                joinedCollection |= readsCollection(expression);
                 continue;
             }
             if (expression == null) {
@@ -379,6 +379,10 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
         if (countOnly) {
+            if (!fetchPaths.isEmpty() && joinedCollection && isEntityCount()) {
+                // the list fetches a collection, so it has each instance once, whatever rows the sort joins
+                ((CriteriaQuery<Long>) cq).select(criteriaBuilder.countDistinct(context.getRoot()));
+            }
             // a count has the joins of its orders and no order
             return;
         }
@@ -396,6 +400,20 @@ public class JpaCriteriaQueryCreator<T> {
      * Whether the query requests a fetch or a join type for a collection of the queried class.
      */
     private boolean fetchesCollection() {
+        for (String path : fetchPaths()) {
+            int dot = path == null ? -1 : path.indexOf('.');
+            String first = path == null ? null : dot < 0 ? path : path.substring(0, dot);
+            if (first != null && entity.getPropertyByName(first) instanceof ToMany<?>) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The association paths that the query requests a fetch or a join type for.
+     */
+    private Set<String> fetchPaths() {
         Set<String> paths = new HashSet<>(detachedCriteria.getJoinTypes().keySet());
         if (hibernateQuery != null) {
             paths.addAll(hibernateQuery.getFetchJoinPaths());
@@ -406,14 +424,39 @@ public class JpaCriteriaQueryCreator<T> {
                 paths.add(path);
             }
         });
-        for (String path : paths) {
-            int dot = path == null ? -1 : path.indexOf('.');
-            String first = path == null ? null : dot < 0 ? path : path.substring(0, dot);
-            if (first != null && entity.getPropertyByName(first) instanceof ToMany<?>) {
+        return paths;
+    }
+
+    /**
+     * Whether a sort path from the queried class goes through a collection that the query fetches. The list sorts
+     * through the fetch join of the collection, which keeps the instances whose collection is empty.
+     */
+    private boolean sortsThroughFetchedCollection(String propertyName, Set<String> fetchPaths) {
+        if (fetchPaths.isEmpty()) {
+            return false;
+        }
+        String[] tokens = propertyName.split("\\.");
+        PersistentEntity current = entity;
+        String path = null;
+        for (int i = 0; i < tokens.length - 1 && current != null; i++) {
+            if (!(current.getPropertyByName(tokens[i]) instanceof Association<?> association)) {
+                return false;
+            }
+            path = path == null ? tokens[i] : path + '.' + tokens[i];
+            if (association instanceof ToMany<?> && fetchPaths.contains(path)) {
                 return true;
             }
+            current = association.getAssociatedEntity();
         }
         return false;
+    }
+
+    /**
+     * Whether the query counts the instances of the queried class, as {@code count()} does, and nothing else.
+     */
+    private boolean isEntityCount() {
+        List<Query.Projection> projectionList = projections.getProjectionList();
+        return projectionList.size() == 1 && projectionList.get(0).getClass() == Query.CountProjection.class;
     }
 
     /**
