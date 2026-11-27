@@ -24,8 +24,18 @@ import liquibase.Liquibase
 import liquibase.database.Database
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
+@ToolHints(readOnlyHint = false, destructiveHint = true)
+@DatabaseMigrationOptions
+@ToolOption(names = ['--skip'], arity = '1', label = 'NUMBER', defaultValue = '0',
+        description = 'The number of the last change sets of the change log to leave out')
+@ToolParameter(index = 0, label = 'NUMBER', arity = '1', description = 'The number of change sets, from the last of the change log, whose SQL is written')
+@ToolParameter(index = 1, label = 'FILE', arity = '1', required = false,
+        description = 'The file to write the SQL to; the standard output when not given')
 @CompileStatic
 class DbmPreviousChangesetSqlTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

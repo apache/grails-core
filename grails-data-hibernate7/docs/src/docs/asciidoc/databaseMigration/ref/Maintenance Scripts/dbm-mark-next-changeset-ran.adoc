@@ -25,19 +25,18 @@ Mark the next change set as executed in the database.
 
 ====== Description
 
-If a filename is specified, writes the SQL that will perform the update that file but doesn't update.
+To write the SQL that marks the next change set as executed instead, without updating the database, use `dbm-mark-next-changeset-ran-sql`.
 
 Usage:
 [source,java]
 ----
-grails <<environment>> dbm-mark-next-changeset-ran <<filename>> --contexts=<<contexts>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
+grails <<environment>> dbm-mark-next-changeset-ran --contexts=<<contexts>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
 ----
 
 Required arguments: __none__.
 
 Optional arguments:
 
-* `filename` - The path to the output file to write to
 * `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be run
 * `defaultSchema` - The default schema name to use
 * `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.

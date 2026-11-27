@@ -23,8 +23,19 @@ import groovy.transform.CompileStatic
 import liquibase.database.Database
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
+@ToolHints(readOnlyHint = false, destructiveHint = true)
+@DatabaseMigrationOptions
+@ToolOption(names = ['--force'], arity = '0', description = 'Replaces the change log when it exists')
+@ToolOption(names = ['--add'], arity = '0', description = 'Includes the change log it writes in the root change log')
+@ToolOption(names = ['--diffTypes'], arity = '1', label = 'TYPES',
+        description = 'Taken so that the command lines that give it still run, and not used: the change log has every type of change')
+@ToolParameter(index = 0, label = 'FILE', arity = '1', required = false,
+        description = 'The change log to write, in the folder of the change logs; the standard output when not given')
 @CompileStatic
 class DbmGenerateChangelogTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

@@ -118,6 +118,8 @@ dependencies {
 
     // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output
     testRuntimeOnly 'org.slf4j:jul-to-slf4j'
+    // runs the dbm-* tools the way the build of an application does, with the class its runTool task starts
+    testCliRuntimeOnly project(':grails-console')
 }
 
 tasks.named('test', Test) {

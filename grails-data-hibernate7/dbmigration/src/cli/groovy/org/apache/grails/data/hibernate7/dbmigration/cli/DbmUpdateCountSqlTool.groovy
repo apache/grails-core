@@ -23,8 +23,15 @@ import groovy.transform.CompileStatic
 import liquibase.Liquibase
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
+@ToolHints(readOnlyHint = false, destructiveHint = true)
+@DatabaseMigrationOptions
+@ToolParameter(index = 0, label = 'NUMBER', arity = '1', description = 'The number of the change sets that have not run to apply')
+@ToolParameter(index = 1, label = 'FILE', arity = '1', required = false,
+        description = 'The file to write the SQL to; the standard output when not given')
 @CompileStatic
 class DbmUpdateCountSqlTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

@@ -24,8 +24,16 @@ import liquibase.serializer.ChangeLogSerializer
 import liquibase.serializer.ChangeLogSerializerFactory
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
+@ToolHints(readOnlyHint = false, destructiveHint = true)
+@DatabaseMigrationOptions
+@ToolOption(names = ['--force'], arity = '0', description = 'Replaces the change log when it exists')
+@ToolOption(names = ['--add'], arity = '0', description = 'Includes the change log it writes in the root change log')
+@ToolParameter(index = 0, label = 'FILE', arity = '1', description = 'The change log to create, in the folder of the change logs')
 @CompileStatic
 class DbmCreateChangelogTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

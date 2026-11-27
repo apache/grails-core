@@ -23,7 +23,13 @@ import groovy.transform.CompileStatic
 import liquibase.Liquibase
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 
+@ToolHints(readOnlyHint = false, destructiveHint = true)
+@DatabaseMigrationOptions
+@ToolParameter(index = 0, label = 'DIRECTORY', arity = '1', required = false,
+        description = 'The directory to write the documentation to; the configured dbDocLocation, or build/dbdoc, when not given')
 @CompileStatic
 class DbmDbDocTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

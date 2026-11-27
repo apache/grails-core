@@ -24,7 +24,13 @@ import liquibase.CatalogAndSchema
 import liquibase.Liquibase
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = true)
+@DatabaseMigrationOptions
+@ToolParameter(index = 0, label = 'SCHEMAS', arity = '1', required = false,
+        description = 'The schemas whose objects are dropped, separated by commas; the default schema when not given')
 @CompileStatic
 class DbmDropAllTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

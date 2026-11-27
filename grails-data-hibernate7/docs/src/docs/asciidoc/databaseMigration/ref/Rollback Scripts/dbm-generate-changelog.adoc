@@ -34,7 +34,7 @@ Executes against the database configured in `application.[yml|groovy]` for the c
 Usage:
 [source,java]
 ----
-grails <<environment>> dbm-generate-changelog <<filename>> --diffTypes=<<diffTypes>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>> --add
+grails <<environment>> dbm-generate-changelog <<filename>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>> --add --force
 ----
 
 Required arguments: _none_ .
@@ -42,10 +42,11 @@ Required arguments: _none_ .
 Optional arguments:
 
 * `filename` - The path to the output file to write to. If not specified output is written to the console
-* `diffTypes` - A comma-delimited list of change types to include - see http://www.liquibase.org/manual/diff#controlling_checks_since_1.8[the documentation] for what types are available
+* `diffTypes` - Accepted so that command lines that give it still run, and not used: the changelog has every type of change
 * `defaultSchema` - The default schema name to use
 * `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
 * `add` - if specified add an include in the root changelog file referencing the new file
+* `force` - If specified, replaces the output file when it exists; without it the script stops when the file is there
 
 NOTE: Note that the `diffTypes`, `defaultSchema`, and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
 [source,groovy]

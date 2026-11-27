@@ -25,8 +25,14 @@ import groovy.transform.CompileStatic
 import liquibase.Liquibase
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = true)
+@DatabaseMigrationOptions
+@ToolParameter(index = 0, label = 'DATE', arity = '1', description = 'The date to roll back to, as yyyy-MM-dd')
+@ToolParameter(index = 1, label = 'TIME', arity = '1', required = false, description = 'The time of the day, as HH:mm:ss; midnight when not given')
 @CompileStatic
 class DbmRollbackToDateTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

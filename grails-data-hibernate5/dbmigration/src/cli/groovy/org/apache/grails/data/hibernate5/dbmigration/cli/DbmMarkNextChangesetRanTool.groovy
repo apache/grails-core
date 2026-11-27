@@ -23,7 +23,10 @@ import groovy.transform.CompileStatic
 import liquibase.Liquibase
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
 
+@ToolHints(readOnlyHint = false, destructiveHint = true)
+@DatabaseMigrationOptions
 @CompileStatic
 class DbmMarkNextChangesetRanTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

@@ -34,7 +34,7 @@ File are written to the migrations folder, so specify the filename relative to t
 Usage:
 [source,java]
 ----
-grails <<environment>> dbm-diff <<otherEnv>> <<filename>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>> --add
+grails <<environment>> dbm-diff <<otherEnv>> <<filename>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>> --add --force
 ----
 
 Required arguments:
@@ -46,6 +46,7 @@ Optional arguments:
 * `filename` - The path to the output file to write to. If not specified output is written to the console
 * `defaultSchema` - The default schema name to use
 * `add` - If specified add an include in the root changelog file referencing the new file
+* `force` - If specified, replaces the output file when it exists; without it the script stops when the file is there
 * `dataSource` - If provided will run the script for the specified dataSource. Not needed for the default dataSource.
 
 NOTE: Note that the `defaultSchema` and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.

@@ -23,8 +23,13 @@ import groovy.transform.CompileStatic
 import liquibase.Liquibase
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = true)
+@DatabaseMigrationOptions
+@ToolParameter(index = 0, label = 'TAG', arity = '1', description = 'The tag to roll back to')
 @CompileStatic
 class DbmRollbackTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

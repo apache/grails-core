@@ -30,16 +30,18 @@ Creates a new empty file instead of generating the file from the database (using
 Usage:
 [source,java]
 ----
-grails <<environment>> dbm-create-changelog <<filename>> --dataSource=<<dataSource>>
+grails <<environment>> dbm-create-changelog <<filename>> --dataSource=<<dataSource>> --add --force
 ----
 
 Required arguments:
 
-* `filename` - The path to the output file to write to
+* `filename` - The path to the output file to write to, relative to the migrations folder
 
 Optional arguments:
 
-* `dataSource` - if provided will run the script for the specified dataSource creating a file named `changelog-<<dataSource>>.groovy` if a `filename` is not given. Not needed for the default dataSource.
+* `dataSource` - if provided will run the script for the specified dataSource. Not needed for the default dataSource.
+* `add` - if specified add an include in the root changelog file referencing the new file
+* `force` - If specified, replaces the output file when it exists; without it the script stops when the file is there
 
 NOTE: Note that the `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
 [source,groovy]

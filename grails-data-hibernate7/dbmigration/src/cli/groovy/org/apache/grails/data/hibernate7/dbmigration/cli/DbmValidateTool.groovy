@@ -23,7 +23,10 @@ import groovy.transform.CompileStatic
 import liquibase.Liquibase
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
 
+@ToolHints(readOnlyHint = true)
+@DatabaseMigrationOptions
 @CompileStatic
 class DbmValidateTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

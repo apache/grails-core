@@ -23,7 +23,16 @@ import groovy.transform.CompileStatic
 import liquibase.Liquibase
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
 
+@ToolHints(readOnlyHint = false, destructiveHint = true)
+@DatabaseMigrationOptions
+@ToolOption(names = ['--verbose'], arity = '1', label = 'TRUE-OR-FALSE', defaultValue = 'true',
+        description = 'Lists the change sets that have not run when true, and only counts them when false')
+@ToolParameter(index = 0, label = 'FILE', arity = '1', required = false,
+        description = 'The file to write the status to; the standard output when not given')
 @CompileStatic
 class DbmStatusTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

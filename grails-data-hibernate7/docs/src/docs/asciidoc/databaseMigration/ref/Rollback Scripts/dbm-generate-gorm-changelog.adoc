@@ -34,7 +34,7 @@ Executes against the database configured in `DataSource.groovy` for the current 
 Usage:
 [source,java]
 ----
-grails <<environment>> dbm-generate-gorm-changelog <<filename>> --dataSource=<<dataSource>> --add
+grails <<environment>> dbm-generate-gorm-changelog <<filename>> --dataSource=<<dataSource>> --add --force
 ----
 
 Required arguments: _none_ .
@@ -44,6 +44,7 @@ Optional arguments:
 * `filename` - The path to the output file to write to. If not specified output is written to the console
 * `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
 * `add` - if specified add an include in the root changelog file referencing the new file
+* `force` - If specified, replaces the output file when it exists; without it the script stops when the file is there
 
 NOTE: Note that the `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
 [source,groovy]
