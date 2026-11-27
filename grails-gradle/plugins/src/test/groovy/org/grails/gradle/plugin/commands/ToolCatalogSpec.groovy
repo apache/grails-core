@@ -278,6 +278,47 @@ class ToolCatalogSpec extends CommandProjectSpecification {
         diagnostics.size() == expectedDiagnostics().size()
     }
 
+    def "what the tools of a plugin declare of their arguments and of what they do is in the catalog, as their descriptors have it"() {
+        given:
+        setupCommandProject("""
+            dependencies {
+                grailsCli 'org.example:declaring-plugin-cli:1.0.0'
+                grailsCli 'org.example:breaking-plugin-cli:1.0.0'
+            }
+        """)
+        publish('org.example', 'declaring-plugin-cli', '1.0.0', [
+                (CLI_FACTORIES): registrations('com.example.DbmUpdateTool', 'com.example.AskTool'),
+                (descriptorPath('com.example.DbmUpdateTool')): '{"format":1,"class":"com.example.DbmUpdateTool","name":"dbm-update","description":"Updates the database",' +
+                        '"target":"application","startsApplication":true,"options":[{"names":["--dataSource"],"arity":"1","type":"string","label":"DATASOURCE"},' +
+                        '{"names":["--force"],"arity":"0","type":"boolean"}],"parameters":[{"label":"CHANGELOG","arity":"0..1","type":"string"}],' +
+                        '"hints":{"readOnlyHint":false,"destructiveHint":true,"idempotentHint":false,"openWorldHint":true}}',
+                (descriptorPath('com.example.AskTool')): '{"format":1,"class":"com.example.AskTool","name":"ask","target":"application","startsApplication":false,' +
+                        '"readsInput":true,"incomplete":["description","hints"]}',
+        ])
+        publish('org.example', 'breaking-plugin-cli', '1.0.0', [
+                (CLI_FACTORIES): registrations('com.example.BrokenTool'),
+                (descriptorPath('com.example.BrokenTool')): '{"format":1,"class":"com.example.BrokenTool","name":"broken","options":[{"names":["--help"],"arity":"0"}]}',
+        ])
+
+        when:
+        executeTask('grailsToolCatalog')
+        Map catalog = catalog()
+
+        then: 'the tools are listed with what they declare, each member only where it says something'
+        catalog.tools.find { it.name == 'dbm-update' } == command('dbm-update', 'Updates the database', 'org.example:declaring-plugin-cli:1.0.0') + [
+                options   : [[names: ['--dataSource'], arity: '1', type: 'string', label: 'DATASOURCE'], [names: ['--force'], arity: '0', type: 'boolean']],
+                parameters: [[label: 'CHANGELOG', arity: '0..1', type: 'string']],
+                hints     : [readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true],
+        ]
+        catalog.tools.find { it.name == 'ask' }.subMap(['startsApplication', 'readsInput', 'incomplete']) ==
+                [startsApplication: false, readsInput: true, incomplete: ['description', 'hints']]
+
+        and: 'a tool whose declarations break a rule is left out, and the rule is said'
+        !catalog.tools.any { it.name == 'broken' }
+        catalog.diagnostics == ['The command class com.example.BrokenTool of org.example:breaking-plugin-cli:1.0.0 is not listed: its descriptor has declarations ' +
+                                        'that have an option, the 1st, that takes the name --help, which the command line keeps for itself.']
+    }
+
     private static List<String> expectedDiagnostics() {
         [
                 'A command that org.hostile:not-a-class:1.0 registers is not listed because what is registered is not the name of a class.',

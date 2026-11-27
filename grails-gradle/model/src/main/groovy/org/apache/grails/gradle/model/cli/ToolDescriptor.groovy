@@ -188,11 +188,86 @@ final class ToolDescriptor {
     /** Everything that can be deprecated about how a tool is written, in the order it is written down. */
     public static final List<String> DEPRECATIONS = [DEPRECATED_TYPE, DEPRECATED_FOLDER].asImmutable()
 
-    /** The most bytes a descriptor has. */
+    /**
+     * The most bytes a descriptor has. The compiler refuses a tool whose declarations need more, with an
+     * error that says so: a description is written in ASCII, and each of its characters outside ASCII
+     * takes six bytes ({@code é}).
+     */
     public static final int MAX_BYTES = 16 * 1024
 
-    /** How deep the arrays and objects of a descriptor go at most. */
+    /** How deep the arrays and objects of a descriptor go at most: the names of an option are four deep. */
     public static final int MAX_DEPTH = 4
+
+    /** The most options a tool declares. */
+    public static final int MAX_OPTIONS = 32
+
+    /** The most parameters a tool declares. */
+    public static final int MAX_PARAMETERS = 16
+
+    /** The most names one option has. */
+    public static final int MAX_OPTION_NAMES = 4
+
+    /** The most characters the name of an option has, with its hyphens. */
+    public static final int MAX_OPTION_NAME_LENGTH = 32
+
+    /** The most characters a label has. */
+    public static final int MAX_LABEL_LENGTH = 32
+
+    /** The most characters the description of an option or a parameter has. */
+    public static final int MAX_DECLARATION_DESCRIPTION_LENGTH = 512
+
+    /** The most choices an option or a parameter has. */
+    public static final int MAX_CHOICES = 64
+
+    /** The most characters a choice has. */
+    public static final int MAX_CHOICE_LENGTH = 64
+
+    /** The most characters the default value of an option has. */
+    public static final int MAX_DEFAULT_LENGTH = 128
+
+    /** The arity of an option that takes no value, a switch. */
+    public static final String ARITY_SWITCH = '0'
+
+    /** The arity of an option that takes one value, and of a parameter that has to be given. */
+    public static final String ARITY_ONE = '1'
+
+    /** The arity of a parameter that can be left out. */
+    public static final String ARITY_OPTIONAL = '0..1'
+
+    /** The arity of the last parameter when it takes one value or more. */
+    public static final String ARITY_SOME = '1..*'
+
+    /** The arity of the last parameter when it takes any number of values. */
+    public static final String ARITY_ANY = '0..*'
+
+    /** The arities of an option. */
+    public static final List<String> OPTION_ARITIES = [ARITY_SWITCH, ARITY_ONE].asImmutable()
+
+    /** The arities of a parameter. */
+    public static final List<String> PARAMETER_ARITIES = [ARITY_ONE, ARITY_OPTIONAL, ARITY_SOME, ARITY_ANY].asImmutable()
+
+    /**
+     * The names no option takes: the command line has {@code --help} and {@code --version} itself, and
+     * an argument that starts with {@code -D} and has an {@code =} is a system property of the tool.
+     */
+    public static final List<String> RESERVED_OPTION_NAMES = ['--help', '--version', '-D'].asImmutable()
+
+    /**
+     * The hints of {@link #MEMBER_HINTS}, in their order, which are those of a tool of the Model Context
+     * Protocol and of {@code @McpTool.McpAnnotations} of Spring AI.
+     */
+    public static final List<String> HINTS = ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHint'].asImmutable()
+
+    /** What each hint is where a tool does not say otherwise: the most cautious. */
+    public static final Map<String, Boolean> HINT_DEFAULTS = Collections.unmodifiableMap(
+            [readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true] as LinkedHashMap<String, Boolean>)
+
+    /** The members of an option, in the order they are written. */
+    public static final List<String> OPTION_MEMBERS = ['names', 'arity', 'type', 'label', 'required', 'description', 'repeatable', 'choices',
+                                                       'default'].asImmutable()
+
+    /** The members of a parameter, in the order they are written. */
+    public static final List<String> PARAMETER_MEMBERS = ['label', 'arity', 'type', 'description', 'repeatable', 'choices'].asImmutable()
 
     /** The most characters the name of a tool has. */
     public static final int MAX_NAME_LENGTH = 64
@@ -206,6 +281,16 @@ final class ToolDescriptor {
     private static final Pattern COMMAND_NAME = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*')
 
     private static final Pattern CLASS_NAME = Pattern.compile('[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*')
+
+    private static final Pattern LONG_OPTION = Pattern.compile('--[a-z][a-zA-Z0-9]*(-[a-zA-Z0-9]+)*')
+
+    private static final Pattern SHORT_OPTION = Pattern.compile('-[a-zA-Z]')
+
+    private static final Pattern LABEL = Pattern.compile('[A-Z][A-Z0-9-]{0,31}')
+
+    private static final Pattern CHOICE = Pattern.compile('[A-Za-z_$][A-Za-z0-9_$]*')
+
+    private static final Pattern WHOLE_NUMBER = Pattern.compile('[-+]?[0-9]{1,19}')
 
     private static final String TOOL_SUFFIX = 'Tool'
 
@@ -258,6 +343,311 @@ final class ToolDescriptor {
     }
 
     /**
+     * @param name a name of an option, with its hyphens
+     * @return whether it is a long name: two hyphens, a lower-case letter, then letters, digits and
+     * single hyphens, at most {@link #MAX_OPTION_NAME_LENGTH} characters, as {@code --since} or the
+     * {@code --dataSource} of a released tool
+     */
+    static boolean isLongOptionName(String name) {
+        name != null && name.length() <= MAX_OPTION_NAME_LENGTH && LONG_OPTION.matcher(name).matches()
+    }
+
+    /**
+     * @param name a name of an option, with its hyphen
+     * @return whether it is a short name: a hyphen and one letter, as {@code -s}
+     */
+    static boolean isShortOptionName(String name) {
+        name != null && SHORT_OPTION.matcher(name).matches()
+    }
+
+    /**
+     * @param label the label of a value
+     * @return whether it is an upper-case letter followed by at most 31 upper-case letters, digits and
+     * hyphens, as {@code DATE} or {@code DOMAIN-CLASS}
+     */
+    static boolean isLabel(String label) {
+        label != null && LABEL.matcher(label).matches()
+    }
+
+    /**
+     * @param value a value given for an option or a parameter of the type {@link #TYPE_INTEGER}
+     * @return whether it is a whole number, as {@link Long#parseLong} reads one: an optional sign and
+     * ASCII digits, within the range of a {@code long}
+     */
+    static boolean isWholeNumber(String value) {
+        if (value == null || !WHOLE_NUMBER.matcher(value).matches()) {
+            return false
+        }
+        try {
+            Long.parseLong(value)
+            return true
+        } catch (NumberFormatException ignored) {
+            return false
+        }
+    }
+
+    /**
+     * The label a value of an option has when its declaration gives none: its first long name without
+     * the hyphens, in upper case, as {@code DATASOURCE} for {@code --dataSource}.
+     *
+     * @param names the names of the option
+     * @return the label, or {@code null} when the option has no long name
+     */
+    static String defaultLabel(List<String> names) {
+        String first = names?.find { String name -> isLongOptionName(name) }
+        first == null ? null : first.substring(2).toUpperCase(Locale.ROOT)
+    }
+
+    /**
+     * Says which rule an option breaks, as {@code help --json} of the command line describes an option
+     * and a descriptor has it.
+     *
+     * @param option the members of the option
+     * @return the end of a sentence that starts with the option, which repeats nothing of it but a
+     * name or a label that is as the rules have it; {@code null} when it keeps every rule
+     */
+    static String optionRefusal(Map option) {
+        Object names = option.get('names')
+        if (!(names instanceof List) || ((List) names).isEmpty() || !((List) names).every { Object name -> name instanceof String }) {
+            return 'has no names'
+        }
+        List<String> named = (List<String>) names
+        if (named.size() > MAX_OPTION_NAMES) {
+            return "has more than ${MAX_OPTION_NAMES} names".toString()
+        }
+        for (String name : named) {
+            if (RESERVED_OPTION_NAMES.contains(name)) {
+                return "takes the name ${name}, which the command line keeps for itself".toString()
+            }
+            if (!isLongOptionName(name) && !isShortOptionName(name)) {
+                return 'has a name that is neither a long name (two hyphens, a lower-case letter, then letters, digits and single hyphens, ' +
+                        "at most ${MAX_OPTION_NAME_LENGTH} characters, as --since) nor a short name (a hyphen and one letter, as -s)"
+            }
+        }
+        if (named.toSet().size() < named.size()) {
+            return 'has a name twice'
+        }
+        if (!named.any { String name -> isLongOptionName(name) }) {
+            return 'has no long name, as --since'
+        }
+        if (named.count { String name -> isShortOptionName(name) } > 1) {
+            return 'has more than one short name'
+        }
+        Object arity = option.get('arity')
+        if (!OPTION_ARITIES.contains(arity)) {
+            return 'has an arity that is neither 0, for a switch, nor 1, for an option that takes a value'
+        }
+        boolean isSwitch = arity == ARITY_SWITCH
+        Object type = option.containsKey('type') ? option.get('type') : (isSwitch ? TYPE_BOOLEAN : TYPE_STRING)
+        if (isSwitch ? type != TYPE_BOOLEAN : !(type in [TYPE_STRING, TYPE_INTEGER])) {
+            return 'has a type its arity does not take: a switch is boolean, and an option that takes a value is string or integer'
+        }
+        String common = commonRefusal(option, type)
+        if (common != null) {
+            return common
+        }
+        Object label = option.get('label')
+        if (label != null && !(label instanceof String && isLabel((String) label))) {
+            return "has a label that is not an upper-case letter followed by at most ${MAX_LABEL_LENGTH - 1} upper-case letters, digits and hyphens, as DATE".toString()
+        }
+        Object required = option.get('required')
+        if (required != null && !(required instanceof Boolean)) {
+            return 'has a required that is neither true nor false'
+        }
+        Object repeatable = option.get('repeatable')
+        if (repeatable != null && !(repeatable instanceof Boolean)) {
+            return 'has a repeatable that is neither true nor false'
+        }
+        Object defaultValue = option.get('default')
+        if (isSwitch) {
+            if (label != null) {
+                return 'is a switch and has a label: a switch takes no value'
+            }
+            if (required == Boolean.TRUE) {
+                return 'is a switch and is required: a switch is given or not'
+            }
+            if (repeatable == Boolean.TRUE) {
+                return 'is a switch and is repeatable: a switch is given once or not'
+            }
+            if (defaultValue != null) {
+                return 'is a switch and has a default: a switch is false unless it is given'
+            }
+            return null
+        }
+        if (defaultValue == null) {
+            return null
+        }
+        if (!(defaultValue instanceof String) || ((String) defaultValue).length() > MAX_DEFAULT_LENGTH || !isDescription((String) defaultValue)) {
+            return "has a default that is not one line of at most ${MAX_DEFAULT_LENGTH} characters that can be shown".toString()
+        }
+        if (required == Boolean.TRUE) {
+            return 'is required and has a default, which it never takes'
+        }
+        if (repeatable == Boolean.TRUE) {
+            return 'is repeatable and has a default: an option given more than once has the values it is given'
+        }
+        if (type == TYPE_INTEGER && !isWholeNumber((String) defaultValue)) {
+            return 'has a default that is not a whole number'
+        }
+        Object choices = option.get('choices')
+        if (choices != null && !((List) choices).contains(defaultValue)) {
+            return 'has a default that is not one of its choices'
+        }
+        null
+    }
+
+    /**
+     * Says which rule a parameter breaks, as {@code help --json} of the command line describes a
+     * parameter and a descriptor has it: in the same form as an option, with no {@code required}, since
+     * its arity says whether it can be left out.
+     *
+     * @param parameter the members of the parameter
+     * @return the end of a sentence that starts with the parameter, which repeats nothing of it but a
+     * label that is as the rules have it; {@code null} when it keeps every rule
+     */
+    static String parameterRefusal(Map parameter) {
+        Object label = parameter.get('label')
+        if (!(label instanceof String) || !isLabel((String) label)) {
+            return "has no label that is an upper-case letter followed by at most ${MAX_LABEL_LENGTH - 1} upper-case letters, digits and hyphens, as OUTPUT".toString()
+        }
+        Object arity = parameter.get('arity')
+        if (!PARAMETER_ARITIES.contains(arity)) {
+            return "has an arity that is none of ${PARAMETER_ARITIES.join(', ')}".toString()
+        }
+        Object type = parameter.containsKey('type') ? parameter.get('type') : TYPE_STRING
+        if (!(type in [TYPE_STRING, TYPE_INTEGER])) {
+            return 'has a type that is neither string nor integer'
+        }
+        String common = commonRefusal(parameter, type)
+        if (common != null) {
+            return common
+        }
+        Object repeatable = parameter.get('repeatable')
+        if (repeatable != null && repeatable != Boolean.valueOf(((String) arity).endsWith('*'))) {
+            return 'has a repeatable that its arity does not say'
+        }
+        null
+    }
+
+    // what the rules of an option that takes a value and of a parameter have in common
+    private static String commonRefusal(Map declared, Object type) {
+        Object description = declared.get('description')
+        if (description != null && !(description instanceof String && ((String) description).length() <= MAX_DECLARATION_DESCRIPTION_LENGTH &&
+                isDescription((String) description))) {
+            return "has a description that is not one line of at most ${MAX_DECLARATION_DESCRIPTION_LENGTH} characters that can be shown".toString()
+        }
+        Object choices = declared.get('choices')
+        if (choices == null) {
+            return null
+        }
+        if (type != TYPE_STRING) {
+            return 'has choices and takes no text'
+        }
+        if (!(choices instanceof List) || ((List) choices).isEmpty() || ((List) choices).size() > MAX_CHOICES ||
+                ((List) choices).toSet().size() < ((List) choices).size() ||
+                !((List) choices).every { Object choice -> choice instanceof String && ((String) choice).length() <= MAX_CHOICE_LENGTH && CHOICE.matcher((String) choice).matches() }) {
+            return "has choices that are not 1 to ${MAX_CHOICES} different names of at most ${MAX_CHOICE_LENGTH} characters, " +
+                    'each an ASCII letter, _ or $ followed by ASCII letters, digits, _ and $'
+        }
+        null
+    }
+
+    /**
+     * Says which rule the options and the parameters of a tool break together, each of them keeping
+     * the rules of its own ({@link #optionRefusal}, {@link #parameterRefusal}).
+     *
+     * @param options the options of the tool
+     * @param parameters the parameters of the tool, in their order
+     * @return the end of a sentence that starts with the tool, which repeats nothing but a name or a
+     * label that is as the rules have it; {@code null} when they keep every rule
+     */
+    static String declarationsRefusal(List<Map> options, List<Map> parameters) {
+        if (options.size() > MAX_OPTIONS) {
+            return "declares more than ${MAX_OPTIONS} options".toString()
+        }
+        if (parameters.size() > MAX_PARAMETERS) {
+            return "declares more than ${MAX_PARAMETERS} parameters".toString()
+        }
+        Set<String> names = new HashSet<String>()
+        for (Map option : options) {
+            for (Object name : (List) option.get('names')) {
+                if (!names.add((String) name)) {
+                    return "gives two options the name ${name}".toString()
+                }
+            }
+        }
+        Set<String> labels = new HashSet<String>()
+        boolean optional = false
+        for (int index = 0; index < parameters.size(); index++) {
+            Map parameter = parameters[index]
+            String arity = (String) parameter.get('arity')
+            if (!labels.add((String) parameter.get('label'))) {
+                return "gives two parameters the label ${parameter.get('label')}".toString()
+            }
+            if (arity.endsWith('*') && index < parameters.size() - 1) {
+                return "has a parameter that takes any number of values, ${parameter.get('label')}, before its last".toString()
+            }
+            if (optional && arity.startsWith('1')) {
+                return "has a parameter that has to be given, ${parameter.get('label')}, after one that can be left out".toString()
+            }
+            optional = optional || arity.startsWith('0')
+        }
+        null
+    }
+
+    /**
+     * Writes an option with its members in the order of {@link #OPTION_MEMBERS}, and only those that say
+     * something: {@code required} and {@code repeatable} when they are {@code true}, {@code description}
+     * when it is not empty, {@code choices} when there are some, {@code label} and {@code default} when
+     * there is one, and the {@code type} its arity gives when the option has none.
+     *
+     * @param option an option that keeps the rules ({@link #optionRefusal})
+     * @return the option as a descriptor has it
+     */
+    static Map<String, Object> normalOption(Map option) {
+        Map<String, Object> normal = new LinkedHashMap<String, Object>()
+        String arity = (String) option.get('arity')
+        normal.put('names', new ArrayList<String>((List<String>) option.get('names')).asImmutable())
+        normal.put('arity', arity)
+        normal.put('type', option.containsKey('type') ? option.get('type') : (arity == ARITY_SWITCH ? TYPE_BOOLEAN : TYPE_STRING))
+        putSaying(normal, 'label', option.get('label'))
+        putSaying(normal, 'required', option.get('required'))
+        putSaying(normal, 'description', option.get('description'))
+        putSaying(normal, 'repeatable', option.get('repeatable'))
+        putSaying(normal, 'choices', option.get('choices'))
+        putSaying(normal, 'default', option.get('default'))
+        normal.asImmutable()
+    }
+
+    /**
+     * Writes a parameter with its members in the order of {@link #PARAMETER_MEMBERS}, and only those that
+     * say something, as {@link #normalOption} does: {@code repeatable} is {@code true} for the arities
+     * {@link #ARITY_SOME} and {@link #ARITY_ANY}.
+     *
+     * @param parameter a parameter that keeps the rules ({@link #parameterRefusal})
+     * @return the parameter as a descriptor has it
+     */
+    static Map<String, Object> normalParameter(Map parameter) {
+        Map<String, Object> normal = new LinkedHashMap<String, Object>()
+        String arity = (String) parameter.get('arity')
+        normal.put('label', parameter.get('label'))
+        normal.put('arity', arity)
+        normal.put('type', parameter.containsKey('type') ? parameter.get('type') : TYPE_STRING)
+        putSaying(normal, 'description', parameter.get('description'))
+        putSaying(normal, 'repeatable', arity.endsWith('*') ? Boolean.TRUE : null)
+        putSaying(normal, 'choices', parameter.get('choices'))
+        normal.asImmutable()
+    }
+
+    private static void putSaying(Map<String, Object> normal, String member, Object value) {
+        if (value == null || value == Boolean.FALSE || (value instanceof String && ((String) value).isEmpty()) ||
+                (value instanceof List && ((List) value).isEmpty())) {
+            return
+        }
+        normal.put(member, value instanceof List ? new ArrayList<Object>((List) value).asImmutable() : value)
+    }
+
+    /**
      * The name a tool has when its class does not say otherwise, as {@code GrailsTool.getName()}
      * works it out: {@code CreateReportTool} is {@code create-report}. A class whose name does not
      * end with {@code Tool} is named without the ending {@code Command}, so that
@@ -282,13 +672,121 @@ final class ToolDescriptor {
 
     /**
      * Says why a descriptor cannot be used. The message finishes the sentence "its descriptor ..."
-     * and repeats nothing of the descriptor, unless it is one of a fixed set of words.
+     * and repeats nothing of the descriptor, unless it is one of a fixed set of words, or the name of
+     * an option or the label of a parameter that is as the rules have it.
      */
     static final class Refused extends Exception {
 
         Refused(String message) {
             super(message)
         }
+    }
+
+    /**
+     * What a tool declares of its command line and of what it does, and what it lacks of that: the
+     * members {@link #MEMBER_OPTIONS} to {@link #MEMBER_INCOMPLETE} of its descriptor. Nothing of it can
+     * be changed.
+     */
+    static final class Declarations {
+
+        /** What a tool that declares nothing has, and lacks nothing the compiler found. */
+        static final Declarations NONE = new Declarations(null, null, null, false, null)
+
+        /** The options, each as {@link ToolDescriptor#normalOption} writes one; never {@code null}. */
+        final List<Map<String, Object>> options
+
+        /** The parameters, in their order, each as {@link ToolDescriptor#normalParameter} writes one; never {@code null}. */
+        final List<Map<String, Object>> parameters
+
+        /** The four hints of {@link ToolDescriptor#HINTS}, in that order; {@code null} for a tool that declares none. */
+        final Map<String, Boolean> hints
+
+        /** Whether the tool reads what is typed. */
+        final boolean readsInput
+
+        /** What the tool lacks, of {@link ToolDescriptor#INCOMPLETE} and in that order; never {@code null}. */
+        final List<String> incomplete
+
+        /**
+         * @param options the options; {@code null} for none
+         * @param parameters the parameters, in their order; {@code null} for none
+         * @param hints the hints, each of {@link ToolDescriptor#HINTS} that is missing being its default;
+         * {@code null} for none
+         * @param readsInput whether the tool reads what is typed
+         * @param incomplete what the tool lacks; {@code null} for nothing
+         * @throws IllegalArgumentException when the options and the parameters break a rule
+         * ({@link ToolDescriptor#declarationsRefusalOf})
+         */
+        Declarations(List<? extends Map> options, List<? extends Map> parameters, Map<String, Boolean> hints, boolean readsInput,
+                     List<String> incomplete) {
+            String refusal = declarationsRefusalOf((List<Map>) (options ?: []), (List<Map>) (parameters ?: []))
+            if (refusal != null) {
+                throw new IllegalArgumentException("The declarations ${refusal}")
+            }
+            List<Map<String, Object>> normalOptions = []
+            for (Map option : (options ?: [])) {
+                normalOptions << normalOption(option)
+            }
+            List<Map<String, Object>> normalParameters = []
+            for (Map parameter : (parameters ?: [])) {
+                normalParameters << normalParameter(parameter)
+            }
+            this.options = normalOptions.asImmutable()
+            this.parameters = normalParameters.asImmutable()
+            if (hints == null) {
+                this.hints = null
+            } else {
+                Map<String, Boolean> all = new LinkedHashMap<String, Boolean>()
+                for (String hint : HINTS) {
+                    all.put(hint, hints.containsKey(hint) ? hints.get(hint) : HINT_DEFAULTS.get(hint))
+                }
+                this.hints = Collections.unmodifiableMap(all)
+            }
+            this.readsInput = readsInput
+            this.incomplete = INCOMPLETE.findAll { String lacking -> incomplete != null && incomplete.contains(lacking) }.asImmutable()
+        }
+
+        /**
+         * @return whether the tool declares an option or a parameter, and is held to its declarations
+         */
+        boolean isDeclaring() {
+            !options.isEmpty() || !parameters.isEmpty()
+        }
+    }
+
+    /**
+     * Says which rule the options and the parameters of a tool break, each on its own or together.
+     *
+     * @param options the options of the tool, as they are written
+     * @param parameters the parameters of the tool, in their order, as they are written
+     * @return the end of a sentence that starts with the tool or its declarations, which repeats nothing
+     * but a name or a label that is as the rules have it; {@code null} when they keep every rule
+     */
+    static String declarationsRefusalOf(List<Map> options, List<Map> parameters) {
+        int place = 0
+        for (Object option : (List) options) {
+            place++
+            String why = option instanceof Map ? optionRefusal((Map) option) : 'is not a JSON object'
+            if (why != null) {
+                return "have an option, the ${ordinal(place)}, that ${why}".toString()
+            }
+        }
+        place = 0
+        for (Object parameter : (List) parameters) {
+            place++
+            String why = parameter instanceof Map ? parameterRefusal((Map) parameter) : 'is not a JSON object'
+            if (why != null) {
+                return "have a parameter, the ${ordinal(place)}, that ${why}".toString()
+            }
+        }
+        String why = declarationsRefusal(options, parameters)
+        why == null ? null : "say that the tool ${why}".toString()
+    }
+
+    private static String ordinal(int place) {
+        int lastTwo = place % 100
+        String suffix = lastTwo in 11..13 ? 'th' : place % 10 == 1 ? 'st' : place % 10 == 2 ? 'nd' : place % 10 == 3 ? 'rd' : 'th'
+        "${place}${suffix}".toString()
     }
 
     /**
@@ -317,16 +815,24 @@ final class ToolDescriptor {
          */
         final List<String> deprecated
 
+        /** What the tool declares of its command line and of what it does, and what it lacks of that; never {@code null}. */
+        final Declarations declarations
+
         Described(String name, String description) {
             this(name, description, TARGET_APPLICATION, true, Collections.<String> emptyList())
         }
 
         Described(String name, String description, String target, boolean startsApplication, List<String> deprecated) {
+            this(name, description, target, startsApplication, deprecated, Declarations.NONE)
+        }
+
+        Described(String name, String description, String target, boolean startsApplication, List<String> deprecated, Declarations declarations) {
             this.name = name
             this.description = description
             this.target = target
             this.startsApplication = target == TARGET_APPLICATION && startsApplication
             this.deprecated = Collections.unmodifiableList(inOrder(deprecated))
+            this.declarations = declarations == null ? Declarations.NONE : declarations
         }
     }
 
@@ -386,7 +892,37 @@ final class ToolDescriptor {
         }
         new Described((String) name, (String) description, target == null ? TARGET_APPLICATION : (String) target,
                 startsApplication == null || (Boolean) startsApplication,
-                deprecated == null ? Collections.<String> emptyList() : (List<String>) deprecated)
+                deprecated == null ? Collections.<String> emptyList() : (List<String>) deprecated, declarations(descriptor))
+    }
+
+    // what the tool declares, held to every rule a compiled tool is held to: a descriptor written by hand is read as one the compiler wrote
+    private static Declarations declarations(Map descriptor) throws Refused {
+        Object options = descriptor.get(MEMBER_OPTIONS)
+        Object parameters = descriptor.get(MEMBER_PARAMETERS)
+        if (options != null && !(options instanceof List)) {
+            throw new Refused("has ${MEMBER_OPTIONS} that are not a list")
+        }
+        if (parameters != null && !(parameters instanceof List)) {
+            throw new Refused("has ${MEMBER_PARAMETERS} that are not a list")
+        }
+        String why = declarationsRefusalOf((List<Map>) (options ?: []), (List<Map>) (parameters ?: []))
+        if (why != null) {
+            throw new Refused("has declarations that ${why}")
+        }
+        Object hints = descriptor.get(MEMBER_HINTS)
+        if (hints != null && !(hints instanceof Map && HINTS.every { String hint -> ((Map) hints).get(hint) instanceof Boolean })) {
+            throw new Refused("has ${MEMBER_HINTS} that are not an object with ${HINTS.join(', ')}, each true or false")
+        }
+        Object readsInput = descriptor.get(MEMBER_READS_INPUT)
+        if (readsInput != null && !(readsInput instanceof Boolean)) {
+            throw new Refused("has a ${MEMBER_READS_INPUT} that is neither true nor false")
+        }
+        Object incomplete = descriptor.get(MEMBER_INCOMPLETE)
+        if (incomplete != null && !(incomplete instanceof List && INCOMPLETE.containsAll((List) incomplete))) {
+            throw new Refused("has an ${MEMBER_INCOMPLETE} that is not a list of ${INCOMPLETE.join(', ')}")
+        }
+        new Declarations((List<Map>) options, (List<Map>) parameters, (Map<String, Boolean>) hints, readsInput == Boolean.TRUE,
+                (List<String>) incomplete)
     }
 
     /**
@@ -418,11 +954,32 @@ final class ToolDescriptor {
      * @return the JSON document, or {@code null} when the tool cannot be described
      */
     static String describe(String className, String name, String description, String target, boolean startsApplication, List<String> deprecated) {
+        describe(className, name, description, target, startsApplication, deprecated, Declarations.NONE)
+    }
+
+    /**
+     * Writes the descriptor of a tool with what it declares, when {@link #read} would take it: as
+     * {@link #describe(String, String, String, String, boolean, List)} does, and with no descriptor that
+     * has more than {@link #MAX_BYTES} bytes.
+     *
+     * @param className the name of the tool class
+     * @param name what is typed for the tool
+     * @param description the description of the tool, or {@code null} when it is not known
+     * @param target the execution target of the tool, one of {@link #RUN_TARGETS}
+     * @param startsApplication whether the application is started around the tool
+     * @param deprecated what is deprecated about how the tool is written; {@code null} is nothing
+     * @param declarations what the tool declares, and what it lacks
+     * @return the JSON document, or {@code null} when the tool cannot be described
+     */
+    static String describe(String className, String name, String description, String target, boolean startsApplication, List<String> deprecated,
+                           Declarations declarations) {
         if (!isClassName(className) || !isCommandName(name) || !RUN_TARGETS.contains(target) ||
                 (deprecated != null && !DEPRECATIONS.containsAll(deprecated))) {
             return null
         }
-        toJson(className, name, description != null && isDescription(description) ? description : null, target, startsApplication, deprecated)
+        String json = toJson(className, name, description != null && isDescription(description) ? description : null, target, startsApplication,
+                deprecated, declarations)
+        json.length() > MAX_BYTES ? null : json
     }
 
     /**
@@ -453,6 +1010,50 @@ final class ToolDescriptor {
      * @return the JSON document, in ASCII, with a line end
      */
     static String toJson(String className, String name, String description, String target, boolean startsApplication, List<String> deprecated) {
+        toJson(className, name, description, target, startsApplication, deprecated, Declarations.NONE)
+    }
+
+    /**
+     * Writes a descriptor of format 1 with what the tool declares, whatever {@link #read} makes of it:
+     * the members of {@link Declarations} after the others, each only where it says something, so that
+     * a tool that declares nothing and lacks nothing has the descriptor it had without them.
+     *
+     * @param className the name of the tool class
+     * @param name what is typed for the tool
+     * @param description the description of the tool, or {@code null} when it is not known
+     * @param target the execution target of the tool
+     * @param startsApplication whether the application is started around the tool, which is written
+     * for the target {@link #TARGET_APPLICATION} and for no other
+     * @param deprecated what is deprecated about how the tool is written; {@code null} and an empty
+     * list are not written
+     * @param declarations what the tool declares, and what it lacks
+     * @return the JSON document, in ASCII, with a line end
+     */
+    static String toJson(String className, String name, String description, String target, boolean startsApplication, List<String> deprecated,
+                         Declarations declarations) {
+        String plain = plainJson(className, name, description, target, startsApplication, deprecated)
+        Declarations declared = declarations == null ? Declarations.NONE : declarations
+        StringBuilder json = new StringBuilder(plain.substring(0, plain.length() - 2))
+        if (!declared.options.isEmpty()) {
+            json.append(',"').append(MEMBER_OPTIONS).append('":').append(StrictJson.write(declared.options))
+        }
+        if (!declared.parameters.isEmpty()) {
+            json.append(',"').append(MEMBER_PARAMETERS).append('":').append(StrictJson.write(declared.parameters))
+        }
+        if (declared.hints != null) {
+            json.append(',"').append(MEMBER_HINTS).append('":').append(StrictJson.write(declared.hints))
+        }
+        if (declared.readsInput) {
+            json.append(',"').append(MEMBER_READS_INPUT).append('":true')
+        }
+        if (!declared.incomplete.isEmpty()) {
+            json.append(',"').append(MEMBER_INCOMPLETE).append('":').append(StrictJson.write(declared.incomplete))
+        }
+        json.append('}\n')
+        json.toString()
+    }
+
+    private static String plainJson(String className, String name, String description, String target, boolean startsApplication, List<String> deprecated) {
         StringBuilder json = new StringBuilder()
         json.append('{"format":').append(FORMAT)
         json.append(',"class":')

@@ -88,11 +88,20 @@ class ToolCatalogBuilder {
 
     /**
      * The most bytes a catalog has. What reads a catalog reads no more, so none is written that has
-     * more: with the most commands, each with the longest name, description and origin in ASCII, a
-     * catalog is under this, and one whose descriptions are written as escapes lists as many
-     * commands as fit.
+     * more: with the most commands, each with the longest name, description and origin in ASCII and
+     * no declarations, a catalog is under this. One whose descriptions are written as escapes, or
+     * whose tools declare many options and parameters, lists as many commands as fit, the first by
+     * name, and says how many it left out; a descriptor has at most {@link ToolDescriptor#MAX_BYTES},
+     * so at least the first 32 commands always fit.
      */
     public static final int MAX_BYTES = 512 * 1024
+
+    /**
+     * The most values a catalog has, counting every string, number, boolean, {@code null}, array and
+     * object, and not the names of the members of objects. What reads a catalog reads no more, so a
+     * catalog whose tools declare that many lists as many commands as fit, as for {@link #MAX_BYTES}.
+     */
+    public static final int MAX_VALUES = 100_000
 
     /** The most characters where a command comes from is written with. */
     public static final int MAX_ORIGIN_LENGTH = 120
@@ -232,11 +241,12 @@ class ToolCatalogBuilder {
      * about the commands, as it is
      */
     Map<String, Object> build() {
-        document(MAX_COMMANDS)
+        document(MAX_COMMANDS, null)
     }
 
-    // the document with no more than a number of commands: the first by name, and a line for the others
-    private Map<String, Object> document(int most) {
+    // the document with no more than a number of commands: the first by name, and a line for the others that
+    // says which bound of a catalog they are left out for when it is not the number of commands
+    private Map<String, Object> document(int most, String limit) {
         Set<String> said = new TreeSet<String>(diagnostics)
         List<Entry> entries = []
         for (Map.Entry<String, List<Candidate>> registration : registered) {
@@ -278,12 +288,31 @@ class ToolCatalogBuilder {
             if (entry.deprecated) {
                 command.deprecated = new ArrayList<String>(entry.deprecated)
             }
+            ToolDescriptor.Declarations declared = entry.declarations
+            if (declared != null) {
+                // what the tool declares, in the order and the form of help --json, and only where it says something
+                if (!declared.options.isEmpty()) {
+                    command.put(ToolDescriptor.MEMBER_OPTIONS, declared.options)
+                }
+                if (!declared.parameters.isEmpty()) {
+                    command.put(ToolDescriptor.MEMBER_PARAMETERS, declared.parameters)
+                }
+                if (declared.hints != null) {
+                    command.put(ToolDescriptor.MEMBER_HINTS, declared.hints)
+                }
+                if (declared.readsInput) {
+                    command.put(ToolDescriptor.MEMBER_READS_INPUT, Boolean.TRUE)
+                }
+                if (!declared.incomplete.isEmpty()) {
+                    command.put(ToolDescriptor.MEMBER_INCOMPLETE, declared.incomplete)
+                }
+            }
             commands << command
         }
         if (commands.size() > most) {
             // by name, so that the same commands are left out whatever the order of the class path is
             said << line("There are ${commands.size()} commands, more than a catalog lists" +
-                    (most < MAX_COMMANDS ? " in ${MAX_BYTES} bytes" : " (${MAX_COMMANDS})") +
+                    (most < MAX_COMMANDS ? " in ${limit}" : " (${MAX_COMMANDS})") +
                     ": the last ${commands.size() - most} by name are not listed.")
             commands = new ArrayList<Map<String, Object>>(commands.subList(0, most))
         }
@@ -324,15 +353,46 @@ class ToolCatalogBuilder {
      * @return the document as one line of JSON in ASCII, with a line end
      */
     String toJson() {
-        // what reads the catalog reads a bounded number of bytes: fewer commands are listed until it is within them
+        // what reads the catalog reads a bounded number of bytes and values: fewer commands are listed until it is within them
         int most = MAX_COMMANDS
-        String json = StrictJson.write(document(most)) + '\n'
-        while (json.length() > MAX_BYTES && most > 0) {
-            most = Math.min(most, ((List) document(most).get(MEMBER_TOOLS)).size())
+        Map<String, Object> written = document(most, null)
+        String json = StrictJson.write(written) + '\n'
+        String limit = bound(json, written)
+        while (limit != null && most > 0) {
+            most = Math.min(most, ((List) written.get(MEMBER_TOOLS)).size())
             most -= Math.max(1, most.intdiv(8))
-            json = StrictJson.write(document(most)) + '\n'
+            written = document(most, limit)
+            json = StrictJson.write(written) + '\n'
+            String beyond = bound(json, written)
+            if (beyond == null) {
+                break
+            }
+            limit = beyond
         }
         json
+    }
+
+    // the bound of a catalog the document is beyond, as the diagnostic says it; null when it is within both
+    private static String bound(String json, Map<String, Object> document) {
+        if (json.length() > MAX_BYTES) {
+            return "${MAX_BYTES} bytes".toString()
+        }
+        values(document) > MAX_VALUES ? "${MAX_VALUES} values".toString() : null
+    }
+
+    // the values of a document as its reader counts them: every value, and not the names of the members of objects
+    private static int values(Object value) {
+        int count = 1
+        if (value instanceof Map) {
+            for (Object member : ((Map) value).values()) {
+                count += values(member)
+            }
+        } else if (value instanceof Collection) {
+            for (Object element : (Collection) value) {
+                count += values(element)
+            }
+        }
+        count
     }
 
     private Entry resolve(String className, List<Candidate> candidates, Set<String> said) {
@@ -361,7 +421,8 @@ class ToolCatalogBuilder {
             }
             return new Entry(name: application.described.name, description: application.described.description, origin: application.origin,
                     className: className, registration: REGISTRATION_DESCRIPTOR, target: application.described.target,
-                    startsApplication: application.described.startsApplication, deprecated: application.described.deprecated)
+                    startsApplication: application.described.startsApplication, deprecated: application.described.deprecated,
+                    declarations: application.described.declarations)
         }
         List<Candidate> described = candidates.findAll { Candidate candidate -> candidate.digest != null }
         if (described.isEmpty()) {
@@ -384,7 +445,8 @@ class ToolCatalogBuilder {
         }
         new Entry(name: first.described.name, description: first.described.description, origin: first.origin,
                 className: className, registration: REGISTRATION_DESCRIPTOR, target: first.described.target,
-                startsApplication: first.described.startsApplication, deprecated: first.described.deprecated)
+                startsApplication: first.described.startsApplication, deprecated: first.described.deprecated,
+                declarations: first.described.declarations)
     }
 
     // what the compiler says of a source in the wrong folder, of a descriptor in the output of the wrong source set
@@ -595,6 +657,8 @@ class ToolCatalogBuilder {
         String target
         boolean startsApplication = true
         List<String> deprecated
+        // what the descriptor says the tool declares, or null for a command that is listed from its registration alone
+        ToolDescriptor.Declarations declarations
     }
 
     // one place a class is registered: with the descriptor found there (read, or refused), or without one

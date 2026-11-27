@@ -212,6 +212,95 @@ class ToolDescriptorSpec extends Specification {
         read.description == null
     }
 
+    def "what a tool declares is written after the other members, each only where it says something, and read back as it was"() {
+        given:
+        ToolDescriptor.Declarations declarations = new ToolDescriptor.Declarations(
+                [[names: ['--since', '-s'], arity: '1', type: 'string', label: 'DATE', required: false, description: 'The first day', repeatable: false],
+                 [names: ['--format'], arity: '1', type: 'string', label: 'FORMAT', choices: ['TEXT', 'JSON'], default: 'TEXT'],
+                 [names: ['--force'], arity: '0', type: 'boolean', description: '']],
+                [[label: 'OUTPUT', arity: '1', type: 'string', description: 'The file'], [label: 'MORE', arity: '0..*', type: 'string']],
+                [readOnlyHint: true], true, ['hints', 'description'])
+
+        when:
+        String json = ToolDescriptor.describe(CLASS, 'greet', 'Greets someone', 'application', true, [], declarations)
+        ToolDescriptor.Described read = ToolDescriptor.read(CLASS, json.getBytes('US-ASCII'))
+
+        then:
+        json == '{"format":1,"class":"example.GreetCommand","name":"greet","description":"Greets someone","target":"application","startsApplication":true,' +
+                '"options":[{"names":["--since","-s"],"arity":"1","type":"string","label":"DATE","description":"The first day"},' +
+                '{"names":["--format"],"arity":"1","type":"string","label":"FORMAT","choices":["TEXT","JSON"],"default":"TEXT"},' +
+                '{"names":["--force"],"arity":"0","type":"boolean"}],' +
+                '"parameters":[{"label":"OUTPUT","arity":"1","type":"string","description":"The file"},{"label":"MORE","arity":"0..*","type":"string","repeatable":true}],' +
+                '"hints":{"readOnlyHint":true,"destructiveHint":true,"idempotentHint":false,"openWorldHint":true},"readsInput":true,"incomplete":["description","hints"]}\n'
+        read.declarations.options == declarations.options
+        read.declarations.parameters == declarations.parameters
+        read.declarations.hints == declarations.hints
+        read.declarations.readsInput
+        read.declarations.incomplete == ['description', 'hints']
+        read.declarations.declaring
+    }
+
+    def "a tool that declares nothing and lacks nothing has the descriptor it had before declarations"() {
+        expect:
+        ToolDescriptor.describe(CLASS, 'greet', 'Greets someone', 'application', true, [], ToolDescriptor.Declarations.NONE) ==
+                ToolDescriptor.describe(CLASS, 'greet', 'Greets someone', 'application', true, [])
+        !ToolDescriptor.read(CLASS, ToolDescriptor.describe(CLASS, 'greet', 'Greets someone').getBytes('US-ASCII')).declarations.declaring
+    }
+
+    def "a descriptor written by hand, as a Java tool has, is read in the form a compiled one has"() {
+        when:
+        ToolDescriptor.Described read = ToolDescriptor.read(CLASS, ('{"format":1,"class":"example.GreetCommand","name":"greet",' +
+                '"options":[{"description":"Replaces","arity":"0","names":["-f","--force"],"required":false}],' +
+                '"parameters":[{"arity":"1..*","label":"FILES"}],"readsInput":false,"incomplete":[]}').getBytes('UTF-8'))
+
+        then: 'the type its arity gives, in the order of the members, without what says nothing'
+        read.declarations.options == [[names: ['-f', '--force'], arity: '0', type: 'boolean', description: 'Replaces']]
+        read.declarations.parameters == [[label: 'FILES', arity: '1..*', type: 'string', repeatable: true]]
+        read.declarations.hints == null
+        !read.declarations.readsInput
+        read.declarations.incomplete == []
+    }
+
+    @Unroll
+    def "a descriptor whose declarations #title is refused with the rule, and nothing else is thrown"() {
+        expect:
+        refusal('{"format":1,"class":"example.GreetCommand","name":"greet",' + members + '}') == reason
+
+        where:
+        title                                   | members                                                                             || reason
+        'are no list'                           | '"options":{"names":["--a"]}'                                                        || 'has options that are not a list'
+        'have something that is no option'      | '"options":[1]'                                                                      || 'has declarations that have an option, the 1st, that is not a JSON object'
+        'have an option without names'          | '"options":[{"arity":"0"}]'                                                          || 'has declarations that have an option, the 1st, that has no names'
+        'have an option of arity 2'             | '"options":[{"names":["--a"],"arity":"0"},{"names":["--b"],"arity":"2"}]'            || 'has declarations that have an option, the 2nd, that has an arity that is neither 0, for a switch, nor 1, for an option that takes a value'
+        'have a name with a control character'  | '"options":[{"names":["--a\\u001b"],"arity":"0"}]'                                   || 'has declarations that have an option, the 1st, that has a name that is neither a long name (two hyphens, a lower-case letter, then letters, digits and single hyphens, at most 32 characters, as --since) nor a short name (a hyphen and one letter, as -s)'
+        'have a switch of the type string'      | '"options":[{"names":["--a"],"arity":"0","type":"string"}]'                          || 'has declarations that have an option, the 1st, that has a type its arity does not take: a switch is boolean, and an option that takes a value is string or integer'
+        'have a parameter of arity 2'           | '"parameters":[{"label":"A","arity":"2"}]'                                           || 'has declarations that have a parameter, the 1st, that has an arity that is none of 1, 0..1, 1..*, 0..*'
+        'give two options one name'             | '"options":[{"names":["--a"],"arity":"0"},{"names":["--a"],"arity":"1"}]'            || 'has declarations that say that the tool gives two options the name --a'
+        'have the rest before the last'         | '"parameters":[{"label":"A","arity":"0..*"},{"label":"B","arity":"0..1"}]'           || 'has declarations that say that the tool has a parameter that takes any number of values, A, before its last'
+        'have hints that are text'              | '"hints":"read-only"'                                                                || 'has hints that are not an object with readOnlyHint, destructiveHint, idempotentHint, openWorldHint, each true or false'
+        'have three hints'                      | '"hints":{"readOnlyHint":true,"destructiveHint":true,"idempotentHint":true}'         || 'has hints that are not an object with readOnlyHint, destructiveHint, idempotentHint, openWorldHint, each true or false'
+        'read input as text'                    | '"readsInput":"yes"'                                                                 || 'has a readsInput that is neither true nor false'
+        'lack something else'                   | '"incomplete":["everything"]'                                                        || 'has an incomplete that is not a list of description, arguments, hints'
+    }
+
+    def "no descriptor is written whose declarations do not fit in one, nor for declarations that break a rule"() {
+        given:
+        List<Map> options = (0..<32).collect { int index -> [names: ["--o${index}".toString()], arity: '1', description: 'é' * 512] as Map }
+
+        expect:
+        ToolDescriptor.describe(CLASS, 'greet', 'Greets someone', 'application', true, [],
+                new ToolDescriptor.Declarations(options, null, null, false, null)) == null
+        ToolDescriptor.describe(CLASS, 'greet', 'Greets someone', 'application', true, [],
+                new ToolDescriptor.Declarations(options.collect { it + [description: 'd' * 200] }, null, null, false, null)).length() <= ToolDescriptor.MAX_BYTES
+
+        when:
+        new ToolDescriptor.Declarations([[names: ['since'], arity: '1']], null, null, false, null)
+
+        then:
+        IllegalArgumentException refused = thrown()
+        refused.message.startsWith('The declarations have an option, the 1st, that has a name that is neither a long name')
+    }
+
     private static String refusal(String content) {
         try {
             ToolDescriptor.read(CLASS, content.getBytes('UTF-8'))

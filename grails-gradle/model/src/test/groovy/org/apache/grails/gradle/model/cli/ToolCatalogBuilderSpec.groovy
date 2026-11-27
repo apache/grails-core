@@ -220,6 +220,79 @@ class ToolCatalogBuilderSpec extends Specification {
         catalog.diagnostics == ['org.example:old-plugin:7.0.0 has commands of Grails 7, which Grails 9 does not run: use a version of the plugin for Grails 9.']
     }
 
+    def "the catalog copies what a tool declares from its descriptor, a descriptor written by hand as well, each member only where it says something"() {
+        given: 'a descriptor written by hand, as a Java tool has one, with its members in another order'
+        File plugin = element('plugin', '{"format":1,"class":"demo.ReportCommand","name":"report","description":"Reports","target":"standalone",' +
+                '"incomplete":["hints"],"readsInput":true,"hints":{"openWorldHint":false,"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true},' +
+                '"parameters":[{"label":"OUTPUT","arity":"1"}],"options":[{"names":["--since"],"arity":"1","label":"DATE","required":false}]}')
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
+        builder.add('org.example:report-tools-cli:1.0.0', plugin)
+
+        expect:
+        builder.toJson() == '{"format":1,"complete":true,"diagnostics":[],"tools":[{"name":"report","aliases":[],"description":"Reports",' +
+                '"origin":"org.example:report-tools-cli:1.0.0","target":"standalone","startsApplication":false,"registration":"descriptor",' +
+                '"options":[{"names":["--since"],"arity":"1","type":"string","label":"DATE"}],"parameters":[{"label":"OUTPUT","arity":"1","type":"string"}],' +
+                '"hints":{"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},"readsInput":true,"incomplete":["hints"]}]}\n'
+    }
+
+    def "a tool whose descriptor has declarations that break a rule is not listed, and the rule is said"() {
+        given:
+        File plugin = element('plugin', '{"format":1,"class":"demo.ReportCommand","name":"report","options":[{"names":["--a"],"arity":"0"},{"names":["--a"],"arity":"1"}]}')
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
+        builder.add('org.example:report-tools-cli:1.0.0', plugin)
+
+        when:
+        Map<String, Object> catalog = builder.build()
+
+        then:
+        catalog.tools == []
+        catalog.diagnostics == ['The command class demo.ReportCommand of org.example:report-tools-cli:1.0.0 is not listed: its descriptor has declarations that say ' +
+                                        'that the tool gives two options the name --a.']
+    }
+
+    def "a catalog whose tools declare more values than a reader takes lists as many tools as fit, the first by name, and says so"() {
+        given: 'tools that each declare the most options, each with the most choices of a letter or two'
+        List<String> choices = (('A'..'Z') + ('a'..'z') + ['_', '$'] + (0..9).collect { "B${it}".toString() }) as List<String>
+        File element = new File(dir, 'tools')
+        new File(element, 'META-INF').mkdirs()
+        List<String> classes = (0..<80).collect { int number -> "demo.C${number}Tool".toString() }
+        new File(element, 'META-INF/grails-cli.factories').text = "org.apache.grails.core.cli.GrailsTool=${classes.join(',')}\n"
+        classes.each { String className ->
+            List<Map> options = (0..<ToolDescriptor.MAX_OPTIONS).collect { int index -> [names: ["--o${index}".toString()], arity: '1', choices: choices] as Map }
+            File file = new File(element, ToolDescriptor.location(className))
+            file.parentFile.mkdirs()
+            file.text = ToolDescriptor.describe(className, "t-${className.replaceAll(/\D/, '')}".toString(), 'A tool', 'application', true, [],
+                    new ToolDescriptor.Declarations(options, null, null, false, null))
+        }
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
+        builder.add('org.example:tools:1.0', element)
+
+        when:
+        String json = builder.toJson()
+        Map<String, Object> catalog = (Map<String, Object>) StrictJson.parse(json.trim(), 8)
+        int listed = ((List) catalog.tools).size()
+
+        then: 'within the values and the bytes a reader takes'
+        values(catalog) <= ToolCatalogBuilder.MAX_VALUES
+        json.length() <= ToolCatalogBuilder.MAX_BYTES
+        listed > 0 && listed < 80
+
+        and: 'the first by name, and what is left out is said'
+        ((List<Map>) catalog.tools)*.name == classes.collect { "t-${it.replaceAll(/\D/, '')}".toString() }.sort().take(listed)
+        catalog.diagnostics == ["There are 80 commands, more than a catalog lists in ${ToolCatalogBuilder.MAX_VALUES} values: the last ${80 - listed} by name are not listed.".toString()]
+    }
+
+    // the values of a document as the reader of a catalog counts them: every value, and not the names of the members of objects
+    private static int values(Object value) {
+        int count = 1
+        if (value instanceof Map) {
+            ((Map) value).values().each { count += values(it) }
+        } else if (value instanceof List) {
+            ((List) value).each { count += values(it) }
+        }
+        count
+    }
+
     // a directory that registers the class, with the descriptor when there is one
     private File element(String name, String descriptor) {
         File element = new File(dir, name)
