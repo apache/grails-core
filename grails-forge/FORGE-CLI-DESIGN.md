@@ -16,7 +16,7 @@ limitations under the License.
 
 # One generator: Forge, feature packs, and a profile-free console
 
-**Issue:** apache/grails-core #16348 · **Pull request:** #17114 · **Target:** 9.0.x · **Revision:** 150, 2026-11-27 · **Contract checked against:** `bcee6f11ebb`
+**Issue:** apache/grails-core #16348 · **Pull request:** #17114 · **Target:** 9.0.x · **Revision:** 150, 2026-11-27 · **Contract checked against:** `d3bd34f329e`
 
 This is the maintainers' design of the Grails 9 command line: one `grails` command built on Grails Forge, feature packs in place of profiles, and the commands that work in a project. Users read the Grails guide. Where the guide documents a behaviour, this document states the decision in a sentence and links the guide page by its path in the repository instead of repeating it. When this document, the guide and the code disagree, the code wins, then the guide, and the disagreement is fixed where it was found.
 
