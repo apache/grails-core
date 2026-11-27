@@ -144,6 +144,8 @@ dependencies {
     // SecurityToolsLocationSpec reads the POM and the module metadata of the companions
     testCliImplementation 'org.apache.groovy:groovy-json'
     testCliImplementation 'org.apache.groovy:groovy-xml'
+    // SecurityToolsDeclaredArgumentsSpec runs s2-quickstart as the runTool task does, with the class that runs a tool
+    testCliRuntimeOnly project(':grails-console')
 }
 
 // the templates the tools render are in the companion of the tools as well as in the plugin: the same staged
