@@ -71,6 +71,7 @@ Use the published Grails documentation as the source of truth before changing an
 | `https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes` | Spring Boot 4.2 changes |
 | `https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes` | Spring Framework 7.1 changes |
 | `https://github.com/graphql-java/graphql-java/releases/tag/v26.0` | graphql-java 26.0 breaking changes, for applications using the GraphQL plugin |
+| `https://docs.spring.io/spring-ai/reference/2.1/upgrade-notes.html` | Spring AI 2.0.2, 2.0.3 and 2.1.0 changes, for applications using Spring AI |
 | `https://github.com/ReactiveX/RxJava/wiki/What's-different-in-3.0` | RxJava 3 API differences, with the RxJava 1 to 2 differences it links to |
 
 # Grails 9.0.0-M1
@@ -83,6 +84,7 @@ Verify these before touching application code; `gradle.properties`, the Gradle w
 - Groovy moves from 5.x to 6.0, and Spock to the `groovy-6.0` variant. Do not pin `groovy-all` or Spock yourself; the Grails BOM manages both.
 - Spring Boot moves from 4.1 to 4.2 and Spring Framework from 7.0 to 7.1; the Grails BOM manages the exact versions. The managed versions that change include Spring Security 7.2, Spring Data 2026.1, Micrometer 1.18 and Reactor 2026.0. Spring Boot 4.2 renames configuration properties, so a Grails 8 application's Boot configuration needs review; see [Spring Boot 4.2 and Spring Framework 7.1](#spring-boot-42-and-spring-framework-71).
 - Applications using the GraphQL plugin (`grails-data-graphql`) move from graphql-java 25 to graphql-java 26, which Spring Boot 4.2 manages.
+- Applications using Spring AI (`grails-spring-ai`) move from Spring AI 2.0.1 to 2.1.0, the Spring Boot 4.2 line, which the Grails BOM manages. In the test environment `grails-testing-support-ai` also defaults the new `spring.ai.model.decision` selection to `none`.
 - Gradle 9.7 or later, the minimum Grails 8 already required. The requirements page of the guide names the Gradle version Grails 9 generates applications with.
 - RxGORM (`grails-datamapping-rx`) depends on `io.reactivex.rxjava3:rxjava`. The RxJava 1 artifact `io.reactivex:rxjava` is no longer transitively available through it.
 - Groovy source sets compile with invokedynamic by default; `grails { indy = false }` was the Grails 8 default and is now unset.
@@ -1036,6 +1038,23 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
   - `grails-neo4j-bom` imports `grails-bom`, so GORM for Hibernate 5 next to GORM for Neo4j keeps its versions. The Grails Gradle plugin applies the declared BOM to the other configurations; a build that relies on the BOM the plugin applies sets `grails { bom = 'grails-neo4j-bom' }`. Never declare both: the plugin refuses two Grails BOMs.
   - No Grails BOM covers GORM for Neo4j with GORM for Hibernate 7 or with `grails-micronaut`: `create-app`, `feature add` and the hosted Forge refuse those combinations (`gorm-neo4j cannot be combined with ...`). Do not move an application with GORM for Neo4j to Hibernate 7 or Micronaut.
   - `grails create-app --data neo4j` (or `--features gorm-neo4j`) and `grails feature add gorm-neo4j` write `grails-neo4j-bom`; `project migrate` does not change the build file of an application an earlier version generated with `grails-bom`, and `project regenerate --diff` names `build.gradle` until it is replaced.
+
+## A Sort by an Alias That the Query Does Not Define Is Rejected
+
+With GORM for Hibernate 5 and Hibernate 7, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines throws `IllegalArgumentException: Invalid sort property`. Hibernate 5 ignored it; Hibernate 7 either ignored it or failed inconsistently. This applies to where queries, detached criteria, static list, dynamic finders, example queries and criteria sorts. Stored sorts are validated for `count()` and `get()` too, even though a count does not order its result. An empty example rejects an invalid sort; with a valid sort Hibernate 7 still returns `null`.
+
+- Check dotted sort paths, including those from request parameters, against properties or aliases defined by the same query.
+- Remove the sort or declare its alias, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`.
+- Prefer an association path such as `author.name` when optional filters change the aliases available. Check the count query too when it shares a table's sort parameter.
+
+## Cache Annotations Use `grailsCacheManager`
+
+The cache annotations and `GrailsCacheAdminService` cache with the bean named `grailsCacheManager`, or the bean with that alias, like the cache tags. Grails 8 injected them a cache manager by type, so a cache manager of the application's own marked primary or with a `@Priority` took them from `grailsCacheManager`; now no other cache manager is taken or created for them.
+
+- Search for `CacheManager` beans the application defines, marked primary or with a `@Priority`, and for `grails.cache.enabled: false`. Where the cached methods should keep caching with such a cache manager, name it `grailsCacheManager` or register that alias; declaring `@Qualifier("grailsCacheManager")` on its `@Bean` method or class does not select it. With caching enabled it replaces the plugin's and must implement `GrailsCacheManager`.
+- Without a `grailsCacheManager`, as with `grails.cache.enabled: false`, the annotated methods run uncached, where Grails 8 used the only or primary cache manager, such as Spring Security's `cacheUsers` one.
+- A `grailsCacheManager` created from a bean with cached methods no longer starts; create it from that bean's dependencies.
+- Plugins compiled against Grails 8 keep the Grails 8.0.1 behaviour until they are compiled against Grails 9.
 
 # After the Upgrade
 

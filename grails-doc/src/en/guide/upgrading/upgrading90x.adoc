@@ -3270,3 +3270,44 @@ See "Tools of a Plugin" in xref:commandLine#creatingTools[Creating Tools].
 * None for a plugin whose companion has `src/cli` only: it is published as in Grails 8.
 * None for an application that depends on its plugins: their companions follow them.
 * *An application that declares a companion by hand*: a `-cli` it declares in `grailsCli`, such as `grails-scaffolding-cli`, keeps resolving and brings the plugin with it; to have the standalone tools of a plugin without the plugin, it declares the plugin's `-cli-standalone` in `grailsCliStandalone` instead.
+
+==== 67. A Sort by an Alias That the Query Does Not Define Is Rejected
+
+With GORM for Hibernate 5 and Hibernate 7, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines, as in `Book.list(sort: 'a.name')`, throws an `IllegalArgumentException` with the message `Invalid sort property`. Hibernate 5 ignored such a sort and returned its results unsorted. Hibernate 7 rejected it inconsistently, sometimes with a `NullPointerException` or an `AssertionError`, and sometimes ignored it. The exception now applies to where queries, detached criteria, `list`, dynamic finders, `find` and `findAll` with an example, and the sort argument or `order` of a criteria query. A stored sort is validated for `count()` and `get()` too: `Book.where { ... }.sort('a.name').count()` throws even though a count does not order its result. An empty example with an invalid sort also throws; with a valid sort it keeps Hibernate 7's existing `null` result.
+
+To get the results without a sort, remove the sort, or define the alias in the query, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`. When the same sort is applied to queries with different criteria, for example from a sortable table with optional filters, sort by the association path, such as `author.name`, which does not depend on an alias. Check the count query as well when reusing the table's sort parameter.
+
+==== 68. Cache Annotations Use `grailsCacheManager`
+
+The cache annotations and `GrailsCacheAdminService` cache with the bean named `grailsCacheManager`, or the bean with that alias, like the cache tags and the plugin's startup hook. Grails 8 injected them a cache manager by type: beside a cache manager of the application's own marked primary or with a `@Priority`, the annotations cached with that one, while the tags cached with `grailsCacheManager`. Now no other cache manager is taken for them, or created to choose one.
+
+Where there is no `grailsCacheManager`, as with `grails.cache.enabled: false`, the annotated methods run uncached. Grails 8 gave them the only cache manager the context had, or the one marked primary, such as the one the Spring Security plugin defines when `cacheUsers` is set.
+
+===== Required Actions
+
+* To keep the cache annotations caching with a cache manager of the application's own, name it `grailsCacheManager`, or register `grailsCacheManager` as its alias. Declaring `@Qualifier("grailsCacheManager")` on its `@Bean` method or its class is not enough: the annotations take no cache manager by that qualifier, only by the name or the alias. With caching enabled that replaces the plugin's, which a cache provider plugin does too; it must then implement `GrailsCacheManager`, as the plugin's startup hook requires. For example, a subclass of Spring's `JCacheCacheManager` can implement `cacheExists` and `destroyCache`.
+* A `grailsCacheManager` cannot be created from a bean with cached methods, as that bean is given `grailsCacheManager` while it is created; the context does not start. Create it from the dependencies of that bean instead.
+* A plugin compiled against Grails 8 keeps the Grails 8.0.1 behaviour for its cached classes until it is compiled against Grails 9.
+
+==== 69. Jakarta Expression Language 6 for Bean Validation
+
+GORM's default Expression Language implementation is Expressly 6.0.0, with Jakarta EL API 6.0.1, matching the EL 6
+API that Hibernate Validator 9 uses. This fixes message interpolation in standalone validation: reporting a standard
+`@DecimalMin` or `@DecimalMax` violation could previously throw `NoClassDefFoundError` for
+`jakarta.el.RecordELResolver` instead of returning the constraint violation and its message.
+
+If the application replaces GORM's default EL implementation, supply an EL 6-compatible implementation and remove
+explicit EL 5 version overrides. Applications using the default dependencies need no code changes.
+
+==== 70. Spring AI 2.1 for Applications Using Spring AI
+
+Spring AI 2.1 is the Spring AI line for Spring Boot 4.2, so the Grails BOM moves applications that use the `grails-spring-ai` plugin, or Spring AI directly, from Spring AI 2.0.1 to 2.1.0.
+The {springAiReference}upgrade-notes.html[Spring AI upgrade notes] list the changes of 2.0.2, 2.0.3 and 2.1.0, provider by provider and for the `ChatClient`, chat memory and advisors.
+
+Spring AI 2.1 adds decision models, which pick among known outcomes and report how likely each is; the OpenAI and Ollama starters auto-configure one.
+The provider of the decision model is selected with `spring.ai.model.decision`, and in the test environment `grails-testing-support-ai` defaults it to `none`, like the other selection properties, so a test needs no credentials for it.
+
+===== Required Actions
+
+* An application that takes the Spring AI version from the Grails BOM changes nothing in its build; follow the Spring AI upgrade notes for the provider APIs it calls.
+* An application that pins `spring-ai-bom` itself moves the pin to 2.1, the line for Spring Boot 4.2.

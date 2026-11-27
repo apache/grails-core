@@ -48,6 +48,7 @@ class AiStubEnvironmentPostProcessorSpec extends Specification {
         environment.getProperty('spring.ai.model.audio.transcription') == 'none'
         environment.getProperty('spring.ai.model.audio.speech') == 'none'
         environment.getProperty('spring.ai.model.moderation') == 'none'
+        environment.getProperty('spring.ai.model.decision') == 'none'
         environment.getProperty('spring.ai.vectorstore.type') == 'none'
         environment.propertySources.stream().toList().last().name == AiStubEnvironmentPostProcessor.PROPERTY_SOURCE_NAME
     }

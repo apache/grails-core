@@ -439,14 +439,23 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D findWhere(Map queryMap, Map args) {
+        validateWhereSort(args)
         if (!queryMap) return null
         executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
     }
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
+        validateWhereSort(args)
         if (!queryMap) return null
         executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
+    }
+
+    private void validateWhereSort(Map args) {
+        if (args?.containsKey(HibernateQueryArgument.SORT.value())) {
+            // These calls declare no aliases, including when an empty example returns before querying.
+            new HqlListQueryBuilder((GrailsHibernatePersistentEntity) persistentEntity, [sort: args.sort]).buildListHql()
+        }
     }
 
     private GormQuery prepareWhereHqlQuery(Map queryMap, Map<String, Object> querySettings) {
