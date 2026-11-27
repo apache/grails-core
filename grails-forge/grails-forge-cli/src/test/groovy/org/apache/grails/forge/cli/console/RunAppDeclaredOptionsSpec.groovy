@@ -200,7 +200,7 @@ class RunAppDeclaredOptionsSpec extends CommandSpec implements CommandFixture {
         AutoComplete.complete(ForgeCli.createCommandLine(beanContext, true, true).getCommandSpec(), ['run-app', ''] as String[], 1, 0, 0, completions)
 
         then:
-        runApp.options.find { it.names == ['--query-tail'] } == [names: ['--query-tail'], arity: '0', label: null, required: false,
+        runApp.options.find { it.names == ['--query-tail'] } == [names: ['--query-tail'], arity: '0', type: 'boolean', label: null, required: false,
                                                                  description: 'Capture every statement GORM runs, for the query-tail command.', repeatable: false,
                                                                  split: null, choices: null, default: null, origin: DATA,
                                                                  property: 'grails.gorm.queryTail.enabled', value: 'true']

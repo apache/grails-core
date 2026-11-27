@@ -55,6 +55,41 @@ final class CommandCatalog {
     /** The origin of a command that is part of the command line itself. */
     public static final String BUILT_IN = 'built-in'
 
+    /**
+     * The {@code type} of an option that takes no value, a switch. The member {@code type} of an option
+     * or a parameter says what each of its values is, and for one that is {@code repeatable} what each
+     * value that is given is.
+     */
+    public static final String TYPE_BOOLEAN = 'boolean'
+
+    /** The {@code type} of a value that is text: a name, a path, or one of the {@code choices}. */
+    public static final String TYPE_STRING = 'string'
+
+    /** The {@code type} of a value that is a whole number. */
+    public static final String TYPE_INTEGER = 'integer'
+
+    /** The {@code type} of a value that is a number with a fraction. */
+    public static final String TYPE_NUMBER = 'number'
+
+    /** The {@code type} of an option whose values are keys with values, each given as {@code key=value}, as {@code -D}. */
+    public static final String TYPE_MAP = 'map'
+
+    /** Every {@code type} an option or a parameter has. */
+    public static final List<String> TYPES = [TYPE_BOOLEAN, TYPE_STRING, TYPE_INTEGER, TYPE_NUMBER, TYPE_MAP].asImmutable()
+
+    /**
+     * The members a tool of the application or of a plugin has besides those every command has, in their
+     * order, after {@code deprecated} and before {@code commands}: what the tool declares of its command
+     * line, {@code options} and {@code parameters} described as those of a command of the command line
+     * are; its {@code hints}, the four booleans {@code readOnlyHint}, {@code destructiveHint},
+     * {@code idempotentHint} and {@code openWorldHint}; {@code readsInput}, {@code true} for a tool that
+     * reads what is typed; and {@code incomplete}, which of {@code description}, {@code arguments} and
+     * {@code hints} the tool lacks. Each is there only where the build listed it for the tool and it says
+     * something: a list or an object that is not empty, or {@code true}. A tool that has no {@code options}
+     * and no {@code parameters} declares none, and takes whatever it is given.
+     */
+    public static final List<String> TOOL_MEMBERS = ['options', 'parameters', 'hints', 'readsInput', 'incomplete'].asImmutable()
+
     private final CommandLine root
 
     /**
@@ -306,7 +341,7 @@ final class CommandCatalog {
             CommandLine.Model.CommandSpec spec = command.getCommandSpec()
             if (spec.userObject() instanceof ToolCommand) {
                 // a tool of the application is described by the build of the project
-                described.add(((ToolCommand) spec.userObject()).describe())
+                described.add(tool(((ToolCommand) spec.userObject()).describe()))
                 continue
             }
             Map<String, Object> each = new LinkedHashMap<>()
@@ -331,6 +366,7 @@ final class CommandCatalog {
                 Map<String, Object> entry = new LinkedHashMap<>()
                 entry.put('label', parameter.paramLabel())
                 entry.put('arity', parameter.arity().toString())
+                entry.put('type', typeOf(parameter))
                 entry.put('description', text(parameter.renderedDescription()))
                 entry.put('repeatable', parameter.isMultiValue())
                 entry.put('split', parameter.splitRegex() ?: null)
@@ -345,6 +381,68 @@ final class CommandCatalog {
             described.add(each)
         }
         return described
+    }
+
+    // A tool as the build of the project describes it, with the members of TOOL_MEMBERS where they say something,
+    // in their order and before its commands, and without them where they say nothing.
+    private static Map<String, Object> tool(Map<String, Object> described) {
+        Map<String, Object> entry = new LinkedHashMap<>()
+        described.each { String member, Object value ->
+            if (member != 'commands' && !TOOL_MEMBERS.contains(member)) {
+                entry.put(member, value)
+            }
+        }
+        for (String member : TOOL_MEMBERS) {
+            Object value = described.get(member)
+            if (saysSomething(value)) {
+                entry.put(member, value)
+            }
+        }
+        entry.put('commands', described.containsKey('commands') ? described.get('commands') : Collections.emptyList())
+        return entry
+    }
+
+    private static boolean saysSomething(Object value) {
+        if (value instanceof Collection) {
+            return !((Collection) value).isEmpty()
+        }
+        if (value instanceof Map) {
+            return !((Map) value).isEmpty()
+        }
+        return value == Boolean.TRUE
+    }
+
+    // What each value of an option or a parameter is: a switch is a boolean, an option of keys with values a map, and
+    // otherwise what its type, or the type of each value of one that can be given more than once, says.
+    private static String typeOf(CommandLine.Model.ArgSpec arg) {
+        if (arg.isOption() && arg.arity().max() == 0) {
+            return TYPE_BOOLEAN
+        }
+        Class<?> type = arg.type()
+        if (type != null && Map.isAssignableFrom(type)) {
+            return TYPE_MAP
+        }
+        if (arg.isMultiValue()) {
+            Class<?>[] each = arg.auxiliaryTypes()
+            type = each != null && each.length > 0 ? each[0] : null
+        }
+        return valueType(type)
+    }
+
+    private static String valueType(Class<?> type) {
+        if (type == null) {
+            return TYPE_STRING
+        }
+        if (type in [Integer, Integer.TYPE, Long, Long.TYPE, Short, Short.TYPE, Byte, Byte.TYPE, BigInteger]) {
+            return TYPE_INTEGER
+        }
+        if (type in [Double, Double.TYPE, Float, Float.TYPE, BigDecimal]) {
+            return TYPE_NUMBER
+        }
+        if (type in [Boolean, Boolean.TYPE]) {
+            return TYPE_BOOLEAN
+        }
+        return TYPE_STRING
     }
 
     /**
@@ -384,6 +482,7 @@ final class CommandCatalog {
             Map<String, Object> entry = new LinkedHashMap<>()
             entry.put('names', option.names().toList())
             entry.put('arity', option.arity().toString())
+            entry.put('type', typeOf(option))
             entry.put('label', option.arity().max() > 0 ? option.paramLabel() : null)
             entry.put('required', option.required())
             entry.put('description', description(option))

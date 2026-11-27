@@ -301,7 +301,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         sample.description == 'A command that says what it was given'
         sample.project
         sample.options.find { it.names == ['--loud'] }.arity == '0'
-        sample.parameters == [[label: 'WORD', arity: '0..*', description: 'What to say', repeatable: true, split: null, choices: null]]
+        sample.parameters == [[label: 'WORD', arity: '0..*', type: 'string', description: 'What to say', repeatable: true, split: null, choices: null]]
     }
 
     @Unroll
@@ -768,7 +768,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         commands.find { it.name == 'feature' }.commands*.name == ['add', 'list', 'find', 'show', 'diff']
         commands.find { it.name == 'feature' }.commands[0].project == true
         commands.find { it.name == 'gradle' }.options == []
-        commands.find { it.name == 'gradle' }.parameters == [[label: 'ARGS', arity: '1..*', description: 'The tasks to run and the options of Gradle, for example: build --offline',
+        commands.find { it.name == 'gradle' }.parameters == [[label: 'ARGS', arity: '1..*', type: 'string', description: 'The tasks to run and the options of Gradle, for example: build --offline',
                                                                  repeatable: true, split: null, choices: null]]
         commands.find { it.name == 'gradle' }.description == 'Runs Gradle in the Grails project of the current directory, with the Gradle wrapper of the project. ' +
                 'Everything after gradle is given to Gradle as it is, the options too. So gradle --help is the help of Gradle, and this text is what help gradle shows.'
