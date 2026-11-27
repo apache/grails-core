@@ -434,6 +434,66 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         EarlierApplication.GRAILS_7_FORGE | 'Grails 7.0.9 generated'
     }
 
+    @Unroll
+    void "an application that #created, in a clone with the line endings of Windows, gets the record it gets with LF, and its files keep their line endings"() {
+        given: 'the application as it was created, and as Git checks it out for Windows (core.autocrlf), with CR LF at the end of every line of its files'
+        File unix = new File(dir, 'unix/legacy')
+        File windows = new File(dir, 'windows/legacy')
+        EarlierApplication.copy(fixture, unix)
+        EarlierApplication.upgrade(unix)
+        EarlierApplication.copy(fixture, windows)
+        EarlierApplication.upgrade(windows)
+        // but for the wrapper script, which a .gitattributes keeps as it is so that it runs, and the baseline compares byte for byte
+        List<String> ofTheApplication = tree(windows).keySet().findAll { String path -> new File(windows, path).isFile() && path != 'gradlew' } as List<String>
+        for (String path : ofTheApplication) {
+            File file = new File(windows, path)
+            file.bytes = file.getText('UTF-8').replace('\n', '\r\n').getBytes('UTF-8')
+        }
+        Map<String, String> before = tree(windows)
+
+        when: 'the record is written for each'
+        int exit = inDirectory(windows) { migrate() }
+        String said = out.toString().readLines().find { String line -> line.startsWith('| The baseline is the ') }
+        reset()
+        int withLineFeeds = inDirectory(unix) { migrate() }
+
+        then: 'it is the same record, which takes no file for a change of yours for how its lines end, and no other file is touched'
+        exit == 0
+        withLineFeeds == 0
+        said != null
+        said == out.toString().readLines().find { String line -> line.startsWith('| The baseline is the ') }
+        record(windows) == record(unix)
+        tree(windows).findAll { String path, String content -> !path.startsWith('.grails') } == before
+
+        when: 'features are added to each: one that changes the BootStrap class an earlier version generated, and one that is merged into the build, the configuration and the README'
+        reset()
+        exit = inDirectory(windows) { add('grails-spring-security') }
+        int cached = inDirectory(windows) { add('cache') }
+        String outcome = out.toString() + err.toString()
+        reset()
+        int securedWithLineFeeds = inDirectory(unix) { add('grails-spring-security') }
+        int cachedWithLineFeeds = inDirectory(unix) { add('cache') }
+        List<String> files = tree(windows).keySet().findAll { String path -> !path.startsWith('.grails') && new File(windows, path).isFile() } as List<String>
+
+        then: 'the record is the same, and every file of the application, the BootStrap class among them, is what it is with LF with CR LF at the end of every line'
+        [exit, cached, securedWithLineFeeds, cachedWithLineFeeds] == [0, 0, 0, 0]
+        outcome =~ /update +grails-app\/init\/com\/example\/BootStrap\.groovy/
+        record(windows) == record(unix)
+        ProjectState.read(windows.toPath()).verifyBaseline(windows.toPath())
+        tree(windows).keySet() == tree(unix).keySet()
+        new File(windows, 'grails-app/init/com/example/BootStrap.groovy').getText('UTF-8').contains('springSecurityService')
+        files.findAll { String path ->
+            byte[] withLf = new File(unix, path).bytes
+            new File(windows, path).bytes != (path in ofTheApplication ? new String(withLf, 'UTF-8').replace('\n', '\r\n').getBytes('UTF-8') : withLf)
+        } == []
+
+        where:
+        fixture                           | created
+        EarlierApplication.GRAILS_8_SHELL | 'the Grails shell of Grails 8.0.0 created'
+        EarlierApplication.GRAILS_8_FORGE | 'Grails 8.0.0 generated'
+        EarlierApplication.GRAILS_7_FORGE | 'Grails 7.0.9 generated'
+    }
+
     void "a project that is still on Grails 8 gets its record, and a feature is added once it is on Grails 9"() {
         given:
         EarlierApplication.copy(EarlierApplication.GRAILS_8_FORGE, dir)
@@ -554,5 +614,21 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
 
     private int health(String... arguments) {
         return CliRunner.run(ProjectHealthCommand, beanContext, arguments)
+    }
+
+    // a command run in another directory than that of the spec
+    private static int inDirectory(File directory, Closure<Integer> command) {
+        String current = System.getProperty('user.dir')
+        System.setProperty('user.dir', directory.absolutePath)
+        try {
+            return command.call()
+        } finally {
+            System.setProperty('user.dir', current)
+        }
+    }
+
+    // the files of the record of a project, with the digests of their content
+    private static Map<String, String> record(File project) {
+        return tree(project).findAll { String path, String content -> path.startsWith('.grails') }
     }
 }

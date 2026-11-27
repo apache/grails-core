@@ -946,10 +946,11 @@ final class FeatureAddition {
                     ["Put the file back as it was generated (its copy is ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}), add the feature, and remove it again".toString()])
         }
         // A file of an application that was there which is what an earlier version of Grails generated has
-        // nothing of the application in it: it is to the feature what a generated file that was not changed is
+        // nothing of the application in it: it is to the feature what a generated file that was not changed is,
+        // and keeps its line endings as such a file does when it is merged
         if (adopted && !binary && !Arrays.equals(base, proposed) && !ThreeWayMerge.sameText(working.content, base) && !ThreeWayMerge.sameText(working.content, proposed) &&
                 EarlierGeneratedFiles.isAsGenerated(path, working.content)) {
-            return new PlannedFile(path, Action.UPDATE, null, binary, working.content, proposed,
+            return new PlannedFile(path, Action.UPDATE, null, binary, working.content, ThreeWayMerge.withLineEndingsOf(working.content, proposed),
                     posix && working.executable != proposedExecutable ? Boolean.valueOf(proposedExecutable) : null, base, proposed,
                     ['this file is as an earlier version of Grails generated it, with nothing of yours in it: it becomes the file this version generates with the feature'])
         }

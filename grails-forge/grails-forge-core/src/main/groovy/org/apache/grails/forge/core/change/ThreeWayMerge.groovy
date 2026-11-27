@@ -215,6 +215,30 @@ final class ThreeWayMerge {
         return keys
     }
 
+    /**
+     * A file as it is generated, with the line endings of the file of the project it takes the place
+     * of, as a merge gives the lines the generator adds: every line ends with CR LF when every line of
+     * the current file does, and as it was generated otherwise.
+     *
+     * @param current the text file of the project
+     * @param generated the text file as it is generated
+     * @return the generated file with those line endings
+     */
+    static byte[] withLineEndingsOf(byte[] current, byte[] generated) {
+        if (!withCarriageReturns(lines(current))) {
+            return generated
+        }
+        List<String> generatedLines = lines(generated)
+        StringBuilder result = new StringBuilder()
+        append(result, generatedLines, 0, generatedLines.size(), true)
+        return result.toString().getBytes(StandardCharsets.ISO_8859_1)
+    }
+
+    // whether every line of a file ends with CR LF, the last line of a file that does not end with a line feed apart
+    private static boolean withCarriageReturns(List<String> lines) {
+        return lines.any { String line -> line.endsWith('\r\n') } && !lines.any { String line -> line.endsWith('\n') && !line.endsWith('\r\n') }
+    }
+
     static ThreeWayMerge of(byte[] base, byte[] current, byte[] proposed) {
         if (lineCount(base) > MAX_LINES || lineCount(current) > MAX_LINES || lineCount(proposed) > MAX_LINES) {
             return new ThreeWayMerge(null, [], true)
@@ -256,8 +280,7 @@ final class ThreeWayMerge {
             edit.from = after[edit.start]
             edit.to = behind[edit.end]
         }
-        boolean carriageReturns = currentLines.any { String line -> line.endsWith('\r\n') } &&
-                !currentLines.any { String line -> line.endsWith('\n') && !line.endsWith('\r\n') }
+        boolean carriageReturns = withCarriageReturns(currentLines)
 
         StringBuilder result = new StringBuilder()
         List<Conflict> conflicts = []
