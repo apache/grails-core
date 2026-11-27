@@ -237,25 +237,40 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     }
 
     public Criteria createAlias(String associationPath, String alias) {
-        return createAlias(associationPath, alias, 0);
+        var criteria = hibernateQuery.getDetachedCriteria();
+        String path = pathFromDeclaredAlias(criteria, associationPath, alias);
+        // an alias without a join type joins its association with the join type that the query requests for it, also
+        // one that a later fetch mode replaced, as with Hibernate 5; the request and the fetch mode stay as they are.
+        // The join type that an earlier alias of the path configured is the type of that alias, which has a join of
+        // its own
+        boolean aliased = criteria.getCriteria().stream()
+                .anyMatch(criterion -> criterion instanceof HibernateAlias declared && declared.path().equals(path));
+        JoinType requested = null;
+        if (!aliased) {
+            requested = criteria.getJoinTypes().get(path);
+            if (requested == null) {
+                requested = criteria.getSupersededJoinTypes().get(path);
+            }
+        }
+        return requested != null ? addAlias(criteria, path, alias, requested, false) :
+                addAlias(criteria, path, alias, JoinType.INNER, true);
     }
 
     public Criteria createAlias(
             String associationPath, String alias, int joinType) {
         var criteria = hibernateQuery.getDetachedCriteria();
-        JoinType convertedJoinType = convertFromInt(joinType);
-        String path = pathFromDeclaredAlias(criteria, associationPath, alias);
-        if (path.contains(ALIAS_SEPARATOR)) {
-            criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
-            return this;
-        }
-        var prop = criteria.getPersistentEntity().getPropertyByName(path);
-        criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
-        if (prop instanceof Basic) {
+        return addAlias(criteria, pathFromDeclaredAlias(criteria, associationPath, alias), alias, convertFromInt(joinType), true);
+    }
+
+    private Criteria addAlias(DetachedCriteria<?> criteria, String path, String alias, JoinType joinType, boolean requestJoinType) {
+        criteria.getCriteria().add(new HibernateAlias(path, alias, joinType));
+        if (path.contains(ALIAS_SEPARATOR) || criteria.getPersistentEntity().getPropertyByName(path) instanceof Basic) {
             return this;
         }
         criteria.createAlias(path, alias);
-        criteria.join(path, convertedJoinType);
+        if (requestJoinType) {
+            criteria.join(path, joinType);
+        }
         return this;
     }
 

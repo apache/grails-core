@@ -27,6 +27,8 @@ import grails.gorm.tests.entities.Player
 import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.mapping.query.Query
+import org.hibernate.FetchMode
 import org.hibernate.Hibernate
 import org.hibernate.loader.MultipleBagFetchException
 import spock.lang.Shared
@@ -216,16 +218,25 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         }*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player']
     }
 
-    void 'a requested left join keeps its type when supplied #request the association block'() {
+    void 'a requested left join applies to an existing criteria #associationForm regardless of #request'() {
         when:
         final arguments = request == 'fetch' ? [fetch: [club: JoinType.LEFT]] : [:]
         final results = Team.createCriteria().list(arguments) {
             if (request == 'before') {
                 join('club', JoinType.LEFT)
             }
-            or {
-                club { eq('name', 'Chelsea') }
-                eq('name', 'Unattached First Team')
+            if (associationForm == 'alias') {
+                createAlias('club', 'c')
+                or {
+                    eq('c.name', 'Chelsea')
+                    eq('name', 'Unattached First Team')
+                }
+            }
+            else {
+                or {
+                    club { eq('name', 'Chelsea') }
+                    eq('name', 'Unattached First Team')
+                }
             }
             if (request == 'after') {
                 join('club', JoinType.LEFT)
@@ -236,7 +247,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         results*.name.sort() == ['Chelsea First Team', 'Unattached First Team']
 
         where:
-        request << ['before', 'after', 'fetch']
+        [associationForm, request] << [['block', 'alias'], ['before', 'after', 'fetch']].combinations()
     }
 
     void 'a requested left join supplied #request the block belongs only to that builder call'() {
@@ -1045,6 +1056,43 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         'the fetch argument of list' | { Team.where { club.name == 'Arsenal' || name == 'Unattached First Team' }.join('club', JoinType.LEFT).list(fetch: [club: 'join']) }
         'join without a join type'   | { Team.where { club.name == 'Arsenal' || name == 'Unattached First Team' }.join('club', JoinType.LEFT).join('club').list() }
         'select'                     | { Team.where { club.name == 'Arsenal' || name == 'Unattached First Team' }.join('club', JoinType.LEFT).select('club').list() }
+    }
+
+    void 'a fetch mode that a criteria query requests after a join type keeps the join type for the join that criteria on the association make: #description'() {
+        expect:
+        query.call()*.name.sort() == expected
+
+        where:
+        description                                  | query                                                                                                                                                               || expected
+        'join without a join type'                   | { Team.createCriteria().list { join('club', JoinType.LEFT); join('club'); or { club { eq('name', 'Arsenal') }; eq('name', 'Unattached First Team') } } }          || ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team']
+        'select'                                     | { Team.createCriteria().list { join('club', JoinType.LEFT); select('club'); or { club { eq('name', 'Arsenal') }; eq('name', 'Unattached First Team') } } }        || ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team']
+        'fetchMode'                                  | { Team.createCriteria().list { join('club', JoinType.LEFT); fetchMode('club', FetchMode.JOIN); or { club { eq('name', 'Arsenal') }; eq('name', 'Unattached First Team') } } } || ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team']
+        'the fetch argument of list'                 | { Team.createCriteria().list(fetch: [club: 'join']) { join('club', JoinType.LEFT); or { club { eq('name', 'Arsenal') }; eq('name', 'Unattached First Team') } } } || ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team']
+        'join without a join type after the block'   | { Team.createCriteria().list { or { club { eq('name', 'Arsenal') }; eq('name', 'Unattached First Team') }; join('club', JoinType.LEFT); join('club') } }          || ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team']
+        'an alias'                                   | { Team.createCriteria().list { join('club', JoinType.LEFT); join('club'); createAlias('club', 'c'); or { eq('c.name', 'Arsenal'); eq('name', 'Unattached First Team') } } } || ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team']
+        'a paged list'                               | { Team.createCriteria().list(max: 10) { join('club', JoinType.LEFT); join('club'); or { club { eq('name', 'Arsenal') }; eq('name', 'Unattached First Team') } } } || ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team']
+        'a nested block'                             | { Player.createCriteria().list { join('team.club', JoinType.LEFT); join('team.club'); or { team { club { eq('name', 'Arsenal') } }; eq('name', 'Unattached Player') } } } || ['Arsenal Player', 'Unattached Player']
+        'an alias made through another alias'        | { Player.createCriteria().list { join('team.club', JoinType.LEFT); select('team.club'); createAlias('team', 't'); createAlias('t.club', 'c'); or { eq('c.name', 'Arsenal'); eq('name', 'Unattached Player') } } } || ['Arsenal Player', 'Unattached Player']
+        'a join type requested after the fetch mode' | { Team.createCriteria().list { join('club', JoinType.LEFT); join('club'); join('club', JoinType.INNER); or { club { eq('name', 'Arsenal') }; eq('name', 'Unattached First Team') } } } || ['Arsenal First Team', 'Playerless First Team']
+        'a join type in the fetch argument of list'  | { Team.createCriteria().list(fetch: [club: JoinType.INNER]) { join('club', JoinType.LEFT); join('club'); or { club { eq('name', 'Arsenal') }; eq('name', 'Unattached First Team') } } } || ['Arsenal First Team', 'Playerless First Team']
+    }
+
+    void 'an order of a criteria query uses the join that criteria on the association make with the join type that a fetch mode replaced: #description'() {
+        when:
+        final List<Team> results = query.call()
+
+        then: 'the left join of the criteria keeps the teams without a club, and the order sorts the teams with a club by its name'
+        results*.name.sort() == expected
+        results*.club.findAll()*.name == clubs
+
+        where:
+        description                       | query                                                                                                                                                                                       || expected                                                                    | clubs
+        'an order after the block'        | { Team.createCriteria().list { join('club', JoinType.LEFT); join('club'); or { club { eq('name', 'Arsenal') }; eq('name', 'Unattached First Team') }; order('club.name') } }                 || ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team'] | ['Arsenal', 'Arsenal']
+        'an order with a Query.Order'     | { Team.createCriteria().list(max: 10) { join('club', JoinType.LEFT); select('club'); or { club { eq('name', 'Chelsea') }; eq('name', 'Unattached First Team') }; order(Query.Order.desc('club.name')) } }    || ['Chelsea First Team', 'Unattached First Team']                           | ['Chelsea']
+        'an order inside the block'       | { Team.createCriteria().list { join('club', JoinType.LEFT); join('club'); club { order('name', 'desc') } } }                                                                              || ALL_TEAMS                                                                   | ['Manchester United', 'Chelsea', 'Arsenal', 'Arsenal']
+        'a paged order inside the block'  | { Team.createCriteria().list(max: 10) { join('club', JoinType.LEFT); select('club'); club { order('name', 'desc') } } }                                                                   || ALL_TEAMS                                                                   | ['Manchester United', 'Chelsea', 'Arsenal', 'Arsenal']
+        'an order through an alias'       | { Team.createCriteria().list { join('club', JoinType.LEFT); join('club'); createAlias('club', 'c'); or { eq('c.name', 'Arsenal'); eq('name', 'Unattached First Team') }; order('c.name') } } || ['Arsenal First Team', 'Playerless First Team', 'Unattached First Team'] | ['Arsenal', 'Arsenal']
+        'the sort argument'               | { Team.createCriteria().list(max: 10, sort: 'club.name', order: 'desc') { join('club', JoinType.LEFT); select('club'); or { club { eq('name', 'Chelsea') }; eq('name', 'Unattached First Team') } } } || ['Chelsea First Team', 'Unattached First Team'] | ['Chelsea']
     }
 
     void 'a fetch mode that a where query requests with #method replaces a join type that it requested before'() {
