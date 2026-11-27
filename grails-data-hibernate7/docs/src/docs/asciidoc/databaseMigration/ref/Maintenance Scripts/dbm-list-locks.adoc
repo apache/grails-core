@@ -25,7 +25,7 @@ Lists who has locks on the database change log, to the standard output or a file
 
 ====== Description
 
-Lists who holds the lock Liquibase keeps in the database, if anyone does. It changes nothing in the database but the tables `DATABASECHANGELOG` and `DATABASECHANGELOGLOCK` Liquibase keeps, which it makes where they are not there, so `grails mcp --read-only` does not offer it.
+Lists who holds the lock Liquibase keeps in the database, if anyone does. It never changes the schema or the data of the application, and never runs or records a change set, so `grails mcp --read-only` offers it to an AI agent. In a database Liquibase has not been used with yet, it creates the two empty bookkeeping tables of Liquibase, `DATABASECHANGELOG` and `DATABASECHANGELOGLOCK`, as any first use of the plugin does. It writes a file only when it is given its name, and only as a new file inside the project.
 
 Usage:
 [source,console]

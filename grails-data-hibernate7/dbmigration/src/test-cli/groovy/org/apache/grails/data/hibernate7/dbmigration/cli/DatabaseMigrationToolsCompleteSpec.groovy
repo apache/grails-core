@@ -56,7 +56,7 @@ class DatabaseMigrationToolsCompleteSpec extends Specification {
         className << toolClasses()
     }
 
-    def "the tools that change nothing in the database and write only a new file inside the project are read-only"() {
+    def "the tools that change neither the schema nor the data of the application, and write only a new file inside the project, are read-only"() {
         when:
         Map<String, Map> hints = toolClasses().collectEntries { String className ->
             Map descriptor = descriptorOf(className)
@@ -64,15 +64,14 @@ class DatabaseMigrationToolsCompleteSpec extends Specification {
         }
         Map<String, Map> readOnly = hints.findAll { String name, Map toolHints -> toolHints.readOnlyHint }
 
-        then: 'the tools that write SQL Liquibase only prints, which DatabaseMigrationReadOnlyToolsSpec holds to changing nothing'
+        then: 'those whose SQL Liquibase only prints, and the three that read what Liquibase keeps, as DatabaseMigrationReadOnlyToolsSpec shows'
         readOnly.keySet() == ['dbm-changelog-sync-sql', 'dbm-future-rollback-count-sql', 'dbm-future-rollback-sql', 'dbm-mark-next-changeset-ran-sql',
-                              'dbm-rollback-count-sql', 'dbm-rollback-sql', 'dbm-rollback-to-date-sql'] as Set
+                              'dbm-rollback-count-sql', 'dbm-rollback-sql', 'dbm-rollback-to-date-sql',
+                              'dbm-validate', 'dbm-status', 'dbm-list-locks'] as Set
         readOnly.values().every { Map toolHints -> toolHints == [readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true] }
 
-        and: 'those that make the tables of Liquibase where they are not there only add to the database'
-        ['dbm-status', 'dbm-list-locks', 'dbm-validate', 'dbm-previous-changeset-sql'].every { String name ->
-            hints[name] == [readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true]
-        }
+        and: 'dbm-previous-changeset-sql fills in missing checksums, so it is not read-only, though it only adds'
+        hints['dbm-previous-changeset-sql'] == [readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true]
     }
 
     // the tools of the plugin the registry of the tools finds, by the name of their class

@@ -262,17 +262,15 @@ class McpGeneratedApplicationSpec extends Specification {
         ((Map) update.inputSchema().get('properties')).keySet().containsAll(['dataSource', 'defaultSchema', 'contexts'])
         update.annotations().readOnlyHint() == false
 
-        and: 'the tools whose SQL Liquibase only prints are read-only: they change nothing in the database, and write only a new file inside the project'
+        and: 'the tools that change neither the schema nor the data of the application, and write only a new file inside the project, are read-only'
         rollbackSql.annotations().readOnlyHint() == true
         rollbackSql.annotations().destructiveHint() == false
+        status.annotations().readOnlyHint() == true
+        status.annotations().destructiveHint() == false
+        validate.annotations().readOnlyHint() == true
         tools.findAll { String name, Tool tool -> name.startsWith('dbm-') && tool.annotations()?.readOnlyHint() }.keySet() ==
                 ['dbm-changelog-sync-sql', 'dbm-future-rollback-count-sql', 'dbm-future-rollback-sql', 'dbm-mark-next-changeset-ran-sql',
-                 'dbm-rollback-count-sql', 'dbm-rollback-sql', 'dbm-rollback-to-date-sql'] as Set
-
-        and: 'those that make the tables of Liquibase in a database without them are not, though they only add to it'
-        status.annotations().readOnlyHint() == false
-        status.annotations().destructiveHint() == false
-        validate.annotations().readOnlyHint() == false
+                 'dbm-rollback-count-sql', 'dbm-rollback-sql', 'dbm-rollback-to-date-sql', 'dbm-validate', 'dbm-status', 'dbm-list-locks'] as Set
         ((Map) update.meta()['org.apache.grails/command']).origin != 'application'
         tools.keySet().count { it.startsWith('dbm-') } > 20
     }

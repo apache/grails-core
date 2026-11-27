@@ -25,7 +25,7 @@ import liquibase.Liquibase
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ToolHints
 
-@ToolHints(readOnlyHint = false, destructiveHint = false, idempotentHint = true)
+@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true)
 @DatabaseMigrationOptions
 @CompileStatic
 class DbmValidateTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {

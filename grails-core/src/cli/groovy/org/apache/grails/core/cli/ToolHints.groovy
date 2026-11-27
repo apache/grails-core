@@ -50,7 +50,9 @@ import java.lang.annotation.Target
     /**
      * @return whether the tool changes nothing: no data, and no file. A tool that writes what it prints to
      * a file whose name the caller gives it is read-only only when it writes that file new, inside the
-     * project, and refuses one that is there or outside it. Then the other hints say nothing
+     * project, and refuses one that is there or outside it. A tool that creates the empty bookkeeping
+     * tables a library keeps in a database it is used with for the first time, as {@code dbm-status}
+     * creates those of Liquibase, is still read-only. Then the other hints say nothing
      */
     boolean readOnlyHint() default false
 

@@ -27,7 +27,7 @@ import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolParameter
 
 // It never changes the database, and writes a file only when the caller names one: read-only, as dbm-validate is
-@ToolHints(readOnlyHint = false, destructiveHint = false, idempotentHint = true)
+@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true)
 @DatabaseMigrationOptions
 @ToolParameter(index = 0, label = 'FILE', arity = '1', required = false,
         description = 'The file to write the list to; the standard output when not given')
