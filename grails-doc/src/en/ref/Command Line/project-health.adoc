@@ -325,6 +325,21 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | A tool of the application in the list implements `ApplicationCommand` or `GrailsApplicationCommand`, which are deprecated. The tools of plugins are not named.
 | Implement `ApplicationTool` in place of `ApplicationCommand`, and `ApplicationTool` and `ToolSupport` in place of `GrailsApplicationCommand`. Nothing else changes.
 
+| `tools.description-missing`
+| advice
+| A tool of the application in the list has no description, so `help` and the agents of `grails mcp` show only its name. The tools are named.
+| Give each a `description` of one line. See link:{guidePath}commandLine.html#creatingTools[Creating Tools].
+
+| `tools.arguments-undeclared`
+| advice
+| A tool of the application in the list reads its arguments without declaring them, so the command line cannot check them, `help` cannot show them, and an agent can only guess them. The tools are named.
+| Declare the options and parameters each reads, with `@ToolOption` and `@ToolParameter`.
+
+| `tools.hints-missing`
+| advice
+| A tool of the application in the list does not say what it does, so clients take it to change files and may destroy something, and ask before every call of it. The tools are named.
+| Declare `@ToolHints`: `readOnlyHint = true` for a tool that changes nothing, `destructiveHint = false` for one that only adds.
+
 4+| `leftover`: what an earlier version of Grails read and Grails {grailsMajorVersion} does not.
 
 | `leftover.settings-groovy`

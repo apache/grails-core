@@ -20,6 +20,8 @@ under the License.
 [[creatingCustomCommands]]
 The `grails` command has commands of its own: `create-app`, `run-app`, `feature add`, `help` and the others of this chapter. What an application or a plugin adds to it is a _tool_. A tool is a class of the project or of a plugin, and it is run by its name, as a command of `grails` is: `grails dbm-update` runs a tool of the Database Migration plugin, `grails generate-all Book` one of the Scaffolding plugin, and `grails data-import orders.csv` a tool of your own.
 
+A tool declares what it takes and what it does: a description of one line, its options and parameters, and whether it changes anything. Everything that shows or runs tools reads these declarations: `grails help`, completion in interactive mode, `help --json` and the IDEs that read it, and the AI agents that drive the command line through `grails mcp`. `create-tool` writes a tool that declares all of it, and the compiler says what a tool leaves out. Writing a tool this way is all there is to do for each of them; there is no step that registers a tool for help or for agents.
+
 [[whereToPutATool]]
 === Where to Put a Tool
 
@@ -92,7 +94,7 @@ $ grails create-tool --standalone CreateReport
 | Run it with: grails create-report
 ----
 
-The first class implements `ApplicationTool` and the second `StandaloneTool`, both from the package `org.apache.grails.core.cli`, and both `ToolSupport`, which gives a tool the arguments it was given and the helpers for templates, files and models. As it is written, a tool prints its name and its arguments and succeeds, so `grails data-import` runs at once:
+The first class implements `ApplicationTool` and the second `StandaloneTool`, both from the package `org.apache.grails.core.cli`, and both `ToolSupport`, which gives a tool the arguments it was given and the helpers for templates, files and models. As it is written, a tool declares a description, one parameter and what it does, prints its name and what it was given, and succeeds, so `grails data-import orders.csv` runs at once and the compiler has nothing to warn about:
 
 [source,groovy]
 .src/cli/groovy/com/example/DataImportTool.groovy
@@ -100,54 +102,414 @@ The first class implements `ApplicationTool` and the second `StandaloneTool`, bo
 package com.example
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 import org.apache.grails.core.cli.ToolSupport
 
+@ToolHints(readOnlyHint = false, destructiveHint = true)   // say what the tool does: readOnlyHint = true when it changes nothing, destructiveHint = false when it only adds
 class DataImportTool implements ApplicationTool, ToolSupport {
 
+    String description = 'Data import'           // one line that says what the tool does
+
+    @ToolParameter(index = 0, label = 'NAME', description = 'What the tool is run for', required = false)
+    String target
+
     boolean handle() {
-        // args holds what was given after the name of the tool, and applicationContext the running
-        // application. Return true when the tool has done its work, and false to end it with exit code 1.
-        println "Ran ${name} with the arguments ${args}"
+        println "Ran ${name} for ${target ?: 'nothing'}"
         return true
     }
 }
 ----
 
-Replace that body with the work of the tool. `handle()` returns `true` when the tool succeeded; `false`, or an exception, ends it with exit code 1.
+Replace that body with the work of the tool, and the declarations with what it takes and does. `handle()` returns `true` when the tool succeeded; `false`, or an exception, ends it with exit code 1. The hints `create-tool` writes are the most cautious ones, so that a tool that is edited never claims to do less than it does: change them to what the tool does once it does its work (see <<toolHints,What a Tool Does>>).
 
 * *The name* of a tool is what is typed after `grails`, and its class name gives it: the class name without `Tool` at its end, in words joined by hyphens, so `DataImportTool` is `data-import`. A class whose name does not end with `Tool` loses `Command` at its end instead, so a class written for Grails 8, such as `UrlMappingsReportCommand`, keeps its name, `url-mappings-report`. A tool that is to have another name returns it from `getName()` or sets the property `name`.
-* *The description* is one line, which `grails help` shows. It is the string `getDescription()` returns or the property `description` is set to, and the name of the tool without one:
-+
-[source,groovy]
-----
-class DataImportTool implements ApplicationTool, ToolSupport {
-
-    String description = 'Imports the orders of a CSV file'
-    ...
-}
-----
-* *What a tool is given.* `args` is the arguments of the command line after the name of the tool, and `executionContext` has the rest: `executionContext.commandLine` the options (`executionContext.commandLine.hasOption('dry-run')` for `--dry-run`), `executionContext.baseDir` the directory of the project, and `executionContext.project` what the project is (see <<standaloneTools,A Standalone Tool>>). With `ToolSupport` the tool also has `render`, `template`, `file`, `model` and the other methods of `TemplateRenderer`, `FileSystemInteraction` and `ModelBuilder` as its own.
-* *Without `ToolSupport`* a tool implements `boolean handle(ExecutionContext executionContext)` and is given the context as its argument. That is the form for a tool written in Java:
+* *The description* is one line that says what the tool does, which `grails help` shows and an agent reads to choose a tool. It is the string `getDescription()` returns or the property `description` is set to. Without one, the description is the name of the tool, and the compiler warns.
+* *What a tool takes* is declared with `@ToolOption` and `@ToolParameter` on its fields, which are given their values before `handle()` runs: see <<toolDeclarations,Options and Parameters>>. `args` is still the arguments of the command line after the name of the tool, and `executionContext` has the rest: `executionContext.commandLine` the options as Grails reads them (`executionContext.commandLine.hasOption('dry-run')` for `--dry-run`), `executionContext.baseDir` the directory of the project, and `executionContext.project` what the project is (see <<standaloneTools,A Standalone Tool>>). With `ToolSupport` the tool also has `render`, `template`, `file`, `model` and the other methods of `TemplateRenderer`, `FileSystemInteraction` and `ModelBuilder` as its own.
+* *Without `ToolSupport`* a tool implements `boolean handle(ExecutionContext executionContext)` and is given the context as its argument. That is the form for a tool written in Java, which uses the same annotations:
 +
 [source,java]
 .src/cli/java/com/example/CountTool.java
 ----
 package com.example;
 
+import java.util.List;
+
 import org.apache.grails.core.cli.ApplicationTool;
 import org.apache.grails.core.cli.ExecutionContext;
+import org.apache.grails.core.cli.ToolHints;
+import org.apache.grails.core.cli.ToolParameter;
 
+@ToolHints(readOnlyHint = true, openWorldHint = false)
 public class CountTool implements ApplicationTool {
+
+    @ToolParameter(index = 0, label = "WORD", description = "The words to count", required = false)
+    List<String> words;
+
+    @Override
+    public String getDescription() {
+        return "Counts the words it is given";
+    }
 
     @Override
     public boolean handle(ExecutionContext executionContext) {
-        System.out.println(executionContext.getCommandLine().getRemainingArgs());
+        System.out.println(words == null ? 0 : words.size());
         return true;
     }
 }
 ----
++
+The compiler of Groovy does not read a Java class, so a tool written in Java has a descriptor written by hand, which says what the annotations say: see <<toolCatalog,Listing Tools Without Running Them>>.
 
-`create-tool` reads its template from `src/main/templates/artifacts/Tool.groovy` of the project when there is one, and with `--standalone` from `src/main/templates/artifacts/StandaloneTool.groovy`; a project of Grails 8 that has `src/main/templates/artifacts/Command.groovy` has that one read for `create-tool` without `--standalone`, with a warning. See link:{commandLineRef}create-tool.html[create-tool].
+`create-tool` reads its template from `src/main/templates/artifacts/Tool.groovy` of the project when there is one, and with `--standalone` from `src/main/templates/artifacts/StandaloneTool.groovy`, whose tool is the same with `StandaloneTool` in place of `ApplicationTool`; a project of Grails 8 that has `src/main/templates/artifacts/Command.groovy` has that one read for `create-tool` without `--standalone`, with a warning. A template of the project that was copied from an earlier version writes a tool without declarations, which the compiler then warns about: copy the template of this version again with `install-templates`, or add the declarations to it. See link:{commandLineRef}create-tool.html[create-tool].
+
+[[toolDeclarations]]
+=== Options and Parameters
+
+A tool declares what it takes with two annotations of the package `org.apache.grails.core.cli`, on the fields that are to have the values:
+
+* `@ToolOption` declares an option, which is given by its name, as `--since 2026-01-01`.
+* `@ToolParameter` declares a parameter, which is given by its place among the arguments that are no options.
+
+[source,groovy]
+.src/cli/groovy/com/example/AuditReportTool.groovy
+----
+package com.example
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
+import org.apache.grails.core.cli.ToolSupport
+
+@ToolHints(destructiveHint = false, openWorldHint = false)
+class AuditReportTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Writes the audit report'
+
+    @ToolOption(names = ['--since', '-s'], label = 'DATE', description = 'The first day of the report')
+    String since
+
+    @ToolOption(names = ['--format'], description = 'The format of the report')
+    ReportFormat format = ReportFormat.TEXT        // an enum: its constants are the choices
+
+    @ToolOption(names = ['--include-deleted'], description = 'Lists deleted records as well')
+    boolean includeDeleted
+
+    @ToolParameter(index = 0, label = 'OUTPUT', description = 'The file to write, which must not be there yet')
+    String output
+
+    boolean handle() {
+        File report = file(output)
+        if (report.exists()) {
+            System.err.println("${output} is there already")
+            return false
+        }
+        report.text = "Audit report as ${format}, since ${since ?: 'the start'}${includeDeleted ? ', with deleted records' : ''}\n"
+        return true
+    }
+}
+
+enum ReportFormat {
+    TEXT, CSV
+}
+----
+
+`grails audit-report --since 2026-01-01 --format CSV report.csv` gives the tool `since`, `format` and `output` before `handle()` runs, and `includeDeleted` stays `false`. `grails help audit-report` shows the options and the parameter as it shows those of a command of `grails`, interactive mode completes them, and `help --json` describes them in its `options` and `parameters` (see "Help" in xref:commandLine[The Command Line]).
+
+`@ToolOption` has these members:
+
+[cols="1,4"]
+|===
+| Member | Meaning
+
+| `names`
+| The names of the option: at least one long name, `--` and a lower-case letter followed by letters and digits, in words joined by single hyphens, at most 32 characters (`--since`, `--include-deleted`, and in camel case `--dataSource`), and at most one short name of one letter, as `-s`.
+
+| `description`
+| One line of at most 512 characters, which the help shows.
+
+| `required`
+| Whether the option has to be given; `false` by default.
+
+| `label`
+| What the help calls the value, as `DATE`: an upper-case letter followed by upper-case letters, digits and hyphens, at most 32 characters.
+
+| `defaultValue`
+| The default of the option, as the help, `help --json` and agents show it. Give the field the same value where it is declared.
+
+| `arity`
+| Only for an option declared on the class (below): `'0'` for an option that takes no value, `'1'` for one that takes a value. On a field the type of the field decides.
+|===
+
+`@ToolParameter` has the members `index`, the place of the parameter, from 0 and without gaps; `label`, which is required; `description`; and `required`, which is `true` by default. An option or a parameter that is not given leaves its field as the tool declares it: `null`, `false`, or the value it is declared with, as `ReportFormat.TEXT` above.
+
+The type of the field decides what the option or the parameter takes:
+
+[cols="2,2,2"]
+|===
+| Type of the field | As an option | As a parameter
+
+| `String`
+| a value
+| a value
+
+| `boolean`, `Boolean`
+| a switch, which takes no value
+| not allowed
+
+| `int`, `Integer`, `long`, `Long`
+| a whole number
+| a whole number
+
+| An enum
+| one of its constants, which are the choices the help and completion offer
+| the same
+
+| `List<String>`
+| a value that can be given more than once
+| the values of the last parameter, of which there may be several
+
+| Any other type
+| a compile error
+| a compile error
+|===
+
+A tool declares at most 32 options and 16 parameters, no name twice, neither `--help` nor `--version`, and at most 64 constants for an enum. A declaration that breaks one of these rules, or one of the members above, does not compile, and the error names the field and the rule.
+
+[[toolOptionsOnTheClass]]
+==== Options a Tool Reads Itself, and Options Several Tools Share
+
+A tool that reads an option itself, through `executionContext.commandLine`, declares it on the class, with its `arity`, and `@ToolOption` can be given more than once there. A set of options that several tools share is a Groovy `@AnnotationCollector`, which each of them carries in the place of the options:
+
+[source,groovy]
+.src/cli/groovy/com/example/ArchiveOrdersTool.groovy
+----
+package com.example
+
+import groovy.transform.AnnotationCollector
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolSupport
+
+@ToolOption(names = ['--tenant'], arity = '1', label = 'NAME', description = 'The tenant to work on, every tenant without it')
+@ToolOption(names = ['--dry-run'], arity = '0', description = 'Says what would change, and changes nothing')
+@AnnotationCollector
+@interface TenantOptions {
+}
+
+@TenantOptions
+@ToolHints(idempotentHint = true, openWorldHint = false)
+class ArchiveOrdersTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Archives the delivered orders of a tenant'
+
+    boolean handle() {
+        String tenant = executionContext.commandLine.optionValue('tenant')
+        boolean dryRun = executionContext.commandLine.hasOption('dry-run')
+        println "${dryRun ? 'Would archive' : 'Archived'} the delivered orders of ${tenant ?: 'every tenant'}"
+        return true
+    }
+}
+----
+
+The `dbm-*` tools of the Database Migration plugin share `--dataSource`, `--defaultSchema` and `--contexts` this way.
+
+[[toolArgumentsHeld]]
+==== How the Arguments Reach the Tool
+
+The arguments are given to the declared fields before `handle()` runs, in the forms of a command line: `--name value` and `--name=value`, `-s value` for a short name, a switch by its name alone, and `--`, after which every argument is a parameter. `args`, `executionContext.commandLine` and `executionContext.commandLine.rawArguments` are as they would be without declarations, so a tool can go on reading them.
+
+*A tool that declares an option or a parameter is held to its declarations.* An option it does not declare, an option or parameter that is required and not given, a value that is not of the type of its field or not one of its choices, and one argument more than the parameters take are refused before `handle()` runs, with one line and exit code 2:
+
+[source,console]
+----
+$ grails audit-report --sinse 2026-01-01 report.txt
+| Error audit-report: ... grails help audit-report shows its options
+----
+
+`grails NAME` checks the arguments against what the build listed of the tool before it starts Gradle or the process of a standalone tool, so a mistyped option is refused at once, and the tool itself checks them again when it is started in another way, as with `./gradlew runTool`, which then fails without running `handle()`. A tool that declares no option and no parameter takes whatever it is given, as a tool always did.
+
+[[toolHints]]
+=== What a Tool Does: `@ToolHints`
+
+`@ToolHints` on the class says what running the tool does, so that a client of `grails mcp` knows whether it may run the tool without asking, or run it beside another call:
+
+[cols="1,1,4"]
+|===
+| Member | Default | Meaning when it is `true`
+
+| `readOnlyHint`
+| `false`
+| The tool changes nothing: no file and no data.
+
+| `destructiveHint`
+| `true`
+| The tool may replace or delete files you wrote, or data the application holds. It means something only when `readOnlyHint` is `false`.
+
+| `idempotentHint`
+| `false`
+| Running the tool twice with the same arguments does what running it once does. It means something only when `readOnlyHint` is `false`.
+
+| `openWorldHint`
+| `true`
+| The tool reaches beyond the project, as a tool that calls another service does.
+|===
+
+The members and their defaults are those of the hints of the Model Context Protocol. A tool without `@ToolHints` has the defaults, which are the most cautious: a client takes it to change something that it may not be able to undo, and asks before every call of it. Choose them by what the tool does:
+
+* `readOnlyHint = true` for a tool that changes nothing, such as a report printed to the terminal.
+* `destructiveHint = false` for a tool that only adds, such as one that writes files that are not there yet.
+* Leave the defaults for a tool that changes or deletes what is there, such as a migration of the database or a generator with `--force`.
+
+The hints are hints: they say what the author of a tool says it does. `grails mcp` passes them on to agents only for the tools of the application and of the plugins of Grails, and gives the tools of other plugins the defaults (see xref:commandLine#mcp[Driving Grails from an AI Agent]).
+
+[[toolReadsInput]]
+=== A Tool That Asks: `readsInput`
+
+A tool that asks what is typed declares so, with a constant the build reads as it reads `startsApplication`:
+
+[source,groovy]
+.src/cli/groovy/com/example/CleanReportsTool.groovy
+----
+package com.example
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolSupport
+
+@ToolHints(openWorldHint = false)
+class CleanReportsTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Deletes the reports of earlier builds, after asking'
+
+    boolean startsApplication = false
+
+    boolean readsInput = true
+
+    boolean handle() {
+        File reports = file('build/reports')
+        print "Delete ${reports}? [y/N] "
+        String answer = System.in.newReader().readLine()
+        if (answer?.trim()?.equalsIgnoreCase('y')) {
+            reports.deleteDir()
+        }
+        return true
+    }
+}
+----
+
+[cols="1,3"]
+|===
+| Where | A tool with `readsInput = true`
+
+| `grails NAME --non-interactive`, and a script or job that gives `--non-interactive`
+| Refused with exit code 2 and the line `NAME reads what is typed, and --non-interactive gives it nothing to read`, where the tool would otherwise read the end of its input.
+
+| Interactive mode
+| Given the terminal: a tool of `src/cli` is run with the Gradle wrapper there, and not through the connection to Gradle that interactive mode keeps for its builds, which gives a build no input.
+
+| `grails mcp`
+| Not offered to agents, which cannot answer it. `grails://commands` names it, with the reason.
+|===
+
+The compiler warns about a tool that reads `System.in` or `System.console()` without declaring `readsInput`. A tool that a script or an agent is to run takes what it would ask as an option instead, and does not ask.
+
+[[toolResult]]
+=== The Result of a Tool
+
+What a tool prints is what a person reads. A tool can also give its result as data, for a program or an agent to use, by setting `executionContext.result` to a `Map`, a `List`, a `String`, a number or a boolean, nested as JSON can be:
+
+[source,groovy]
+.src/cli/groovy/com/example/TodoReportTool.groovy
+----
+package com.example
+
+import groovy.io.FileType
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolSupport
+
+@ToolHints(readOnlyHint = true, openWorldHint = false)
+class TodoReportTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Lists the sources of the application that have a TODO'
+
+    boolean startsApplication = false
+
+    boolean handle() {
+        List<String> sources = []
+        File root = file('grails-app')
+        if (root.directory) {
+            root.eachFileRecurse(FileType.FILES) { File source ->
+                if (source.name.endsWith('.groovy') && source.text.contains('TODO')) {
+                    sources << projectPath(source)
+                }
+            }
+        }
+        sources.each { String source -> println source }
+        executionContext.result = [count: sources.size(), files: sources]
+        return true
+    }
+}
+----
+
+At the terminal nothing changes: the output of the tool is what it prints. Through `grails mcp`, the result is given to the agent as the structured content of the call, as JSON of at most 256 KiB, besides what the tool printed. The tool writes it to a file of `.grails/run` beside the file of its arguments, which only you can read and which is deleted when the tool has ended.
+
+[[toolChecks]]
+=== What the Compiler and `project health` Say
+
+Nothing of the above is needed for a tool to compile and run: a tool without any declaration is listed, run and offered to agents, with free arguments and the most cautious hints, as the tools of Grails 8 are. What a tool leaves out is said where its author sees it:
+
+[cols="3,1,4"]
+|===
+| What | Where | What is said
+
+| A tool without a description
+| The compiler, a warning
+| `ImportOrdersTool has no description: help and agents show only its name. Set description = '...'`
+
+| A tool that reads its arguments and declares none
+| The compiler, a warning
+| `ImportOrdersTool reads its arguments without declaring them: declare them with @ToolOption and @ToolParameter, so that help, completion and agents know them`
+
+| A tool that reads `System.in` or `System.console()` and does not declare `readsInput`
+| The compiler, a warning
+| `ImportOrdersTool reads what is typed: declare boolean readsInput = true, so that --non-interactive and agents do not run it without input`
+
+| A declaration that breaks a rule of <<toolDeclarations,Options and Parameters>>
+| The compiler, an error
+| The field and the rule.
+
+| A tool of the application without a description, without declarations of the arguments it reads, or without `@ToolHints`
+| `grails project health`, advice
+| `tools.description-missing`, `tools.arguments-undeclared` and `tools.hints-missing`, each with the tools it names.
+
+| A tool of a plugin that lacks one of them
+| `grails help NAME`, `grails://commands` of `grails mcp`
+| That it lacks it; the author of the plugin got the warnings when the plugin was compiled.
+|===
+
+The compiler finds that a tool reads its arguments, or what is typed, in the code of the tool class itself: `args`, `executionContext.commandLine` and its `remainingArgs`, `optionValue` and `hasOption`, `System.in` and `System.console()`. It is a heuristic: it can miss a tool that reads them through another class, and it warns and never fails the build. A missing `@ToolHints` is not warned about, because the defaults are safe; `project health` advises it. What the compiler found is recorded with the tool as `incomplete`, which `help --json` shows.
+
+[[toolsAndAgents]]
+=== Tools and Agents
+
+Every tool of the application and its plugins is a tool of `grails mcp`, the server of the Model Context Protocol that AI coding agents drive the command line through (see xref:commandLine#mcp[Driving Grails from an AI Agent]). Nothing is done for it but writing the tool as this section describes:
+
+* The name of the tool is its name there, and its description its description, followed by how it is run and where it comes from.
+* Its options and parameters are the input schema of the tool, which the agent fills in, and the server checks a call against them before anything runs. A tool that declares none takes one list of free `arguments`, and its description tells the agent that its arguments are not declared.
+* Its hints tell the client whether to ask before a call, for the tools of the application and of the plugins of Grails.
+* `executionContext.result` is the structured content of the result of a call.
+* A tool that declares `readsInput` is not offered.
+* A new tool is offered once the project is compiled, which `compile`, a build at the terminal or in an IDE, or the call `refresh_tools` does.
+
+There is no setting that keeps a tool from agents: `run-tool` reaches every tool at the terminal and over MCP alike, so such a setting would protect nothing. What an agent may call is decided in its client, which asks before a call and lets you deny tools by their names. A tool that is dangerous to call says so with its hints, and clients ask before a call that is destructive.
+
+The vocabulary is that of Spring AI, which an application uses to serve MCP tools of its own while it runs (see xref:usingAi[Using AI in Your Application]): `@ToolHints` has the members and defaults of `@McpTool.McpAnnotations`, and `description` and `required` mean what they mean in `@McpToolParam`. Grails has annotations of its own because a tool is not what those annotations describe. They describe a method of a bean whose parameters become JSON, read by reflection while the application runs; a tool is a command line, with names, short names, places and values, which the build and the `grails` command read without loading the class of the tool. And the tool API, which every standalone tool runs with, does not carry Spring AI, so that the tools of a plugin keep working whatever version of Spring AI an application uses.
 
 [[toolsInTheApplication]]
 === A Tool That Uses the Application
@@ -159,27 +521,33 @@ A tool in `src/cli` is run with the application started around it, unless it say
 ----
 package com.example
 
+import grails.core.GrailsApplication
 import grails.util.Environment
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolSupport
 
+@ToolHints(destructiveHint = false)
 class BackupTool implements ApplicationTool, ToolSupport {
 
     String description = 'Backs up the customer data'
 
-    CustomerService customerService
+    GrailsApplication grailsApplication
 
     boolean handle() {
+        String database = grailsApplication.config.getProperty('dataSource.url')
         if (Environment.current == Environment.PRODUCTION) {
-            println "Full backup of ${customerService.count()} customers"
+            println "Full backup of ${database}"
         } else {
-            println 'Partial backup of the customers'
+            println "Partial backup of ${database}"
         }
         return true
     }
 }
 ----
+
+A service of the application is injected in the same way, by the name of its property, as `CustomerService customerService`, and a domain class is used through GORM as anywhere in the application.
 
 * The environment is `development`, as for every tool that is run by its name. `grails run-tool -Dgrails.env=production backup` runs the tool for another environment: the environment is named in front of the name of the tool, since everything after the name is an argument of the tool (see <<runningATool,Running a Tool>>).
 * A tool that sets `boolean skipBootstrap = true` is run without the `BootStrap` classes of the application.
@@ -198,17 +566,23 @@ A tool in `src/cli` that uses the classes of the project but not the running app
 package com.example
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 import org.apache.grails.core.cli.ToolSupport
 
+@ToolHints(readOnlyHint = true, openWorldHint = false)
 class ListFieldsTool implements ApplicationTool, ToolSupport {
 
     boolean startsApplication = false
 
     String description = 'Lists the fields of classes of the application'
 
+    @ToolParameter(index = 0, label = 'CLASS', description = 'The classes to list the fields of, by their whole names')
+    List<String> classNames
+
     boolean handle() {
         // the classes of the application are on the class path: the build compiled them before the tool runs
-        args.each { String name ->
+        classNames.each { String name ->
             Class<?> type = Class.forName(name)
             println "${type.name}: ${type.declaredFields.findAll { !it.synthetic }*.name.sort().join(', ')}"
         }
@@ -224,7 +598,7 @@ class ListFieldsTool implements ApplicationTool, ToolSupport {
 * The class path is the same: the compiled classes of the application, its run time dependencies, `src/cli`, `src/standalone` and the two scopes of the tools.
 * The configuration of the application is not loaded. A tool that needs a setting reads the file, `grails-app/conf/application.yml` for example, and gets what is written there, without what an environment block, a Spring profile, a system property or a plugin would change.
 
-The build reads `startsApplication` from the source of the tool, without running it, so its value has to be the constant `true` or `false`: where the property is declared, as above, or set to the same constant in every constructor of the tool. Any other value does not compile:
+The build reads `startsApplication` from the source of the tool, without running it, as it reads `readsInput`, so its value has to be the constant `true` or `false`: where the property is declared, as above, or set to the same constant in every constructor of the tool. Any other value does not compile:
 
 ----
 startsApplication of ListFieldsTool has to be the constant true or false, where it is declared or in every constructor: the build reads it without running the tool.
@@ -243,18 +617,20 @@ A tool in `src/standalone` is run by the `grails` command line itself, as a Java
 package com.example
 
 import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 import org.apache.grails.core.cli.ToolSupport
 
+@ToolHints(destructiveHint = false, idempotentHint = true, openWorldHint = false)
 class CreateReportTool implements StandaloneTool, ToolSupport {
 
     String description = 'Creates a report class from a template'
 
+    @ToolParameter(index = 0, label = 'NAME', description = 'The name of the report, with or without its package')
+    String reportName
+
     boolean handle() {
-        if (!args) {
-            System.err.println('Usage: create-report <name>')
-            return false
-        }
-        def model = model(args[0])
+        def model = model(reportName)
         render template: template('artifacts/Report.groovy'),
                destination: file("src/main/groovy/${model.packagePath}/${model.simpleName}Report.groovy"),
                model: model
@@ -263,7 +639,7 @@ class CreateReportTool implements StandaloneTool, ToolSupport {
 }
 ----
 
-The template is `src/main/templates/artifacts/Report.groovy` of the project, or `META-INF/templates/artifacts/Report.groovy` of a plugin (in `src/standalone/resources`), with `${packageName}` and `${className}` where the package and the class name go. `grails create-report Sales` starts no Gradle:
+The template is `src/main/templates/artifacts/Report.groovy` of the project, or `META-INF/templates/artifacts/Report.groovy` of a plugin (in `src/standalone/resources`), with `${packageName}` and `${className}` where the package and the class name go. A file that is there already is left as it is, which is why the tool only adds and doing it twice does what doing it once does. The parameter is required, so `grails create-report` without a name is refused before the tool is started. `grails create-report Sales` starts no Gradle:
 
 [source,console]
 ----
@@ -271,7 +647,7 @@ $ grails create-report Sales
 | Running the tool create-report of the application, as a process of its own, without Gradle
 ----
 
-* `grails` starts `java` with a main class of Grails that finds the tool by its name, calls `handle()`, and ends with 0 for `true` and with 1 for `false` or an exception. The output of the process is the output of the tool; it reads what is typed unless `--non-interactive` is given.
+* `grails` starts `java` with a main class of Grails that finds the tool by its name, gives the declared fields their values, calls `handle()`, and ends with 0 for `true` and with 1 for `false` or an exception. The output of the process is the output of the tool; it reads what is typed unless `--non-interactive` is given, which refuses a tool that declares `readsInput`.
 * `applicationContext` does not exist, nothing is injected, and the configuration of the application is not loaded. The tool gets the command line, the directories of the project and, with `ToolSupport`, the helpers for templates, files and models.
 * *The class path has the classes of `src/standalone`, what `grailsCliStandalone` holds, and the tool API* (`grails-core-cli`, with what it needs: `grails-core`, `grails-bootstrap`, Spring Framework and Groovy). It has nothing of `src/main`, of the dependencies of the application or of `grailsCli`. A class of the application does not resolve when the tool is compiled, so a tool that needs one is a tool of `src/cli`.
 * *It runs while the project does not compile.* A tool that generates code has to: `grails generate-all org.bookstore.Book` reads the source of the domain class and writes the controller, the views and the specs in a project that does not compile at the moment.
@@ -340,7 +716,7 @@ The file is UTF-8 and holds a JSON array of strings, one for each argument, for 
 
 `-Pargs` is the third form, one text: `./gradlew runTool -Pargs="greet 'Alice Smith'"` is the tool `greet` with the one argument `Alice Smith`. Gradle hands the text to the build, which splits it at spaces and reads single and double quotes the way a shell does, so what `-Pargs` holds is quoted twice, once for your shell and once for this split, and a program that puts the text together from arguments has to quote each of them for the split. Use one of the three forms in a build: `--arg`, `--args-file` or `-Pargs`. The task fails when it is given arguments in more than one of them.
 
-In the tool, `executionContext.commandLine.rawArguments` is the arguments as they were given, the name of the tool first. `args` and the options of `executionContext.commandLine` are what Grails reads from them: an argument that starts with a dash is an option, which takes the argument after it as its value unless it has one of its own (`--name=value`), surrounding white space and surrounding double quotes are removed, and an empty argument is left out.
+In the tool, `executionContext.commandLine.rawArguments` is the arguments as they were given, the name of the tool first. `args` and the options of `executionContext.commandLine` are what Grails reads from them: an argument that starts with a dash is an option, which takes the argument after it as its value unless it has one of its own (`--name=value`), surrounding white space and surrounding double quotes are removed, and an empty argument is left out. The fields a tool declares are given their values from the same arguments, by its declarations (see <<toolArgumentsHeld,How the Arguments Reach the Tool>>), with each of the three forms above.
 
 [[toolsOfAPlugin]]
 === Tools of a Plugin
@@ -379,8 +755,10 @@ grails create-plugin my-plugin
 package com.example.myplugin.cli
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolSupport
 
+@ToolHints(readOnlyHint = true, openWorldHint = false)
 class AuditReportTool implements ApplicationTool, ToolSupport {
 
     String description = 'Prints an audit report'
@@ -438,6 +816,8 @@ dependencies {
 ----
 
 . *Run the tools* by their names: `grails audit-report`, or `./gradlew runTool --arg=audit-report`, or the task of the tool, `./gradlew auditReport`.
+
+The tools of a plugin declare what they take and do as the tools of an application do, and the compiler warns the author of the plugin about what one leaves out; the declarations are in the companion, so an application that uses the plugin has them in `help`, in completion and in `grails mcp`. `grails mcp` passes the hints of a tool on to agents only for the plugins of Grails itself (see <<toolHints,What a Tool Does>>), so the tools of another plugin are offered with the most cautious hints, whatever they declare.
 
 Every project that applies the Grails plugin Gradle plugin (`org.apache.grails.gradle.grails-plugin`) is built this way. The Gradle plugin that produces the companions, `org.apache.grails.gradle.grails-plugin-cli`, is applied with it, so a build script of Grails 8 that applies it by hand still works, and the line can be removed. A project that is no Grails plugin, such as a library of tools, applies `org.apache.grails.gradle.grails-plugin-cli` itself. Whether a folder has a source is decided when the build is configured, so the first tool in a folder changes the configuration of the build, as a new source set would. The `cliArtifact` block of the build changes what the companions are called:
 
@@ -524,6 +904,8 @@ DataImportCommand implements ApplicationCommand, which is deprecated: implement 
 | Warning data-import implements ApplicationCommand, which is deprecated: implement ApplicationTool
 ----
 
+A tool of Grails 8 declares nothing, and needs to declare nothing: it takes its arguments as it always did, `help` shows its description and where it comes from, and `grails mcp` offers it with free arguments and the most cautious hints. The compiler warns where it has no description or reads its arguments without declaring them, and `project health` advises the same; give it a description, its options and parameters, and `@ToolHints` when it is touched (see <<toolDeclarations,Options and Parameters>>). Once it declares an option or a parameter it is held to its declarations, so declare every option it reads.
+
 Nothing has to change to upgrade. When a class is touched anyway, move it to `src/cli/groovy`, into the directory of its package, as it is, and replace `implements GrailsApplicationCommand` with `implements ApplicationTool, ToolSupport` (or `implements ApplicationCommand` with `implements ApplicationTool`). Its name stays the same, since the name of `DataImportCommand` is `data-import` either way. A tool that only reads and writes files of the project can move to `src/standalone/groovy` instead and implement `StandaloneTool`, to run without Gradle; note 46 of xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9] says which tools can, and what such a tool loses. `grails project health` lists the files in `grails-app/commands` and the tools of a deprecated type, as advice.
 
 The tools of Grails 7 implemented `grails.dev.commands.ApplicationCommand`. Grails 9 does not have those types: a source that imports `grails.dev.commands.*` does not compile, and is changed to import `org.apache.grails.core.cli.ApplicationTool` and `ToolSupport` (or, with no other change, `org.apache.grails.core.cli.GrailsApplicationCommand`, whose members are the same). `ExecutionContext` is `org.apache.grails.core.cli.ExecutionContext`, and the types of `grails.dev.commands.io` and `grails.dev.commands.template`, such as `FileSystemInteraction` and `TemplateRenderer`, have the same names in `org.apache.grails.core.cli.io` and `org.apache.grails.core.cli.template`. A plugin jar compiled for Grails 7 that registers commands has none of them listed or run: the build says so with a warning, and a version of the plugin for Grails 9 is needed.
@@ -541,6 +923,7 @@ When a tool is compiled, the compiler writes a descriptor of it beside its regis
 * A method that is given the tool may stop holding it on one way through its code (`tool = null` in one branch of an `if`). Each way is read with what holds the tool on that way, and where the ways meet again and it is no longer certain what holds the tool, a name that is set from there on is not described.
 * The name a tool is listed by is the name that runs it: the name of its descriptor, or the name its class name gives when it has none. Another tool that gives itself that name when it is made, in a way the compiler does not read, does not take it over: of an `AlphaTool` and a `BetaTool` that have no descriptors, `beta` runs `BetaTool`, whatever `AlphaTool.getName()` returns. A name that no tool is listed by, or that more than one is, which is then not listed, runs the tool that has that name when it is made.
 * `target` is `application` for a tool of `src/cli` and `standalone` for one of `src/standalone`, and `startsApplication` says, for the first, whether the application is started around it. `deprecated` lists `type` for a class that implements `ApplicationCommand` or `GrailsApplicationCommand` and `folder` for a source in `grails-app/commands`.
+* `options` and `parameters` are what `@ToolOption` and `@ToolParameter` declare, in the form `help --json` describes the options and parameters of a command in (see "Help" in xref:commandLine[The Command Line]); `hints` the four members of `@ToolHints`, where the tool has it; `readsInput` is `true` where the tool declares it; and `incomplete` lists what the compiler found that the tool does not declare, of `description`, `arguments` and `hints`.
 
 Write the name in lower case letters and digits, in words joined by single hyphens, with at most 64 characters, and the description on one line of at most 512 characters; a tool whose descriptor has anything else is left out of the list, with the reason. A tool whose name or description is not written that way gets a descriptor without the description, or none when it is the name. A tool written in Java, or registered by hand in `META-INF/grails-cli.factories`, has no generated descriptor. Add the file to the resources next to the registration:
 
@@ -548,6 +931,16 @@ Write the name in lower case letters and digits, in words joined by single hyphe
 .src/cli/resources/META-INF/grails-tools/com.example.AuditReportTool.json
 ----
 {"format": 1, "class": "com.example.AuditReportTool", "name": "audit-report", "description": "Writes the audit report", "target": "application", "startsApplication": true}
+----
+
+Such a descriptor says what the annotations of the tool declare with the members above, which the build reads as it reads them from a generated one; the tool itself is given its values from its annotations when it runs. The `CountTool` of <<writingATool,Writing a Tool>> has:
+
+[source,json]
+.src/cli/resources/META-INF/grails-tools/com.example.CountTool.json
+----
+{"format": 1, "class": "com.example.CountTool", "name": "count", "description": "Counts the words it is given", "target": "application", "startsApplication": true,
+ "parameters": [{"label": "WORD", "arity": "0..*", "description": "The words to count", "repeatable": true, "split": null, "choices": null, "type": "string"}],
+ "hints": {"readOnlyHint": true, "destructiveHint": true, "idempotentHint": false, "openWorldHint": false}}
 ----
 
 A descriptor of a standalone tool, in `src/standalone/resources/META-INF/grails-tools`, has the `target` `standalone` and no `startsApplication`. A descriptor whose `target` does not fit the folder it is in is not used, and the list says why in the words of the compile errors above.
@@ -566,7 +959,8 @@ It lists the tools of the project itself, of the companions of its plugins, and 
 {"format": 1, "complete": true, "diagnostics": [],
  "tools": [
    {"name": "audit-report", "aliases": [], "description": "Writes the audit report",
-    "origin": "com.example:my-plugin-cli:1.0.0", "target": "application", "startsApplication": true, "registration": "descriptor"},
+    "origin": "com.example:my-plugin-cli:1.0.0", "target": "application", "startsApplication": true, "registration": "descriptor",
+    "options": [...], "parameters": [...], "hints": {...}},
    {"name": "create-report", "aliases": [], "description": "Creates a report class from a template",
     "origin": "application", "target": "standalone", "startsApplication": false, "registration": "descriptor"},
    {"name": "data-import", "aliases": [], "description": "Imports the orders",
@@ -578,6 +972,7 @@ It lists the tools of the project itself, of the companions of its plugins, and 
 * `origin` is the coordinates of the artifact the tool comes from, or `application` for a tool of the project itself.
 * `target` and `startsApplication` say how the tool is run: `application` is run by the build, with the application started around it when `startsApplication` is `true` and without it when it is `false`, and `standalone` is run by the `grails` command line as a process of its own, without Gradle. A tool without a descriptor is listed as `application`, whatever its class says; the build runs it as its class says, and `grails` runs it through the build.
 * `deprecated`, where it is there, says what of the tool is deprecated: `type`, `folder` or both, as in its descriptor.
+* `options`, `parameters`, `hints`, `readsInput` and `incomplete` are those of its descriptor, which `help --json` gives as they are, and which the `grails` command checks the arguments of the tool against before it starts it.
 * `registration` says how much is known: `descriptor` for a tool with a descriptor; `factories` for a tool that is registered without one, whose name is the one its class name gives and whose description is empty. A tool listed by the name its class name gives is run by that name also when it has another name of its own; `runTool` looks for a tool by the name it is listed by first, and by the name a tool has of its own when no tool, or more than one, is listed by that name.
 * The file lists at most 512 tools in at most 512 KiB, which is what the `grails` command reads: when a project has more, the first by name are listed and a line of `diagnostics` says how many are not.
 * `complete` is `false` when something could not be listed, and `diagnostics` then says what and why, one line each: a descriptor that is not as described above or does not fit its folder, a name that two tools have (neither is listed, because the task does not choose between them), a descriptor in a jar for a class of the application (the tool keeps what the application says of it, and the other descriptor is not used), a plugin jar with commands of Grails 7, or a class path the tools run with that does not resolve completely, with what Gradle could not resolve in it. The task prints the same lines as warnings.

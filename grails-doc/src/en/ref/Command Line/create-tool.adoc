@@ -45,7 +45,9 @@ Without `--standalone`, creates `src/cli/groovy/<package>/<Name>Tool.groovy`, a 
 
 With `--standalone`, creates `src/standalone/groovy/<package>/<Name>Tool.groovy`, a class that implements `StandaloneTool` and `ToolSupport`, from the template `artifacts/StandaloneTool.groovy`. The `grails` command runs such a tool as a Java process of its own, without Gradle and without the application, also while the project does not compile; it has the files of the project and not its classes. Choose it for a tool that only reads and writes files of the project.
 
-It is a command of every project. As it is written, the class prints its name and the arguments it was given and returns `true` from `handle()`, so the new tool runs and succeeds at once; its work replaces that body, and `handle()` returns `false` to end the tool with exit code 1.
+It is a command of every project. As it is written, the class prints its name and the argument it was given and returns `true` from `handle()`, so the new tool runs and succeeds at once; its work replaces that body, and `handle()` returns `false` to end the tool with exit code 1.
+
+The class declares what a tool declares, so that the compiler warns about nothing in it: a `description` of one line, one optional parameter with `@ToolParameter`, and `@ToolHints` that say that the tool changes files and may replace them, the most cautious hints, so that a tool that is edited never claims less than it does. Change the three to what the tool takes and does: see "Options and Parameters" and "What a Tool Does" in link:{guidePath}commandLine.html#creatingTools[Creating Tools]. `help`, completion and the agents of `grails mcp` read them.
 
 The name is needed: the command does not ask for one. It can include a package, such as `org.bookstore` in the last example above; without one, the class goes into the default package of the project. The first letter of the name is made upper case.
 
