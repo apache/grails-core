@@ -36,12 +36,25 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ArtifactView
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.artifacts.result.DependencyResult
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.java.archives.Manifest
 import org.gradle.api.logging.Logger
 import org.gradle.api.provider.Provider
+import org.gradle.api.specs.Spec
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 
@@ -446,6 +459,96 @@ class SbomPlugin implements Plugin<Project> {
             task.includeConfigs.set(includeConfigs)
             task.jsonOutput.set(output)
             task.outputs.file(output)
+            for (String name : includeConfigs) {
+                declareWhatTheSbomDescribes(project, task, name)
+            }
+        }
+    }
+
+    /**
+     * Makes what the SBOM describes an input of its task. The task declares the names of the configurations it
+     * reads and not what they resolve to, so a dependency that was added, removed or moved to another version left
+     * an SBOM that was built before up to date, and took one from the build cache under the same key. The SBOM
+     * names each component of the resolved graph by its coordinates and version, with what it depends on, and
+     * records the hashes of the files of the external modules; it leaves out the hashes of the projects of the
+     * build. So the inputs are:
+     * <ul>
+     * <li>the resolved graph, each component by its identifier, its coordinates and version and its variants,
+     * with the components it depends on: a version that changes counts even where the two versions have the same
+     * bytes, and a project dependency counts without its jar;</li>
+     * <li>the files of the external modules, by their content: a module whose bytes change under the same version,
+     * as a snapshot's do, counts. The files of the projects of the build are left out, so the task builds no jar it
+     * did not build before.</li>
+     * </ul>
+     * Both are lazy: nothing is resolved while the projects are configured. Gradle resolves them when it checks the
+     * task, or, with the configuration cache, when it stores the entry, as it resolves the configuration for the
+     * SBOM itself. A configuration the project does not have is passed over, as the task passes it over.
+     */
+    private static void declareWhatTheSbomDescribes(Project project, CyclonedxDirectTask task, String configurationName) {
+        Configuration configuration = project.configurations.findByName(configurationName)
+        if (configuration == null) {
+            return
+        }
+        task.inputs.property("sbomGraph_${configurationName}".toString(),
+                configuration.incoming.resolutionResult.rootComponent.map(new DescribedGraph()))
+        FileCollection moduleFiles = configuration.incoming.artifactView { ArtifactView.ViewConfiguration view ->
+            view.lenient(true)
+            view.componentFilter(new ExternalModules())
+        }.files
+        task.inputs.files(moduleFiles)
+                .withPropertyName("sbomModuleFiles_${configurationName}".toString())
+                .withPathSensitivity(PathSensitivity.NONE)
+    }
+
+    /**
+     * The resolved graph as text: one line for each component, sorted, with its identity, its variants and the
+     * identities of what it depends on. The identity of a component is its coordinates and version, and its
+     * identifier; a project of the build is identified as the SBOM identifies it, by its path within its own build,
+     * so a project has the same identity whether its build runs alone or is included in another, as the framework
+     * is in that of Forge.
+     */
+    static final class DescribedGraph implements Transformer<String, ResolvedComponentResult> {
+
+        @Override
+        String transform(ResolvedComponentResult root) {
+            SortedSet<String> lines = new TreeSet<String>()
+            Set<ComponentIdentifier> seen = new HashSet<ComponentIdentifier>()
+            Deque<ResolvedComponentResult> pending = new ArrayDeque<ResolvedComponentResult>()
+            pending.push(root)
+            while (!pending.isEmpty()) {
+                ResolvedComponentResult component = pending.pop()
+                if (!seen.add(component.id)) {
+                    continue
+                }
+                SortedSet<String> dependsOn = new TreeSet<String>()
+                for (DependencyResult dependency : component.dependencies) {
+                    if (dependency instanceof ResolvedDependencyResult) {
+                        ResolvedComponentResult selected = ((ResolvedDependencyResult) dependency).selected
+                        dependsOn.add(identity(selected))
+                        pending.push(selected)
+                    } else {
+                        dependsOn.add("unresolved ${dependency.requested.displayName}".toString())
+                    }
+                }
+                List<String> variants = component.variants.collect { ResolvedVariantResult variant -> variant.displayName }.sort()
+                lines.add("${identity(component)} ${variants} -> ${dependsOn}".toString())
+            }
+            return lines.join('\n')
+        }
+
+        private static String identity(ResolvedComponentResult component) {
+            ComponentIdentifier id = component.id
+            String identifier = id instanceof ProjectComponentIdentifier ? "project ${((ProjectComponentIdentifier) id).projectPath}" : id.displayName
+            return "${component.moduleVersion} (${identifier})".toString()
+        }
+    }
+
+    /** The external modules of a resolved configuration, and not the projects of the build. */
+    static final class ExternalModules implements Spec<ComponentIdentifier> {
+
+        @Override
+        boolean isSatisfiedBy(ComponentIdentifier identifier) {
+            return identifier instanceof ModuleComponentIdentifier
         }
     }
 

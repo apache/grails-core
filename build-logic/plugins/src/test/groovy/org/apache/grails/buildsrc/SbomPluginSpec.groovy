@@ -19,6 +19,8 @@
 package org.apache.grails.buildsrc
 
 import java.util.jar.JarFile
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 import groovy.json.JsonSlurper
 import org.gradle.api.GradleException
@@ -325,5 +327,212 @@ class SbomPluginSpec extends Specification {
                 .withArguments('clean', 'cyclonedxDirectBom', '--configuration-cache', '--stacktrace')
                 .withPluginClasspath()
                 .build()
+    }
+
+    void "a dependency added to the runtime class path runs the task again, and is in the sbom"() {
+        given: 'a library that depends on one module, whose sbom is built and then up to date'
+        publishModule('alpha', '1.0', JAR)
+        publishModule('beta', '1.0', OTHER_JAR)
+        writeLibrary(["implementation 'com.example:alpha:1.0'"])
+        assert sbomBuild().task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+        assert sbomBuild().task(':cyclonedxDirectBom').outcome == TaskOutcome.UP_TO_DATE
+
+        when:
+        writeLibrary(["implementation 'com.example:alpha:1.0'", "implementation 'com.example:beta:1.0'"])
+        BuildResult result = sbomBuild()
+
+        then:
+        result.task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+        sbomModules() == ['alpha:1.0', 'beta:1.0']
+    }
+
+    void "another version of a dependency runs the task again, also where the two versions have the same bytes"() {
+        given:
+        publishModule('alpha', '1.0', JAR)
+        publishModule('alpha', '1.1', JAR)
+        writeLibrary(["implementation 'com.example:alpha:1.0'"])
+        assert sbomBuild().task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+
+        when:
+        writeLibrary(["implementation 'com.example:alpha:1.1'"])
+        BuildResult result = sbomBuild()
+
+        then:
+        result.task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+        sbomModules() == ['alpha:1.1']
+    }
+
+    void "a build in which nothing changed finds the sbom up to date, with the configuration cache reused"() {
+        given:
+        publishModule('alpha', '1.0', JAR)
+        writeLibrary(["implementation 'com.example:alpha:1.0'"])
+        BuildResult first = sbomBuild()
+
+        when:
+        BuildResult second = sbomBuild()
+
+        then:
+        first.task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+        second.output.contains('Configuration cache entry reused')
+        second.task(':cyclonedxDirectBom').outcome == TaskOutcome.UP_TO_DATE
+        sbomModules() == ['alpha:1.0']
+    }
+
+    void "a module whose bytes change under its version, as a snapshot's do, runs the task again, and the sbom has its new hash"() {
+        given:
+        publishModule('alpha', '1.0', JAR)
+        writeLibrary(["implementation 'com.example:alpha:1.0'"])
+        assert sbomBuild().task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+        List hashes = sbomComponent('alpha').hashes as List
+
+        when:
+        publishModule('alpha', '1.0', OTHER_JAR)
+        BuildResult result = sbomBuild()
+
+        then: 'the build file is as it was, and the task runs all the same'
+        result.task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+        hashes
+        (sbomComponent('alpha').hashes as List) != hashes
+    }
+
+    void "with the build cache, an sbom is taken from it for the dependencies it was built for, and for no others"() {
+        given: 'a library whose sbom is in the build cache for version 1.0 of its dependency'
+        publishModule('alpha', '1.0', JAR)
+        publishModule('alpha', '1.1', JAR)
+        writeLibrary(["implementation 'com.example:alpha:1.0'"])
+        assert sbomBuild('clean', '--build-cache').task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+
+        when: 'the dependency moves to 1.1 and the sbom is built from clean'
+        writeLibrary(["implementation 'com.example:alpha:1.1'"])
+        BuildResult moved = sbomBuild('clean', '--build-cache')
+
+        then: 'it is built, and not taken from the cache with 1.0 in it'
+        moved.task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+        sbomModules() == ['alpha:1.1']
+
+        when: 'the dependency is 1.0 again'
+        writeLibrary(["implementation 'com.example:alpha:1.0'"])
+        BuildResult back = sbomBuild('clean', '--build-cache')
+
+        then: 'the sbom of 1.0 is taken from the cache'
+        back.task(':cyclonedxDirectBom').outcome == TaskOutcome.FROM_CACHE
+        sbomModules() == ['alpha:1.0']
+    }
+
+    void "the sbom of a project that depends on another describes it without building its jar, and runs again when its dependencies change"() {
+        given: 'an application that depends on a library of the same build'
+        publishModule('alpha', '1.0', JAR)
+        publishModule('beta', '1.0', OTHER_JAR)
+        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'app'\ninclude 'library'\n"
+        new File(projectDir, 'gradle.properties').text = FIXTURE_PROPERTIES
+        new File(projectDir, 'build.gradle').text = projectBuild(["implementation project(':library')"])
+        new File(projectDir, 'library').mkdirs()
+        new File(projectDir, 'library/build.gradle').text = projectBuild(["implementation 'com.example:alpha:1.0'"])
+
+        when:
+        BuildResult first = sbomBuild()
+
+        then: 'the library is in the sbom, and its jar was not built for it'
+        first.task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+        first.task(':library:jar') == null
+        sbomModules('build/app-1.0.0-sbom.json') == ['alpha:1.0', 'library:1.0.0']
+
+        when: 'the library gains a dependency'
+        new File(projectDir, 'library/build.gradle').text = projectBuild(["implementation 'com.example:alpha:1.0'", "implementation 'com.example:beta:1.0'"])
+        BuildResult second = sbomBuild()
+
+        then:
+        second.task(':cyclonedxDirectBom').outcome == TaskOutcome.SUCCESS
+        second.task(':library:jar') == null
+        sbomModules('build/app-1.0.0-sbom.json') == ['alpha:1.0', 'beta:1.0', 'library:1.0.0']
+    }
+
+    // A feature changes the files of a build between two builds, which a daemon that watches the file system can miss
+    // while its events are on their way; the builds read the files instead.
+    private static final String FIXTURE_PROPERTIES = 'projectVersion=1.0.0\norg.gradle.vfs.watch=false\n'
+
+    // the bytes of two jars of the repository of these features: the same entry with another content
+    private static final byte[] JAR = jar('one')
+    private static final byte[] OTHER_JAR = jar('two')
+
+    private static byte[] jar(String content) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream()
+        new ZipOutputStream(bytes).withCloseable { ZipOutputStream zip ->
+            ZipEntry entry = new ZipEntry('com/example/content.txt')
+            entry.time = 0L
+            zip.putNextEntry(entry)
+            zip.write(content.getBytes('UTF-8'))
+            zip.closeEntry()
+        }
+        bytes.toByteArray()
+    }
+
+    /** Writes a module of the group com.example, with its POM, which names its license, into the repository of the build */
+    private void publishModule(String name, String version, byte[] jar) {
+        File directory = new File(projectDir, "repo/com/example/${name}/${version}")
+        directory.mkdirs()
+        new File(directory, "${name}-${version}.jar").bytes = jar
+        new File(directory, "${name}-${version}.pom").text = """\
+            <project xmlns="http://maven.apache.org/POM/4.0.0">
+              <modelVersion>4.0.0</modelVersion>
+              <groupId>com.example</groupId>
+              <artifactId>${name}</artifactId>
+              <version>${version}</version>
+              <licenses>
+                <license>
+                  <name>Apache License, Version 2.0</name>
+                  <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+                </license>
+              </licenses>
+            </project>
+            """.stripIndent()
+    }
+
+    private void writeLibrary(List<String> dependencies) {
+        new File(projectDir, 'settings.gradle').text = """\
+            rootProject.name = 'library'
+            buildCache {
+                local {
+                    directory = new File(rootDir, 'build-cache')
+                }
+            }
+            """.stripIndent()
+        new File(projectDir, 'gradle.properties').text = FIXTURE_PROPERTIES
+        new File(projectDir, 'build.gradle').text = projectBuild(dependencies)
+    }
+
+    private static String projectBuild(List<String> dependencies) {
+        """\
+            plugins {
+                id 'java-library'
+                id 'org.apache.grails.buildsrc.sbom'
+            }
+            version = projectVersion
+            repositories {
+                maven { url = rootProject.file('repo') }
+            }
+            dependencies {
+                ${dependencies.join('\n                ')}
+            }
+            """.stripIndent()
+    }
+
+    private BuildResult sbomBuild(String... more) {
+        List<String> arguments = (more.toList() - ['clean']) as List<String>
+        GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withArguments(((more.contains('clean') ? ['clean'] : []) + ['cyclonedxDirectBom', '--configuration-cache', '--stacktrace'] + arguments) as List<String>)
+                .withPluginClasspath()
+                .build()
+    }
+
+    /** @return the external modules the sbom lists, and the projects, as name:version, sorted */
+    private List<String> sbomModules(String path = 'build/library-1.0.0-sbom.json') {
+        (new JsonSlurper().parse(new File(projectDir, path)).components as List<Map>)
+                .collect { Map component -> "${component.name}:${component.version}".toString() }.sort()
+    }
+
+    private Map sbomComponent(String name) {
+        (new JsonSlurper().parse(new File(projectDir, 'build/library-1.0.0-sbom.json')).components as List<Map>).find { Map component -> component.name == name }
     }
 }
