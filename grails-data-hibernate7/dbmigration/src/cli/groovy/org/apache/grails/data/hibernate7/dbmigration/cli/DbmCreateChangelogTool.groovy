@@ -47,6 +47,9 @@ class DbmCreateChangelogTool implements ApplicationTool, ApplicationContextDatab
         }
 
         def outputChangeLogFile = resolveChangeLogFile(filename)
+        // the format is the one of the file that is written: a name without an extension is a Groovy change log.
+        // It is found before a file that is there is replaced, so that a format Liquibase does not write leaves it
+        ChangeLogSerializer serializer = ChangeLogSerializerFactory.instance.getSerializer(outputChangeLogFile.name)
         if (outputChangeLogFile.exists()) {
             if (hasOption('force')) {
                 outputChangeLogFile.delete()
@@ -57,8 +60,6 @@ class DbmCreateChangelogTool implements ApplicationTool, ApplicationContextDatab
         if (!outputChangeLogFile.parentFile.exists()) {
             outputChangeLogFile.parentFile.mkdirs()
         }
-
-        ChangeLogSerializer serializer = ChangeLogSerializerFactory.instance.getSerializer(filename)
 
         outputChangeLogFile.withOutputStream { OutputStream out ->
             serializer.write([], out)

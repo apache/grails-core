@@ -80,6 +80,36 @@ class DbmCreateChangelogToolSpec extends ApplicationContextDatabaseMigrationComm
             command.changeLogFile.text.contains("include file: 'added.groovy'")
     }
 
+    def "creates a Groovy change log for a name without an extension, named as the change logs of its data source are"() {
+        given:
+            configure(['grails.plugin.databasemigration.reports.changelogLocation': changeLogLocation.canonicalPath])
+
+        when:
+            command.handle(getExecutionContext(*arguments))
+
+        then:
+            new File(changeLogLocation, written).text.replaceAll(/\s/, '') == 'databaseChangeLog={}'
+
+        where:
+            arguments                         || written
+            ['empty']                         || 'empty.groovy'
+            ['empty', '--dataSource=reports'] || 'empty-reports.groovy'
+    }
+
+    def "keeps a file whose format it cannot write, even when it is told to overwrite it"() {
+        given:
+            def file = new File(changeLogLocation, 'notes.md')
+            file.text = 'kept'
+
+        when:
+            command.handle(getExecutionContext('notes.md', '--force'))
+
+        then:
+            def e = thrown(RuntimeException)
+            e.message.contains('notes.md')
+            file.text == 'kept'
+    }
+
     def "creates the file in a directory that is not there yet"() {
         when:
             command.handle(getExecutionContext('releases/2026/empty.groovy'))

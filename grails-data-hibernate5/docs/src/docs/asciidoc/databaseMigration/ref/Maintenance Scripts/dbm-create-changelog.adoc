@@ -27,7 +27,7 @@ Creates an empty change log file.
 
 Creates a new empty file instead of generating the file from the database (with <<ref-rollback-scripts-dbm-generate-changelog,dbm-generate-changelog>>) or from your GORM classes (with <<ref-rollback-scripts-dbm-generate-gorm-changelog,dbm-generate-gorm-changelog>>).
 
-The folder of the change logs is `grails-app/migrations`, or the one `grails.plugin.databasemigration.changelogLocation` names. Give the name with its extension, which decides the format: `.groovy` for the Groovy DSL, `.xml` for Liquibase XML, and the other formats Liquibase writes, as `.yaml`.
+The folder of the change logs is `grails-app/migrations`, or the one `grails.plugin.databasemigration.changelogLocation` names. The extension of the file decides its format: `.groovy` for the Groovy DSL, `.xml` for Liquibase XML, and the other formats Liquibase writes, as `.yaml`. A name without an extension gets `.groovy`, after a hyphen and the name of the data source when it is not the default one: `changes` is `changes.groovy`, and `changes-reports.groovy` with `--dataSource=reports`. For an extension Liquibase writes no format for, the tool fails and leaves a file of that name as it is, also with `--force`.
 
 Usage:
 [source,console]

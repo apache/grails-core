@@ -124,6 +124,26 @@ databaseChangeLog:
     }
 
     @Unroll
+    def "dbm-create-changelog #arguments creates the Groovy change log #written"() {
+        given:
+        File changeLogs = new File(dir, 'migrations')
+
+        when:
+        Map result = run(["-Dgrails.plugin.databasemigration.changelogLocation=${changeLogs.path}".toString(),
+                          "-Dgrails.plugin.databasemigration.reports.changelogLocation=${changeLogs.path}".toString()],
+                'dbm-create-changelog', *arguments, DatabaseMigrationForkApplication.name)
+
+        then:
+        result.exit == 0
+        new File(changeLogs, written).text.replaceAll(/\s/, '') == 'databaseChangeLog={}'
+
+        where:
+        arguments                         || written
+        ['empty']                         || 'empty.groovy'
+        ['--dataSource=reports', 'empty'] || 'empty-reports.groovy'
+    }
+
+    @Unroll
     def "#tool #arguments is refused before the application is started for it, and the JVM ends with 2"() {
         when:
         Map result = run([], tool, *arguments, DatabaseMigrationForkFailingApplication.name)
