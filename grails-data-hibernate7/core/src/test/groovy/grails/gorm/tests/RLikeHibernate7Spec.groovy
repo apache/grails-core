@@ -35,12 +35,13 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
+    @Shared sqlServer = DatabaseContainers.SQL_SERVER
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
     }
 
-    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    @IgnoreIf({ data.db in ['DB2', 'SQL Server'] && System.getProperty('os.arch') in ['aarch64', 'arm64'] && System.getProperty('grails.test.amd64.emulation') != 'true' })
     void "test rlike works with #db"() {
         given:
         if (container != null && !container.isRunning()) {
@@ -75,21 +76,22 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then:
-        allFoos.size() == 2
+        then: 'SQL Server has no regular expression operator Grails uses, so rlike is a like and the pattern matches nothing'
+        allFoos.size() == expected
 
         where:
-        db           | container
-        "H2"         | null
-        "Postgres"   | postgres
-        "MySQL"      | mysql
-        "MariaDB"    | mariadb
-        "Oracle"     | oracle
-        "DB2"        | db2
+        db           | container  || expected
+        "H2"         | null       || 2
+        "Postgres"   | postgres   || 2
+        "MySQL"      | mysql      || 2
+        "MariaDB"    | mariadb    || 2
+        "Oracle"     | oracle     || 2
+        "DB2"        | db2        || 2
+        "SQL Server" | sqlServer  || 0
     }
 
-    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
-    void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
+    @IgnoreIf({ data.db in ['DB2', 'SQL Server'] && System.getProperty('os.arch') in ['aarch64', 'arm64'] && System.getProperty('grails.test.amd64.emulation') != 'true' })
+    void "test rlike on #db matches #expected of Alice, alice and bob for the pattern #pattern"() {
         given:
         if (container != null && !container.isRunning()) {
             container.start()
@@ -109,25 +111,60 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
 
         when: 'the pattern is matched'
         manager.session.clear()
-        List<String> names = RlikeFoo.findAllByNameRlike('^al.*')*.name.sort()
+        List<String> names = RlikeFoo.findAllByNameRlike(pattern)*.name.sort()
 
-        then: 'whether case matters follows the database: PostgreSQL matches with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882)'
+        then: 'whether case matters follows the database: PostgreSQL matches with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882); SQL Server falls back to a like, so a regular expression matches nothing and a like pattern selects the rows'
         names == expected
 
         where:
-        db           | container || expected
-        "H2"         | null      || ['alice']
-        "Postgres"   | postgres  || ['alice']
-        "MySQL"      | mysql     || ['Alice', 'alice']
-        "MariaDB"    | mariadb   || ['Alice', 'alice']
-        "Oracle"     | oracle    || ['alice']
-        "DB2"        | db2       || ['alice']
+        db           | container | pattern  || expected
+        "H2"         | null      | '^al.*'  || ['alice']
+        "Postgres"   | postgres  | '^al.*'  || ['alice']
+        "MySQL"      | mysql     | '^al.*'  || ['Alice', 'alice']
+        "MariaDB"    | mariadb   | '^al.*'  || ['Alice', 'alice']
+        "Oracle"     | oracle    | '^al.*'  || ['alice']
+        "DB2"        | db2       | '^al.*'  || ['alice']
+        "SQL Server" | sqlServer | '^al.*'  || []
+        "SQL Server" | sqlServer | 'al%'    || ['Alice', 'alice']
+    }
+
+    @IgnoreIf({ System.getProperty('os.arch') in ['aarch64', 'arm64'] && System.getProperty('grails.test.amd64.emulation') != 'true' })
+    void "a negated rlike on SQL Server leaves out a row whose name is null, as a negated like does"() {
+        given:
+        if (!sqlServer.isRunning()) {
+            sqlServer.start()
+        }
+        manager.destroy()
+        manager.grailsConfig = [
+                'dataSource.url'                     : sqlServer.jdbcUrl,
+                'dataSource.driverClassName'         : sqlServer.driverClassName,
+                'dataSource.username'                : sqlServer.username,
+                'dataSource.password'                : sqlServer.password,
+                'dataSource.dbCreate'                : 'create-drop',
+                'hibernate.id.new_generator_mappings': 'true'
+        ]
+        manager.setup(this.class)
+        ['Alice', 'bob'].each { new RlikeFoo(name: it).save() }
+        new RlikeFoo(name: null).save(validate: false)
+        RlikeFoo.withSession { it.flush() }
+
+        when: 'rlike falls back to a like on a name that matches, one that does not, and a null'
+        manager.session.clear()
+        List<String> matching = RlikeFoo.createCriteria().list { rlike('name', 'al%') }*.name
+        List<String> negated = RlikeFoo.createCriteria().list { not { rlike('name', 'al%') } }*.name
+
+        then: 'the null name is neither a match nor a non-match'
+        matching == ['Alice']
+        negated == ['bob']
     }
 }
 
 @Entity
 class RlikeFoo {
     String name
+    static constraints = {
+        name nullable: true
+    }
     static mapping = {
         id generator: 'identity'
     }
