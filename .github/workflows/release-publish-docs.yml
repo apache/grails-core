@@ -24,14 +24,12 @@ on:
 permissions: { }
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 21.0.12
   VERSION: ${{ inputs.version }}
 jobs:
   docs:
     environment: docs
     name: "Publish Documentation"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "⚙️ Maximize build space"
         run: |
@@ -72,11 +70,14 @@ jobs:
           fi
       - name: "📅 Ensure Common Build Date" # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+      - name: "☕️ Determine Java version from .sdkmanrc"
+        id: sdkmanrc
+        uses: ./.github/actions/sdkmanrc-java
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v6.1.0
         with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ steps.sdkmanrc.outputs.java-distribution }}
+          java-version: ${{ steps.sdkmanrc.outputs.java-version }}
       - name: "🗄️ Decide the Gradle cache mode"
         id: gradle-cache-policy
         uses: ./.github/actions/gradle-cache-policy

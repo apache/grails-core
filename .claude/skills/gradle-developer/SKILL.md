@@ -1,0 +1,1 @@
+../../../.agents/skills/gradle-developer/SKILL.md

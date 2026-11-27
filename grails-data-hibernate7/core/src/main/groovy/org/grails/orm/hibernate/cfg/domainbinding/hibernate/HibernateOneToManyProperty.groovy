@@ -16,68 +16,65 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import groovy.transform.CompileStatic;
-import org.hibernate.MappingException;
-import org.hibernate.mapping.Collection;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.mapping.Collection
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.mapping.OneToManyWithMapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.mapping.OneToManyWithMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
-import java.beans.PropertyDescriptor;
+import java.beans.PropertyDescriptor
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToMany} */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyConfig>
         implements HibernateToManyEntityProperty {
 
-    private Collection collection;
+    private Collection collection
 
     HibernateOneToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
+        super(entity, context, property)
     }
 
     @Override
     HibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (HibernatePersistentEntity) super.getAssociatedEntity();
+        return (HibernatePersistentEntity) super.getAssociatedEntity()
     }
 
     @Override
     String getReferencedEntityName() {
-        return getHibernateAssociatedEntity().getName();
+        return getHibernateAssociatedEntity().getName()
     }
 
     @Override
     Collection getHibernateCollection() {
-        return collection;
+        return collection
     }
 
     @Override
     void setHibernateCollection(Collection collection) {
-        this.collection = collection;
+        this.collection = collection
     }
 
     @Override
     boolean isLazy() {
-        return getHibernateOwner().isLazy(this);
+        return getHibernateOwner().isLazy(this)
     }
 
     @Override
     HibernatePersistentProperty validateProperty() {
         if (hasSort() && !isBidirectional()) {
-            throw new MappingException("Default sort for associations [" + getHibernateOwner().getName() + "->" + getName() + "] are not supported with unidirectional one to many relationships.");
+            throw new MappingException('Default sort for associations [' + getHibernateOwner().getName() + '->' + getName() + '] are not supported with unidirectional one to many relationships.')
         }
-        return this;
+        return this
     }
 
     @Override
     boolean shouldBindWithForeignKey() {
-        return (isBidirectional() || !isUnidirectionalOneToMany()) && !Map.isAssignableFrom(getType());
+        return (isBidirectional() || !isUnidirectionalOneToMany()) && !Map.isAssignableFrom(getType())
     }
 }

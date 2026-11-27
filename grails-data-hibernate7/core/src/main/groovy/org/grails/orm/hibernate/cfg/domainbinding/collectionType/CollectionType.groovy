@@ -28,8 +28,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 
 /**
  * A Collection type, for the moment only Set is supported
- *
- * @author Graeme
  */
 @CompileStatic
 abstract class CollectionType {

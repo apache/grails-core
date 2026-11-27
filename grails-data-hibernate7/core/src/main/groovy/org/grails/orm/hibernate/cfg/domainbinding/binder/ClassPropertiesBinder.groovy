@@ -35,7 +35,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
  * @since 8.0
  */
 @CompileStatic
-@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class ClassPropertiesBinder {
 
     private final GrailsPropertyBinder grailsPropertyBinder

@@ -72,3 +72,16 @@ tasks.withType(Test).configureEach {
     systemProperty "mongodbContainerVersion", "7.0.25"
 }
 ----
+
+== Transactions With an Embedded Replica Set
+
+A standalone MongoDB refuses multi-document transactions, so a specification that exercises them extends `org.apache.grails.testing.mongo.EmbeddedReplicaSetSpec` instead. It starts an embedded replica set of one member through the `grails-data-mongodb-embedded` module and the flapdoodle library behind it, which the test class path has to provide, and exposes the URL of the running server as `mongoUrl`. No Docker is needed.
+
+[source,groovy,subs="attributes"]
+----
+testImplementation "org.apache.grails.testing:grails-testing-support-mongodb"
+testImplementation "org.apache.grails:grails-data-mongodb-embedded"
+testImplementation "de.flapdoodle.embed:de.flapdoodle.embed.mongo:4.33.0"
+----
+
+The embedded server runs the release line that `mongodbContainerVersion` names, `V8_0` for `8.0` for example, so a container-backed specification and a replica-set one run against the same MongoDB release. When flapdoodle does not run that line yet, the newest line it does run is used instead, and a line on standard error, starting `Embedded MongoDB:`, names both. It is written there rather than logged, so it appears in the test output whatever SLF4J binding the tests use. `org.apache.grails.testing.mongo.EmbeddedMongoVersions.lineFor(String)` answers which line a version maps to.

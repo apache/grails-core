@@ -30,7 +30,6 @@ import org.grails.datastore.mapping.model.DatastoreConfigurationException
 
 /** Utility class to build SQL order by clauses from HQL-style order by strings. */
 @CompileStatic
-@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class OrderByClauseBuilder {
 
     String buildOrderByClause(
@@ -71,11 +70,11 @@ class OrderByClauseBuilder {
                     throw new DatastoreConfigurationException(
                             "Error while parsing sort clause: ${hqlOrderBy} (${role})".toString())
                 }
-                currentEntry.direction = token.toLowerCase(Locale.ROOT)
+                currentEntry.@direction = token.toLowerCase(Locale.ROOT)
             }
             else {
                 if (currentEntry != null && currentEntry.direction == null) {
-                    currentEntry.direction = 'asc'
+                    currentEntry.@direction = 'asc'
                 }
                 currentEntry = new SortEntry(token)
                 entries.add(currentEntry)
@@ -83,7 +82,7 @@ class OrderByClauseBuilder {
         }
 
         if (currentEntry != null && currentEntry.direction == null) {
-            currentEntry.direction = defaultOrder
+            currentEntry.@direction = defaultOrder
         }
 
         return entries

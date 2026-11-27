@@ -160,6 +160,73 @@ class GroovydocEnhancerPluginSpec extends Specification {
         overridden.output.contains('finished with non-zero exit value')
     }
 
+    void 'groovydoc requires the JDK sources by default only in a reproducible build (SOURCE_DATE_EPOCH #epoch)'() {
+        given: 'a build script that reports the default'
+        writeGroovydocProject()
+        new File(projectDir, 'build.gradle') << '''
+            def required = groovydocEnhancer.requireJdkSources
+            tasks.register('reportRequireJdkSources') {
+                doLast { println "requireJdkSources=${required.get()}" }
+            }
+        '''
+        Map<String, String> environment = new HashMap<>(System.getenv())
+        environment.remove('SOURCE_DATE_EPOCH')
+        if (epoch == 'set') {
+            environment.put('SOURCE_DATE_EPOCH', '1767225600')
+        }
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withEnvironment(environment)
+                .withArguments('reportRequireJdkSources')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.output.contains("requireJdkSources=${required}")
+
+        where:
+        epoch     || required
+        'set'     || true
+        'not set' || false
+    }
+
+    void 'a reproducible build copies the Javadoc of the JDK methods a class inherits from the JDK sources'() {
+        given: 'a Java class that inherits the Javadoc of a JDK interface method'
+        writeGroovydocProject()
+        File source = new File(projectDir, 'src/main/java/com/example/Letters.java')
+        source.parentFile.mkdirs()
+        source.text = '''
+            package com.example;
+
+            /** A sequence of letters. */
+            public class Letters implements CharSequence {
+                /** {@inheritDoc} */
+                public int length() { return 0; }
+                public char charAt(int index) { return 'a'; }
+                public CharSequence subSequence(int start, int end) { return this; }
+            }
+        '''.stripIndent()
+        Map<String, String> environment = new HashMap<>(System.getenv())
+        environment.put('SOURCE_DATE_EPOCH', '1767225600')
+
+        when: 'groovydoc runs in a reproducible build on this JDK, which has its sources'
+        def result = GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withEnvironment(environment)
+                .withArguments('groovydoc')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':groovydoc').outcome == TaskOutcome.SUCCESS
+
+        and: 'the page carries the JDK Javadoc, which a JDK without lib/src.zip would leave out'
+        new File(projectDir, 'build/docs/groovydoc/com/example/Letters.html').text
+                .contains('Returns the length of this character sequence.')
+    }
+
     void 'Groovydoc tasks in different projects do not overlap in a parallel build'() {
         given: 'two documentation tasks competing for runner memory'
         new File(projectDir, 'settings.gradle').text = "include 'one', 'two'"

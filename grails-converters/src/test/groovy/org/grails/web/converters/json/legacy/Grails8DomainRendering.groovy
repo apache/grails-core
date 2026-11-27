@@ -77,6 +77,17 @@ class Grails8DomainRendering {
         ]
     }
 
+    /**
+     * Renders a proxy of a novel with the converter's includes for the value it is given, which Grails 8 ignored.
+     */
+    static String renderProxyIncluding(Map<String, Object> settings, List<String> includes) {
+        render(settings, [:]) {
+            def json = new JSON(new NovelProxy(target: novel(), proxyId: 1L))
+            json.setIncludes(includes)
+            json.toString()
+        }
+    }
+
     static Novel novel() {
         def author = new Author(name: 'Ursula')
         author.id = 7

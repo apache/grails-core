@@ -25,8 +25,6 @@ import java.lang.ref.SoftReference
 
 /**
  * SoftReference key to be used with ConcurrentHashMap.
- *
- * @author Lari Hotari
  */
 @CompileStatic
 class SoftKey<T> extends SoftReference<T> {

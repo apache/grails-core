@@ -1,10 +1,10 @@
-package com.example.pojo.auction;
+package com.example.pojo.auction
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
 @CompileStatic
 class Persistent {
 
-    Long id;
+    Long id
 
 }

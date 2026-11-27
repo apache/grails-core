@@ -25,6 +25,9 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.springframework.transaction.IllegalTransactionStateException
+import org.springframework.transaction.support.TransactionSynchronizationManager
+
 import grails.gorm.MultiTenant
 import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
@@ -37,7 +40,9 @@ import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.transactions.SessionHolder
 
 /**
  * Abstract base class for GORM API objects
@@ -144,8 +149,9 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
             return executeQualified(currentQualifier, callback)
         }
 
-        // DEFAULT qualifier path: check if a tenant is already bound
-        if (isMultiTenantCapable) {
+        // DEFAULT qualifier path: check if a tenant is already bound. Only a multi-tenant entity follows it: any other
+        // entity keeps its own datastore inside a tenant block, as it does outside one.
+        if (isMultiTenantCapable && isMultiTenantEntity) {
             Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
             if (tenantId != null) {
                 // If a tenant is already bound, use executeQualified to delegate to a potentially
@@ -162,6 +168,47 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         }
 
         return DatastoreUtils.execute(ds, callback)
+    }
+
+    /**
+     * Fails a write that a tenant's transaction would neither commit nor roll back. With a database or a schema per
+     * tenant, a class that is not multi-tenant is written to its own datastore inside a tenant block, and the
+     * tenant's transaction belongs to the tenant's datastore: a change left pending there would be lost, or written
+     * although the tenant's transaction rolled back. Such a write runs in a transaction of the class's own datastore,
+     * or is flushed at once.
+     *
+     * @param flush Whether the write is flushed at once
+     */
+    protected void requireTransactionForWrite(boolean flush) {
+        if (flush || MultiTenant.isAssignableFrom(persistentClass)) {
+            return
+        }
+        Datastore ds = getDatastore()
+        if (!(ds instanceof MultiTenantCapableDatastore)) {
+            return
+        }
+        MultiTenantCapableDatastore multiTenantDatastore = (MultiTenantCapableDatastore) ds
+        MultiTenancySettings.MultiTenancyMode mode = multiTenantDatastore.multiTenancyMode
+        if (mode != MultiTenancySettings.MultiTenancyMode.DATABASE && mode != MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+            return
+        }
+        Serializable tenantId = CurrentTenantHolder.get(multiTenantDatastore)
+        if (tenantId == null || isTransactionActive(ds)) {
+            return
+        }
+        Datastore tenantDatastore = multiTenantDatastore.getDatastoreForTenantId(tenantId)
+        if (tenantDatastore.is(ds) || !isTransactionActive(tenantDatastore)) {
+            return
+        }
+        throw new IllegalTransactionStateException("${persistentClass.name} is not multi-tenant, so inside a block of " +
+                "tenant [${tenantId}] it is written to its own datastore, outside the transaction of the tenant, which " +
+                'would neither commit nor roll back the write. Write it in a transaction of its own datastore, such as ' +
+                "${persistentClass.simpleName}.withTransaction { } or a method of its data service, or with flush: true.")
+    }
+
+    private static boolean isTransactionActive(Datastore datastore) {
+        Object holder = TransactionSynchronizationManager.getResource(datastore)
+        holder instanceof SessionHolder && ((SessionHolder) holder).transactionActive
     }
 
     /**

@@ -53,6 +53,7 @@ import grails.compiler.ast.GrailsArtefactClassInjector;
 import grails.compiler.ast.GrailsDomainClassInjector;
 import org.grails.core.artefact.DomainClassArtefactHandler;
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.reflect.AstUtils;
 import org.grails.io.support.GrailsResourceUtils;
 
 /**
@@ -237,7 +238,7 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
         final boolean hasVersion = GrailsASTUtils.hasOrInheritsProperty(classNode, GormProperties.VERSION);
 
         if (!hasVersion) {
-            ClassNode parent = GrailsASTUtils.getFurthestUnresolvedParent(classNode);
+            ClassNode parent = AstUtils.getFurthestUnresolvedDomainParent(classNode);
             parent.addProperty(GormProperties.VERSION, Modifier.PUBLIC, new ClassNode(Long.class), null, null, null);
         }
     }
@@ -246,8 +247,7 @@ public class DefaultGrailsDomainClassInjector implements GrailsDomainClassInject
         final boolean hasId = GrailsASTUtils.hasOrInheritsProperty(classNode, GormProperties.IDENTITY);
 
         if (!hasId) {
-            // inject into furthest relative
-            ClassNode parent = GrailsASTUtils.getFurthestUnresolvedParent(classNode);
+            ClassNode parent = AstUtils.getFurthestUnresolvedDomainParent(classNode);
 
             parent.addProperty(GormProperties.IDENTITY, Modifier.PUBLIC, new ClassNode(Long.class), null, null, null);
         }

@@ -30,13 +30,12 @@ To create and save a new instance to the database you should use the `save()` me
 ----
 new Book(title:"The Stand")
         .save()
-        .toBlocking()
-        .first()
+        .blockingFirst()
 ----
 
-The `save()` method returns an https://reactivex.io/RxJava/javadoc/rx/Observable.html[rx.Observable].
+The `save()` method returns an https://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/core/Observable.html[io.reactivex.rxjava3.core.Observable].
 
-Notice that in this example we are calling `toBlocking()`, this is purely for demonstration and testing purposes to ensure the operation completes immediately.
+Notice that in this example we are calling `blockingFirst()`, this is purely for demonstration and testing purposes to ensure the operation completes immediately.
 
 In a real world application you would typically subscribe to the observable in order to receive a result:
 
@@ -66,7 +65,7 @@ Book.get(id)
 
 ==== Update - Updating instances
 
-To update an instance after retrieving it you can use the https://reactivex.io/RxJava/javadoc/rx/Observable.html#switchMap-rx.functions.Func1-[Observable.switchMap] method:
+To update an instance after retrieving it you can use the https://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/core/Observable.html#switchMap-io.reactivex.rxjava3.functions.Function-[Observable.switchMap] method:
 
 [source,groovy]
 ----
@@ -93,7 +92,7 @@ Book.where { id == id }
 
 ==== Delete - Deleting instances
 
-To delete an instance after retreiving it you can use the https://reactivex.io/RxJava/javadoc/rx/Observable.html#switchMap-rx.functions.Func1-[Observable.switchMap] method:
+To delete an instance after retreiving it you can use the https://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/core/Observable.html#switchMap-io.reactivex.rxjava3.functions.Function-[Observable.switchMap] method:
 
 [source,groovy]
 ----

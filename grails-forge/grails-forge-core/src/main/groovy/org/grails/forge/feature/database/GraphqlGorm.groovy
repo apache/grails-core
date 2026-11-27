@@ -27,6 +27,7 @@ import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.feature.Category
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
+import org.grails.forge.util.VersionInfo
 
 /**
  * Adds the {@code grails-data-graphql} plugin to the generated application.
@@ -87,6 +88,12 @@ class GraphqlGorm implements Feature {
                 .groupId('org.apache.grails')
                 .artifactId('grails-data-graphql')
                 .implementation())
+    }
+
+    @Nullable
+    @Override
+    String getDocumentation() {
+        return 'https://grails.apache.org/docs/' + VersionInfo.getDocumentationVersion() + '/grails-data/graphql/manual/'
     }
 
     @Nullable

@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import groovy.transform.CompileStatic;
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.From;
-import jakarta.persistence.criteria.ParameterExpression;
-import jakarta.persistence.criteria.Path;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.From
+import jakarta.persistence.criteria.JoinType
+import jakarta.persistence.criteria.ParameterExpression
+import jakarta.persistence.criteria.Path
 
 /**
  * Orchestrator for JPA query translation state (Aliases, Joins, Expressions).
@@ -30,103 +31,138 @@ import jakarta.persistence.criteria.Path;
  *
  * @since 8.0
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
-class JpaQueryContext implements Cloneable {
+class JpaQueryContext implements Cloneable, QueryPathContext {
 
-    private final AliasRegistry aliasRegistry;
-    private final JoinTracker joinTracker;
-    private final ExpressionResolver resolver;
-    private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
-    private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
-    private JpaQueryContext parent;
+    private final AliasRegistry aliasRegistry
+    private final JoinTracker joinTracker
+    private final ExpressionResolver resolver
+    private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>()
+    private final Map<String, Expression<?>> selectionAliases = new HashMap<>()
+    private JpaQueryContext parent
 
     JpaQueryContext() {
-        this((JpaQueryContext) null, (List<HibernateAlias>) null, (From<?, ?>) null);
+        this((JpaQueryContext) null, (List<HibernateAlias>) null, (From<?, ?>) null)
     }
 
     JpaQueryContext(From<?, ?> root) {
-        this((JpaQueryContext) null, (List<HibernateAlias>) null, root);
+        this((JpaQueryContext) null, (List<HibernateAlias>) null, root)
     }
 
     JpaQueryContext(List<HibernateAlias> aliases, From<?, ?> root) {
-        this((JpaQueryContext) null, aliases, root);
+        this((JpaQueryContext) null, aliases, root)
     }
 
     JpaQueryContext(JpaQueryContext parent, From<?, ?> root) {
-        this(parent, (List<HibernateAlias>) null, root);
+        this(parent, (List<HibernateAlias>) null, root)
     }
 
     static JpaQueryContext forRoot(From<?, ?> root) {
-        return new JpaQueryContext((JpaQueryContext) null, (List<HibernateAlias>) null, root);
+        return new JpaQueryContext((JpaQueryContext) null, (List<HibernateAlias>) null, root)
     }
 
     static JpaQueryContext forRoot(List<HibernateAlias> aliases, From<?, ?> root) {
-        return new JpaQueryContext((JpaQueryContext) null, aliases, root);
+        return new JpaQueryContext((JpaQueryContext) null, aliases, root)
     }
 
     static JpaQueryContext forSubquery(JpaQueryContext parent, From<?, ?> root) {
-        return new JpaQueryContext(parent, (List<HibernateAlias>) null, root);
+        return new JpaQueryContext(parent, (List<HibernateAlias>) null, root)
     }
 
     static JpaQueryContext forSubquery(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
-        return new JpaQueryContext(parent, aliases, root);
+        return new JpaQueryContext(parent, aliases, root)
+    }
+
+    /**
+     * Creates the context of an association block, which shares the joins of the context that contains it.
+     *
+     * @param parent the context of the query or block that contains the block
+     * @param aliases the aliases the block declares, or {@code null}
+     * @param root the join of the block's association
+     * @param blockPath the association path of the block, relative to the container
+     */
+    static JpaQueryContext forBlock(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root,
+                                    String blockPath) {
+        return new JpaQueryContext(parent, aliases, root, blockPath)
     }
 
     /**
      * Internal constructor for subqueries and base initialization.
      */
     JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
-        this.parent = parent;
-        this.joinTracker = new JoinTracker(parent != null ? parent.joinTracker : null, root);
-        this.aliasRegistry = new AliasRegistry(parent != null ? parent.aliasRegistry : null);
-        this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
+        this(parent, aliases, root, (String) null)
+    }
+
+    private JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root, String blockPath) {
+        this.parent = parent
+        this.joinTracker = blockPath != null ? JoinTracker.forBlock(parent.joinTracker, root, blockPath) :
+                new JoinTracker(parent != null ? parent.joinTracker : null, root)
+        this.aliasRegistry = new AliasRegistry(parent != null ? parent.aliasRegistry : null)
+        this.resolver = new ExpressionResolver(aliasRegistry, joinTracker)
         if (aliases != null) {
             for (HibernateAlias alias : aliases) {
-                aliasRegistry.define(alias.alias(), alias);
+                aliasRegistry.define(alias.alias(), alias)
             }
         }
         if (root != null) {
-            this.joinTracker.addJoin("root", root);
+            this.joinTracker.addJoin('root', root)
         }
     }
 
     protected JoinTracker getJoinTracker() {
-        return joinTracker;
+        return joinTracker
     }
 
     protected AliasRegistry getAliasRegistry() {
-        return aliasRegistry;
+        return aliasRegistry
+    }
+
+    @PackageScope
+    void setJoinPlan(JoinPlan joinPlan) {
+        joinTracker.setPlan(joinPlan)
+    }
+
+    /**
+     * The join of an association path relative to this scope. It is the join every alias, block and property
+     * that goes through the path of the query shares, with the join type the criteria decided for the path.
+     */
+    @PackageScope
+    From<?, ?> resolveAssociation(String path) {
+        HibernateAlias definition = aliasRegistry.getDefinition(path)
+        JoinType planned = joinTracker.plannedType(path)
+        JoinType joinType = planned != null ? planned :
+                definition != null && !definition.explicit() ? definition.joinType() : JoinType.INNER
+        return resolver.resolveAssociation(path, joinType)
     }
 
     void setRoot(From<?, ?> root) {
-        this.joinTracker.setRoot(root);
-        this.joinTracker.addJoin("root", root);
+        this.joinTracker.setRoot(root)
+        this.joinTracker.addJoin('root', root)
     }
 
     void setParent(JpaQueryContext parent) {
-        this.parent = parent;
+        this.parent = parent
     }
 
+    @Override
     From<?, ?> getRoot() {
-        return joinTracker.root;
+        return joinTracker.root
     }
 
     void addFrom(String path, From<?, ?> from) {
-        joinTracker.addJoin(path, from);
+        joinTracker.addJoin(path, from)
     }
 
     From<?, ?> getFrom(String path) {
-        return joinTracker.getJoin(path);
+        return joinTracker.getJoin(path)
     }
 
     void registerAlias(String alias, Expression<?> expression) {
-        aliasRegistry.realize(alias, expression);
+        aliasRegistry.realize(alias, expression)
     }
 
     void registerAlias(String alias, HibernateAlias definition) {
-        aliasRegistry.define(alias, definition);
+        aliasRegistry.define(alias, definition)
     }
 
     /**
@@ -138,63 +174,67 @@ class JpaQueryContext implements Cloneable {
      * @param selection the selection
      */
     void registerSelectionAlias(String alias, Expression<?> selection) {
-        selectionAliases.put(alias, selection);
+        selectionAliases.put(alias, selection)
     }
 
     /**
-     * Returns the selection recorded under an alias by {@link #registerSelectionAlias(String, Expression)}.
+     * Returns the selection recorded under an alias by {@link #registerSelectionAlias(String, Expression)}. Unlike
+     * {@link #getFullyQualifiedExpression(String)}, which resolves a property first, this asks for the alias alone.
      *
      * @param alias the alias of the selection
      * @return the selection, or {@code null} if no selection of this query has the alias
      */
+    @Override
     Expression<?> getSelectionAlias(String alias) {
-        return selectionAliases.get(alias);
+        return selectionAliases.get(alias)
     }
 
     void registerAliasFromPath(String path) {
         if (path != null && path.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            String alias = path.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[0];
+            String alias = path.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[0]
             if (!aliasRegistry.isDefined(alias) && !aliasRegistry.hasRealized(alias)) {
-                aliasRegistry.define(alias, null); // Mark as known
+                aliasRegistry.define(alias, null) // Mark as known
             }
         }
     }
 
     boolean hasAlias(String alias) {
-        return aliasRegistry.isDefined(alias) || aliasRegistry.hasRealized(alias) || (parent != null && parent.hasAlias(alias));
+        return aliasRegistry.isDefined(alias) || aliasRegistry.hasRealized(alias) || (parent != null && parent.hasAlias(alias))
     }
 
     Expression<?> getAliasedExpression(String alias) {
-        Expression<?> expr = aliasRegistry.getRealized(alias);
+        Expression<?> expr = aliasRegistry.getRealized(alias)
         if (expr == null && parent != null) {
-            return parent.getAliasedExpression(alias);
+            return parent.getAliasedExpression(alias)
         }
-        return expr;
+        return expr
     }
 
+    @Override
     Expression<?> getFullyQualifiedExpression(String path) {
         if (parent != null) {
             if ('{alias}' == path) {
-                return parent.root;
+                return parent.root
             }
-            if (path != null && path.startsWith("{alias}.")) {
-                return parent.getFullyQualifiedExpression("root.${path.substring(8)}".toString());
+            if (path != null && path.startsWith('{alias}.')) {
+                return parent.getFullyQualifiedExpression("root.${path.substring(8)}".toString())
             }
         }
-        return resolver.resolve(path);
+        return resolver.resolve(path)
     }
 
+    @Override
     Path<?> getFullyQualifiedPath(String path) {
         if (parent != null) {
             if ('{alias}' == path) {
-                return parent.root;
+                return parent.root
             }
-            if (path != null && path.startsWith("{alias}.")) {
-                return parent.getFullyQualifiedPath("root.${path.substring(8)}".toString());
+            if (path != null && path.startsWith('{alias}.')) {
+                return parent.getFullyQualifiedPath("root.${path.substring(8)}".toString())
             }
         }
-        Expression<?> resolved = resolver.resolve(path);
-        return (resolved instanceof Path) ? (Path) resolved : null;
+        Expression<?> resolved = resolver.resolve(path)
+        return (resolved instanceof Path) ? (Path) resolved : null
     }
 
     /**
@@ -206,9 +246,9 @@ class JpaQueryContext implements Cloneable {
      */
     void bindParameter(ParameterExpression<?> parameter, Object value) {
         if (parent != null) {
-            parent.bindParameter(parameter, value);
+            parent.bindParameter(parameter, value)
         } else {
-            parameterValues.put(parameter, value);
+            parameterValues.put(parameter, value)
         }
     }
 
@@ -218,15 +258,15 @@ class JpaQueryContext implements Cloneable {
      * @return the value of each parameter
      */
     Map<ParameterExpression<?>, Object> getParameterValues() {
-        return parent != null ? parent.getParameterValues() : Collections.unmodifiableMap(parameterValues);
+        return parent != null ? parent.getParameterValues() : Collections.unmodifiableMap(parameterValues)
     }
 
     @Override
     JpaQueryContext clone() {
         try {
-            return (JpaQueryContext) super.clone();
+            return (JpaQueryContext) super.clone()
         } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
+            throw new AssertionError()
         }
     }
 

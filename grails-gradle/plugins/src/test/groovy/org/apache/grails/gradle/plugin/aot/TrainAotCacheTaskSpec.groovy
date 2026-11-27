@@ -18,6 +18,8 @@
  */
 package org.apache.grails.gradle.plugin.aot
 
+import java.time.Duration
+
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.testfixtures.ProjectBuilder
@@ -62,7 +64,7 @@ class TrainAotCacheTaskSpec extends Specification {
      * {@code -XX:AOTCacheOutput}, which a JDK before 25 refuses outright, and a test of this task
      * should not also be a test of which JDK the build is running on.</p>
      */
-    private TrainAotCacheTask servingTask(List<String> paths, boolean announcesItself = true) {
+    private TrainAotCacheTask servingTask(List<String> paths, boolean announcesItself = true, String behaviour = 'ok') {
         File application = new File(temporaryFolder, 'serving')
         application.mkdirs()
         new File(application, 'served.jar').text = 'stands in for the archive, and is what is digested'
@@ -81,7 +83,7 @@ for arg in "\$@"; do
 done
 exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
   -cp '${System.getProperty('java.class.path')}' \\
-  ${TrainingRunFixture.name} "\$cache" "\$port" '${requestedFile.absolutePath}' ${announcesItself ? 'loud' : 'quiet'}
+  ${TrainingRunFixture.name} "\$cache" "\$port" '${requestedFile.absolutePath}' ${announcesItself ? 'loud' : 'quiet'} ${behaviour}
 """
         script.setExecutable(true)
 
@@ -307,6 +309,46 @@ exit 1
 
         and: 'the paths that are URIs were still asked for'
             requested == ['/']
+    }
+
+    void 'a path is not asked for while the run still answers that it is not ready'() {
+        given: 'the Spring Security plugin answers every request with 503 and Retry-After until the application has started'
+            TrainAotCacheTask task = servingTask(['/'], true, 'gated')
+
+        when:
+            task.train()
+
+        then: 'where it would otherwise train on the refusal'
+            noExceptionThrown()
+            requested == ['/']
+    }
+
+    void 'a run whose home page answers 503 of its own accord is exercised without waiting'() {
+        given: 'a 503 without Retry-After, which does not say it will change'
+            TrainAotCacheTask task = servingTask(['/page'], true, 'homePageDown')
+            task.startTimeoutSeconds.set(60)
+            long began = System.nanoTime()
+
+        when:
+            task.train()
+
+        then: 'rather than after sitting out the whole of the start timeout'
+            noExceptionThrown()
+            requested == ['/page']
+            Duration.ofNanos(System.nanoTime() - began) < Duration.ofSeconds(30)
+    }
+
+    void 'a run whose home page always says to come back is still exercised once the timeout has passed'() {
+        given: 'waited for no longer than the timeout'
+            TrainAotCacheTask task = servingTask(['/page'], true, 'homePageRetrying')
+            task.startTimeoutSeconds.set(5)
+
+        when:
+            task.train()
+
+        then:
+            noExceptionThrown()
+            requested == ['/page']
     }
 
     void 'a run that says nothing is found by its port'() {

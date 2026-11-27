@@ -297,7 +297,7 @@ class GroovyPagePlugin implements Plugin<Project> {
                         packagedTagLibIndex,
                         packagedSettings,
                         project.configurations.findByName('providedCompile') ?: null
-                ].findAll { it }
+                ].findAll { it != null }
         )
 
         // Carried into the artifact and onto the runtime classpath directly rather than through

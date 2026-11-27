@@ -16,76 +16,73 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import groovy.transform.CompileStatic;
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.boot.spi.InFlightMetadataCollector
 
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.orm.hibernate.cfg.JoinTable;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Basic
+import org.grails.orm.hibernate.cfg.JoinTable
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE
 
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['PMD.DataflowAnomalyAnalysis', 'UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class TableForManyCalculator {
 
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final InFlightMetadataCollector mappings;
-    private final BackticksRemover backticksRemover;
+    private final PersistentEntityNamingStrategy namingStrategy
+    private final InFlightMetadataCollector mappings
+    private final BackticksRemover backticksRemover
 
     TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy, InFlightMetadataCollector mappings) {
-        this.namingStrategy = namingStrategy;
-        this.mappings = mappings;
-        this.backticksRemover = new BackticksRemover();
+        this.namingStrategy = namingStrategy
+        this.mappings = mappings
+        this.backticksRemover = new BackticksRemover()
     }
 
     protected TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy, InFlightMetadataCollector mappings, BackticksRemover backticksRemover) {
-        this.namingStrategy = namingStrategy;
-        this.mappings = mappings;
-        this.backticksRemover = backticksRemover;
+        this.namingStrategy = namingStrategy
+        this.mappings = mappings
+        this.backticksRemover = backticksRemover
     }
 
     String getTableName(HibernateToManyProperty property) {
-        PropertyConfig config = property.getHibernateMappedForm();
-        JoinTable joinTable = config.getJoinTable();
+        PropertyConfig config = property.getHibernateMappedForm()
+        JoinTable joinTable = config.getJoinTable()
 
-        String logicalName = calculateTableForMany(property);
+        String logicalName = calculateTableForMany(property)
         return (joinTable != null && joinTable.getName() != null) ?
-                joinTable.getName() : namingStrategy.resolveTableName(logicalName);
+                joinTable.getName() : namingStrategy.resolveTableName(logicalName)
     }
 
     String getJoinTableSchema(HibernateToManyProperty property) {
-        PropertyConfig config = property.getHibernateMappedForm();
-        JoinTable joinTable = config.getJoinTable();
+        PropertyConfig config = property.getHibernateMappedForm()
+        JoinTable joinTable = config.getJoinTable()
 
         if (joinTable != null && joinTable.getSchema() != null) {
-            return joinTable.getSchema();
+            return joinTable.getSchema()
         }
-        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
+        String schemaName = NamespaceNameExtractor.getSchemaName(mappings)
         // Ask the owning entity directly: property.getTable() may already return the
         // (partially built) collection table for a basic collection element at this point.
-        return (schemaName == null) ? property.getPersistentClass().getTable().getSchema() : schemaName;
+        return (schemaName == null) ? property.getPersistentClass().getTable().getSchema() : schemaName
     }
 
     String getJoinTableCatalog(HibernateToManyProperty property) {
-        PropertyConfig config = property.getHibernateMappedForm();
-        JoinTable joinTable = config.getJoinTable();
+        PropertyConfig config = property.getHibernateMappedForm()
+        JoinTable joinTable = config.getJoinTable()
 
         if (joinTable != null && joinTable.getCatalog() != null) {
-            return joinTable.getCatalog();
+            return joinTable.getCatalog()
         }
-        return NamespaceNameExtractor.getCatalogName(mappings);
+        return NamespaceNameExtractor.getCatalogName(mappings)
     }
 
     /**
@@ -94,64 +91,64 @@ class TableForManyCalculator {
      * and right_left
      */
     String calculateTableForMany(HibernatePersistentProperty property) {
-        String propertyColumnName = namingStrategy.resolveColumnName(property.getName());
-        PropertyConfig config = property.getMappedForm();
-        JoinTable jt = config.getJoinTable();
-        boolean hasJoinTableMapping = jt != null && jt.getName() != null;
-        GrailsHibernatePersistentEntity domainClass1 = property.getHibernateOwner();
-        String left = domainClass1.getTableName(namingStrategy);
+        String propertyColumnName = namingStrategy.resolveColumnName(property.getName())
+        PropertyConfig config = property.getMappedForm()
+        JoinTable jt = config.getJoinTable()
+        boolean hasJoinTableMapping = jt != null && jt.getName() != null
+        GrailsHibernatePersistentEntity domainClass1 = property.getHibernateOwner()
+        String left = domainClass1.getTableName(namingStrategy)
 
         if (Map.isAssignableFrom(property.getType())) {
             if (hasJoinTableMapping) {
-                return jt.getName();
+                return jt.getName()
             }
-            return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(propertyColumnName);
+            return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(propertyColumnName)
         } else if (property instanceof Basic) {
             if (hasJoinTableMapping) {
-                return jt.getName();
+                return jt.getName()
             }
-            return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(propertyColumnName);
+            return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(propertyColumnName)
         }
 
         // Only proceed with association logic if it's an actual Association and has an associated
         // entity
         if (!(property instanceof Association<?>)) {
-            throw new MappingException("Property [" + property.getName() +
-                    "] is not an association and is not a basic type for table calculation.");
+            throw new MappingException('Property [' + property.getName() +
+                    '] is not an association and is not a basic type for table calculation.')
         }
-        Association<?> association = (Association<?>) property;
+        Association<?> association = (Association<?>) property
 
         GrailsHibernatePersistentEntity domainClass =
-                (GrailsHibernatePersistentEntity) association.getAssociatedEntity();
+                (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
         if (domainClass == null) {
             throw new MappingException(
-                    "Expected an entity to be associated with the association (" + property + ") and none was found. ");
+                    'Expected an entity to be associated with the association (' + property + ') and none was found. ')
         }
-        String right = domainClass.getTableName(namingStrategy);
+        String right = domainClass.getTableName(namingStrategy)
 
         if (property instanceof HibernateManyToManyProperty) {
-            HibernateManyToManyProperty property1 = (HibernateManyToManyProperty) property;
+            HibernateManyToManyProperty property1 = (HibernateManyToManyProperty) property
             if (hasJoinTableMapping) {
-                return jt.getName();
+                return jt.getName()
             }
             if (association.isOwningSide()) {
-                return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(propertyColumnName);
+                return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(propertyColumnName)
             }
-            String s2 = namingStrategy.resolveColumnName(property1.getInversePropertyName());
-            return backticksRemover.apply(right) + UNDERSCORE.toString() + backticksRemover.apply(s2);
+            String s2 = namingStrategy.resolveColumnName(property1.getInversePropertyName())
+            return backticksRemover.apply(right) + UNDERSCORE.toString() + backticksRemover.apply(s2)
         }
 
         if (property.supportsJoinColumnMapping()) {
             if (hasJoinTableMapping) {
-                return jt.getName();
+                return jt.getName()
             }
-            return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(right);
+            return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(right)
         }
 
         if (association.isOwningSide()) {
-            return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(right);
+            return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(right)
         }
-        return backticksRemover.apply(right) + UNDERSCORE.toString() + backticksRemover.apply(left);
+        return backticksRemover.apply(right) + UNDERSCORE.toString() + backticksRemover.apply(left)
     }
 
 }

@@ -33,7 +33,7 @@ If no asynchronous framework is present on the classpath then Grails creates an 
 
 When `grails.async.promiseFactory=virtual-thread` selects the opt-in factory, the event bus instead shares that factory's decorated virtual-thread executor and remains asynchronous.
 
-If you wish to use a popular async framework such as RxJava as the `EventBus` implementation then you will need to add the appropriate dependency. For example for RxJava 1.x:
+If you wish to use a popular async framework such as RxJava as the `EventBus` implementation then you will need to add the appropriate dependency. For example, for RxJava 3:
 
 [source,groovy,subs="attributes"]
 .build.gradle
@@ -55,11 +55,11 @@ The following table summarizes async framework support and the necessary depende
 |`grails-events-gpars`
 |`org.grails.events.gpars.ActorEventBus`
 
-|RxJava 1.2.x
+|RxJava 1.x (deprecated)
 |`grails-events-rxjava`
 |`org.grails.events.rxjava.RxEventBus`
 
-|RxJava 2.x
+|RxJava 2.x (deprecated)
 |`grails-events-rxjava2`
 |`org.grails.events.rxjava2.RxEventBus`
 
@@ -70,3 +70,5 @@ The following table summarizes async framework support and the necessary depende
 |===
 
 The GPars event bus is deprecated and will be removed in a future release; Groovy 6 provides actors in `groovy.concurrent`, which the `grails-events-groovy-concurrent` bus uses. Replace the dependency rather than adding both, because the event bus builder refuses to start when more than one `EventBus` implementation is on the classpath.
+
+The RxJava 1 and RxJava 2 event buses are deprecated and will be removed in a future release, because neither RxJava version is maintained any more. They log a warning when they are created. Replace either dependency with `grails-events-rxjava3`; the `EventBus` API an application uses is the same.

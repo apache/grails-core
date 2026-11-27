@@ -1,52 +1,49 @@
-@SuppressWarnings('UnnecessarySemicolon')
-package liquibase.ext.hibernate.database;
+package liquibase.ext.hibernate.database
 
-import java.lang.reflect.Field;
+import java.lang.reflect.Field
 
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.PersistenceUnitTransactionType;
-import jakarta.persistence.metamodel.ManagedType;
-import jakarta.persistence.metamodel.Metamodel;
+import jakarta.persistence.EntityManagerFactory
+import jakarta.persistence.PersistenceUnitTransactionType
+import jakarta.persistence.metamodel.ManagedType
+import jakarta.persistence.metamodel.Metamodel
 
-import groovy.transform.CompileStatic;
-import groovy.transform.stc.POJO;
-import liquibase.Scope;
-import liquibase.database.DatabaseConnection;
-import liquibase.exception.DatabaseException;
-import org.hibernate.boot.Metadata;
-import org.hibernate.boot.MetadataSources;
-import org.hibernate.cfg.AvailableSettings;
-import org.hibernate.dialect.Dialect;
-import org.hibernate.jpa.HibernatePersistenceProvider;
-import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl;
-import org.hibernate.jpa.boot.spi.EntityManagerFactoryBuilder;
-import org.hibernate.jpa.boot.spi.PersistenceUnitDescriptor;
+import groovy.transform.CompileStatic
+import groovy.transform.stc.POJO
+import liquibase.Scope
+import liquibase.database.DatabaseConnection
+import liquibase.exception.DatabaseException
+import org.hibernate.boot.Metadata
+import org.hibernate.boot.MetadataSources
+import org.hibernate.cfg.AvailableSettings
+import org.hibernate.dialect.Dialect
+import org.hibernate.jpa.HibernatePersistenceProvider
+import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl
+import org.hibernate.jpa.boot.spi.EntityManagerFactoryBuilder
+import org.hibernate.jpa.boot.spi.PersistenceUnitDescriptor
 
 /**
  * Database implementation for "ejb3" hibernate configurations.
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 @POJO // see HibernateDatabase
 class HibernateEjb3Database extends HibernateDatabase {
 
-    protected EntityManagerFactory entityManagerFactory;
+    protected EntityManagerFactory entityManagerFactory
 
     @Override
     String getShortName() {
-        return "hibernateEjb3";
+        return 'hibernateEjb3'
     }
 
     @Override
     protected String getDefaultDatabaseProductName() {
-        return "Hibernate EJB3";
+        return 'Hibernate EJB3'
     }
 
     @Override
     boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
-        String url = conn.getURL();
-        return url != null && url.startsWith('hibernate:ejb3:');
+        String url = conn.getURL()
+        return url != null && url.startsWith('hibernate:ejb3:')
     }
 
     /**
@@ -54,70 +51,70 @@ class HibernateEjb3Database extends HibernateDatabase {
      */
     @Override
     protected Metadata buildMetadataFromPath() throws DatabaseException {
-        EntityManagerFactoryBuilderImpl builder = createEntityManagerFactoryBuilder();
-        this.entityManagerFactory = builder.build();
-        Metadata metadata = builder.getMetadata();
+        EntityManagerFactoryBuilderImpl builder = createEntityManagerFactoryBuilder()
+        this.entityManagerFactory = builder.build()
+        Metadata metadata = builder.getMetadata()
 
         // this.@dialect: direct access to the inherited protected field. A bare assignment would compile
         // to a dynamic property set, which a @POJO class cannot service.
-        String dialectString = findDialectName();
+        String dialectString = findDialectName()
         if (dialectString != null) {
             try {
                 this.@dialect = (Dialect) Class.forName(dialectString)
                         .getDeclaredConstructor()
-                        .newInstance();
-                Scope.getCurrentScope().getLog(getClass()).info("Using dialect " + dialectString);
+                        .newInstance()
+                Scope.getCurrentScope().getLog(getClass()).info('Using dialect ' + dialectString)
             } catch (Exception e) {
-                throw new DatabaseException(e);
+                throw new DatabaseException(e)
             }
         } else {
             Scope.getCurrentScope()
                     .getLog(getClass())
-                    .info("Could not determine hibernate dialect, using HibernateGenericDialect");
-            this.@dialect = new HibernateGenericDialect();
+                    .info('Could not determine hibernate dialect, using HibernateGenericDialect')
+            this.@dialect = new HibernateGenericDialect()
         }
 
-        return metadata;
+        return metadata
     }
 
     protected EntityManagerFactoryBuilderImpl createEntityManagerFactoryBuilder() {
-        MyHibernatePersistenceProvider persistenceProvider = new MyHibernatePersistenceProvider();
+        MyHibernatePersistenceProvider persistenceProvider = new MyHibernatePersistenceProvider()
 
-        Map<String, Object> properties = new HashMap<>();
-        properties.put(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString());
-        properties.put(AvailableSettings.USE_SECOND_LEVEL_CACHE, Boolean.FALSE.toString());
+        Map<String, Object> properties = new HashMap<>()
+        properties.put(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString())
+        properties.put(AvailableSettings.USE_SECOND_LEVEL_CACHE, Boolean.FALSE.toString())
         properties.put(
                 AvailableSettings.USE_NATIONALIZED_CHARACTER_DATA,
-                getProperty(AvailableSettings.USE_NATIONALIZED_CHARACTER_DATA));
+                getProperty(AvailableSettings.USE_NATIONALIZED_CHARACTER_DATA))
 
-        String path = getHibernateConnection().getPath();
+        String path = getHibernateConnection().getPath()
         if (path == null) {
-            throw new IllegalStateException('Hibernate connection path is null');
+            throw new IllegalStateException('Hibernate connection path is null')
         }
 
         return (EntityManagerFactoryBuilderImpl) persistenceProvider.getEntityManagerFactoryBuilderOrNull(
-                path, properties, null);
+                path, properties, null)
     }
 
     @Override
     String getProperty(String name) {
         if (entityManagerFactory != null) {
-            String value = (String) entityManagerFactory.getProperties().get(name);
+            String value = (String) entityManagerFactory.getProperties().get(name)
             if (value != null) {
-                return value;
+                return value
             }
         }
-        return super.getProperty(name);
+        return super.getProperty(name)
     }
 
     @Override
     protected String findDialectName() {
-        String dialectName = super.findDialectName();
+        String dialectName = super.findDialectName()
         if (dialectName != null) {
-            return dialectName;
+            return dialectName
         }
         return entityManagerFactory != null ?
-                (String) entityManagerFactory.getProperties().get(AvailableSettings.DIALECT) : null;
+                (String) entityManagerFactory.getProperties().get(AvailableSettings.DIALECT) : null
     }
 
     /**
@@ -125,18 +122,18 @@ class HibernateEjb3Database extends HibernateDatabase {
      */
     @Override
     protected void configureSources(MetadataSources sources) {
-        Metamodel metamodel = entityManagerFactory != null ? entityManagerFactory.getMetamodel() : null;
+        Metamodel metamodel = entityManagerFactory != null ? entityManagerFactory.getMetamodel() : null
         if (metamodel != null) {
             for (ManagedType<?> managedType : metamodel.getManagedTypes()) {
-                Class<?> javaType = managedType.getJavaType();
+                Class<?> javaType = managedType.getJavaType()
                 if (javaType != null) {
-                    sources.addAnnotatedClass(javaType);
+                    sources.addAnnotatedClass(javaType)
                 }
             }
         }
 
         for (Package pkg : Package.getPackages()) {
-            sources.addPackage(pkg);
+            sources.addPackage(pkg)
         }
     }
 
@@ -144,11 +141,11 @@ class HibernateEjb3Database extends HibernateDatabase {
 
         private void setField(final Object obj, String fieldName, final Object value)
                 throws NoSuchFieldException, IllegalAccessException {
-            final Field declaredField = obj.getClass().getDeclaredField(fieldName);
+            final Field declaredField = obj.getClass().getDeclaredField(fieldName)
             if (declaredField.trySetAccessible()) {
-                declaredField.set(obj, value);
+                declaredField.set(obj, value)
             } else {
-                throw new IllegalAccessException("Cannot access field: " + fieldName);
+                throw new IllegalAccessException('Cannot access field: ' + fieldName)
             }
         }
 
@@ -158,19 +155,19 @@ class HibernateEjb3Database extends HibernateDatabase {
         @SuppressWarnings('UnnecessaryOverridingMethod')
         protected EntityManagerFactoryBuilder getEntityManagerFactoryBuilderOrNull(
                 String persistenceUnitName, Map properties, ClassLoader providedClassLoader) {
-            return super.getEntityManagerFactoryBuilderOrNull(persistenceUnitName, properties, providedClassLoader);
+            return super.getEntityManagerFactoryBuilderOrNull(persistenceUnitName, properties, providedClassLoader)
         }
 
         @Override
         protected EntityManagerFactoryBuilder getEntityManagerFactoryBuilder(
                 PersistenceUnitDescriptor persistenceUnitDescriptor, Map integration, ClassLoader providedClassLoader) {
             try {
-                setField(persistenceUnitDescriptor, "jtaDataSource", null);
-                setField(persistenceUnitDescriptor, "transactionType", PersistenceUnitTransactionType.RESOURCE_LOCAL);
+                setField(persistenceUnitDescriptor, 'jtaDataSource', null)
+                setField(persistenceUnitDescriptor, 'transactionType', PersistenceUnitTransactionType.RESOURCE_LOCAL)
             } catch (Exception ex) {
-                Scope.getCurrentScope().getLog(getClass()).severe(null, ex);
+                Scope.getCurrentScope().getLog(getClass()).severe(null, ex)
             }
-            return super.getEntityManagerFactoryBuilder(persistenceUnitDescriptor, integration, providedClassLoader);
+            return super.getEntityManagerFactoryBuilder(persistenceUnitDescriptor, integration, providedClassLoader)
         }
 
     }

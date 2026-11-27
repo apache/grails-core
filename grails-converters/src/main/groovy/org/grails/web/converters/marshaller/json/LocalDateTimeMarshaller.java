@@ -30,7 +30,7 @@ import org.grails.web.json.JSONException;
  * JSON ObjectMarshaller which converts a LocalDateTime to ISO-8601 format (without timezone).
  *
  * @since 7.0
- * @deprecated with {@code grails.converters.json.legacy} set to {@code false}, as a later release does by default,
+ * @deprecated with {@code grails.converters.json.legacy} set to {@code false}, as Grails 10 does by default,
  *     the converter writes {@code LocalDateTime} values with the application's {@code JsonMapper}; this marshaller is registered while
  *     it is {@code true}, the default in Grails 9, to render JSON as Grails 8 did.
  */

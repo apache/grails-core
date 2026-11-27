@@ -16,37 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import groovy.transform.CompileStatic;
-import jakarta.annotation.Nonnull;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.RootClass;
-import org.hibernate.mapping.Table;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Table
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.grails.orm.hibernate.cfg.CacheConfig;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.CacheConfig
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class RootPersistentClassCommonValuesBinder {
 
-    public static final Logger LOG = LoggerFactory.getLogger(RootPersistentClassCommonValuesBinder);
+    public static final Logger LOG = LoggerFactory.getLogger(RootPersistentClassCommonValuesBinder)
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final IdentityBinder identityBinder;
-    private final VersionBinder versionBinder;
-    private final ClassBinder classBinder;
-    private final ClassPropertiesBinder classPropertiesBinder;
-    private final InFlightMetadataCollector mappings;
+    private final MetadataBuildingContext metadataBuildingContext
+    private final PersistentEntityNamingStrategy namingStrategy
+    private final IdentityBinder identityBinder
+    private final VersionBinder versionBinder
+    private final ClassBinder classBinder
+    private final ClassPropertiesBinder classPropertiesBinder
+    private final InFlightMetadataCollector mappings
 
     RootPersistentClassCommonValuesBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -56,38 +53,38 @@ class RootPersistentClassCommonValuesBinder {
             ClassBinder classBinder,
             ClassPropertiesBinder classPropertiesBinder,
             InFlightMetadataCollector mappings) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.namingStrategy = namingStrategy;
-        this.identityBinder = identityBinder;
-        this.versionBinder = versionBinder;
-        this.classBinder = classBinder;
-        this.classPropertiesBinder = classPropertiesBinder;
-        this.mappings = mappings;
+        this.metadataBuildingContext = metadataBuildingContext
+        this.namingStrategy = namingStrategy
+        this.identityBinder = identityBinder
+        this.versionBinder = versionBinder
+        this.classBinder = classBinder
+        this.classPropertiesBinder = classPropertiesBinder
+        this.mappings = mappings
     }
 
     RootClass bindRoot(@Nonnull HibernatePersistentEntity hibernatePersistentEntity) {
 
-        RootClass root = new RootClass(this.metadataBuildingContext);
-        classBinder.bindClass(hibernatePersistentEntity, root);
+        RootClass root = new RootClass(this.metadataBuildingContext)
+        classBinder.bindClass(hibernatePersistentEntity, root)
 
         // get the schema and catalog names from the configuration
-        Mapping gormMapping = hibernatePersistentEntity.getHibernateMappedForm();
+        Mapping gormMapping = hibernatePersistentEntity.getHibernateMappedForm()
 
-        hibernatePersistentEntity.configureDerivedProperties();
-        CacheConfig cc = gormMapping.getCache();
+        hibernatePersistentEntity.configureDerivedProperties()
+        CacheConfig cc = gormMapping.getCache()
         if (cc != null && cc.getEnabled()) {
-            root.setCacheConcurrencyStrategy(cc.getUsage().toString());
-            root.setCached(true);
-            if ("read-only".equalsIgnoreCase(cc.getUsage().toString())) {
-                root.setMutable(false);
+            root.setCacheConcurrencyStrategy(cc.getUsage().toString())
+            root.setCached(true)
+            if ('read-only'.equalsIgnoreCase(cc.getUsage().toString())) {
+                root.setMutable(false)
             }
             root.setLazyPropertiesCacheable(
-                    !"non-lazy".equalsIgnoreCase(cc.getInclude().toString()));
+                    !'non-lazy'.equalsIgnoreCase(cc.getInclude().toString()))
         }
 
-        String schema = hibernatePersistentEntity.getSchema(mappings);
+        String schema = hibernatePersistentEntity.getSchema(mappings)
 
-        String catalog = hibernatePersistentEntity.getCatalog(mappings);
+        String catalog = hibernatePersistentEntity.getCatalog(mappings)
 
         // create the table
         Table table = mappings.addTable(
@@ -97,17 +94,17 @@ class RootPersistentClassCommonValuesBinder {
                 null,
                 hibernatePersistentEntity.isTableAbstract(),
                 metadataBuildingContext,
-                false);
-        root.setTable(table);
+                false)
+        root.setTable(table)
         if (LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: {} -> {}", hibernatePersistentEntity.getName(), root.getTable().getName());
+            LOG.debug('[GrailsDomainBinder] Mapping Grails domain class: {} -> {}', hibernatePersistentEntity.getName(), root.getTable().getName())
         }
 
-        identityBinder.bindIdentity(hibernatePersistentEntity);
-        versionBinder.bindVersion(hibernatePersistentEntity.getVersion(), root);
-        root.createPrimaryKey();
-        classPropertiesBinder.bindClassProperties(hibernatePersistentEntity);
+        identityBinder.bindIdentity(hibernatePersistentEntity)
+        versionBinder.bindVersion(hibernatePersistentEntity.getVersion(), root)
+        root.createPrimaryKey()
+        classPropertiesBinder.bindClassProperties(hibernatePersistentEntity)
 
-        return root;
+        return root
     }
 }

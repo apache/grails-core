@@ -47,7 +47,6 @@ import java.lang.annotation.Annotation
 /**
  * Utility methods for configuring Hibernate inside Grails.
  *
- * @author Graeme Rocher
  * @since 0.4
  */
 @CompileStatic
@@ -108,7 +107,6 @@ class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param target The target object
      * @param sessionFactory The SessionFactory instance
      */
-    @SuppressWarnings('PMD.CloseResource')
     static void setObjectToReadyOnly(Object target, SessionFactory sessionFactory) {
         Object resource = TransactionSynchronizationManager.getResource(sessionFactory)
         if (resource != null) {
@@ -136,7 +134,6 @@ class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param target The target object
      * @param sessionFactory The SessionFactory instance
      */
-    @SuppressWarnings(['PMD.CloseResource', 'PMD.DataflowAnomalyAnalysis'])
     static void setObjectToReadWrite(final Object target, SessionFactory sessionFactory) {
         Session session = sessionFactory.currentSession
         if (!canModifyReadWriteState(session, target)) {

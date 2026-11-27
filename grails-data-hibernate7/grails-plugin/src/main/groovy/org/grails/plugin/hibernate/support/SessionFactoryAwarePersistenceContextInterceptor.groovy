@@ -26,7 +26,6 @@ import grails.persistence.support.PersistenceContextInterceptor
 /**
  * Interface for {@link grails.persistence.support.PersistenceContextInterceptor} instances that are aware of the {@link org.hibernate.SessionFactory}
  *
- * @author Graeme Rocher
  * @since 2.0.7
  */
 @CompileStatic

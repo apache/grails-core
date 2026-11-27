@@ -26,13 +26,20 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
 
 import groovy.transform.InheritConstructors
 import spock.lang.Specification
 
+import org.springframework.beans.factory.NoSuchBeanDefinitionException
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.BeanDefinitionCustomizer
+import org.springframework.context.support.GenericApplicationContext
+
 import grails.gorm.annotation.CreatedBy
 import grails.gorm.annotation.LastModifiedBy
 import org.grails.datastore.gorm.events.AutoTimestampEventListener
+import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.EntityAccess
@@ -633,6 +640,132 @@ class AutoTimestampEventListenerSpec extends Specification {
         updated == [lastModifiedBy: 'testUser']
     }
 
+    void "a listener that is not given an auditor looks it up in the application context of its datastore once that is active"() {
+        given: 'the publisher of the datastore, which the datastores of every connection share, holds the context'
+        AuditorAware<String> contextAuditor = { -> Optional.of('contextUser') } as AuditorAware<String>
+        GenericApplicationContext context = new GenericApplicationContext()
+        context.registerBean(AuditorAware, { contextAuditor } as Supplier<AuditorAware>)
+        TestEventListener contextListener = new TestEventListener(Stub(Datastore) {
+            getMappingContext() >> null
+            getApplicationEventPublisher() >> new ConfigurableApplicationContextEventPublisher(context)
+        })
+
+        expect: 'no auditor while the context is not refreshed'
+        contextListener.auditorAware == null
+
+        when:
+        context.refresh()
+        contextListener.persistentEntityAdded(auditedEntity())
+
+        then:
+        contextListener.auditorAware.is(contextAuditor)
+        appliedOnInsert(contextListener, Audited) == [createdBy: 'contextUser', lastModifiedBy: 'contextUser']
+
+        cleanup:
+        context.close()
+    }
+
+    void "an auditor that is set, or found in the application context given to the listener, is not looked up again"() {
+        given:
+        AuditorAware<String> setAuditor = { -> Optional.of('setUser') } as AuditorAware<String>
+        AuditorAware<String> givenAuditor = { -> Optional.of('givenUser') } as AuditorAware<String>
+        GenericApplicationContext datastoreContext = new GenericApplicationContext()
+        datastoreContext.registerBean(AuditorAware, { { -> Optional.of('datastoreUser') } as AuditorAware<String> } as Supplier<AuditorAware>)
+        datastoreContext.refresh()
+        GenericApplicationContext givenContext = new GenericApplicationContext()
+        givenContext.registerBean(AuditorAware, { givenAuditor } as Supplier<AuditorAware>)
+        givenContext.refresh()
+        Datastore datastore = Stub(Datastore) {
+            getMappingContext() >> null
+            getApplicationEventPublisher() >> new ConfigurableApplicationContextEventPublisher(datastoreContext)
+        }
+        TestEventListener withSetAuditor = new TestEventListener(datastore)
+        TestEventListener withGivenContext = new TestEventListener(datastore)
+        TestEventListener withEmptyContext = new TestEventListener(datastore)
+        GenericApplicationContext emptyContext = new GenericApplicationContext()
+        emptyContext.refresh()
+
+        when:
+        withSetAuditor.auditorAware = setAuditor
+        withGivenContext.applicationContext = givenContext
+        withEmptyContext.applicationContext = emptyContext
+
+        then:
+        withSetAuditor.auditorAware.is(setAuditor)
+        withGivenContext.auditorAware.is(givenAuditor)
+        withEmptyContext.auditorAware == null
+
+        cleanup:
+        [datastoreContext, givenContext, emptyContext]*.close()
+    }
+
+    void "a listener bean keeps the auditor it is configured with when the application context has none"() {
+        given: 'Spring sets the bean\'s auditorAware property and then gives it the application context'
+        AuditorAware<String> configuredAuditor = { -> Optional.of('configuredUser') } as AuditorAware<String>
+        GenericApplicationContext context = new GenericApplicationContext()
+        context.registerBean('listener', TestEventListener, { new TestEventListener(Stub(Datastore) { getMappingContext() >> null }) } as Supplier<TestEventListener>,
+                { BeanDefinition definition -> definition.propertyValues.add('auditorAware', configuredAuditor) } as BeanDefinitionCustomizer)
+
+        when:
+        context.refresh()
+        TestEventListener bean = context.getBean(TestEventListener)
+        bean.persistentEntityAdded(auditedEntity())
+
+        then:
+        bean.auditorAware.is(configuredAuditor)
+        appliedOnInsert(bean, Audited) == [createdBy: 'configuredUser', lastModifiedBy: 'configuredUser']
+
+        cleanup:
+        context.close()
+    }
+
+    void "a listener bean takes the auditor of the application context over the one it is configured with"() {
+        given:
+        AuditorAware<String> configuredAuditor = { -> Optional.of('configuredUser') } as AuditorAware<String>
+        AuditorAware<String> contextAuditor = { -> Optional.of('contextUser') } as AuditorAware<String>
+        GenericApplicationContext context = new GenericApplicationContext()
+        context.registerBean(AuditorAware, { contextAuditor } as Supplier<AuditorAware>)
+        context.registerBean('listener', TestEventListener, { new TestEventListener(Stub(Datastore) { getMappingContext() >> null }) } as Supplier<TestEventListener>,
+                { BeanDefinition definition -> definition.propertyValues.add('auditorAware', configuredAuditor) } as BeanDefinitionCustomizer)
+
+        when:
+        context.refresh()
+
+        then:
+        context.getBean(TestEventListener).auditorAware.is(contextAuditor)
+
+        cleanup:
+        context.close()
+    }
+
+    void "an auditor set while the listener looks one up in the application context of its datastore is kept"() {
+        given: 'a context whose lookup of the auditor blocks until it is released, and then finds none'
+        BlockingAuditorLookupContext context = new BlockingAuditorLookupContext()
+        context.refresh()
+        context.blockAuditorLookup = true
+        TestEventListener contextListener = new TestEventListener(Stub(Datastore) {
+            getMappingContext() >> null
+            getApplicationEventPublisher() >> new ConfigurableApplicationContextEventPublisher(context)
+        })
+        AuditorAware<String> setAuditor = { -> Optional.of('setUser') } as AuditorAware<String>
+        Thread lookup = new Thread({ contextListener.auditorAware } as Runnable)
+
+        when: 'an auditor is set while the lookup runs'
+        lookup.start()
+        assert context.lookupEntered.await(10, TimeUnit.SECONDS)
+        contextListener.auditorAware = setAuditor
+        context.release.countDown()
+        lookup.join(10000)
+
+        then:
+        !lookup.alive
+        contextListener.auditorAware.is(setAuditor)
+
+        cleanup:
+        context.release.countDown()
+        context.close()
+    }
+
     private PersistentEntity auditedEntity() {
         PersistentEntity entity = null
         PersistentProperty createdBy = auditedProperty('createdBy') { -> entity }
@@ -660,8 +793,12 @@ class AutoTimestampEventListenerSpec extends Specification {
     }
 
     private Map<String, Object> appliedOnInsert(Class clazz) {
+        appliedOnInsert(listener, clazz)
+    }
+
+    private static Map<String, Object> appliedOnInsert(AutoTimestampEventListener eventListener, Class clazz) {
         Map<String, Object> applied = new ConcurrentHashMap<>()
-        listener.beforeInsert(entityFor(clazz), recordingAccess(applied))
+        eventListener.beforeInsert(entityFor(clazz), recordingAccess(applied))
         applied
     }
 
@@ -714,5 +851,22 @@ class TestEventListener extends AutoTimestampEventListener {
             entitiesWithLastUpdated.put(it.getName(), Optional.of(['lastUpdated'] as Set<String>))
             entitiesWithDateCreated.put(it.getName(), Optional.of(['dateCreated'] as Set<String>))
         }
+    }
+}
+
+class BlockingAuditorLookupContext extends GenericApplicationContext {
+
+    final CountDownLatch lookupEntered = new CountDownLatch(1)
+    final CountDownLatch release = new CountDownLatch(1)
+    volatile boolean blockAuditorLookup
+
+    @Override
+    <T> T getBean(Class<T> requiredType) {
+        if (blockAuditorLookup && requiredType == AuditorAware) {
+            lookupEntered.countDown()
+            release.await(10, TimeUnit.SECONDS)
+            throw new NoSuchBeanDefinitionException(AuditorAware)
+        }
+        super.getBean(requiredType)
     }
 }

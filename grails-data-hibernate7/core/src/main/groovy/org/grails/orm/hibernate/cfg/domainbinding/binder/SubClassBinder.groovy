@@ -16,37 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import groovy.transform.CompileStatic;
-import jakarta.annotation.Nonnull;
-import org.hibernate.mapping.JoinedSubclass;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.SingleTableSubclass;
-import org.hibernate.mapping.Subclass;
-import org.hibernate.mapping.UnionSubclass;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.mapping.JoinedSubclass
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.SingleTableSubclass
+import org.hibernate.mapping.Subclass
+import org.hibernate.mapping.UnionSubclass
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 
 /** Binder for subclasses. */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class SubClassBinder {
 
-    private final SubclassMappingBinder subclassMappingBinder;
-    private final MultiTenantFilterBinder multiTenantFilterBinder;
-    private final String dataSourceName;
+    private final SubclassMappingBinder subclassMappingBinder
+    private final MultiTenantFilterBinder multiTenantFilterBinder
+    private final String dataSourceName
 
     SubClassBinder(
             SubclassMappingBinder subclassMappingBinder,
             MultiTenantFilterBinder multiTenantFilterBinder,
             String dataSourceName) {
-        this.subclassMappingBinder = subclassMappingBinder;
-        this.multiTenantFilterBinder = multiTenantFilterBinder;
-        this.dataSourceName = dataSourceName;
+        this.subclassMappingBinder = subclassMappingBinder
+        this.multiTenantFilterBinder = multiTenantFilterBinder
+        this.dataSourceName = dataSourceName
     }
 
     /**
@@ -57,24 +54,24 @@ class SubClassBinder {
      * @return The list of subclasses created
      */
     List<Subclass> bindSubClass(@Nonnull HibernatePersistentEntity sub, PersistentClass parent) {
-        Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent);
-        sub.setPersistentClass(subClass);
-        bindMultiTenantFilter(sub, subClass);
-        List<Subclass> subclasses = new ArrayList<>();
-        subclasses.add(subClass);
+        Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent)
+        sub.setPersistentClass(subClass)
+        bindMultiTenantFilter(sub, subClass)
+        List<Subclass> subclasses = new ArrayList<>()
+        subclasses.add(subClass)
         for (HibernatePersistentEntity sub1 : sub.getChildEntities(dataSourceName)) {
-            subclasses.addAll(bindSubClass(sub1, subClass));
+            subclasses.addAll(bindSubClass(sub1, subClass))
         }
-        return subclasses;
+        return subclasses
     }
 
     private void bindMultiTenantFilter(HibernatePersistentEntity sub, Subclass subClass) {
         if (subClass instanceof SingleTableSubclass) {
-            multiTenantFilterBinder.bind(sub, (SingleTableSubclass) subClass);
+            multiTenantFilterBinder.bind(sub, (SingleTableSubclass) subClass)
         } else if (subClass instanceof JoinedSubclass) {
-            multiTenantFilterBinder.bind(sub, (JoinedSubclass) subClass);
+            multiTenantFilterBinder.bind(sub, (JoinedSubclass) subClass)
         } else if (subClass instanceof UnionSubclass) {
-            multiTenantFilterBinder.bind(sub, (UnionSubclass) subClass);
+            multiTenantFilterBinder.bind(sub, (UnionSubclass) subClass)
         }
     }
 }

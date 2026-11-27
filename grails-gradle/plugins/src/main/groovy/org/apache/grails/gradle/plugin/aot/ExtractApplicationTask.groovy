@@ -37,11 +37,15 @@ import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.process.ExecOperations
 
 /**
- * Unpacks an executable jar into the form an AOT cache is read against.
+ * Unpacks an executable jar or war into the form an AOT cache is read against.
  *
- * <p>An executable jar loads its dependencies through a nested-jar class loader; the extracted form
- * loads them as ordinary jars on the classpath. A cache records the class path it saw, so only the
- * second is a layout a later run can reuse one against.</p>
+ * <p>An executable archive loads its dependencies through a nested-jar class loader; the extracted
+ * form loads them as ordinary jars on the classpath. A cache records the class path it saw, so only
+ * the second is a layout a later run can reuse one against.</p>
+ *
+ * <p>A war is extracted as a jar, with the libraries it provides beside its own and what it holds
+ * outside {@code WEB-INF} in the jar's {@code META-INF/resources}, which needs Spring Boot 4.2 or
+ * later in the war.</p>
  *
  * <p>The work is done through injected services rather than through the project, so that nothing is
  * reached at execution time that the configuration cache forbids.</p>
@@ -52,7 +56,7 @@ import org.gradle.process.ExecOperations
 @CompileStatic
 abstract class ExtractApplicationTask extends DefaultTask {
 
-    /** The archive to unpack, which has to be the one the cache will be trained against. */
+    /** The executable jar or war to unpack, which has to be the one the cache will be trained against. */
     @InputFile
     @PathSensitive(PathSensitivity.RELATIVE)
     abstract RegularFileProperty getArchiveFile()
@@ -78,6 +82,16 @@ abstract class ExtractApplicationTask extends DefaultTask {
 
     @Inject
     abstract ExecOperations getExecOperations()
+
+    /**
+     * The name of the application the extraction writes for an archive of the given name: a jar
+     * keeps its name, and a war is written as a jar of the same name.
+     */
+    static String applicationFileName(String archiveFileName) {
+        archiveFileName.toLowerCase(Locale.ROOT).endsWith('.war') ?
+                archiveFileName.substring(0, archiveFileName.length() - 4) + '.jar' :
+                archiveFileName
+    }
 
     @TaskAction
     void extract() {

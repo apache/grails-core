@@ -16,16 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.proxy;
+package org.grails.orm.hibernate.proxy
 
-import java.util.concurrent.Callable;
+import java.util.concurrent.Callable
 
-import groovy.transform.CompileStatic;
-import org.codehaus.groovy.runtime.InvokerHelper;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.InvokerHelper
 
-import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType
+import net.bytebuddy.implementation.bind.annotation.SuperCall
 
 /**
  * ByteBuddy delegation target for {@code getMetaClass()} on the generated Groovy proxy.
@@ -42,20 +41,18 @@ import net.bytebuddy.implementation.bind.annotation.SuperCall;
  *
  * @since 8.0.1
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class GroovyProxyMetaClassDispatcher {
 
-    private final Class<?> persistentClass;
+    private final Class<?> persistentClass
 
     GroovyProxyMetaClassDispatcher(Class<?> persistentClass) {
-        this.persistentClass = persistentClass;
+        this.persistentClass = persistentClass
     }
 
     @RuntimeType
     Object intercept(@SuperCall Callable<?> superCall) throws Throwable {
-        final Object metaClass = superCall.call();
-        return metaClass != null ? metaClass : InvokerHelper.getMetaClass(persistentClass);
+        final Object metaClass = superCall.call()
+        return metaClass != null ? metaClass : InvokerHelper.getMetaClass(persistentClass)
     }
 }

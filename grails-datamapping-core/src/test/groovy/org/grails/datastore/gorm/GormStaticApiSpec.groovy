@@ -22,12 +22,17 @@ import groovy.transform.CompileStatic
 
 import jakarta.persistence.LockModeType
 
+import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.api.GormAllOperations
 import grails.gorm.api.GormInstanceOperations
 import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore
+import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
+import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -153,6 +158,68 @@ class GormStaticApiSpec extends Specification {
 
         expect:
         api.getGormDynamicFinders() == [finder]
+    }
+
+    void "getAutoTimestampEventListener returns the listener of the api's datastore"() {
+        given:
+        def api = new GormStaticApi(GormStaticApiThing, datastore, [])
+
+        expect:
+        api.autoTimestampEventListener != null
+        api.autoTimestampEventListener.is(datastore.autoTimestampEventListener)
+        GormStaticApiThing.autoTimestampEventListener.is(datastore.autoTimestampEventListener)
+    }
+
+    void "the default auto-timestamp listener of the static operations contract says it cannot be looked up"() {
+        given: 'an implementation that provides nothing beyond the interface defaults'
+        GormStaticOperations<Object> operations = (GormStaticOperations<Object>) Proxy.newProxyInstance(
+                GormStaticOperations.classLoader, [GormStaticOperations] as Class[],
+                { Object proxy, Method method, Object[] methodArgs ->
+                    if (method.isDefault()) {
+                        return InvocationHandler.invokeDefault(proxy, method, methodArgs)
+                    }
+                    throw new AssertionError("unexpected call of ${method.name}")
+                } as InvocationHandler)
+
+        when:
+        operations.autoTimestampEventListener
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('cannot look up the auto-timestamp event listener')
+    }
+
+    void "getAutoTimestampEventListener rejects a datastore that does not set timestamps through a listener"() {
+        given:
+        Datastore plainDatastore = Stub(Datastore)
+        plainDatastore.getMappingContext() >> datastore.mappingContext
+        plainDatastore.connect() >> Stub(Session) { getDatastore() >> plainDatastore }
+        def api = new GormStaticApi(GormStaticApiThing, plainDatastore, [])
+
+        when:
+        api.autoTimestampEventListener
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains(GormStaticApiThing.name)
+        e.message.contains(plainDatastore.toString())
+    }
+
+    void "getAutoTimestampEventListener rejects an auto-timestamping datastore that has no listener"() {
+        given:
+        Datastore listenerlessDatastore = Stub(Datastore, additionalInterfaces: [AutoTimestampingDatastore])
+        listenerlessDatastore.getMappingContext() >> datastore.mappingContext
+        listenerlessDatastore.connect() >> Stub(Session) { getDatastore() >> listenerlessDatastore }
+        ((AutoTimestampingDatastore) listenerlessDatastore).getAutoTimestampEventListener() >> null
+        def api = new GormStaticApi(GormStaticApiThing, listenerlessDatastore, [])
+
+        when:
+        api.autoTimestampEventListener
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains(GormStaticApiThing.name)
+        e.message.contains(listenerlessDatastore.toString())
     }
 
     void "forQualifier creates a new static api bound to the requested qualifier"() {
@@ -643,6 +710,48 @@ class GormStaticApiSpec extends Specification {
         api.getAll(one.id, two.id)*.name.sort() == ['one', 'two']
         api.getAll([one.id, two.id])*.name.sort() == ['one', 'two']
         api.getAll()*.name.sort() == ['one', 'two']
+    }
+
+    void "getAll with iterable ids passes them to getAll with an array of ids, so that a subclass overrides both"() {
+        given:
+        def api = new GetAllRecordingGormStaticApi(GormStaticApiThing, datastore)
+
+        when:
+        api.getAll([1L, 2L])
+
+        then:
+        api.requestedIds == [[1L, 2L]]
+    }
+
+    void "get/read/load/exists/getAll find an instance of a multi-tenant entity for the current tenant only in DISCRIMINATOR mode"() {
+        given:
+        def tenantDatastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver(
+                        [(Settings.SETTING_MULTI_TENANCY_MODE): MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR]),
+                new DefaultApplicationEventPublisher(), GormStaticApiTenantThing)
+        def api = new GormStaticApi(GormStaticApiTenantThing, tenantDatastore, [])
+        Serializable ownId = Tenants.withId(tenantDatastore, 'own') {
+            new GormStaticApiTenantThing(name: 'own').save(flush: true).id
+        }
+        Serializable otherId = Tenants.withId(tenantDatastore, 'other') {
+            new GormStaticApiTenantThing(name: 'other').save(flush: true).id
+        }
+
+        expect:
+        Tenants.withId(tenantDatastore, 'own') {
+            api.withNewSession {
+                [api.get(ownId)?.name, api.get(otherId), api.read(otherId), api.exists(otherId),
+                 api.getAll(otherId, ownId)*.name, api.getAll([ownId, otherId])*.name, api.load(ownId).name]
+            }
+        } == ['own', null, null, false, [null, 'own'], ['own', null], 'own']
+
+        and: 'inside withoutId a lookup by id is not restricted to a tenant'
+        Tenants.withoutId(tenantDatastore) {
+            api.withNewSession { [api.get(ownId)?.name, api.get(otherId)?.name] }
+        } == ['own', 'other']
+
+        cleanup:
+        tenantDatastore?.close()
     }
 
     void "list and list(Map) support the max parameter via a paged result list"() {
@@ -1154,6 +1263,32 @@ class GormStaticApiSpec extends Specification {
 class GormStaticApiThing {
 
     String name
+}
+
+@Entity
+class GormStaticApiTenantThing implements MultiTenant<GormStaticApiTenantThing> {
+
+    String name
+    String tenantId
+}
+
+/**
+ * A static api that records the ids that {@code getAll(Serializable...)} is called with, so that
+ * {@code getAll(Iterable)} can be verified to pass its ids on to it.
+ */
+class GetAllRecordingGormStaticApi<D> extends GormStaticApi<D> {
+
+    List<List<Serializable>> requestedIds = []
+
+    GetAllRecordingGormStaticApi(Class<D> persistentClass, Datastore datastore) {
+        super(persistentClass, datastore, [])
+    }
+
+    @Override
+    List<D> getAll(Serializable... ids) {
+        requestedIds << ids.toList()
+        return []
+    }
 }
 
 /**

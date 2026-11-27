@@ -37,7 +37,7 @@ jobs:
       github.event_name != 'pull_request'
       || (!contains(github.event.pull_request.labels.*.name, 'no ci')
           && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
@@ -56,7 +56,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🧐 Apache License - Release Audit Tool"
         run: ./gradlew rat
       - name: Upload RAT HTML report

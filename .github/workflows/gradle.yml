@@ -31,9 +31,15 @@ on:
 # results would be for a superseded commit, and the run that replaces it publishes the newer one. The publish
 # jobs (publishGradle, publish, publishForge, verifyWrapper, docs) run on always() with explicit result checks
 # instead, so a publish that has started completes: an interrupted upload would leave the snapshot repository
-# with modules from two commits. Nothing of the cancelled commit is published when the cancel arrives before
-# publish starts, because a cancelled test job fails the explicit checks. The replacing run is pending until
-# the cancelled run has finished every job, so two publishes of the same branch never overlap.
+# with modules from two commits. publishGradle waits for every build job (buildGradle, buildForge and
+# validateDependencies), so nothing of the cancelled commit is published when the cancel arrives before the
+# builds have finished. A later cancel lets the publish jobs whose needs have already succeeded or been skipped
+# run: on a run without tests that is the whole chain, and on a run whose tests are still running only
+# publishGradle, because a cancelled test job fails the explicit checks of publish and of everything after it.
+# A cancel after every test has passed lets the whole chain run as well. The replacing run is pending until the
+# cancelled run has finished every job, so two publishes of the same branch never overlap, and it then publishes
+# the newer commit over whatever the cancelled run published. A normal cancel does not stop a running always()
+# job either; the CI policy section of AGENTS.md says how to force one.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -50,7 +56,7 @@ jobs:
   validateDependencies:
     name: 'Validate Dependency Versions'
     needs: [ policy ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
@@ -148,7 +154,7 @@ jobs:
       fail-fast: false
       matrix:
         java: [ 21, 25 ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -169,7 +175,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🔨 Build project without tests"
         if: ${{ needs.policy.outputs.run-tests != 'true' }}
         working-directory: 'grails-gradle'
@@ -213,7 +219,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🔨 Build and test the build logic"
         if: ${{ needs.policy.outputs.run-tests == 'true' }}
         working-directory: 'build-logic'
@@ -229,12 +235,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 21
             job_name: Ubuntu JDK 21
             cache_writer: true
             gradle_task: 'build :grails-shell-cli:installDist groovydoc'
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 25
             job_name: Ubuntu JDK 25
             gradle_task: 'build :grails-shell-cli:installDist groovydoc'
@@ -291,7 +297,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🔨 Build project"
         # build-logic is an included build, so the specs of its vulnerability-scan plugin are run through the root build.
         run: >
@@ -310,22 +316,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 21
             job_name: Ubuntu JDK 21 build
             gradle_task: 'build :grails-shell-cli:installDist groovydoc'
             extra_arguments: '-PskipTests'
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 21
             job_name: Ubuntu JDK 21 shard 0
             gradle_task: testShard
             extra_arguments: '-PtestShardCount=3 -PtestShardIndex=0'
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 21
             job_name: Ubuntu JDK 21 shard 1
             gradle_task: testShard
             extra_arguments: '-PtestShardCount=3 -PtestShardIndex=1'
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             java: 21
             job_name: Ubuntu JDK 21 shard 2
             gradle_task: testShard
@@ -351,7 +357,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🔨 Build project"
         run: >
           ./gradlew ${{ matrix.gradle_task }} :build-logic-root:vulnerability-scan:check
@@ -372,7 +378,7 @@ jobs:
         include:
           - java: 21
             indy: true
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -393,7 +399,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🔨 Build project without tests"
         if: ${{ needs.policy.outputs.run-tests != 'true' }}
         working-directory: 'grails-forge'
@@ -437,11 +443,11 @@ jobs:
     name: "Functional Tests (${{ matrix.job_name }})"
     needs: [ policy ]
     if: ${{ needs.policy.outputs.run-tests == 'true' }}
-    # 8.0.x history: shard 1 is 22-34 min, indy=true shard 0 is 48-55.
-    # On Groovy 6, shard 1 tests finish around 31 min then Gradle hangs in
-    # worker teardown. The init script exits after buildFinished so that hang
-    # cannot occupy a runner. This job cap is a last-resort backstop.
-    timeout-minutes: 80
+    # Shard 0 builds every module and runs the checks as well as its half of the tests, so it is the
+    # slowest cell: its slowest run took 70 min, on 9.0.x in 2026-11, while shard 1 takes 23-41 min.
+    # On Groovy 6, the tests of the Java 21, indy=true shard 1 finish around 31 min, then Gradle hangs
+    # in worker teardown. The init script exits after buildFinished so that hang cannot occupy a runner.
+    timeout-minutes: 150 # slowest run: 70 min
     strategy:
       fail-fast: false
       matrix:
@@ -482,7 +488,7 @@ jobs:
             gradle_task: testShard
             artifact_suffix: java25-indyfalse-shard1
             shard_arguments: '-PtestShardCount=2 -PtestShardIndex=1'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -503,20 +509,22 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🏃 Run Functional Tests"
         # The known hanging cell finishes tests, prints the wrapper:test /
         # aggregate-report tail, then hangs before buildFinished. Timeout plus
         # that end-of-walk log and green XML is treated as success.
         # The sentinel init script registers build listeners, which the
         # configuration cache rejects, so this invocation runs without it.
+        # Every other cell is stopped 10 minutes before the job's limit, so
+        # that a cell that times out still uploads its Geb reports.
         run: |
           hanging=0
           if [ "${{ matrix.java }}" = "21" ] && [ "${{ matrix.indy }}" = "true" ] && [ "${{ matrix.gradle_task }}" = "testShard" ]; then
             hanging=1
             limit=45m
           else
-            limit=70m
+            limit=140m
           fi
           rm -f build/ci-build-finished.txt build/ci-build-finished.txt.tmp
           set +e
@@ -588,7 +596,7 @@ jobs:
             job_name: Java 25, shard 1
             gradle_task: testShard
             shard_arguments: '-PtestShardCount=2 -PtestShardIndex=1'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -609,7 +617,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🏃 Run Functional Tests"
         run: >
           ./gradlew ${{ matrix.gradle_task }}
@@ -632,8 +640,8 @@ jobs:
         # config only runs when TESTCONFIG matches. TESTCONFIG is applied at app startup, so every config
         # must be its own run. Carried over from the standalone grails-spring-security CI — do not drop
         # configs (add, don't remove) when the app's security configurations change.
-        test-config: [ 'static', 'annotation', 'requestmap', 'basic', 'basicCacheUsers', 'misc', 'putWithParams', 'bcrypt', 'issue503', 'noAnonymous' ]
-    runs-on: ubuntu-24.04
+        test-config: [ 'static', 'annotation', 'requestmap', 'basic', 'basicCacheUsers', 'misc', 'putWithParams', 'bcrypt', 'issue503', 'noAnonymous', 'oncePerRequest', 'inactive' ]
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -654,7 +662,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🏃 Run Spring Security Functional Tests (TESTCONFIG=${{ matrix.test-config }})"
         run: >
           ./gradlew
@@ -701,7 +709,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🏃 Run Spring Security CAS Functional Tests (TESTCONFIG=${{ matrix.test-config }})"
         run: >
           ./gradlew
@@ -716,7 +724,7 @@ jobs:
     needs: [ policy ]
     if: ${{ needs.policy.outputs.run-tests == 'true' }}
     timeout-minutes: 180 # slowest run: 86 min
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -742,7 +750,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "🏃 Run Redis Tests"
         run: >
           ./gradlew bootJar check
@@ -758,16 +766,25 @@ jobs:
     name: "Mongodb Functional Tests (Java ${{ matrix.java }}, MongoDB ${{ matrix.mongodb-version }}, indy=${{ matrix.indy }})"
     timeout-minutes: 150 # slowest run: 70 min
     # ubuntu-22.04 while https://github.com/actions/runner-images/issues/15005 is open: the ubuntu-24.04 image 20261018.339
-    # ships kernel 7.0.0-1017-azure, which MongoDB 8.0 reads as 7.0.0 and refuses to start on (it exits on 6.19.0 through
-    # 7.0.13), so every mongo:8.0 container of the MongoDB 8.0 lane dies before "waiting for connections". The ubuntu-22.04
-    # image runs kernel 6.8. Move back to ubuntu-24.04 once the issue is resolved or mongo:8.0 is 8.0.35 or newer.
+    # and the ubuntu-26.04 image ship kernel 7.0.0-1017-azure, which MongoDB 8.0 reads as 7.0.0 and refuses to start on (it
+    # exits on 6.19.0 through 7.0.13), so every mongo:8.0 container of the MongoDB 8.0 lane dies before "waiting for
+    # connections". The ubuntu-22.04 image runs kernel 6.8. The embedded server the 8.0 and 9.0 lanes start for their
+    # replica-set specifications, flapdoodle's V8_0 and V8_3 (8.0.23 and 8.3.2), predates even the exemption for 7.0.14
+    # and newer (SERVER-125742: 8.0.30 and 8.3.9) and exits on any kernel from 6.19.0 up, so moving back needs both a
+    # mongo:8.0 image with the fix (SERVER-131779: 8.0.35 was never released, so 8.0.36 or newer) and a flapdoodle
+    # release whose lines have it.
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         java: [ 21, 25 ]
-        mongodb-version: [ '7.0', '8.0' ] # test with supported versions https://www.mongodb.com/legal/support-policy/lifecycles
+        mongodb-version: [ '7.0', '8.0', '9.0' ] # test with supported versions https://www.mongodb.com/legal/support-policy/lifecycles
         indy: [ false ]
+        exclude:
+          # 7.0 is the oldest supported line and the one closest to its end of life: one JDK is enough for it, and
+          # 8.0 and 9.0 cover Java 25.
+          - java: 25
+            mongodb-version: '7.0'
         include:
           - java: 21
             mongodb-version: '7.0'
@@ -828,7 +845,7 @@ jobs:
     if: ${{ needs.policy.outputs.run-tests == 'true' }}
     name: "Hibernate5 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
     timeout-minutes: 120 # slowest run: 58 min
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -983,15 +1000,19 @@ jobs:
           python3 .github/tests/test_ci_run_neo4j.py
           bash .github/ci-run-neo4j-tests.sh -PgrailsIndy=${{ matrix.indy }}
   publishGradle:
-    # always() with an explicit result check, see the concurrency comment at the top.
+    # always() with explicit result checks, see the concurrency comment at the top. It waits for every build job,
+    # not only buildGradle, so that a run cancelled before its builds have finished publishes nothing, and a
+    # commit whose Forge build or dependency validation failed is not published.
     if: >-
       ${{ always() &&
           github.repository_owner == 'apache' &&
           (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-          needs.buildGradle.result == 'success'
+          needs.buildGradle.result == 'success' &&
+          needs.buildForge.result == 'success' &&
+          needs.validateDependencies.result == 'success'
       }}
-    needs: [ buildGradle ]
-    runs-on: ubuntu-24.04
+    needs: [ buildGradle, buildForge, validateDependencies ]
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -1012,7 +1033,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "📤 Publish Gradle Snapshot Artifacts"
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -1035,17 +1056,19 @@ jobs:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
-    needs: [ publishGradle, build, functional, security, securityConfig, redis, hibernate5Functional, hibernate7Functional, mongodbFunctional, neo4jFunctional ]
+    needs: [ publishGradle, build, buildRerunTasks, functional, security, securityConfig, redis, hibernate5Functional, hibernate7Functional, mongodbFunctional, neo4jFunctional ]
     # always() with explicit result checks, see the concurrency comment at the top. The results are checked
     # explicitly because the implicit success() check also covers the skipped test jobs upstream, which would
-    # skip this job on a build-only run, and because a cancelled test job must not be published: nothing of a
-    # commit whose run was cancelled before this job started reaches the snapshot repository.
+    # skip this job on a build-only run, and because a cancelled test job must not be published: the core of a
+    # commit whose tests were cancelled never reaches the snapshot repository, although its Gradle plugins may.
+    # Every test job of this workflow belongs in these needs.
     if: >-
       ${{ always() &&
           github.repository_owner == 'apache' &&
           (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
           needs.publishGradle.result == 'success' &&
           (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+          (needs.buildRerunTasks.result == 'success' || needs.buildRerunTasks.result == 'skipped') &&
           (needs.functional.result == 'success' || needs.functional.result == 'skipped') &&
           (needs.security.result == 'success' || needs.security.result == 'skipped') &&
           (needs.securityConfig.result == 'success' || needs.securityConfig.result == 'skipped') &&
@@ -1055,7 +1078,7 @@ jobs:
           (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') &&
           (needs.neo4jFunctional.result == 'success' || needs.neo4jFunctional.result == 'skipped')
       }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -1076,7 +1099,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "📤 Publish Grails-Core Snapshot Artifacts"
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         env:
@@ -1124,7 +1147,7 @@ jobs:
           needs.publish.result == 'success'
       }}
     needs: [ buildForge, publishGradle, publish ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -1145,7 +1168,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "📤 Publish Gradle Snapshot Artifacts"
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -1180,7 +1203,7 @@ jobs:
           needs.publishForge.result == 'success'
       }}
     needs: [ publish, publishForge ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
@@ -1217,7 +1240,7 @@ jobs:
           needs.publish.result == 'success'
       }}
     needs: [ publish ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "⚙️ Maximize build space"
         run: |
@@ -1281,3 +1304,8 @@ jobs:
           TARGET_REPOSITORY: 'apache/grails-website'
           TARGET_FOLDER: 'docs'
           DOCUMENTATION_BRANCH: 'asf-site-production'
+          # Only the default branch publishes docs/snapshot. Each publish
+          # replaces the whole folder, so the branches would overwrite each
+          # other, and a publish that overlaps another fails on the rebase.
+          # Like the CI and cache policies, this follows the default branch.
+          SKIP_SNAPSHOT_FOLDER: ${{ github.ref_name != github.event.repository.default_branch }}

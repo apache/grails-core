@@ -112,6 +112,39 @@ class ConfigurationMetadataPluginSpec extends Specification {
         '''.stripIndent())
     }
 
+    def 'a constructor parameter or record component named metaClass is a property, rather than a Groovy property of the model'() {
+        given:
+        resetFixture()
+        write('src/main/java/fixture/MetaClassArgument.java', '''
+            package fixture;
+
+            import org.springframework.boot.context.properties.ConfigurationProperties;
+
+            @ConfigurationProperties("fixture.argument")
+            public class MetaClassArgument {
+                private final String metaClass;
+                public MetaClassArgument(String metaClass) { this.metaClass = metaClass; }
+            }
+        '''.stripIndent())
+        write('src/main/java/fixture/MetaClassRecord.java', '''
+            package fixture;
+
+            import org.springframework.boot.context.properties.ConfigurationProperties;
+
+            @ConfigurationProperties("fixture.record")
+            public record MetaClassRecord(String metaClass) { }
+        '''.stripIndent())
+
+        when:
+        BuildResult result = run('generateConfigurationMetadata', '--max-workers=1', '-Dorg.gradle.jvmargs=-Xmx512m')
+        Map metadata = readMetadata()
+
+        then:
+        result.task(':generateConfigurationMetadata').outcome == TaskOutcome.SUCCESS
+        property(metadata, 'fixture.argument.metaClass').type == 'java.lang.String'
+        property(metadata, 'fixture.record.metaClass').type == 'java.lang.String'
+    }
+
     def "generates canonical metadata across clean incremental edit and source deletion builds"() {
         when: 'a clean jar is built'
         BuildResult clean = run('clean', 'jar')

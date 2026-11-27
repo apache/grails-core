@@ -24,7 +24,13 @@ import io.swagger.v3.oas.models.SpecVersion
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.env.Environment
+import org.springframework.core.env.MutablePropertySources
 import org.springframework.core.env.PropertySource
+import org.springframework.core.env.PropertySourcesPropertyResolver
+
+import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
+
+import grails.config.Settings
 
 /**
  * How the OpenAPI document is generated, read from the {@code grails.openapi} configuration.
@@ -97,6 +103,24 @@ class OpenApiSettings {
     boolean includeVersion = false
 
     /**
+     * Whether {@code respond} writes JSON with Spring MVC's message converters, which it does where
+     * {@code grails.web.rendering.json.spring} is set, and so writes validation errors as an
+     * {@code application/problem+json} problem.
+     *
+     * @since 9.0
+     */
+    boolean springJson = false
+
+    /**
+     * Whether the JSON converter renders as Grails 8 did, which it does unless {@code grails.converters.json.legacy}
+     * is {@code false}: then it writes validation errors with their codes and without the rejected value. It defaults to
+     * the converter's default, which Grails 10 changes.
+     *
+     * @since 9.0
+     */
+    boolean legacyJson = ConvertersConfigurationInitializer.isLegacyJson(new PropertySourcesPropertyResolver(new MutablePropertySources()))
+
+    /**
      * What the default document selects.
      */
     OpenApiSelection defaultSelection = new OpenApiSelection()
@@ -131,6 +155,10 @@ class OpenApiSettings {
 
         settings.includeVersion = environment.getProperty('grails.converters.json.domain.include.version', Boolean,
                 environment.getProperty('grails.converters.domain.include.version', Boolean, false))
+        settings.springJson = environment.getProperty(Settings.WEB_RENDERING_JSON_SPRING, Boolean,
+                Boolean.valueOf(Settings.WEB_RENDERING_JSON_SPRING_DEFAULT))
+        // with the default of the converter of this release, as the converter reads it
+        settings.legacyJson = ConvertersConfigurationInitializer.isLegacyJson(environment)
 
         String version = environment.getProperty('springdoc.api-docs.version')
         if (version?.toLowerCase(Locale.ENGLISH)?.contains('3_0')) {

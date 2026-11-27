@@ -16,32 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package liquibase.ext.hibernate.diff;
+package liquibase.ext.hibernate.diff
 
-import groovy.transform.CompileStatic;
-import liquibase.change.Change;
-import liquibase.database.Database;
-import liquibase.diff.Difference;
-import liquibase.diff.ObjectDifferences;
-import liquibase.diff.output.DiffOutputControl;
-import liquibase.diff.output.changelog.ChangeGeneratorChain;
-import liquibase.diff.output.changelog.core.ChangedIndexChangeGenerator;
-import liquibase.ext.hibernate.database.HibernateDatabase;
-import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.Index;
+import groovy.transform.CompileStatic
+import liquibase.change.Change
+import liquibase.database.Database
+import liquibase.diff.Difference
+import liquibase.diff.ObjectDifferences
+import liquibase.diff.output.DiffOutputControl
+import liquibase.diff.output.changelog.ChangeGeneratorChain
+import liquibase.diff.output.changelog.core.ChangedIndexChangeGenerator
+import liquibase.ext.hibernate.database.HibernateDatabase
+import liquibase.structure.DatabaseObject
+import liquibase.structure.core.Index
 
 /**
  * Suppresses unknown Hibernate index attributes while preserving concrete uniqueness changes.
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class HibernateChangedIndexChangeGenerator extends ChangedIndexChangeGenerator {
 
     @Override
     int getPriority(Class<? extends DatabaseObject> objectType, Database database) {
-        return Index.isAssignableFrom(objectType) ? PRIORITY_ADDITIONAL : PRIORITY_NONE;
+        return Index.isAssignableFrom(objectType) ? PRIORITY_ADDITIONAL : PRIORITY_NONE
     }
 
     @Override
@@ -53,18 +50,18 @@ class HibernateChangedIndexChangeGenerator extends ChangedIndexChangeGenerator {
             Database comparisonDatabase,
             ChangeGeneratorChain chain) {
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
-            Difference unique = differences.getDifference('unique');
+            Difference unique = differences.getDifference('unique')
             if (unique == null || !(unique.referenceValue instanceof Boolean) ||
                     !(unique.comparedValue instanceof Boolean) ||
                     unique.referenceValue == unique.comparedValue) {
-                differences.removeDifference("unique");
+                differences.removeDifference('unique')
             }
-            differences.removeDifference("using");
+            differences.removeDifference('using')
             if (!differences.hasDifferences()) {
-                return new Change[0];
+                return new Change[0]
             }
         }
-        return super.fixChanged(changedObject, differences, control, referenceDatabase, comparisonDatabase, chain);
+        return super.fixChanged(changedObject, differences, control, referenceDatabase, comparisonDatabase, chain)
     }
 
 }

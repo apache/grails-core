@@ -1,0 +1,11 @@
+// the plugin from this project's own build script classpath, with one more entry than the first project's so that
+// Gradle does not give both one class loader: the plugin's classes are loaded a second time
+buildscript {
+    dependencies {
+        classpath files(file('../plugin-classpath.txt').readLines())
+        classpath files('grails-app')
+    }
+}
+
+apply plugin: 'org.apache.grails.gradle.grails-app'
+apply from: '../inspect-query-tail-run.gradle'

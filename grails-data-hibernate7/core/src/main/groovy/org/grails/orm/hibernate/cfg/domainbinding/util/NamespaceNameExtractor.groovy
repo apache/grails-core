@@ -16,34 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import groovy.transform.CompileStatic;
-import jakarta.annotation.Nonnull;
-import org.hibernate.boot.model.naming.Identifier;
-import org.hibernate.boot.model.relational.Database;
-import org.hibernate.boot.model.relational.Namespace;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.relational.Database
+import org.hibernate.boot.model.relational.Namespace
+import org.hibernate.boot.spi.InFlightMetadataCollector
 
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class NamespaceNameExtractor {
 
     static String getCatalogName(@Nonnull InFlightMetadataCollector mappings) {
-        return getNamespaceName(mappings) { Namespace.Name name -> name.catalog() };
+        return getNamespaceName(mappings) { Namespace.Name name -> name.catalog() }
     }
 
     static String getSchemaName(@Nonnull InFlightMetadataCollector mappings) {
-        return getNamespaceName(mappings) { Namespace.Name name -> name.schema() };
+        return getNamespaceName(mappings) { Namespace.Name name -> name.schema() }
     }
 
     private static String getNamespaceName(
             @Nonnull InFlightMetadataCollector mappings, Closure<Identifier> function) {
-        Database database = mappings.getDatabase();
-        Namespace.Name name = database?.getDefaultNamespace()?.getName();
-        Identifier identifier = name != null ? function.call(name) : null;
-        return identifier?.getCanonicalName();
+        Database database = mappings.getDatabase()
+        Namespace.Name name = database?.getDefaultNamespace()?.getName()
+        Identifier identifier = name != null ? function.call(name) : null
+        return identifier?.getCanonicalName()
     }
 }

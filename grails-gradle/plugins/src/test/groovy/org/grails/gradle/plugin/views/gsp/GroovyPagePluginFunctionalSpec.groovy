@@ -72,6 +72,19 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         result.output.contains('WEBAPP_HAS_CLASSES_DIR=true')
     }
 
+    def "the GSP compile classpath is put together without deprecated Gradle features"() {
+        given:
+        setupTestResourceProject('gsp-compile-classpath')
+
+        when: 'the build fails on any deprecation, such as a Provider used where a boolean is expected'
+        def result = executeTask('inspectGspCompileClasspath', ['--warning-mode=fail'])
+
+        then: 'the classpath still has everything it needs to compile a GSP'
+        result.output.contains('MAIN_HAS_COMPILE_CLASSPATH=true')
+        result.output.contains('MAIN_HAS_PROVIDED_COMPILE=true')
+        result.output.contains('MAIN_HAS_CLASSES_DIR=true')
+    }
+
     def "the page opt-in reaches both the build's page compiler and the JVM running the application"() {
         given:
         setupTestResourceProject('gsp-compile-static')
@@ -173,8 +186,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         // The generator the task runs comes from grails-scaffolding, and the page compiler from
         // grails-web-gsp, which this build cannot depend on; the tests' stand-ins record what they
         // are handed instead.
-        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
-         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+        [['generator', 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class'],
+         ['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
             File standInClass = new File(projectDir, "${dir}/${standIn}")
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
@@ -310,8 +324,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
                 runtimeOnly files('widget-plugin.jar')
             }
         """)
-        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
-         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+        [['generator', 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class'],
+         ['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
             File standInClass = new File(projectDir, "${dir}/${standIn}")
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
@@ -365,8 +380,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
                 runtimeOnly files('gadget-plugin.jar')
             }
         """)
-        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
-         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+        [['generator', 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class'],
+         ['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
             File standInClass = new File(projectDir, "${dir}/${standIn}")
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
@@ -452,6 +468,72 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         then: 'the widened classpath came back from the entry'
         rewidened.output.contains('Configuration cache entry reused')
         new File(scaffolded, 'com.gadget.Gadget').isDirectory()
+    }
+
+    def "a plugin's pages are expanded with the servlet API it compiles against, and nothing else it compiles against only"() {
+        given: 'a plugin, which leaves the servlet API to the container of the application that installs it'
+        def runner = setupTestResourceProject('gsp-compile-classpath')
+        File projectDir = runner.projectDir
+        new File(projectDir, 'build.gradle').append("""
+            dependencies {
+                runtimeOnly files('generator')
+                runtimeOnly files('widget-plugin.jar')
+                compileOnly files('compile-only-library')
+                compileOnly files('servlet-api')
+            }
+        """)
+        File generator = new File(projectDir, 'generator/org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class')
+        generator.parentFile.mkdirs()
+        generator.bytes = getClass().classLoader.getResource('org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class').bytes
+        ClassWriter servletRequest = new ClassWriter(0)
+        servletRequest.visit(Opcodes.V21, Opcodes.ACC_PUBLIC | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT, 'jakarta/servlet/ServletRequest',
+                null, 'java/lang/Object', null)
+        servletRequest.visitEnd()
+        File servletRequestClass = new File(projectDir, 'servlet-api/jakarta/servlet/ServletRequest.class')
+        servletRequestClass.parentFile.mkdirs()
+        servletRequestClass.bytes = servletRequest.toByteArray()
+        new File(projectDir, 'compile-only-library').mkdirs()
+        ClassWriter controller = new ClassWriter(0)
+        controller.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, 'com/plugin/WidgetController', null, 'java/lang/Object', null)
+        AnnotationVisitor scaffold = controller.visitAnnotation('Lgrails/plugin/scaffolding/annotation/Scaffold;', true)
+        scaffold.visit('domain', Type.getObjectType('java/lang/Long'))
+        scaffold.visitEnd()
+        controller.visitEnd()
+        new JarOutputStream(new File(projectDir, 'widget-plugin.jar').newOutputStream()).withCloseable { JarOutputStream out ->
+            ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+             'com/plugin/WidgetController.class': controller.toByteArray(),
+             'META-INF/templates/scaffolding/show.gsp': 'widget show ${className}'.bytes].each { String name, byte[] bytes ->
+                out.putNextEntry(new JarEntry(name))
+                out.write(bytes)
+                out.closeEntry()
+            }
+        }
+        File generated = new File(projectDir, 'build/generated/scaffolded-views')
+        Closure<List<String>> generatorClasspath = {
+            new File(generated, 'classpath.txt').readLines('UTF-8').collect { String entry ->
+                new File(entry).canonicalPath.replace(File.separatorChar, '/' as char)
+            }
+        }
+
+        when:
+        def result = executeTask('generateScaffoldedViews', ['--configuration-cache'])
+
+        then: 'the generator runs on the runtime classpath, and then the servlet API'
+        assertTaskSuccess('generateScaffoldedViews', result)
+        new File(generated, 'grails-scaffolded/java.lang.Long').listFiles()*.listFiles().flatten()*.text == ['widget show ${className}']
+        generatorClasspath().last().endsWith('/servlet-api')
+        generatorClasspath().any { String entry -> entry.endsWith('/widget-plugin.jar') }
+
+        and: 'not what else the plugin compiles against only'
+        !generatorClasspath().any { String entry -> entry.endsWith('/compile-only-library') }
+
+        when: 'it runs again from the stored entry, with its output removed so the task has to run'
+        generated.deleteDir()
+        def reused = executeTask('generateScaffoldedViews', ['--configuration-cache'])
+
+        then:
+        reused.output.contains('Configuration cache entry reused')
+        generatorClasspath().last().endsWith('/servlet-api')
     }
 
     def "a project that scaffolds nothing generates nothing"() {

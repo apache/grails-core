@@ -38,6 +38,8 @@ import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.GrailsTransactionTemplate
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.gorm.transactions.DefaultTransactionTemplateFactory
@@ -166,6 +168,39 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     List<FinderMethod> getGormDynamicFinders() {
         return finders
+    }
+
+    /**
+     * Returns the listener that sets the timestamp and auditor properties of an instance of the persistent class
+     * saved from the calling code. Each datastore has a listener of its own, and so does each connection and each
+     * tenant with a database or schema of its own, and a listener only handles the saves made through its own
+     * datastore, so this is the listener of the datastore that such a save goes through.
+     *
+     * @return the listener that handles a save of the persistent class from the calling code
+     * @throws IllegalStateException when that datastore has no such listener
+     * @since 9.0
+     */
+    @Override
+    AutoTimestampEventListener getAutoTimestampEventListener() {
+        // An instance is saved through execute(), which routes a multi-tenant class to the datastore of a bound tenant,
+        // so a session of that routing is asked for its datastore, rather than taking the one this API was made for.
+        autoTimestampEventListenerOf(execute({ Session session -> session.datastore } as SessionCallback<Datastore>))
+    }
+
+    /**
+     * @param ds the datastore that saves the instances of the persistent class
+     * @return the auto-timestamp listener of the datastore
+     * @throws IllegalStateException when the datastore has no such listener
+     * @since 9.0
+     */
+    protected AutoTimestampEventListener autoTimestampEventListenerOf(Datastore ds) {
+        AutoTimestampEventListener listener = ds instanceof AutoTimestampingDatastore
+                ? ((AutoTimestampingDatastore) ds).autoTimestampEventListener
+                : null
+        if (listener == null) {
+            throw new IllegalStateException("The datastore [${ds}] of class [${persistentClass.name}] has no auto-timestamp event listener")
+        }
+        listener
     }
 
     GormStaticApi<D> forQualifier(String qualifier) {
@@ -333,10 +368,10 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     // GormStaticOperations
     @Override
     D get(Serializable id) {
-        if (id != null && isRetrievedByQuery()) {
-            return retrieveAllByQuery([id], false)[0]
-        }
         execute({ Session session ->
+            if (id != null && isRetrievedByQuery(session)) {
+                return retrieveAllByQuery(session, [id], false)[0]
+            }
             session.retrieve(persistentClass, id)
         } as SessionCallback<D>)
     }
@@ -348,10 +383,10 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D load(Serializable id) {
-        if (id != null && isRetrievedByQuery()) {
-            return proxyByQuery(id)
-        }
         execute({ Session session ->
+            if (id != null && isRetrievedByQuery(session)) {
+                return proxyByQuery(session, id)
+            }
             session.proxy(persistentClass, id)
         } as SessionCallback<D>)
     }
@@ -363,28 +398,24 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List<D> getAll(Serializable... ids) {
-        if (isRetrievedByQuery()) {
-            List<Serializable> keys = (List<Serializable>) ids.flatten()
-            if (keys) {
-                return retrieveAllByQuery(keys, true)
-            }
-        }
         execute({ Session session ->
+            if (isRetrievedByQuery(session)) {
+                List<Serializable> keys = (List<Serializable>) ids.flatten()
+                if (keys) {
+                    return retrieveAllByQuery(session, keys, true)
+                }
+            }
             session.retrieveAll(persistentClass, ids)
         } as SessionCallback<List<D>>)
     }
 
+    /**
+     * Passes the identifiers on to {@link #getAll(Serializable...)}, so that a subclass that overrides it handles
+     * both.
+     */
     @Override
     List<D> getAll(Iterable<Serializable> ids) {
-        if (isRetrievedByQuery()) {
-            List<Serializable> keys = ids.toList()
-            if (keys) {
-                return retrieveAllByQuery(keys, true)
-            }
-        }
-        execute({ Session session ->
-            session.retrieveAll(persistentClass, ids)
-        } as SessionCallback<List<D>>)
+        getAll(ids.toList() as Serializable[])
     }
 
     @Override
@@ -397,11 +428,14 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * multi-tenant event listener restricts a query to the current tenant, but a lookup by key bypasses it, so the
      * instances of a multi-tenant entity are retrieved through a query instead. Inside
      * {@link Tenants#withoutId(groovy.lang.Closure)} a lookup by id is not restricted to a tenant and stays a lookup by
-     * key.
+     * key. This is decided inside the session callback, as the listener decides it, so that a tenant that a qualifier
+     * binds for the callback, as {@code withTenant(tenantId).get(id)} binds it, restricts the lookup inside
+     * {@code withoutId} as well. Protected rather than private because the session callbacks of this class call it.
      *
+     * @param session The session
      * @return Whether instances are retrieved by id through a query
      */
-    private boolean isRetrievedByQuery() {
+    protected boolean isRetrievedByQuery(Session session) {
         if (multiTenancyMode != MultiTenancyMode.DISCRIMINATOR) {
             return false
         }
@@ -409,7 +443,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         if (entity?.isMultiTenant() != true || entity.identity == null || entity.tenantId == null) {
             return false
         }
-        return !Tenants.isWithoutId(getDatastore())
+        return !Tenants.isWithoutId(session.datastore)
     }
 
     /**
@@ -429,16 +463,16 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     /**
      * Retrieves the instances for the given identifiers through a query, which the multi-tenant event listener
-     * restricts to the current tenant.
+     * restricts to the current tenant. Protected rather than private because the session callbacks of this class call
+     * it.
      *
+     * @param session The session
      * @param ids The identifiers
      * @param strict Whether an identifier that cannot be converted to the type of the identity throws
      * @return The instances in the order of the identifiers, with {@code null} for an identifier no instance was found for
      */
-    private List<D> retrieveAllByQuery(Collection<Serializable> ids, boolean strict) {
-        execute({ Session session ->
-            findAllByKeys(session, ids.collect { Serializable id -> convertIdentifier(session, id, strict) })
-        } as SessionCallback<List<D>>)
+    protected List<D> retrieveAllByQuery(Session session, Collection<Serializable> ids, boolean strict) {
+        findAllByKeys(session, ids.collect { Serializable id -> convertIdentifier(session, id, strict) })
     }
 
     /**
@@ -549,25 +583,25 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * that is current when the proxy is initialized. A proxy for an instance of another tenant then fails to
      * initialize, as a proxy for an instance that does not exist does. A proxy initialized inside
      * {@link Tenants#withoutId(groovy.lang.Closure)} looks the instance up by key, so it is not restricted to a tenant.
+     * Protected rather than private because the session callbacks of this class call it.
      *
+     * @param session The session
      * @param id The identifier
      * @return The instance or the proxy
      */
-    private D proxyByQuery(Serializable id) {
-        execute({ Session session ->
-            Serializable key = convertIdentifier(session, id, true)
-            Object cached = findCachedInstance(session, key, currentTenantId())
-            if (cached != null) {
-                return cached
-            }
-            try {
-                return session.mappingContext.proxyFactory.createProxy(session, new IdQueryExecutor(this, session), key)
-            }
-            catch (UnsupportedOperationException ignored) {
-                // a proxy factory that cannot initialize a proxy through a query gets the instance itself
-                return findAllByKeys(session, [key])[0]
-            }
-        } as SessionCallback<D>)
+    protected D proxyByQuery(Session session, Serializable id) {
+        Serializable key = convertIdentifier(session, id, true)
+        Object cached = findCachedInstance(session, key, currentTenantId())
+        if (cached != null) {
+            return (D) cached
+        }
+        try {
+            return (D) session.mappingContext.proxyFactory.createProxy(session, new IdQueryExecutor(this, session), key)
+        }
+        catch (UnsupportedOperationException ignored) {
+            // a proxy factory that cannot initialize a proxy through a query gets the instance itself
+            return findAllByKeys(session, [key])[0]
+        }
     }
 
     /**
@@ -780,6 +814,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List<Serializable> saveAll(Iterable<?> objectsToSave) {
+        requireTransactionForWrite(false)
         execute({ Session session ->
             session.persist(objectsToSave)
         } as SessionCallback<List<Serializable>>)
@@ -808,6 +843,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     void deleteAll(Iterable objectsToDelete) {
+        requireTransactionForWrite(false)
         execute({ Session session ->
             for (obj in objectsToDelete) {
                 session.delete(obj)
@@ -822,6 +858,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     void deleteAll(Map params, Iterable objectsToDelete) {
+        requireTransactionForWrite(params?.flush as boolean)
         execute({ Session session ->
             for (obj in objectsToDelete) {
                 session.delete(obj)

@@ -16,26 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.proxy;
+package org.grails.orm.hibernate.proxy
 
-import groovy.transform.CompileStatic;
-import org.codehaus.groovy.runtime.HandleMetaClass;
-import org.codehaus.groovy.runtime.InvokerHelper;
+import groovy.transform.CompileStatic
+import groovy.transform.RecordOptions
+import groovy.transform.TupleConstructor
+import org.codehaus.groovy.runtime.HandleMetaClass
+import org.codehaus.groovy.runtime.InvokerHelper
 
-import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass
 
 /**
  * Pure logic for Groovy proxy interception and handling, decoupled from Hibernate.
  *
  * @since 8.0
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class GroovyProxyInterceptorLogic {
 
-    public static final Object INVOKE_IMPLEMENTATION = new Object();
+    public static final Object INVOKE_IMPLEMENTATION = new Object()
 
     /**
      * Setting that controls {@code toString()} on an uninitialized proxy. When {@code false}
@@ -43,41 +42,41 @@ class GroovyProxyInterceptorLogic {
      * and delegates to the entity's own implementation. When {@code true}, the proxy answers
      * {@code entityName:id} without initializing.
      */
-    public static final String PROPERTY_LAZY_TO_STRING = "hibernate.grails.proxy.lazy_to_string";
+    public static final String PROPERTY_LAZY_TO_STRING = 'hibernate.grails.proxy.lazy_to_string'
 
-    private static final String GET_META_CLASS = "getMetaClass";
-    private static final String SET_META_CLASS = "setMetaClass";
-    private static final String META_CLASS_PROPERTY = "metaClass";
-    private static final String GET_PROPERTY = "getProperty";
-    private static final String ID_PROPERTY = "id";
-    private static final String IDENT_METHOD = "ident";
-    private static final String IS_DIRTY = "isDirty";
-    private static final String HAS_CHANGED = "hasChanged";
-    private static final String TO_STRING = "toString";
+    private static final String GET_META_CLASS = 'getMetaClass'
+    private static final String SET_META_CLASS = 'setMetaClass'
+    private static final String META_CLASS_PROPERTY = 'metaClass'
+    private static final String GET_PROPERTY = 'getProperty'
+    private static final String ID_PROPERTY = 'id'
+    private static final String IDENT_METHOD = 'ident'
+    private static final String IS_DIRTY = 'isDirty'
+    private static final String HAS_CHANGED = 'hasChanged'
+    private static final String TO_STRING = 'toString'
 
     static Object handleUninitialized(InterceptorState state, String methodName, Object... args) {
         if ((GET_META_CLASS == methodName || methodName.endsWith('getStaticMetaClass')) &&
                 (args == null || args.length == 0)) {
-            return InvokerHelper.getMetaClass(state.persistentClass());
+            return InvokerHelper.getMetaClass(state.persistentClass())
         }
         if (GET_PROPERTY == methodName && args.length == 1) {
             if (ID_PROPERTY == args[0]) {
-                return state.identifier();
+                return state.identifier()
             }
             if (META_CLASS_PROPERTY == args[0]) {
-                return InvokerHelper.getMetaClass(state.persistentClass());
+                return InvokerHelper.getMetaClass(state.persistentClass())
             }
         }
         if (IDENT_METHOD == methodName && (args == null || args.length == 0)) {
-            return state.identifier();
+            return state.identifier()
         }
         if ((IS_DIRTY == methodName || HAS_CHANGED == methodName) && (args == null || args.length == 0)) {
-            return false;
+            return false
         }
         if (state.lazyToString() && TO_STRING == methodName && (args == null || args.length == 0)) {
-            return state.entityName() + ":" + state.identifier();
+            return state.entityName() + ':' + state.identifier()
         }
-        return INVOKE_IMPLEMENTATION;
+        return INVOKE_IMPLEMENTATION
     }
 
     static boolean isGroovyMethod(String methodName) {
@@ -85,36 +84,36 @@ class GroovyProxyInterceptorLogic {
                 'setMetaClass' == methodName ||
                 'getProperty' == methodName ||
                 'setProperty' == methodName ||
-                'invokeMethod' == methodName;
+                'invokeMethod' == methodName
     }
 
     static ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
         if (o instanceof GroovyObject) {
-            MetaClass mc = o.getMetaClass();
+            MetaClass mc = o.getMetaClass()
             if (mc instanceof HandleMetaClass) {
-                mc = ((HandleMetaClass) mc).getAdaptee();
+                mc = ((HandleMetaClass) mc).getAdaptee()
             }
             if (mc instanceof ProxyInstanceMetaClass) {
-                return (ProxyInstanceMetaClass) mc;
+                return (ProxyInstanceMetaClass) mc
             }
         }
-        return null;
+        return null
     }
 
     static Object unwrap(Object object) {
-        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(object);
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(object)
         if (proxyMc != null) {
-            return proxyMc.getProxyTarget();
+            return proxyMc.getProxyTarget()
         }
-        return null;
+        return null
     }
 
     static Serializable getIdentifier(Object o) {
-        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o)
         if (proxyMc != null) {
-            return proxyMc.getKey();
+            return proxyMc.getKey()
         }
-        return null;
+        return null
     }
 
     /**
@@ -122,17 +121,21 @@ class GroovyProxyInterceptorLogic {
      * @return {@code true} if initialized, {@code false} if not initialized, or {@code null} if the object is not a Groovy proxy
      */
     static Boolean isInitialized(Object o) {
-        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o)
         if (proxyMc != null) {
-            return proxyMc.isProxyInitiated();
+            return proxyMc.isProxyInitiated()
         }
-        return null;
+        return null
     }
 
+    // CodeNarc reads the components of an annotated nested record as fields and reports their indentation
+    @SuppressWarnings('Indentation')
+    @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+    @TupleConstructor(defaults = false, namedVariant = false)
     record InterceptorState(String entityName, Class<?> persistentClass, Object identifier, boolean lazyToString) {
 
         InterceptorState(String entityName, Class<?> persistentClass, Object identifier) {
-            this(entityName, persistentClass, identifier, false);
+            this(entityName, persistentClass, identifier, false)
         }
     }
 

@@ -16,28 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import groovy.transform.CompileStatic;
-import groovy.transform.TupleConstructor;
-import groovy.transform.RecordOptions;
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.Parameter;
-import jakarta.persistence.Tuple;
-import jakarta.persistence.criteria.ParameterExpression;
-import org.hibernate.Session;
-import org.hibernate.query.Query;
-import org.hibernate.query.QueryFlushMode;
-import org.hibernate.query.criteria.JpaCriteriaQuery;
+import groovy.transform.CompileStatic
+import groovy.transform.TupleConstructor
+import groovy.transform.RecordOptions
+import jakarta.persistence.LockModeType
+import jakarta.persistence.Parameter
+import jakarta.persistence.Tuple
+import jakarta.persistence.criteria.ParameterExpression
+import org.hibernate.Session
+import org.hibernate.query.Query
+import org.hibernate.query.QueryFlushMode
+import org.hibernate.query.criteria.JpaCriteriaQuery
 
-import org.grails.datastore.mapping.proxy.ProxyHandler;
+import org.grails.datastore.mapping.proxy.ProxyHandler
 
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
 @CompileStatic
-@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation', 'UnnecessarySemicolon', 'UnnecessaryGString'])
+@SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
 @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
-@TupleConstructor(defaults = false)
+@TupleConstructor(defaults = false, namedVariant = false)
 record HibernateQueryExecutor(
         Integer offset,
         Integer maxResults,
@@ -50,59 +48,59 @@ record HibernateQueryExecutor(
         ProxyHandler proxyHandler) {
 
     List list(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
-        return configureQuery(session, jpaCq, parameterValues).resultList;
+        return configureQuery(session, jpaCq, parameterValues).resultList
     }
 
     Object scroll(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
-        return configureQuery(session, jpaCq, parameterValues).scroll();
+        return configureQuery(session, jpaCq, parameterValues).scroll()
     }
 
     Object singleResult(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
-        Query query = configureQuery(session, jpaCq, parameterValues);
+        Query query = configureQuery(session, jpaCq, parameterValues)
         try {
-            Object singleResult = query.singleResult;
-            return proxyHandler.unwrap(singleResult);
+            Object singleResult = query.singleResult
+            return proxyHandler.unwrap(singleResult)
         } catch (org.hibernate.NonUniqueResultException | jakarta.persistence.NonUniqueResultException e) {
-            return proxyHandler.unwrap(query.resultList.get(0));
+            return proxyHandler.unwrap(query.resultList.get(0))
         } catch (jakarta.persistence.NoResultException e) {
-            return null;
+            return null
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings('unchecked')
     private Query configureQuery(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
-        Query query = session.createQuery(jpaCq);
+        Query query = session.createQuery(jpaCq)
         parameterValues.each { ParameterExpression<?> parameter, Object value ->
-            query.setParameter((Parameter<Object>) parameter, value);
+            query.setParameter((Parameter<Object>) parameter, value)
         }
         if (Tuple.equals(jpaCq.resultType)) {
-            query.setTupleTransformer({ payload, aliases -> payload });
+            query.setTupleTransformer({ payload, aliases -> payload })
         }
         if (offset != null && offset > 0) {
-            query.setFirstResult(offset);
+            query.setFirstResult(offset)
         }
         if (queryCache != null) {
-            query.setHint('org.hibernate.cacheable', queryCache);
+            query.setHint('org.hibernate.cacheable', queryCache)
         }
         if (maxResults != null && maxResults > 0) {
-            query.setMaxResults(maxResults);
+            query.setMaxResults(maxResults)
         }
         if (lockResult != null) {
-            query.setLockMode(lockResult);
+            query.setLockMode(lockResult)
         }
         if (fetchSize != null && fetchSize > 0) {
-            query.setFetchSize(fetchSize);
+            query.setFetchSize(fetchSize)
         }
         if (timeout != null && timeout > 0) {
-            query.setTimeout(timeout);
+            query.setTimeout(timeout)
         }
         if (flushMode != null) {
-            query.setQueryFlushMode(flushMode);
+            query.setQueryFlushMode(flushMode)
         }
         if (readOnly != null) {
-            query.setReadOnly(readOnly);
+            query.setReadOnly(readOnly)
         }
-        return query;
+        return query
     }
 
 }

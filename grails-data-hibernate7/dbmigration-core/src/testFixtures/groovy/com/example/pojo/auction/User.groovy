@@ -1,19 +1,19 @@
-package com.example.pojo.auction;
+package com.example.pojo.auction
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
 @CompileStatic
 class User extends Persistent {
 
-    String userName;
-    String password;
-    String email;
-    Name name;
-    List bids;
-    List auctions;
+    String userName
+    String password
+    String email
+    Name name
+    List bids
+    List auctions
 
     String toString() {
-        return userName;
+        return userName
     }
 
 }

@@ -29,7 +29,6 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 
 @CompileStatic
-@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class DiscriminatorPropertyBinder {
 
     private final MetadataBuildingContext metadataBuildingContext

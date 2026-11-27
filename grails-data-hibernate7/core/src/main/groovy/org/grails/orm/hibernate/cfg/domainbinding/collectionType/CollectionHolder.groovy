@@ -29,7 +29,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 @CompileStatic
 @SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
 @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
-@TupleConstructor(defaults = false)
+@TupleConstructor(defaults = false, namedVariant = false)
 record CollectionHolder(Map<Class<?>, CollectionType> map) {
 
     /** Creates a new {@link CollectionHolder} instance. */

@@ -20,13 +20,27 @@ package org.apache.grails.undertow.core.servlet;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 
 import io.undertow.Undertow.Builder;
+import io.undertow.servlet.api.Deployment;
 
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.Filter;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -48,12 +62,17 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.apache.grails.undertow.core.UndertowBuilderCustomizer;
 
+import org.springframework.boot.web.error.ErrorPage;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.boot.web.server.WebServerException;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.boot.web.servlet.ServletContextInitializer;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.util.FileCopyUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Tests for {@link UndertowServletWebServerFactory}.
@@ -143,6 +162,243 @@ class UndertowServletWebServerFactoryTests {
             .isEqualTo("Hello World");
     }
 
+    @Test
+    void temporaryDirectoriesAreDeletedWhenTheServerStops() throws Exception {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration());
+        this.webServer = webServer;
+        webServer.start();
+        Deployment deployment = webServer.getDeploymentManager().getDeployment();
+        Path tempDir = deployment.getDeploymentInfo().getTempDir().toPath();
+        Path documentRoot = Path.of(deployment.getServletContext().getRealPath("/"));
+        Files.writeString(tempDir.resolve("upload.tmp"), "upload");
+        assertThat(tempDir).isDirectory();
+        assertThat(documentRoot).isDirectory();
+        webServer.stop();
+        assertThat(tempDir).doesNotExist();
+        assertThat(documentRoot).doesNotExist();
+    }
+
+    @Test
+    void aServerThatNeverStartedIsUndeployedWhenItIsDestroyed() {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(-1);
+        AtomicBoolean contextDestroyed = new AtomicBoolean();
+        ServletContextInitializer listenerRegistration = (servletContext) -> servletContext
+            .addListener(new ServletContextListener() {
+
+                @Override
+                public void contextDestroyed(ServletContextEvent event) {
+                    contextDestroyed.set(true);
+                }
+
+            });
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration(), listenerRegistration);
+        this.webServer = webServer;
+        webServer.start();
+        Deployment deployment = webServer.getDeploymentManager().getDeployment();
+        Path tempDir = deployment.getDeploymentInfo().getTempDir().toPath();
+        Path documentRoot = Path.of(deployment.getServletContext().getRealPath("/"));
+        assertThat(tempDir).isDirectory();
+        assertThat(documentRoot).isDirectory();
+        webServer.destroy();
+        assertThat(contextDestroyed).isTrue();
+        assertThat(tempDir).doesNotExist();
+        assertThat(documentRoot).doesNotExist();
+    }
+
+    @Test
+    void theApplicationsListenersStillFindTheTemporaryDirectoryWhenTheContextIsDestroyed() {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        AtomicBoolean tempDirExisted = new AtomicBoolean();
+        ServletContextInitializer listenerRegistration = (servletContext) -> servletContext
+            .addListener(new ServletContextListener() {
+
+                @Override
+                public void contextDestroyed(ServletContextEvent event) {
+                    File tempDir = (File) event.getServletContext().getAttribute(ServletContext.TEMPDIR);
+                    tempDirExisted.set(tempDir.isDirectory());
+                }
+
+            });
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration(), listenerRegistration);
+        this.webServer = webServer;
+        webServer.start();
+        Path tempDir = webServer.getDeploymentManager().getDeployment().getDeploymentInfo().getTempDir().toPath();
+        webServer.stop();
+        assertThat(tempDirExisted).as("the temporary directory while the application's listener is destroyed")
+            .isTrue();
+        assertThat(tempDir).doesNotExist();
+    }
+
+    @Test
+    void aServerWhoseHandlersFailedToBuildIsUndeployedWhenItIsDestroyed(@TempDir File parent) throws Exception {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        File regularFile = new File(parent, "file");
+        Files.writeString(regularFile.toPath(), "not a directory");
+        factory.setAccessLogEnabled(true);
+        factory.setAccessLogDirectory(new File(regularFile, "logs"));
+        AtomicBoolean contextDestroyed = new AtomicBoolean();
+        ServletContextInitializer listenerRegistration = (servletContext) -> servletContext
+            .addListener(new ServletContextListener() {
+
+                @Override
+                public void contextDestroyed(ServletContextEvent event) {
+                    contextDestroyed.set(true);
+                }
+
+            });
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration(), listenerRegistration);
+        this.webServer = webServer;
+        Path tempDir = webServer.getDeploymentManager().getDeployment().getDeploymentInfo().getTempDir().toPath();
+        assertThatExceptionOfType(WebServerException.class).isThrownBy(webServer::start);
+        // what Spring Boot does with a server that failed to start
+        webServer.stop();
+        webServer.destroy();
+        assertThat(contextDestroyed).isTrue();
+        assertThat(tempDir).doesNotExist();
+    }
+
+    @Test
+    void aConfiguredDocumentRootIsKeptWhenTheServerStops(@TempDir File documentRoot) throws Exception {
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.setDocumentRoot(documentRoot);
+        Files.writeString(documentRoot.toPath().resolve("index.html"), "Hello World");
+        UndertowServletWebServer webServer = (UndertowServletWebServer) factory
+            .getWebServer(helloWorldServletRegistration());
+        this.webServer = webServer;
+        webServer.start();
+        Path tempDir = webServer.getDeploymentManager().getDeployment().getDeploymentInfo().getTempDir().toPath();
+        assertThat(getResponse("http://localhost:" + webServer.getPort() + "/index.html")).isEqualTo("Hello World");
+        webServer.stop();
+        assertThat(tempDir).doesNotExist();
+        assertThat(documentRoot.toPath().resolve("index.html")).hasContent("Hello World");
+    }
+
+    @Test
+    void aFilterReadsTheDispatcherTypeOfItsDispatchOnceAForwardItMadeHasReturned() throws Exception {
+        List<DispatcherType> readAfterChain = new CopyOnWriteArrayList<>();
+        Filter recordingFilter = (request, response, chain) -> {
+            chain.doFilter(request, response);
+            readAfterChain.add(request.getDispatcherType());
+        };
+        FilterRegistrationBean<Filter> filterRegistration = new FilterRegistrationBean<>(recordingFilter);
+        filterRegistration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST, DispatcherType.ASYNC));
+        ServletRegistrationBean<HttpServlet> forwarding = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                    throws ServletException, IOException {
+                request.getRequestDispatcher("/hello").forward(request, response);
+            }
+
+        }, "/forwarding");
+        forwarding.setName("forwarding");
+        ServletRegistrationBean<HttpServlet> asynchronous = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+                request.startAsync().dispatch("/forwarding");
+            }
+
+        }, "/asynchronous");
+        asynchronous.setName("asynchronous");
+        asynchronous.setAsyncSupported(true);
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        this.webServer = factory.getWebServer(filterRegistration, helloWorldServletRegistration(), forwarding,
+            asynchronous);
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/forwarding")).isEqualTo("Hello World");
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/asynchronous"))
+            .isEqualTo("Hello World");
+
+        Awaitility.await().untilAsserted(() -> assertThat(readAfterChain).containsExactly(DispatcherType.REQUEST,
+            DispatcherType.REQUEST, DispatcherType.ASYNC));
+    }
+
+    @Test
+    void asynchronousProcessingCompletesOnceAnErrorItsRequestDispatchSentIsAnswered() throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        this.webServer = factory.getWebServer(sendsErrorAfterStartingAsync(events, false));
+        this.webServer.start();
+
+        assertThat(getStatus("http://localhost:" + this.webServer.getPort() + "/sendsError")).isEqualTo(503);
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("onComplete"));
+    }
+
+    @Test
+    void asynchronousProcessingCompletesOnceTheErrorPageHasAnsweredAnErrorItsRequestDispatchSent() throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/hello"));
+        this.webServer = factory.getWebServer(helloWorldServletRegistration(), sendsErrorAfterStartingAsync(events, false));
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/sendsError")).isEqualTo("Hello World");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("onComplete"));
+    }
+
+    @Test
+    void asynchronousProcessingThatADispatchCompletesAfterSendingAnErrorCompletesOnce() throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        this.webServer = factory.getWebServer(sendsErrorAfterStartingAsync(events, true));
+        this.webServer.start();
+
+        assertThat(getStatus("http://localhost:" + this.webServer.getPort() + "/sendsError")).isEqualTo(503);
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactly("onComplete");
+    }
+
+    private ServletRegistrationBean<HttpServlet> sendsErrorAfterStartingAsync(List<String> events, boolean completes) {
+        ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+                request.startAsync().addListener(new AsyncListener() {
+
+                    @Override
+                    public void onComplete(AsyncEvent event) {
+                        events.add("onComplete");
+                    }
+
+                    @Override
+                    public void onTimeout(AsyncEvent event) {
+                        events.add("onTimeout");
+                    }
+
+                    @Override
+                    public void onError(AsyncEvent event) {
+                        events.add("onError");
+                    }
+
+                    @Override
+                    public void onStartAsync(AsyncEvent event) {
+                        events.add("onStartAsync");
+                    }
+
+                });
+                response.sendError(503);
+                if (completes) {
+                    request.getAsyncContext().complete();
+                }
+            }
+
+        }, "/sendsError");
+        registration.setName("sendsError");
+        registration.setAsyncSupported(true);
+        return registration;
+    }
+
     private ServletRegistrationBean<HttpServlet> helloWorldServletRegistration() {
         ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HelloWorldServlet());
         registration.addUrlMappings("/hello");
@@ -152,6 +408,13 @@ class UndertowServletWebServerFactoryTests {
     private String getResponse(String url) throws IOException {
         try (CloseableHttpClient client = HttpClients.createMinimal()) {
             return readEntity(client, url);
+        }
+    }
+
+    private int getStatus(String url) throws IOException {
+        try (CloseableHttpClient client = HttpClients.createMinimal();
+                CloseableHttpResponse response = client.execute(new HttpGet(url))) {
+            return response.getCode();
         }
     }
 

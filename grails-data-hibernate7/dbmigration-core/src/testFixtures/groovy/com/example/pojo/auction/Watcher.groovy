@@ -1,22 +1,22 @@
-package com.example.pojo.auction;
+package com.example.pojo.auction
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.ManyToOne
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
 @Entity
 @CompileStatic
 class Watcher {
 
     @Id
-    Integer id;
+    Integer id
 
-    @SuppressWarnings("unused")
-    String name;
+    @SuppressWarnings('unused')
+    String name
 
     @ManyToOne
-    AuctionItem auctionItem;
+    AuctionItem auctionItem
 
 }

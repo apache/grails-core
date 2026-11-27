@@ -13,70 +13,94 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import groovy.transform.CompileStatic;
-import jakarta.persistence.criteria.Expression;
+import groovy.transform.CompileStatic
+import jakarta.persistence.criteria.Expression
 
 /**
  * Registry for user-defined and auto-generated aliases in a JPA query.
  *
  * @since 8.0
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class AliasRegistry {
 
-    private final Map<String, HibernateAlias> definitions = [:];
-    private final Map<String, Expression<?>> realizedExpressions = [:];
-    private final AliasRegistry parent;
+    private final Map<String, HibernateAlias> definitions = [:]
+    private final Map<String, Expression<?>> realizedExpressions = [:]
+    private final AliasRegistry parent
 
     AliasRegistry() {
-        this.parent = null;
+        this.parent = null
     }
 
     AliasRegistry(AliasRegistry parent) {
-        this.parent = parent;
+        this.parent = parent
     }
 
     void define(String alias, HibernateAlias definition) {
-        definitions.put(alias, definition);
+        definitions.put(alias, definition)
     }
 
     void realize(String alias, Expression<?> expression) {
-        realizedExpressions.put(alias, expression);
+        realizedExpressions.put(alias, expression)
+    }
+
+    /**
+     * Whether this query declares the alias, independently of any enclosing query.
+     */
+    boolean isOwnDefined(String alias) {
+        return definitions.containsKey(alias)
+    }
+
+    /**
+     * Whether this query realized the alias, independently of any enclosing query.
+     */
+    boolean isOwnRealized(String alias) {
+        return realizedExpressions.containsKey(alias)
+    }
+
+    /**
+     * The first declared alias of an association path shares the path join. Further aliases
+     * have independent joins. Only declarations in this query participate.
+     */
+    HibernateAlias getAssociationAlias(String path) {
+        for (HibernateAlias definition : definitions.values()) {
+            if (definition != null && definition.explicit() && path == definition.path()) {
+                return definition
+            }
+        }
+        return null
     }
 
     boolean isDefined(String alias) {
         if (definitions.containsKey(alias) || realizedExpressions.containsKey(alias)) {
-            return true;
+            return true
         }
         if (parent != null) {
-            return parent.isDefined(alias);
+            return parent.isDefined(alias)
         }
-        return false;
+        return false
     }
 
     HibernateAlias getDefinition(String alias) {
-        HibernateAlias definition = definitions.get(alias);
+        HibernateAlias definition = definitions.get(alias)
         if (definition == null && parent != null) {
-            return parent.getDefinition(alias);
+            return parent.getDefinition(alias)
         }
-        return definition;
+        return definition
     }
 
     Expression<?> getRealized(String alias) {
-        Expression<?> expr = realizedExpressions.get(alias);
-        if (expr == null && parent != null) {
-            return parent.getRealized(alias);
+        Expression<?> expr = realizedExpressions.get(alias)
+        if (expr == null && !isOwnDefined(alias) && parent != null) {
+            return parent.getRealized(alias)
         }
-        return expr;
+        return expr
     }
 
     boolean hasRealized(String alias) {
-        return realizedExpressions.containsKey(alias) || (parent != null && parent.hasRealized(alias));
+        return getRealized(alias) != null
     }
 
 }

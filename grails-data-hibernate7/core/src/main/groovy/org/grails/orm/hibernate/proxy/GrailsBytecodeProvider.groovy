@@ -16,71 +16,68 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.proxy;
+package org.grails.orm.hibernate.proxy
 
-import groovy.transform.CompileStatic;
-import org.hibernate.bytecode.enhance.spi.EnhancementContext;
-import org.hibernate.bytecode.enhance.spi.Enhancer;
-import org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState;
-import org.hibernate.bytecode.spi.BytecodeProvider;
-import org.hibernate.bytecode.spi.ProxyFactoryFactory;
-import org.hibernate.bytecode.spi.ReflectionOptimizer;
-import org.hibernate.property.access.spi.PropertyAccess;
-import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper;
+import groovy.transform.CompileStatic
+import org.hibernate.bytecode.enhance.spi.EnhancementContext
+import org.hibernate.bytecode.enhance.spi.Enhancer
+import org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState
+import org.hibernate.bytecode.spi.BytecodeProvider
+import org.hibernate.bytecode.spi.ProxyFactoryFactory
+import org.hibernate.bytecode.spi.ReflectionOptimizer
+import org.hibernate.property.access.spi.PropertyAccess
+import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper
 
 /**
  * A {@link BytecodeProvider} implementation for Hibernate 7 that provides Groovy-aware proxies.
  *
  * @since 8.0
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class GrailsBytecodeProvider implements BytecodeProvider, Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L
 
-    private final ByteBuddyState byteBuddyState;
-    private final ByteBuddyProxyHelper proxyHelper;
+    private final ByteBuddyState byteBuddyState
+    private final ByteBuddyProxyHelper proxyHelper
 
     GrailsBytecodeProvider() {
-        this.byteBuddyState = new ByteBuddyState();
-        this.proxyHelper = createProxyHelper();
+        this.byteBuddyState = new ByteBuddyState()
+        this.proxyHelper = createProxyHelper()
     }
 
     protected ByteBuddyProxyHelper createProxyHelper() {
-        return new ByteBuddyProxyHelper(byteBuddyState);
+        return new ByteBuddyProxyHelper(byteBuddyState)
     }
 
     /** The state the proxy classes are loaded through, which the Groovy proxy wrapper is loaded through as well. */
     ByteBuddyState getByteBuddyState() {
-        return byteBuddyState;
+        return byteBuddyState
     }
 
     ByteBuddyProxyHelper getProxyHelper() {
-        return proxyHelper;
+        return proxyHelper
     }
 
     @Override
     ProxyFactoryFactory getProxyFactoryFactory() {
-        return new GrailsProxyFactoryFactory(this);
+        return new GrailsProxyFactoryFactory(this)
     }
 
     @Override
     ReflectionOptimizer getReflectionOptimizer(
             Class clazz, String[] getterNames, String[] setterNames, Class[] types) {
-        return null;
+        return null
     }
 
     @Override
     ReflectionOptimizer getReflectionOptimizer(Class<?> clazz, Map<String, PropertyAccess> propertyAccessMap) {
-        return null;
+        return null
     }
 
     @Override
     Enhancer getEnhancer(EnhancementContext enhancementContext) {
-        return null;
+        return null
     }
 
 }

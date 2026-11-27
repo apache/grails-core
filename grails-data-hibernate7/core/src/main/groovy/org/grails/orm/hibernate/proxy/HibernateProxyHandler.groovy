@@ -16,91 +16,88 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.proxy;
+package org.grails.orm.hibernate.proxy
 
-import groovy.transform.CompileStatic;
-import org.hibernate.Hibernate;
-import org.hibernate.collection.spi.LazyInitializable;
-import org.hibernate.collection.spi.PersistentCollection;
-import org.hibernate.proxy.HibernateProxy;
-import org.hibernate.proxy.HibernateProxyHelper;
+import groovy.transform.CompileStatic
+import org.hibernate.Hibernate
+import org.hibernate.collection.spi.LazyInitializable
+import org.hibernate.collection.spi.PersistentCollection
+import org.hibernate.proxy.HibernateProxy
+import org.hibernate.proxy.HibernateProxyHelper
 
-import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
-import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
-import org.grails.datastore.mapping.proxy.EntityProxy;
-import org.grails.datastore.mapping.proxy.ProxyFactory;
-import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.engine.AssociationQueryExecutor
+import org.grails.datastore.mapping.proxy.EntityProxy
+import org.grails.datastore.mapping.proxy.ProxyFactory
+import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
+import org.grails.orm.hibernate.GrailsHibernateTemplate
 
 /**
  * Implementation of the ProxyHandler interface for Hibernate 7.
  *
  * @since 1.2.2
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['PMD.CloseResource', 'UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     @Override
     boolean isInitialized(Object o) {
-        if (o == null) return false;
+        if (o == null) return false
 
         if (o instanceof HibernateProxy) {
-            return !o.getHibernateLazyInitializer().isUninitialized();
+            return !o.getHibernateLazyInitializer().isUninitialized()
         }
         if (o instanceof EntityProxy) {
-            return o.isInitialized();
+            return o.isInitialized()
         }
         if (o instanceof LazyInitializable) {
-            return o.wasInitialized();
+            return o.wasInitialized()
         }
 
-        Boolean groovyProxyInitialized = GroovyProxyInterceptorLogic.isInitialized(o);
+        Boolean groovyProxyInitialized = GroovyProxyInterceptorLogic.isInitialized(o)
         if (groovyProxyInitialized != null) {
-            return groovyProxyInitialized;
+            return groovyProxyInitialized
         }
 
-        return Hibernate.isInitialized(o);
+        return Hibernate.isInitialized(o)
     }
 
     @Override
     boolean isInitialized(Object obj, String associationName) {
         try {
-            Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
-            return isInitialized(proxy);
+            Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName)
+            return isInitialized(proxy)
         }
         catch (RuntimeException e) {
-            return false;
+            return false
         }
     }
 
     @Override
     Object unwrap(Object object) {
         if (object instanceof EntityProxy) {
-            return object.getTarget();
+            return object.getTarget()
         }
 
-        Object unwrapped = GroovyProxyInterceptorLogic.unwrap(object);
+        Object unwrapped = GroovyProxyInterceptorLogic.unwrap(object)
         if (unwrapped != null) {
-            return unwrapped;
+            return unwrapped
         }
 
         if (object instanceof PersistentCollection) {
-            initialize(object);
-            return object;
+            initialize(object)
+            return object
         }
 
-        return Hibernate.unproxy(object);
+        return Hibernate.unproxy(object)
     }
 
     @Override
     Serializable getIdentifier(Object o) {
         if (o instanceof EntityProxy) {
-            return o.getProxyKey();
+            return o.getProxyKey()
         }
 
         // check HibernateProxy before the Groovy metaClass probe: probing the metaClass of a
@@ -108,15 +105,15 @@ class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         // LazyInitializationException when detached), while the LazyInitializer holds the
         // identifier without needing a session
         if (o instanceof HibernateProxy) {
-            return (Serializable) o.getHibernateLazyInitializer().getIdentifier();
+            return (Serializable) o.getHibernateLazyInitializer().getIdentifier()
         }
 
-        return GroovyProxyInterceptorLogic.getIdentifier(o);
+        return GroovyProxyInterceptorLogic.getIdentifier(o)
     }
 
     @Override
     Class<?> getProxiedClass(Object o) {
-        return HibernateProxyHelper.getClassWithoutInitializingProxy(o);
+        return HibernateProxyHelper.getClassWithoutInitializingProxy(o)
     }
 
     @Override
@@ -126,62 +123,62 @@ class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         return o instanceof EntityProxy ||
                 o instanceof HibernateProxy ||
                 o instanceof PersistentCollection ||
-                GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null;
+                GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null
     }
 
     @Override
     void initialize(Object o) {
         if (o instanceof EntityProxy) {
-            o.initialize();
-            return;
+            o.initialize()
+            return
         }
 
-        ProxyInstanceMetaClass proxyMc = GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o);
+        ProxyInstanceMetaClass proxyMc = GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o)
         if (proxyMc != null) {
-            proxyMc.getProxyTarget();
+            proxyMc.getProxyTarget()
         }
         else {
-            Hibernate.initialize(o);
+            Hibernate.initialize(o)
         }
     }
 
     @Override
     def <T> T createProxy(Session session, Class<T> type, Serializable key) {
         if (session.getNativeInterface() instanceof GrailsHibernateTemplate) {
-            GrailsHibernateTemplate ght = (GrailsHibernateTemplate) session.getNativeInterface();
+            GrailsHibernateTemplate ght = (GrailsHibernateTemplate) session.getNativeInterface()
             // Obtain the proxy from the current Hibernate session (Session#getReference),
             // so that it is attached to it and can be initialized on first access
-            return ght.load(type, key);
+            return ght.load(type, key)
         }
         throw new IllegalStateException(
-                "Could not obtain GrailsHibernateTemplate from Session#getNativeInterface()");
+                'Could not obtain GrailsHibernateTemplate from Session#getNativeInterface()')
     }
 
     @Override
     def <T, K extends Serializable> T createProxy(
             Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
         throw new UnsupportedOperationException(
-                "createProxy via AssociationQueryExecutor not supported in HibernateProxyHandler");
+                'createProxy via AssociationQueryExecutor not supported in HibernateProxyHandler')
     }
 
     HibernateProxy getAssociationProxy(Object obj, String associationName) {
         try {
-            Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
-            return (proxy instanceof HibernateProxy) ? (HibernateProxy) proxy : null;
+            Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName)
+            return (proxy instanceof HibernateProxy) ? (HibernateProxy) proxy : null
         }
         catch (RuntimeException e) {
-            return null;
+            return null
         }
     }
 
     @Deprecated
     Object unwrapIfProxy(Object instance) {
-        return unwrap(instance);
+        return unwrap(instance)
     }
 
     @Deprecated
     Object unwrapProxy(Object proxy) {
-        return unwrap(proxy);
+        return unwrap(proxy)
     }
 
 }

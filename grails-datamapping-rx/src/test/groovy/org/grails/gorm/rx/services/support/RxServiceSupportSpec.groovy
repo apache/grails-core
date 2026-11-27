@@ -19,10 +19,13 @@
 
 package org.grails.gorm.rx.services.support
 
-import rx.schedulers.Schedulers
+import io.reactivex.rxjava3.core.Scheduler
+import io.reactivex.rxjava3.schedulers.Schedulers
 import spock.lang.Specification
 
 import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class RxServiceSupportSpec extends Specification {
 
@@ -31,7 +34,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { 'hello' } as Callable<String>
 
         when:
-        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().toBlocking().single()
+        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().blockingGet()
 
         then:
         results == ['hello']
@@ -42,7 +45,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<List<String>> callable = { ['a', 'b', 'c'] } as Callable<List<String>>
 
         when:
-        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().toBlocking().single()
+        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().blockingGet()
 
         then:
         results == ['a', 'b', 'c']
@@ -53,7 +56,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<List<String>> callable = { [] } as Callable<List<String>>
 
         when:
-        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().toBlocking().single()
+        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().blockingGet()
 
         then:
         results == []
@@ -64,18 +67,18 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { null } as Callable<String>
 
         when:
-        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().toBlocking().single()
+        List<String> results = RxServiceSupport.create(Schedulers.trampoline(), callable).toList().blockingGet()
 
         then:
         results == []
     }
 
-    def "create without an explicit scheduler runs on the IO scheduler and still emits the result"() {
+    def "create without an explicit scheduler delivers the result on the IO scheduler"() {
         given:
         Callable<String> callable = { 'hello' } as Callable<String>
 
         when:
-        String result = RxServiceSupport.create(callable).toBlocking().first()
+        String result = RxServiceSupport.create(callable).blockingFirst()
 
         then:
         result == 'hello'
@@ -86,7 +89,7 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { 'hello' } as Callable<String>
 
         when:
-        String result = RxServiceSupport.createSingle(Schedulers.trampoline(), callable).toBlocking().value()
+        String result = RxServiceSupport.createSingle(Schedulers.trampoline(), callable).blockingGet()
 
         then:
         result == 'hello'
@@ -98,19 +101,71 @@ class RxServiceSupportSpec extends Specification {
         Callable<String> callable = { throw failure } as Callable<String>
 
         when:
-        RxServiceSupport.createSingle(Schedulers.trampoline(), callable).toBlocking().value()
+        RxServiceSupport.createSingle(Schedulers.trampoline(), callable).blockingGet()
 
         then:
         IllegalStateException e = thrown(IllegalStateException)
         e.is(failure)
     }
 
-    def "createSingle without an explicit scheduler runs on the IO scheduler and still emits the result"() {
+    def "createSingle signals NoSuchElementException when the callable returns null"() {
+        given: 'an RxJava 3 Single cannot complete without a value'
+        Callable<String> callable = { null } as Callable<String>
+
+        when:
+        RxServiceSupport.createSingle(Schedulers.trampoline(), callable).blockingGet()
+
+        then:
+        NoSuchElementException e = thrown(NoSuchElementException)
+        e.message == 'The operation produced no result'
+    }
+
+    def "create invokes the callable on the subscribing thread and delivers the result on the scheduler"() {
+        given:
+        ExecutorService executor = Executors.newSingleThreadExecutor({ Runnable r -> new Thread(r, 'rx-delivery') })
+        Scheduler scheduler = Schedulers.from(executor)
+        String callableThread = null
+        Callable<String> callable = { callableThread = Thread.currentThread().name; 'hello' } as Callable<String>
+
+        when:
+        String deliveryThread = RxServiceSupport.create(scheduler, callable)
+                .map { Thread.currentThread().name }
+                .blockingFirst()
+
+        then: 'the blocking call stays on the subscriber, only the emission moves'
+        callableThread == Thread.currentThread().name
+        deliveryThread == 'rx-delivery'
+
+        cleanup:
+        executor.shutdownNow()
+    }
+
+    def "createSingle invokes the callable on the subscribing thread and delivers the result on the scheduler"() {
+        given:
+        ExecutorService executor = Executors.newSingleThreadExecutor({ Runnable r -> new Thread(r, 'rx-single-delivery') })
+        Scheduler scheduler = Schedulers.from(executor)
+        String callableThread = null
+        Callable<String> callable = { callableThread = Thread.currentThread().name; 'hello' } as Callable<String>
+
+        when:
+        String deliveryThread = RxServiceSupport.createSingle(scheduler, callable)
+                .map { Thread.currentThread().name }
+                .blockingGet()
+
+        then: 'the blocking call stays on the subscriber, only the emission moves'
+        callableThread == Thread.currentThread().name
+        deliveryThread == 'rx-single-delivery'
+
+        cleanup:
+        executor.shutdownNow()
+    }
+
+    def "createSingle without an explicit scheduler delivers the result on the IO scheduler"() {
         given:
         Callable<String> callable = { 'hello' } as Callable<String>
 
         when:
-        String result = RxServiceSupport.createSingle(callable).toBlocking().value()
+        String result = RxServiceSupport.createSingle(callable).blockingGet()
 
         then:
         result == 'hello'

@@ -34,7 +34,7 @@ class GrailsSqlProjectionFunctionContributor implements FunctionContributor {
     void contributeFunctions(FunctionContributions functionContributions) {
         functionContributions.functionRegistry.register(
                 GrailsSqlProjectionFunction.NAME,
-                new GrailsSqlProjectionFunction())
+                new GrailsSqlProjectionFunction(SqlSyntax.forDialect(functionContributions.dialect)))
     }
 
 }

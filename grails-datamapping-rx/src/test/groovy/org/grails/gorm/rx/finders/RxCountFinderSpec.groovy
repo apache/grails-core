@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.rx.RxDatastoreClient
 import org.springframework.core.convert.support.DefaultConversionService
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -87,7 +87,7 @@ class RxCountFinderSpec extends Specification {
         // query.singleResult() returns an Observable in production (RxQuery#singleResult) - countBy
         // passes it through unchanged rather than unwrapping it.
         Observable observable = finder.invoke(Person, 'countByName', ['Fred'] as Object[]) as Observable
-        def result = observable.toBlocking().first()
+        def result = observable.blockingFirst()
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
@@ -110,7 +110,7 @@ class RxCountFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Person, 'countByName', detachedCriteria, ['Fred'] as Object[]) as Observable
-        def result = observable.toBlocking().first()
+        def result = observable.blockingFirst()
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
@@ -125,7 +125,7 @@ class RxCountFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Person, 'countByName', (grails.gorm.DetachedCriteria) null, ['Fred'] as Object[]) as Observable
-        def result = observable.toBlocking().first()
+        def result = observable.blockingFirst()
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
@@ -169,7 +169,7 @@ class RxCountFinderSpec extends Specification {
         0 * query.order(_)
         0 * query.cache(_)
         0 * query.lock(_)
-        observable.toBlocking().first() == 5L
+        observable.blockingFirst() == 5L
 
         where:
         arguments << [

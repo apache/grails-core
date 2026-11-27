@@ -35,11 +35,5 @@ enum ErrorsRendering {
      * The errors view an application generated with JSON views has, whose shape the document
      * derives.
      */
-    ERRORS_VIEW,
-
-    /**
-     * The view JSON views falls back to for any object, which renders them as it renders anything
-     * else, and answers with success rather than 422.
-     */
-    OBJECT_VIEW
+    ERRORS_VIEW
 }

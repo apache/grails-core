@@ -18,18 +18,22 @@
  */
 package org.grails.compiler.injection
 
+import java.lang.reflect.Modifier
 import java.nio.charset.StandardCharsets
 
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.MixinNode
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Drives {@link FactoriesFileWriter#updateFactoriesWithType} — the mechanism behind both the
  * {@code grails.factories} and {@code grails-cli.factories} registrations — to lock in that a
- * concrete subtype is registered, an abstract subtype is excluded, and distinct commands whose
- * fully-qualified names share a prefix are both kept.
+ * concrete subtype is registered, an abstract subtype is excluded, distinct commands whose
+ * fully-qualified names share a prefix are both kept, and a class compiled again after it stopped
+ * qualifying is dropped unless a hand-authored file registers it.
  */
 class FactoriesFileWriterSpec extends Specification {
 
@@ -99,9 +103,82 @@ class FactoriesFileWriterSpec extends Specification {
         factories().getProperty(CONTRACT_NAME).tokenize(',')*.trim() == [ConcreteCommand.name]
     }
 
-    private Properties factories() {
+    def "drops a class compiled again without the contract, keeping the others"() {
+        given:
+        FactoriesFileWriter.updateFactoriesWithType(ClassHelper.make(ConcreteCommand), CONTRACT, targetDir, LOCATION, [])
+        FactoriesFileWriter.updateFactoriesWithType(ClassHelper.make(FooCommand), CONTRACT, targetDir, LOCATION, [])
+
+        when: 'incremental compilation recompiles ConcreteCommand alone, no longer implementing the contract'
+        boolean registered = FactoriesFileWriter.updateFactoriesWithType(
+                new ClassNode(ConcreteCommand.name, Modifier.PUBLIC, ClassHelper.OBJECT_TYPE), CONTRACT, targetDir, LOCATION, [])
+
+        then:
+        !registered
+        factories().getProperty(CONTRACT_NAME) == FooCommand.name
+    }
+
+    def "drops a class compiled again as abstract"() {
+        given:
+        FactoriesFileWriter.updateFactoriesWithType(ClassHelper.make(ConcreteCommand), CONTRACT, targetDir, LOCATION, [])
+        FactoriesFileWriter.updateFactoriesWithType(ClassHelper.make(FooCommand), CONTRACT, targetDir, LOCATION, [])
+
+        when:
+        ClassNode nowAbstract = new ClassNode(ConcreteCommand.name, Modifier.PUBLIC | Modifier.ABSTRACT,
+                ClassHelper.OBJECT_TYPE, [CONTRACT] as ClassNode[], MixinNode.EMPTY_ARRAY)
+        boolean registered = FactoriesFileWriter.updateFactoriesWithType(nowAbstract, CONTRACT, targetDir, LOCATION, [])
+
+        then:
+        !registered
+        factories().getProperty(CONTRACT_NAME) == FooCommand.name
+    }
+
+    def "removes the generated file once its last entry is dropped"() {
+        given:
+        FactoriesFileWriter.updateFactoriesWithType(ClassHelper.make(ConcreteCommand), CONTRACT, targetDir, LOCATION, [])
+
+        when:
+        boolean removed = FactoriesFileWriter.removeFromFactories(ConcreteCommand.name, CONTRACT, targetDir, LOCATION, [])
+
+        then:
+        removed
+        !new File(targetDir, LOCATION).exists()
+    }
+
+    def "leaves the file alone when the class was never registered"() {
+        given:
+        FactoriesFileWriter.updateFactoriesWithType(ClassHelper.make(ConcreteCommand), CONTRACT, targetDir, LOCATION, [])
+        String before = new File(targetDir, LOCATION).text
+
+        when:
+        boolean removed = FactoriesFileWriter.removeFromFactories(Unrelated.name, CONTRACT, targetDir, LOCATION, [])
+
+        then:
+        !removed
+        new File(targetDir, LOCATION).text == before
+    }
+
+    @RestoreSystemProperties
+    def "keeps a class a hand-authored factories file registers"() {
+        given: 'a project whose hand-authored file registers ConcreteCommand, compiled into its build directory'
+        System.clearProperty('base.dir')
+        File classes = new File(targetDir, 'project/build/classes/groovy/main')
+        File handAuthored = new File(targetDir, "project/src/main/resources/${LOCATION}")
+        handAuthored.parentFile.mkdirs()
+        handAuthored.text = "${CONTRACT_NAME}=${ConcreteCommand.name}\n"
+        List<String> sourceLocations = ["src/main/resources/${LOCATION}".toString()]
+        FactoriesFileWriter.updateFactoriesWithType(ClassHelper.make(FooCommand), CONTRACT, classes, LOCATION, sourceLocations)
+
+        when:
+        boolean removed = FactoriesFileWriter.removeFromFactories(ConcreteCommand.name, CONTRACT, classes, LOCATION, sourceLocations)
+
+        then:
+        !removed
+        factories(classes).getProperty(CONTRACT_NAME).tokenize(',').toSet() == [ConcreteCommand.name, FooCommand.name].toSet()
+    }
+
+    private Properties factories(File directory = targetDir) {
         Properties props = new Properties()
-        new File(targetDir, LOCATION).withReader(StandardCharsets.ISO_8859_1.name()) { props.load(it) }
+        new File(directory, LOCATION).withReader(StandardCharsets.ISO_8859_1.name()) { props.load(it) }
         props
     }
 

@@ -34,6 +34,30 @@ import spock.lang.Specification
 
 class HttpServletRequestExtensionSpec extends Specification {
 
+    void "request.XML without the XML module names the module it needs, while other properties read the request's attributes"() {
+        given:
+        def request = new MockHttpServletRequest()
+        request.setAttribute('foo', 'bar')
+
+        when:
+        request.XML
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains('org.apache.grails:grails-xml')
+
+        when:
+        request['XML']
+
+        then:
+        e = thrown(IllegalStateException)
+        e.message.contains('org.apache.grails:grails-xml')
+
+        expect:
+        request.foo == 'bar'
+        request['foo'] == 'bar'
+    }
+
     void "Test typed converters read and convert request attributes"() {
         given:
             HttpServletRequest request = new MockHttpServletRequest()

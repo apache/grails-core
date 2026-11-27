@@ -31,6 +31,9 @@ dependencies {
     add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
     add('testRuntimeOnly', 'net.bytebuddy:byte-buddy')
     add('testRuntimeOnly', 'org.objenesis:objenesis')
+    if (project.path != ':grails-test-listener') {
+        add('testRuntimeOnly', project(':grails-test-listener'))
+    }
 }
 
 // Disable build cache for Groovy compilation in CI to ensure AST transformations are always applied.
@@ -82,10 +85,13 @@ tasks.withType(Test).configureEach {
         showCauses = true
         showStackTraces = true
     }
-    excludes = ['**/*TestCase.class', '**/*$*.class']
+    // Keeps any patterns the module excluded before applying this script.
+    exclude('**/*TestCase.class', '**/*$*.class')
+    // These replace any values the module set before applying this script. A module that needs
+    // its own values sets them after applying it.
     maxParallelForks = rootProject.ext.configuredTestParallel
     maxHeapSize = "${rootProject.ext.testForkHeapMb}m"
-    forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 50 : 100)
+    forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : 0
     if (System.getProperty('debug.tests')) {
         jvmArgs += debugArguments
     }

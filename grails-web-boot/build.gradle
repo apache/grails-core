@@ -39,6 +39,9 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(':grails-web-common')
+    // Compatibility default through Grails 9, as in the web starter, for the applications forge and the profiles
+    // generate, which list the Grails modules rather than the starter; optional from Grails 10.
+    api project(':grails-xml')
     api 'org.apache.groovy:groovy'
 
     testImplementation project(':grails-controllers')
@@ -71,4 +74,28 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}
+
+/**
+ * Hands the tests the POM this module is published with, so that they can check the scope applications get its
+ * dependencies in.
+ */
+abstract class PublishedPomArgument implements CommandLineArgumentProvider {
+
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getPom()
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-Dgrails.web.boot.pom=${pom.get().asFile.absolutePath}".toString()]
+    }
+}
+
+// The publish plugin adds the task once this script has been evaluated, so it is named, at the path it writes to
+def publishedPomArgument = objects.newInstance(PublishedPomArgument)
+publishedPomArgument.pom.set(layout.buildDirectory.file('publications/maven/pom-default.xml'))
+tasks.named('test', Test) { Test test ->
+    test.dependsOn('generatePomFileForMavenPublication')
+    test.jvmArgumentProviders.add(publishedPomArgument)
 }

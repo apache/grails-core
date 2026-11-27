@@ -1,0 +1,10 @@
+// the plugin from this project's own build script classpath, so that its classes are loaded by this project's class
+// loader
+buildscript {
+    dependencies {
+        classpath files(file('../plugin-classpath.txt').readLines())
+    }
+}
+
+apply plugin: 'org.apache.grails.gradle.grails-app'
+apply from: '../inspect-query-tail-run.gradle'

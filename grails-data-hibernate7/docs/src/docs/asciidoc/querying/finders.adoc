@@ -83,7 +83,7 @@ The possible comparators include:
 * `Ilike` - Similar to a `Like`, except case insensitive
 * `NotEqual` - Negates equality
 * `InRange` - Between the `from` and `to` values of a Groovy Range
-* `Rlike` - Performs a Regexp LIKE in MySQL or Oracle otherwise falls back to `Like`
+* `Rlike` - Performs a regular expression match on MySQL, MariaDB, PostgreSQL, Oracle, H2 and Db2 (Linux, UNIX and Windows 11.1 and later, and IBM i), and falls back to `Like` on other databases, Db2 for z/OS among them
 * `Between` - Between two values (requires two arguments)
 * `IsNotNull` - Not a null value (doesn't take an argument)
 * `IsNull` - Is a null value (doesn't take an argument)

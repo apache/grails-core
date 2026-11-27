@@ -1,41 +1,41 @@
-package liquibase.ext.hibernate.database;
+package liquibase.ext.hibernate.database
 
-import groovy.transform.CompileStatic;
-import liquibase.CatalogAndSchema;
-import liquibase.database.Database;
-import liquibase.database.DatabaseConnection;
-import liquibase.integration.commandline.CommandLineUtils;
-import liquibase.resource.ClassLoaderResourceAccessor;
-import liquibase.snapshot.DatabaseSnapshot;
-import liquibase.snapshot.SnapshotControl;
-import liquibase.snapshot.SnapshotGeneratorFactory;
-import liquibase.structure.core.Schema;
-import liquibase.structure.core.Table;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import groovy.transform.CompileStatic
+import liquibase.CatalogAndSchema
+import liquibase.database.Database
+import liquibase.database.DatabaseConnection
+import liquibase.integration.commandline.CommandLineUtils
+import liquibase.resource.ClassLoaderResourceAccessor
+import liquibase.snapshot.DatabaseSnapshot
+import liquibase.snapshot.SnapshotControl
+import liquibase.snapshot.SnapshotGeneratorFactory
+import liquibase.structure.core.Schema
+import liquibase.structure.core.Table
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.hamcrest.core.AllOf.allOf;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat
+import static org.hamcrest.Matchers.*
+import static org.hamcrest.core.AllOf.allOf
+import static org.junit.Assert.*
 
 @CompileStatic
 class HibernateClassicDatabaseTest {
 
-    private static final String CUSTOMCONFIG_CLASS = "com.example.customconfig.CustomClassicConfigurationFactoryImpl";
+    private static final String CUSTOMCONFIG_CLASS = 'com.example.customconfig.CustomClassicConfigurationFactoryImpl'
 
-    private DatabaseConnection conn;
-    private HibernateClassicDatabase db;
+    private DatabaseConnection conn
+    private HibernateClassicDatabase db
 
     @Before
     void setUp() throws Exception {
-        db = new HibernateClassicDatabase();
+        db = new HibernateClassicDatabase()
     }
 
     @After
     void tearDown() throws Exception {
-        db.close();
+        db.close()
     }
 
 //    @Test
@@ -67,28 +67,28 @@ class HibernateClassicDatabaseTest {
 
     @Test
     void simpleHibernateUrl() throws Exception {
-        String url = "hibernate:classic:com/example/pojo/Hibernate.cfg.xml";
-        Database database = CommandLineUtils.createDatabaseObject(new ClassLoaderResourceAccessor(this.getClass().getClassLoader()), url, null, null, null, null, null, false, false, null, null, null, null, null, null, null);
+        String url = 'hibernate:classic:com/example/pojo/Hibernate.cfg.xml'
+        Database database = CommandLineUtils.createDatabaseObject(new ClassLoaderResourceAccessor(this.getClass().getClassLoader()), url, null, null, null, null, null, false, false, null, null, null, null, null, null, null)
 
-        assertNotNull(database);
+        assertNotNull(database)
 
-        DatabaseSnapshot snapshot = SnapshotGeneratorFactory.getInstance().createSnapshot(CatalogAndSchema.DEFAULT, database, new SnapshotControl(database));
+        DatabaseSnapshot snapshot = SnapshotGeneratorFactory.getInstance().createSnapshot(CatalogAndSchema.DEFAULT, database, new SnapshotControl(database))
 
-        assertPojoHibernateMapped(snapshot, true);
+        assertPojoHibernateMapped(snapshot, true)
     }
 
     @Test
     void nationalizedCharactersHibernateUrl() throws Exception {
-        String url = "hibernate:classic:com/example/pojo/Hibernate.cfg.xml?hibernate.use_nationalized_character_data=true";
-        Database database = CommandLineUtils.createDatabaseObject(new ClassLoaderResourceAccessor(this.getClass().getClassLoader()), url, null, null, null, null, null, false, false, null, null, null, null, null, null, null);
+        String url = 'hibernate:classic:com/example/pojo/Hibernate.cfg.xml?hibernate.use_nationalized_character_data=true'
+        Database database = CommandLineUtils.createDatabaseObject(new ClassLoaderResourceAccessor(this.getClass().getClassLoader()), url, null, null, null, null, null, false, false, null, null, null, null, null, null, null)
 
-        assertNotNull(database);
+        assertNotNull(database)
 
-        DatabaseSnapshot snapshot = SnapshotGeneratorFactory.getInstance().createSnapshot(CatalogAndSchema.DEFAULT, database, new SnapshotControl(database));
+        DatabaseSnapshot snapshot = SnapshotGeneratorFactory.getInstance().createSnapshot(CatalogAndSchema.DEFAULT, database, new SnapshotControl(database))
 
-        assertPojoHibernateMapped(snapshot, true);
-        Table watcherTable = (Table) snapshot.get(new Table().setName("watcher").setSchema(new Schema()));
-        assertEquals("varchar", watcherTable.getColumn("name").getType().getTypeName());
+        assertPojoHibernateMapped(snapshot, true)
+        Table watcherTable = (Table) snapshot.get(new Table().setName('watcher').setSchema(new Schema()))
+        assertEquals('varchar', watcherTable.getColumn('name').getType().getTypeName())
     }
 
     static void assertPojoHibernateMapped(DatabaseSnapshot snapshot, boolean expectIdentityColumn) {
@@ -100,43 +100,43 @@ class HibernateClassicDatabaseTest {
 //                hasProperty("name", is("Watcher")),
 //                hasProperty("name", is("AuctionUser")),
 //                hasProperty("name", is("AuctionItem"))));
-        assertThat(snapshot.get(Table), hasItem(hasProperty("name", is("Bid"))));
-        assertThat(snapshot.get(Table), hasItem(hasProperty("name", is("Watcher"))));
-        assertThat(snapshot.get(Table), hasItem(hasProperty("name", is("AuctionUser"))));
-        assertThat(snapshot.get(Table), hasItem(hasProperty("name", is("AuctionItem"))));
+        assertThat(snapshot.get(Table), hasItem(hasProperty('name', is('Bid'))))
+        assertThat(snapshot.get(Table), hasItem(hasProperty('name', is('Watcher'))))
+        assertThat(snapshot.get(Table), hasItem(hasProperty('name', is('AuctionUser'))))
+        assertThat(snapshot.get(Table), hasItem(hasProperty('name', is('AuctionItem'))))
 
-        Table bidTable = (Table) snapshot.get(new Table().setName("bid").setSchema(new Schema()));
-        Table auctionItemTable = (Table) snapshot.get(new Table().setName("auctionitem").setSchema(new Schema()));
+        Table bidTable = (Table) snapshot.get(new Table().setName('bid').setSchema(new Schema()))
+        Table auctionItemTable = (Table) snapshot.get(new Table().setName('auctionitem').setSchema(new Schema()))
 
-        assertEquals(expectIdentityColumn, bidTable.getColumn("id").isAutoIncrement());
-        assertFalse(bidTable.getColumn("isBuyNow").isAutoIncrement());
-        assertEquals("Y if a \"buy now\", N if a regular bid.", bidTable.getColumn("isBuyNow").getRemarks());
-        assertFalse(bidTable.getColumn("datetime").isNullable());
-        assertTrue(auctionItemTable.getColumn("condition").isNullable());
+        assertEquals(expectIdentityColumn, bidTable.getColumn('id').isAutoIncrement())
+        assertFalse(bidTable.getColumn('isBuyNow').isAutoIncrement())
+        assertEquals('Y if a "buy now", N if a regular bid.', bidTable.getColumn('isBuyNow').getRemarks())
+        assertFalse(bidTable.getColumn('datetime').isNullable())
+        assertTrue(auctionItemTable.getColumn('condition').isNullable())
 
         assertThat(bidTable.getColumns(), containsInAnyOrder(
-                hasProperty("name", is("id")),
-                hasProperty("name", is("isBuyNow")),
-                hasProperty("name", is("item")),
-                hasProperty("name", is("amount")),
-                hasProperty("name", is("datetime")),
-                hasProperty("name", is("bidder"))
-        ));
+                hasProperty('name', is('id')),
+                hasProperty('name', is('isBuyNow')),
+                hasProperty('name', is('item')),
+                hasProperty('name', is('amount')),
+                hasProperty('name', is('datetime')),
+                hasProperty('name', is('bidder'))
+        ))
 
-        assertThat(bidTable.getPrimaryKey().getColumnNames(), is("id"));
+        assertThat(bidTable.getPrimaryKey().getColumnNames(), is('id'))
 
         assertThat(bidTable.getOutgoingForeignKeys(), containsInAnyOrder(
                 allOf(
-                        hasProperty("primaryKeyColumns", hasToString("[HIBERNATE.AuctionItem.id]")),
-                        hasProperty("foreignKeyColumns", hasToString("[HIBERNATE.Bid.item]")),
-                        hasProperty("primaryKeyTable", hasProperty("name", is("AuctionItem")))
+                        hasProperty('primaryKeyColumns', hasToString('[HIBERNATE.AuctionItem.id]')),
+                        hasProperty('foreignKeyColumns', hasToString('[HIBERNATE.Bid.item]')),
+                        hasProperty('primaryKeyTable', hasProperty('name', is('AuctionItem')))
                 ),
                 allOf(
-                        hasProperty("primaryKeyColumns", hasToString("[HIBERNATE.AuctionUser.id]")),
-                        hasProperty("foreignKeyColumns", hasToString("[HIBERNATE.Bid.bidder]")),
-                        hasProperty("primaryKeyTable", hasProperty("name", is("AuctionUser")))
+                        hasProperty('primaryKeyColumns', hasToString('[HIBERNATE.AuctionUser.id]')),
+                        hasProperty('foreignKeyColumns', hasToString('[HIBERNATE.Bid.bidder]')),
+                        hasProperty('primaryKeyTable', hasProperty('name', is('AuctionUser')))
                 )
-        ));
+        ))
     }
 
 }

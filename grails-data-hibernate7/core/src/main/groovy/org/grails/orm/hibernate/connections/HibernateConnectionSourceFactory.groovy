@@ -53,13 +53,13 @@ import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor
 
 import javax.sql.DataSource
 
+import org.apache.grails.data.hibernate7.core.querytail.QueryTailSessionFactoryObserver
+
 /**
  * Constructs {@link SessionFactory} instances from a {@link HibernateMappingContext}
  *
- * @author Graeme Rocher
  * @since 6.0
  */
-@SuppressWarnings(['PMD.CloseResource', 'PMD.AvoidCatchingThrowable', 'PMD.DataflowAnomalyAnalysis'])
 @CompileStatic
 class HibernateConnectionSourceFactory
         extends AbstractConnectionSourceFactory<SessionFactory, HibernateConnectionSourceSettings>
@@ -209,8 +209,9 @@ class HibernateConnectionSourceFactory
         configuration.setHibernateMappingContext(mappingContext)
         configuration.setDataSourceName(name)
         configuration.setSessionFactoryBeanName(
-                ConnectionSource.DEFAULT.equals(name) ? 'sessionFactory' : "sessionFactory_${name}")
+                ConnectionSource.DEFAULT == name ? 'sessionFactory' : "sessionFactory_${name}")
         configuration.addProperties(settings.toProperties())
+        QueryTailSessionFactoryObserver.install(settings.queryTail, configuration)
         return configuration
     }
 

@@ -99,6 +99,10 @@ class CommandFactoriesTransformation implements ASTTransformation, TransformWith
             if (shouldRegisterCommand(classNode)) {
                 FactoriesFileWriter.updateFactoriesWithType(classNode, APPLICATION_COMMAND_CLASS,
                         compilationTargetDirectory, CLI_FACTORIES_LOCATION, SOURCE_CLI_FACTORIES_LOCATIONS)
+            } else {
+                // an adapter is never a command of its own, including one that used to be a command
+                FactoriesFileWriter.removeFromFactories(classNode.name, APPLICATION_COMMAND_CLASS,
+                        compilationTargetDirectory, CLI_FACTORIES_LOCATION, SOURCE_CLI_FACTORIES_LOCATIONS)
             }
         }
     }

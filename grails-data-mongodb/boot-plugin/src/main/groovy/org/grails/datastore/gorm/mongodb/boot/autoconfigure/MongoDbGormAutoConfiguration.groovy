@@ -16,8 +16,8 @@
 package org.grails.datastore.gorm.mongodb.boot.autoconfigure
 
 import java.beans.Introspector
+import java.util.function.Consumer
 import java.util.function.Function
-import java.util.function.Supplier
 
 import groovy.transform.CompileStatic
 
@@ -109,8 +109,12 @@ class MongoDbGormAutoConfiguration {
                     return new MongoDatastore(environment, eventPublisher, packagesOf(context))
                 }
                 List<MongoClientSettingsBuilderCustomizer> builderCustomizers = customizers.orderedStream().toList()
-                new MongoDatastore({ new MongoClientFactory(builderCustomizers).createMongoClient(settings) } as Supplier<MongoClient>,
-                        environment, eventPublisher, packagesOf(context))
+                // what GORM adds to the settings of a client it owns, such as the query-tail listener, is one more customizer
+                MongoDatastore.fromClientFactory({ Consumer<MongoClientSettings.Builder> gormSettings ->
+                    new MongoClientFactory(builderCustomizers + [{ MongoClientSettings.Builder builder ->
+                        gormSettings.accept(builder)
+                    } as MongoClientSettingsBuilderCustomizer]).createMongoClient(settings)
+                } as Function<Consumer<MongoClientSettings.Builder>, MongoClient>, environment, eventPublisher, packagesOf(context))
             }
         }
 

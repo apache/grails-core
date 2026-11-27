@@ -1,6 +1,5 @@
 package liquibase.ext.hibernate
 
-import java.io.*
 import java.sql.Connection
 import java.sql.DriverManager
 
@@ -22,7 +21,13 @@ import liquibase.ext.hibernate.database.connection.HibernateConnection
 import liquibase.resource.ClassLoaderResourceAccessor
 import liquibase.resource.DirectoryResourceAccessor
 import liquibase.structure.DatabaseObject
-import liquibase.structure.core.*
+import liquibase.structure.core.Column
+import liquibase.structure.core.ForeignKey
+import liquibase.structure.core.Index
+import liquibase.structure.core.PrimaryKey
+import liquibase.structure.core.Sequence
+import liquibase.structure.core.Table
+import liquibase.structure.core.UniqueConstraint
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

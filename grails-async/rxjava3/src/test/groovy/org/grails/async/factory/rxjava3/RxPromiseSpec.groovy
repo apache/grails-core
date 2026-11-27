@@ -18,6 +18,7 @@
  */
 package org.grails.async.factory.rxjava3
 
+import grails.async.Promise
 import grails.async.Promises
 import grails.async.decorator.PromiseDecorator
 import spock.lang.Specification
@@ -67,8 +68,8 @@ class RxPromiseSpec extends Specification {
         }
         def result = promise.get()
 
-        then: 'result is void'
-        result == Void
+        then: 'the result is null, as with every other promise factory'
+        result == null
     }
 
     void 'Test promise map handling'() {
@@ -162,6 +163,15 @@ class RxPromiseSpec extends Specification {
             thrown RuntimeException
             !value
     }
+
+    void 'a promise chained with then is done once it resolves'() {
+        when: 'a task is chained with then'
+            Promise<Integer> chained = Promises.createPromise { 1 }.then { it + 1 }
+
+        then: 'it resolves and reports done'
+            chained.get(5, TimeUnit.SECONDS) == 2
+            new PollingConditions(timeout: 5, delay: 0.2).eventually {
+                assert chained.done
+            }
+    }
 }
-
-

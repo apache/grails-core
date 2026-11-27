@@ -16,29 +16,32 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.example.columnremarks;
+package com.example.columnremarks
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import groovy.transform.CompileStatic
 
-import org.hibernate.annotations.Comment;
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
+import jakarta.persistence.Id
 
+import org.hibernate.annotations.Comment
+
+@CompileStatic
 @Entity
-@Comment("This is the item table")
+@Comment('This is the item table')
 class Item {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    long id;
+    long id
 
-    @Comment("The name of the item")
+    @Comment('The name of the item')
     @Column
-    String name;
+    String name
 
     @Column
-    String description;
+    String description
 
 }

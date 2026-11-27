@@ -37,6 +37,7 @@ gettingStarted:
   developmentReloading: Development Reloading
 upgrading:
   title: Upgrading from the previous versions
+  upgrading100x: Upgrading from Grails 9 to Grails 10
   upgrading90x: Upgrading from Grails 8 to Grails 9
   upgrading81x: Upgrading from Grails 8.0 to Grails 8.1
   upgrading80x: Upgrading from Grails 7 to Grails 8
@@ -75,6 +76,7 @@ conf:
     transactionAwareDataSourceProxy: Transaction-aware DataSource Proxy
     databaseConsole: Database Console
     multipleDatasources: Multiple Datasources
+    queryTail: Finding Query-Heavy Pages with query-tail
   versioning: Versioning
   dependencyResolution: Dependency Resolution
 commandLine:
@@ -126,6 +128,7 @@ theWebLayer:
     jsonResponses: Responding with JSON
     moreOnJSONBuilder: More on JSONBuilder
     xmlResponses: Responding with XML    
+    springResponses: Returning Spring MVC Responses
     uploadingFiles: Uploading Files
     commandObjects: Command Objects
     formtokens: Handling Duplicate Form Submissions
@@ -250,6 +253,7 @@ REST:
   renderers:
     title: Customizing Response Rendering
     defaultRenderers: Customizing the Default Renderers
+    jacksonJson: Customizing JSON With Jackson
     customRenderers: Implementing a Custom Renderer
     gspRenderers: Using GSP to Customize Rendering
   hypermedia:
@@ -273,7 +277,6 @@ async:
   asyncGorm: Asynchronous GORM
   rxjava:
     title: RxJava Support
-    asyncServerSentEvents: Server Sent Events
     asyncRxGorm: RxGORM
   asyncRequests: Asynchronous Request Handling
   asyncStreaming: Streaming Responses

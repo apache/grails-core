@@ -169,6 +169,38 @@ class HibernateCriteriaBuilderSqlRestrictionSpec extends Specification {
         SqlRestrictionBook.createCriteria().list {
             sqlRestriction('{alias}."PAGES" > ? /* why? */ and {alias}.title <> ? -- who?', [50, 'Why?'])
         }*.title == ["It's?"]
+
+        and: 'H2 also ends a line at //, so a question mark after it is no placeholder'
+        SqlRestrictionBook.createCriteria().list {
+            sqlRestriction('{alias}."PAGES" > ? // why? \n and {alias}.title <> ?', [50, 'Why?'])
+        }*.title == ["It's?"]
+
+        and: 'H2 reads $$..$$ as a string and not $tag$..$tag$'
+        SqlRestrictionBook.createCriteria().list {
+            sqlRestriction('{alias}.title = $$Who?$$ and {alias}.pages > ?', [50])
+        }*.title == []
+    }
+
+    @Rollback
+    void 'placeholders inside an array literal are bound'() {
+        given:
+        saveBooks()
+
+        expect: "the two placeholders inside the array are placeholders, so the values bind"
+        SqlRestrictionBook.createCriteria().list {
+            sqlRestriction('{alias}.pages = ANY(ARRAY[CAST(? AS INTEGER), CAST(? AS INTEGER)])', [412, 120])
+        }*.title.sort() == ['Dune', 'Ulysses']
+        SqlRestrictionBook.createCriteria().list {
+            sqlRestriction('{alias}.pages = ANY(ARRAY[CAST(? AS INTEGER), CAST(? AS INTEGER)])', [1, 2])
+        }.isEmpty()
+
+        and: 'a space before the bracket, or a subscript, does not hide a placeholder: H2 has arrays, not bracket identifiers'
+        SqlRestrictionBook.createCriteria().list {
+            sqlRestriction('{alias}.pages = ANY(ARRAY [CAST(? AS INTEGER), CAST(? AS INTEGER)])', [412, 120])
+        }*.title.sort() == ['Dune', 'Ulysses']
+        SqlRestrictionBook.createCriteria().list {
+            sqlRestriction('{alias}.pages = ARRAY[CAST(? AS INTEGER), CAST(? AS INTEGER)][CAST(? AS INTEGER)]', [412, 120, 2])
+        }*.title == ['Ulysses']
     }
 
     @Rollback

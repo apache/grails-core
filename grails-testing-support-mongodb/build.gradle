@@ -50,6 +50,16 @@ dependencies {
     // server refuses. The server it starts belongs to whoever extends it, so this module compiles
     // against the embedded module and carries neither it nor the flapdoodle library behind it.
     compileOnly project(':grails-data-mongodb-embedded')
+
+    // EmbeddedMongoVersions picks the release line that server runs from the lines flapdoodle
+    // has, which only flapdoodle can list. Compiled against for the same reason as above: the
+    // extending specification's class path brings flapdoodle, this module ships nothing of it
+    // nor of the jgrapht (LGPL-2.1 or EPL-2.0) behind it.
+    compileOnly "de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion", {
+        // comp: Version
+    }
+
+    testImplementation "de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion"
 }
 
 apply {

@@ -30,7 +30,6 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 /**
  * Abstract implementation of the {@link grails.persistence.support.PersistenceContextInterceptor} interface that supports multiple data sources
  *
- * @author Graeme Rocher
  * @since 2.0.7
  */
 @CompileStatic

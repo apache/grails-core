@@ -23,7 +23,7 @@ https://grails.apache.org/docs/lastest/grails-data/[GORM], the object mapping te
 
 Async features were added in GORM 4, however these are merely a way to isolate your blocking operations onto a different thread and not a truly non-blocking implementation.
 
-RxGORM builds on top of https://reactivex.io[RxJava] and provides a completely non-blocking, stateless implementation of GORM.
+RxGORM builds on top of https://reactivex.io[RxJava] 3 and provides a completely non-blocking, stateless implementation of GORM.
 
-Currently, only MongoDB is supported as a backing store. However, implementations are planned for SQL, REST client and other NoSQL datastores in the future (subject to driver support).
+No datastore implementation of the `RxEntity` model described in this guide currently ships with Grails. The only one that ever existed, RxGORM for MongoDB, was last released for GORM 6.1 on RxJava 1 and is not available for this release; GORM for Hibernate cannot provide one, because Hibernate ORM has no non-blocking mode. An application that wants reactive signatures over a GORM datastore uses the RxJava data services instead, which run on every GORM implementation; see the RxJava Support section of the Grails user guide.
 

@@ -28,7 +28,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 @CompileStatic
-@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class DefaultColumnNameFetcher {
 
     private static final String FOREIGN_KEY_SUFFIX = '_id'

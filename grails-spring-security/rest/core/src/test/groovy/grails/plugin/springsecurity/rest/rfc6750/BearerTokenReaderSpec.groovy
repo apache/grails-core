@@ -155,4 +155,45 @@ class BearerTokenReaderSpec extends Specification {
         notThrown(Throwable)
     }
 
+    @Unroll
+    def "a token in a form body is read whatever parameter the client sent with its content type: #contentType"() {
+        given:
+        request.method = 'POST'
+        request.contentType = contentType
+        request.addParameter('access_token', 'mytesttokenvalue')
+
+        expect:
+        tokenReader.findToken(request) == new AccessToken('mytesttokenvalue')
+
+        where:
+        contentType << [
+                'application/x-www-form-urlencoded;foo',
+                'application/x-www-form-urlencoded;charset=UTF-8;CHARSET=ISO-8859-1'
+        ]
+    }
+
+    @Unroll
+    def "a content type that cannot be read is not a form, and does not fail the request: #contentType"() {
+        given:
+        request.method = 'POST'
+        request.contentType = contentType
+        request.addParameter('access_token', 'mytesttokenvalue')
+
+        expect:
+        tokenReader.findToken(request) == null
+
+        where:
+        contentType << ['not a media type', 'text/plain;foo']
+    }
+
+    def "a token in the query string is still read when the content type cannot be"() {
+        given:
+        request.method = 'POST'
+        request.contentType = 'not a media type'
+        request.queryString = 'access_token=mytesttokenvalue'
+        request.addParameter('access_token', 'mytesttokenvalue')
+
+        expect:
+        tokenReader.findToken(request) == new AccessToken('mytesttokenvalue')
+    }
 }

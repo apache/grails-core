@@ -29,7 +29,7 @@ import org.grails.datastore.rx.exceptions.BlockingOperationException
 import org.grails.datastore.rx.internal.RxDatastoreClientImplementor
 import org.grails.datastore.rx.query.QueryState
 import org.grails.datastore.rx.query.RxQuery
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 class RxPersistentListSpec extends Specification {

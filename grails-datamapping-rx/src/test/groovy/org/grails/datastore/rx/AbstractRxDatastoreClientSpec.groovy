@@ -59,7 +59,7 @@ import org.grails.gorm.rx.api.RxGormEnhancer
 import org.grails.gorm.rx.api.RxGormInstanceApi
 import org.grails.gorm.rx.api.RxGormStaticApi
 import org.grails.gorm.rx.api.RxGormValidationApi
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 class AbstractRxDatastoreClientSpec extends Specification {
@@ -348,7 +348,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchDeleteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         expect:
-        client.delete(instance).toBlocking().single()
+        client.delete(instance).blockingSingle()
     }
 
     void "delete(instance) converts a zero delete count to false"() {
@@ -362,12 +362,12 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchDeleteHandler = { BatchOperation op -> Observable.just((Number) 0) }
 
         expect:
-        !client.delete(instance).toBlocking().single()
+        !client.delete(instance).blockingSingle()
     }
 
     void "deleteAll(null) returns an observable of zero without touching the batch delete implementation"() {
         expect:
-        client.deleteAll(null).toBlocking().single() == 0
+        client.deleteAll(null).blockingSingle() == 0
         client.batchDeleteOperations.isEmpty()
     }
 
@@ -387,7 +387,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchDeleteHandler = { BatchOperation op -> Observable.just((Number) 2) }
 
         when:
-        Number count = client.deleteAll([first, second]).toBlocking().single()
+        Number count = client.deleteAll([first, second]).blockingSingle()
 
         then:
         count == 2
@@ -412,7 +412,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchDeleteHandler = { BatchOperation op -> Observable.just((Number) 0) }
 
         when:
-        Number count = client.deleteAll([instance]).toBlocking().single()
+        Number count = client.deleteAll([instance]).blockingSingle()
 
         then:
         1 * publisher.publishEvent(_ as PreDeleteEvent) >> { PreDeleteEvent event -> event.cancel() }
@@ -432,7 +432,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchDeleteHandler = { BatchOperation op -> Observable.just((Number) 0) }
 
         when:
-        Number count = client.deleteAll([transientInstance]).toBlocking().single()
+        Number count = client.deleteAll([transientInstance]).blockingSingle()
 
         then:
         count == 0
@@ -446,7 +446,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         mappingContext.getPersistentEntity(TestEntity.name) >> null
 
         when:
-        client.deleteAll([instance]).toBlocking().single()
+        client.deleteAll([instance]).blockingSingle()
 
         then:
         IllegalArgumentException e = thrown(IllegalArgumentException)
@@ -461,7 +461,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.eventPublisher = publisher
 
         when:
-        TestEntity result = client.persist(instance).toBlocking().single()
+        TestEntity result = client.persist(instance).blockingSingle()
 
         then:
         result.is(instance)
@@ -478,7 +478,34 @@ class AbstractRxDatastoreClientSpec extends Specification {
         }
 
         expect:
-        client.persist(instance).toBlocking().single().is(instance)
+        client.persist(instance).blockingSingle().is(instance)
+    }
+
+    void "persist(instance) completes empty when the datastore reports no identifier for the instance"() {
+        given:
+        TestEntity instance = new TestEntity()
+        client.forcedIdentifiers = []
+
+        expect: 'RxJava 3 cannot emit null, so the observable completes without emitting'
+        client.persist(instance).isEmpty().blockingGet()
+    }
+
+    void "insert(instance) completes empty when the datastore reports no identifier for the instance"() {
+        given:
+        TestEntity instance = new TestEntity()
+        client.forcedIdentifiers = []
+
+        expect: 'RxJava 3 cannot emit null, so the observable completes without emitting'
+        client.insert(instance, [:]).isEmpty().blockingGet()
+    }
+
+    void "insert(instance) emits the instance when the datastore reports an identifier for it"() {
+        given:
+        TestEntity instance = new TestEntity()
+        client.forcedIdentifiers = ['assigned']
+
+        expect:
+        client.insert(instance, [:]).blockingSingle().is(instance)
     }
 
     void "insert(instance) forces an insert even when the instance already has an identifier"() {
@@ -492,7 +519,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        TestEntity result = client.insert(instance, [:]).toBlocking().single()
+        TestEntity result = client.insert(instance, [:]).blockingSingle()
 
         then:
         result.is(instance)
@@ -511,7 +538,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        List<Serializable> identifiers = client.insertAll([instance]).toBlocking().single()
+        List<Serializable> identifiers = client.insertAll([instance]).blockingSingle()
 
         then:
         identifiers == ['already-assigned']
@@ -532,7 +559,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        List<Serializable> identifiers = client.persistAll([instance]).toBlocking().single()
+        List<Serializable> identifiers = client.persistAll([instance]).blockingSingle()
 
         then:
         identifiers == ['existing']
@@ -554,7 +581,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.eventPublisher = publisher
 
         when:
-        List<Serializable> identifiers = client.persistAll([instance]).toBlocking().single()
+        List<Serializable> identifiers = client.persistAll([instance]).blockingSingle()
 
         then:
         1 * publisher.publishEvent(_ as PreUpdateEvent) >> { PreUpdateEvent event -> event.cancel() }
@@ -573,7 +600,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        List<Serializable> identifiers = client.persistAll([instance]).toBlocking().single()
+        List<Serializable> identifiers = client.persistAll([instance]).blockingSingle()
 
         then:
         identifiers == [instance.hashCode()]
@@ -592,7 +619,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        List<Serializable> identifiers = client.persistAll([instance]).toBlocking().single()
+        List<Serializable> identifiers = client.persistAll([instance]).blockingSingle()
 
         then:
         identifiers == ['generated-id']
@@ -607,7 +634,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         mappingContext.getEntityReflector(entity) >> Stub(EntityReflector) { getIdentifier(_) >> null }
 
         when:
-        client.persistAll([instance]).toBlocking().single()
+        client.persistAll([instance]).blockingSingle()
 
         then:
         thrown(IdentityGenerationException)
@@ -620,7 +647,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         mappingContext.getPersistentEntity(TestEntity.name) >> null
 
         when:
-        client.persistAll([instance]).toBlocking().single()
+        client.persistAll([instance]).blockingSingle()
 
         then:
         IllegalArgumentException e = thrown(IllegalArgumentException)
@@ -629,7 +656,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
 
     void "persistAllInternal(null) resolves to an empty identifier list without invoking batchWrite"() {
         expect:
-        client.persistAll(null).toBlocking().single() == []
+        client.persistAll(null).blockingSingle() == []
         client.batchWriteOperations.isEmpty()
     }
 
@@ -646,7 +673,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         }
 
         when:
-        client.persistAll([instance]).toBlocking().single()
+        client.persistAll([instance]).blockingSingle()
 
         then:
         client.batchWriteOperations.isEmpty()
@@ -671,7 +698,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 2) }
 
         when:
-        client.persistAll([parent]).toBlocking().single()
+        client.persistAll([parent]).blockingSingle()
 
         then:
         client.batchWriteOperations[0].inserts[parentEntity].size() == 1
@@ -698,7 +725,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 2) }
 
         when:
-        client.persistAll([parent]).toBlocking().single()
+        client.persistAll([parent]).blockingSingle()
 
         then:
         client.batchWriteOperations[0].inserts[childEntity].containsKey('generated-child-id')
@@ -721,7 +748,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 2) }
 
         when:
-        client.persistAll([parent]).toBlocking().single()
+        client.persistAll([parent]).blockingSingle()
 
         then:
         client.batchWriteOperations[0].updates[childEntity].containsKey('child-1')
@@ -744,7 +771,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        client.persistAll([parent]).toBlocking().single()
+        client.persistAll([parent]).blockingSingle()
 
         then:
         client.batchWriteOperations[0].inserts.containsKey(childEntity) == false
@@ -766,7 +793,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        client.persistAll([parent]).toBlocking().single()
+        client.persistAll([parent]).blockingSingle()
 
         then:
         client.batchWriteOperations[0].inserts.containsKey(childEntity) == false
@@ -794,7 +821,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 3) }
 
         when:
-        client.persistAll([parent]).toBlocking().single()
+        client.persistAll([parent]).blockingSingle()
 
         then:
         client.batchWriteOperations[0].inserts[childEntity].size() == 2
@@ -816,7 +843,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        client.persistAll([parent]).toBlocking().single()
+        client.persistAll([parent]).blockingSingle()
 
         then:
         client.batchWriteOperations[0].inserts.containsKey(childEntity) == false
@@ -839,7 +866,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        client.persistAll([parent]).toBlocking().single()
+        client.persistAll([parent]).blockingSingle()
 
         then:
         client.batchWriteOperations[0].inserts.containsKey(childEntity) == false
@@ -865,7 +892,7 @@ class AbstractRxDatastoreClientSpec extends Specification {
         client.batchWriteHandler = { BatchOperation op -> Observable.just((Number) 1) }
 
         when:
-        client.persistAll([parent]).toBlocking().single()
+        client.persistAll([parent]).blockingSingle()
 
         then:
         client.batchWriteOperations[0].inserts.containsKey(childEntity) == false
@@ -1033,6 +1060,8 @@ class RecordingRxDatastoreClient<T> extends AbstractRxDatastoreClient<T> {
     Closure<Observable<Number>> batchDeleteHandler = { BatchOperation op -> Observable.just((Number) 0) }
     Closure<Serializable> identifierGenerator = { entity, instance, reflector -> UUID.randomUUID().toString() }
     Closure<Query> queryFactory = { entity, queryState, arguments -> null }
+    /** When set, persistAll and insertAll resolve to it, as a datastore that assigns its own identifiers does. */
+    List<Serializable> forcedIdentifiers = null
     boolean allowBlockingOperations = true
     boolean closed = false
 
@@ -1049,6 +1078,16 @@ class RecordingRxDatastoreClient<T> extends AbstractRxDatastoreClient<T> {
     Observable<Number> batchWrite(BatchOperation operation) {
         batchWriteOperations << operation
         batchWriteHandler.call(operation)
+    }
+
+    @Override
+    Observable<List<Serializable>> persistAll(Iterable instances, Map<String, Object> arguments) {
+        forcedIdentifiers != null ? Observable.just(forcedIdentifiers) : super.persistAll(instances, arguments)
+    }
+
+    @Override
+    Observable<List<Serializable>> insertAll(Iterable instances, Map<String, Object> arguments) {
+        forcedIdentifiers != null ? Observable.just(forcedIdentifiers) : super.insertAll(instances, arguments)
     }
 
     @Override

@@ -25,10 +25,14 @@ import org.springframework.web.context.request.RequestAttributes
 import org.springframework.web.context.request.RequestContextHolder
 
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.WebUtils
 
 /**
  * Propagates the current Grails web request through a Spring-managed task executor.
+ *
+ * <p>The task is bound to a web request of its own for the request it was started during. That web request is
+ * bound to the task's thread only, not stored on the request, which the request thread is still processing, so
+ * {@link GrailsWebRequest#lookup(jakarta.servlet.http.HttpServletRequest)} finds the request thread's own web
+ * request there and the task's in the task.</p>
  *
  * @since 8.0
  */
@@ -51,7 +55,10 @@ class GrailsWebRequestTaskDecorator implements TaskDecorator {
                     captured.currentRequest,
                     captured.currentResponse,
                     captured.attributes)
-            WebUtils.storeGrailsWebRequest(taskRequest)
+            // Bound to the task's thread only: the request is still shared with the request thread, which
+            // would find the task's web request on it from then on, and a task that outlives the response,
+            // such as a fire-and-forget task, would write it to a request the container may have recycled
+            RequestContextHolder.setRequestAttributes(taskRequest)
             try {
                 task.run()
             }
