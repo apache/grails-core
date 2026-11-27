@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate;
 
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -42,9 +43,11 @@ import org.hibernate.query.MutationQuery;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.ConversionService;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.mapping.core.AbstractAttributeStoringSession;
 import org.grails.datastore.mapping.core.Datastore;
@@ -317,6 +320,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     @Override
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public long deleteAll(final QueryableCriteria criteria) {
+        rejectPagination(criteria, "deleteAll()");
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
             builder.setConversionService(getMappingContext().getConversionService());
@@ -334,6 +338,62 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                     new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
             return result;
         });
+    }
+
+    /**
+     * {@code AbstractDetachedCriteria.defaultMax} and {@code defaultOffset}, read by reflection because this patch
+     * line adds no public accessor for them. From 8.1.x on, the criteria has getters for them.
+     */
+    private static final Field DEFAULT_MAX = criteriaField("defaultMax");
+    private static final Field DEFAULT_OFFSET = criteriaField("defaultOffset");
+
+    private static Field criteriaField(String name) {
+        try {
+            Field field = AbstractDetachedCriteria.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return field;
+        }
+        catch (NoSuchFieldException e) {
+            throw new IllegalStateException("AbstractDetachedCriteria has no field " + name, e);
+        }
+    }
+
+    private static Integer criteriaValue(Field field, AbstractDetachedCriteria<?> criteria) {
+        try {
+            return (Integer) field.get(criteria);
+        }
+        catch (IllegalAccessException e) {
+            throw new IllegalStateException("Cannot read " + field.getName() + " of " + criteria.getClass().getName(), e);
+        }
+    }
+
+    /**
+     * A bulk {@code delete} or {@code update} statement has no {@code LIMIT} or {@code OFFSET}, so a
+     * criteria that carries {@code max} or an {@code offset} would write to every matching row. Refuse it. An
+     * {@code offset} that was set is refused whatever its value, zero included: the call asked for a page, and a bulk
+     * write cannot apply one.
+     */
+    private static void rejectPagination(QueryableCriteria<?> criteria, String operation) {
+        if (!(criteria instanceof AbstractDetachedCriteria)) {
+            return;
+        }
+        Integer max = criteriaValue(DEFAULT_MAX, (AbstractDetachedCriteria<?>) criteria);
+        Integer offset = criteriaValue(DEFAULT_OFFSET, (AbstractDetachedCriteria<?>) criteria);
+        if (max == null && offset == null) {
+            return;
+        }
+        StringBuilder unsupported = new StringBuilder();
+        if (max != null) {
+            unsupported.append("max(").append(max).append(')');
+        }
+        if (offset != null) {
+            if (!unsupported.isEmpty()) {
+                unsupported.append(", ");
+            }
+            unsupported.append("offset(").append(offset).append(')');
+        }
+        throw new InvalidDataAccessResourceUsageException(operation + " cannot limit the rows it writes to, " +
+                "so it does not support " + unsupported + "; remove it or select the ids first");
     }
 
     private MutationQuery createMutationQuery(Session session, JpaQueryInfo jpaQueryInfo) {
@@ -358,6 +418,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     @Override
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public long updateAll(final QueryableCriteria criteria, final Map<String, Object> properties) {
+        rejectPagination(criteria, "updateAll()");
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
             builder.setConversionService(getMappingContext().getConversionService());
