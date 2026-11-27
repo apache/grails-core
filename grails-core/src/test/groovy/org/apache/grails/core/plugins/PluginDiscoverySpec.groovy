@@ -729,7 +729,7 @@ class PluginDiscoverySpec extends Specification {
         e.message.contains('is not a Grails plugin')
     }
 
-    def 'a dependency of unknown version satisfies any required version'() {
+    def 'a dependency of unknown version does not meet a required version range'() {
         given: 'two plugins registered directly, without descriptors, so neither has a version'
         def gcl = new GroovyClassLoader()
         def dependencyClass = gcl.parseClass('''
@@ -747,8 +747,36 @@ class PluginDiscoverySpec extends Specification {
         when:
         discovery.init(new StandardEnvironment())
 
-        then: 'the dependency is satisfied and loaded first'
-        discovery.pluginsInTopologicalOrder*.name == ['unknownVersionDependency', 'needsVersionedDependency']
+        then: 'the range cannot be checked, so the application does not start, and the message says why'
+        def e = thrown(PluginException)
+        e.message.contains('Grails plug-in [needsVersionedDependency] cannot be loaded')
+        e.message.contains('dependency [unknownVersionDependency] has no version, so the required version [2.0.0 > *] cannot be checked')
+    }
+
+    def 'a dependency of unknown version meets a dependency declared by name alone, or against an unknown own version'() {
+        given: 'plugins registered directly, without descriptors, so none has a version'
+        def gcl = new GroovyClassLoader()
+        def dependencyClass = gcl.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class UnversionedBaseGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
+        def byNameClass = gcl.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['unversionedBase'])
+            class ByNameGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
+        def ownVersionClass = gcl.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['unversionedBase:${plugin.version}'])
+            class OwnVersionGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
+        def discovery = new DefaultPluginDiscovery([byNameClass, ownVersionClass, dependencyClass] as Class<?>[]).tap {
+            loadPluginsFromClasspath = false
+        }
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'no range was written to check, so both load, after the plugin they depend on'
+        discovery.pluginsInTopologicalOrder*.name == ['unversionedBase', 'byName', 'ownVersion']
     }
 
     def 'stops discovery with one exception naming every missing or incompatible plugin dependency'() {
@@ -786,8 +814,9 @@ class PluginDiscoverySpec extends Specification {
     }
 
     def 'names every plugin that cannot be loaded, reporting a dependency that failed to load as failed rather than missing'() {
-        given: 'a plugin whose only dependency itself fails to load due to a genuinely missing dependency'
-        def gcl = new GroovyClassLoader()
+        given: 'a plugin whose only dependency itself fails to load due to a genuinely missing dependency, versioned by their descriptors'
+        def root = File.createTempDir()
+        def gcl = PluginClassFixtures.versionedPluginLoader(root.toPath(), [FailingDependencyGrailsPlugin: '1.0.0', DependentOnFailedGrailsPlugin: '1.0.0'])
         def failingDependencyClass = gcl.parseClass('''
             @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['reallyMissing:1.0.0'])
             class FailingDependencyGrailsPlugin extends grails.plugins.Plugin { }
@@ -807,13 +836,16 @@ class PluginDiscoverySpec extends Specification {
         lines.size() == 3
 
         and: 'the missing root cause is reported as missing'
-        def rootCause = lines.find { it.contains('[failingDependency] cannot be loaded') }
+        def rootCause = lines.find { it.contains('[failingDependency] with version [1.0.0] cannot be loaded') }
         rootCause.contains('dependency [reallyMissing] with required version [1.0.0] is missing')
 
         and: 'the plugin depending on the failed plugin reports it as failed, not missing'
         def dependent = lines.find { it.contains('[dependentOnFailed]') }
         dependent.contains('dependency [failingDependency] with required version [1.0.0] failed to load')
         !dependent.contains('is missing')
+
+        cleanup:
+        root.deleteDir()
     }
 
     def 'reports a dependency with the wrong version that cannot load itself either by the version that was found, whatever order the plugins are found in'() {

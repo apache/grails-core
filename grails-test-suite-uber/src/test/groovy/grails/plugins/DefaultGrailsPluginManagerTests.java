@@ -26,12 +26,20 @@ import org.apache.grails.core.plugins.DefaultPluginDiscovery;
 import org.apache.grails.core.plugins.filters.IncludingPluginFilter;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.env.StandardEnvironment;
 
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -91,8 +99,9 @@ public class DefaultGrailsPluginManagerTests {
      */
     @Test
     @SuppressWarnings("rawtypes")
-    public void testDependenciesWithDelayedLoadingWithVersionRangeStrings() {
-        var gcl = new GroovyClassLoader();
+    public void testDependenciesWithDelayedLoadingWithVersionRangeStrings(@TempDir Path descriptors) throws IOException {
+        // The ranges are checked, so the plugins carry the versions their descriptors record, as built plugins do
+        var gcl = versionedPlugins(descriptors, Map.of("First", "0.4", "Second", "0.3", "Third", "0.3-SNAPSHOT"));
 
         // These are defined in a specific order so that the one with the range dependencies
         // is the first in the list, and its dependencies load after
@@ -157,6 +166,25 @@ public class DefaultGrailsPluginManagerTests {
      * The source of a plugin class, compiled at run time so that no other test discovers it from the class path.
      * A plugin registered directly without a descriptor has no version, which satisfies every version range.
      */
+    /**
+     * A class loader whose plugins, once parsed, have the versions given: it holds the descriptors discovery reads a
+     * plugin's version from.
+     */
+    private static GroovyClassLoader versionedPlugins(Path root, Map<String, String> versionsByPrefix) throws IOException {
+        var imports = new StringBuilder();
+        for (var entry : versionsByPrefix.entrySet()) {
+            var name = entry.getKey().substring(0, 1).toLowerCase(Locale.ROOT) + entry.getKey().substring(1);
+            imports.append(name).append('\n');
+            var descriptor = root.resolve("META-INF/grails/plugins/" + name + "/plugin.properties");
+            Files.createDirectories(descriptor.getParent());
+            Files.writeString(descriptor, "format.version=1\nname=" + name + "\nclass=" + entry.getKey() +
+                    "GrailsPlugin\nversion=" + entry.getValue() + "\n");
+        }
+        Files.writeString(root.resolve("META-INF/grails/plugins.imports"), imports);
+        return new GroovyClassLoader(new URLClassLoader(new URL[]{root.toUri().toURL()},
+                DefaultGrailsPluginManagerTests.class.getClassLoader()));
+    }
+
     private static String plugin(String prefix, String descriptorAttributes) {
         return "@grails.plugins.metadata.GrailsPluginDescriptor(" + descriptorAttributes + ")\n" +
                 "class " + prefix + "GrailsPlugin extends grails.plugins.Plugin {\n" +

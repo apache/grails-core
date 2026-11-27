@@ -189,8 +189,8 @@ descriptor that cannot be read, that names a class missing from the class path, 
 stops the application from starting: the jar it came from is broken.
 
 The Grails Gradle plugin gives the compiler the project version and the location of `grails-app/conf`. A plugin compiled
-without them, such as one in a test source set, has no version and no configuration file; an unknown version satisfies
-every `dependsOn` range.
+without them, such as one in a test source set, has no version and no configuration file. A `dependsOn` range on a
+plugin without a version cannot be checked, so the application does not start; depend on such a plugin by name alone.
 
 A plugin class compiled into a test source set is a plugin of the tests: its descriptor is written beside the test
 classes, so every test that starts an application discovers it. A plugin class a test registers itself, and that other

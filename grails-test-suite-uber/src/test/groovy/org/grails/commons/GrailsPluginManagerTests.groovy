@@ -59,7 +59,7 @@ import org.springframework.web.servlet.i18n.CookieLocaleResolver
 import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
-@GrailsPluginDescriptor(dependsOn = ['another:1.2'])
+@GrailsPluginDescriptor(dependsOn = ['another'])
 class MyGrailsPlugin extends Plugin {
 
     static String SHUTDOWN_FIELD = 'not-updated'
@@ -83,7 +83,7 @@ class AnotherGrailsPlugin extends Plugin {
     }
 }
 
-@GrailsPluginDescriptor(dependsOn = ['my:1.1', 'another:1.2'])
+@GrailsPluginDescriptor(dependsOn = ['my', 'another'])
 class SomeOtherGrailsPlugin extends Plugin {
 }
 
@@ -207,7 +207,7 @@ class OtherEnvironmentGrailsPlugin extends Plugin {
         }
     }
 
-    def 'loads a plugin class registered directly, which has no version and so satisfies every version range'() {
+    def 'loads a plugin class registered directly, which has no version and so meets no version range'() {
         given: 'a plugin class compiled outside a build that sets a version, registered directly'
         Class classEditor = new GroovyClassLoader(GrailsPluginManagerTests.classLoader).parseClass('''
 package org.grails.plugins
@@ -231,9 +231,10 @@ class ClassEditorGrailsPlugin extends grails.plugins.Plugin {
         plugin.pluginClass.name == 'org.grails.plugins.ClassEditorGrailsPlugin'
         plugin.version == null
 
-        and: 'any version range is satisfied'
-        pluginManager.getGrailsPlugin('classEditor', '1.1')
-        pluginManager.getGrailsPlugin('classEditor', '1.2')
+        and: 'an unknown version cannot be checked against a range, so only a request for any version finds it'
+        pluginManager.getGrailsPlugin('classEditor', '*')
+        !pluginManager.getGrailsPlugin('classEditor', '1.1')
+        !pluginManager.getGrailsPlugin('classEditor', '1.1 > *')
     }
 
     def 'resolves a plugin by the version its descriptor on the class path records'() {
@@ -295,7 +296,7 @@ class VersionedGrailsPlugin extends grails.plugins.Plugin {
         then: 'discovery fails, naming the plugin and its missing dependency'
         def e = thrown(PluginException)
         e.message.contains('Grails plug-in [my]')
-        e.message.contains('dependency [another] with required version [1.2] is missing')
+        e.message.contains('dependency [another] with required version [*] is missing')
     }
 
     def 'loads plugins when required dependencies are satisfied'() {

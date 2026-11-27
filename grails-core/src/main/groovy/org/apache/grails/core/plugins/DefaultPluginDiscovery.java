@@ -57,7 +57,8 @@ import org.apache.grails.core.plugins.filters.PluginFilterRetriever;
  * that order.</p>
  *
  * <p>Every {@code dependsOn} of every plugin must be met. A plugin whose dependency is missing, has a version
- * outside the required range, was left out by the plugin filter or by its environments, or cannot load itself,
+ * outside the required range, has no version while a range is required, was left out by the plugin filter or by its
+ * environments, or cannot load itself,
  * stops discovery with one {@link PluginException} that names every unmet dependency of every such plugin.
  * Dependencies are checked before evictions are applied: a plugin depending on a plugin another plugin evicts
  * still loads, the evicting plugin standing in for the evicted one.</p>
@@ -65,6 +66,9 @@ import org.apache.grails.core.plugins.filters.PluginFilterRetriever;
 public class DefaultPluginDiscovery implements PluginDiscovery {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultPluginDiscovery.class);
+
+    /** The required version of a dependency declared by name alone, which accepts every version. */
+    private static final String ANY_VERSION = "*";
 
     protected Metadata applicationMeta = Metadata.getCurrent();
     protected Class<?>[] pluginClasses = new Class[0];
@@ -370,7 +374,14 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
             var normalizedName = PluginUtils.normalizePluginName(name);
             var dependency = plugins.get(normalizedName);
             if (dependency != null) {
-                if (!GrailsVersionUtils.isValidVersion(dependency.getPluginVersion(), requiredVersion)) {
+                if (dependency.getPluginVersion() == null && !ANY_VERSION.equals(requiredVersion.trim())) {
+                    unresolvedDependencies.add(
+                            "dependency [" + name + "] has no version, so the required version [" + requiredVersion +
+                                    "] cannot be checked: build [" + name + "] with a version, as the Grails Gradle " +
+                                    "plugin does, or depend on it by name alone"
+                    );
+                }
+                else if (!GrailsVersionUtils.isValidVersion(dependency.getPluginVersion(), requiredVersion)) {
                     unresolvedDependencies.add(
                             "dependency [" + name + "] has version [" + dependency.getPluginVersion() +
                                     "] but requires [" + requiredVersion + "]"

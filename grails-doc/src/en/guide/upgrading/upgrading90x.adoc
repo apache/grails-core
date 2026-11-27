@@ -1750,6 +1750,10 @@ out by `grails.plugin.excludes` or `grails.plugin.includes`, or does not support
 * A plugin whose dependency's `environmentsIncludes` or `environmentsExcludes` leave it out of an environment must be
   left out of that environment as well.
 * A plugin that depends on a plugin another plugin evicts still loads, as before.
+* A version range on a plugin without a version, one compiled outside a build that sets it such as a plugin in a test
+  source set, is not met: the range cannot be checked. Grails 8 accepted any version for such a plugin. Depend on it by
+  name alone (`dependsOn = ['name']`), or build it with the Grails Gradle plugin, which sets its version. For the same
+  reason `GrailsPluginManager.getGrailsPlugin(name, version)` finds such a plugin only for the version `*`.
 * `PluginDiscovery.hasFailedPlugin`, `getFailedPlugin` and `getFailedPlugins`, and `GrailsPluginManager.getFailedPlugin`
   and `getFailedLoadPlugins`, are removed: discovery never finishes with a plugin that failed to load.
 

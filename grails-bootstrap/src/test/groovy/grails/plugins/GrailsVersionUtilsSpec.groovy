@@ -30,8 +30,10 @@ class GrailsVersionUtilsSpec extends Specification {
         pluginVersion    | requiredVersion || valid
         '9.0.0-SNAPSHOT' | '*'             || true
         '1.0'            | ' * '           || true
-        null             | '1.0'           || true
+        null             | '1.0'           || false
+        null             | '1.0 > *'       || false
         null             | '*'             || true
+        null             | ' * '           || true
         '1.1'            | '1.1'           || true
         '1.1'            | '1.2'           || false
         '1.1'            | '1.0 > *'       || true
