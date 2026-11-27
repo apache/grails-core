@@ -101,8 +101,10 @@ final class ConsoleProgram {
      */
     static int run(String command, File directory, boolean readsTerminal) {
         boolean windows = isWindows()
-        PrintStream out = System.out
-        PrintStream err = System.err
+        // read once, on the thread of the line, and handed to the threads that copy what the program writes
+        CommandStreams streams = CommandStreams.current()
+        PrintStream out = streams.out
+        PrintStream err = streams.err
         // the program writes to the output of the console itself where that is the output of the process; a caller
         // that runs the console in its own JVM is given what the program writes
         boolean inherited = GradleBuild.isOutputOfProcess()

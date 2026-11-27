@@ -39,7 +39,9 @@ import org.grails.forge.feature.FeatureSelectionException
  *
  * <p>Gradle writes to the output of the CLI itself where that is the output the process was started
  * with, so that it sees the terminal there is, with its colours and its progress. Where the output
- * was replaced, as a specification does to read it, the bytes Gradle writes are copied to it.</p>
+ * was replaced, as a specification does to read it, and where the command writes to streams of its own,
+ * as each call of {@code grails mcp} does ({@link CommandStreams#current()}), the bytes Gradle writes are
+ * copied there.</p>
  *
  * @since 9.0
  */
@@ -212,15 +214,16 @@ final class GradleRunner extends GradleBuild {
             builder.environment().put(NON_INTERACTIVE, 'true')
         }
         builder.directory(project.directory.toFile())
+        String said = ''
         try {
             Process process = builder.start()
             if (windows) {
                 return process.toHandle()
             }
             // the shell says which process the build is and ends; the build is not its to wait for
-            String said = new String(process.getInputStream().readNBytes(64), StandardCharsets.US_ASCII).trim()
+            said = new String(process.getInputStream().readNBytes(64), StandardCharsets.US_ASCII).trim()
             process.waitFor()
-            Optional<ProcessHandle> build = said ==~ /[0-9]{1,10}/ ? ProcessHandle.of(Long.parseLong(said)) : Optional.<ProcessHandle>empty()
+            Optional<ProcessHandle> build = buildOf(said)
             if (build.isPresent()) {
                 return build.get()
             }
@@ -230,10 +233,17 @@ final class GradleRunner extends GradleBuild {
             failed("The Gradle wrapper ${line(wrapper)} could not be started: ${line(e.getMessage())}")
             return null
         } catch (InterruptedException ignored) {
+            // the command was cancelled once the shell had started the build: the build is not left running without it
+            buildOf(said).ifPresent { ProcessHandle build -> stop(build, STOP_SECONDS) }
             Thread.currentThread().interrupt()
             failed(STOPPED)
             return null
         }
+    }
+
+    // the build the shell says it started, by its number
+    private static Optional<ProcessHandle> buildOf(String said) {
+        return said ==~ /[0-9]{1,10}/ ? ProcessHandle.of(Long.parseLong(said)) : Optional.<ProcessHandle>empty()
     }
 
     /**
@@ -388,8 +398,10 @@ final class GradleRunner extends GradleBuild {
     }
 
     private int run(List<String> command, Path wrapper, Path directory, Consumer<GradleBuild.Running> started) {
-        PrintStream out = System.out
-        PrintStream err = System.err
+        // read once, on the thread of the command, and handed to the threads that copy what Gradle writes
+        CommandStreams streams = CommandStreams.current()
+        PrintStream out = streams.out
+        PrintStream err = streams.err
         boolean inherited = isOutputOfProcess()
         ProcessBuilder builder = new ProcessBuilder(command).directory(directory.toFile())
         if (inherited) {

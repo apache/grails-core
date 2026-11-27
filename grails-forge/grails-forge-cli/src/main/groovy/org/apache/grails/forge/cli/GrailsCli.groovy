@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.CommandStreams
 import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.apache.grails.forge.cli.console.WrapperFiles
@@ -75,6 +76,9 @@ final class GrailsCli {
 
     private static final List<String> FORMER_TYPE_OPTIONS = ['-t', '--type']
 
+    // the command that speaks the Model Context Protocol on the standard input and output of the process
+    private static final String MCP = 'mcp'
+
     // what org.apache.grails.cli.DelegatingShellApplication sets to true when the wrapper of Grails 7 or 8 started it
     private static final String EARLIER_WRAPPER = 'grails.cli.earlierWrapper'
 
@@ -84,18 +88,50 @@ final class GrailsCli {
     /**
      * Runs a command line and ends the JVM with its exit code.
      *
+     * <p>For {@code mcp}, whose standard output is the protocol an agent reads, the standard output is
+     * kept for the protocol before anything else runs, the replacement of the wrapper of Grails 7 and 8
+     * among it: see {@link CommandStreams#guard()}. Everything else that would write there writes to the
+     * standard error, or for the call of a tool that runs.</p>
+     *
      * @param args the command line
      */
     static void main(String[] args) {
+        // the streams the process was started with, which Gradle is given while they are the output of the command line
+        PrintStream out = System.out
+        PrintStream err = System.err
+        if (servesProtocol(args)) {
+            CommandStreams.guard()
+        }
         if (Boolean.parseBoolean(System.clearProperty(EARLIER_WRAPPER))) {
-            mainOfEarlierWrapper(args)
+            mainOfEarlierWrapper(args, out, err)
             return
         }
         // first: the classes the command is about to load are loaded beside it from here on, see StartupPreload
         StartupPreload.start(GrailsCli.classLoader, args)
         // Gradle is given the output of the process for as long as it is the output of the command line
-        GradleBuild.outputOfProcess(System.out, System.err)
+        GradleBuild.outputOfProcess(out, err)
         System.exit(execute(args))
+    }
+
+    /**
+     * Whether a command line is {@code grails mcp}, which speaks a protocol on its standard output: its
+     * command, the first argument that is no option, is {@code mcp}, and it asks neither for the help nor
+     * for the version, which are written for a user to read.
+     */
+    private static boolean servesProtocol(String[] args) {
+        String command = null
+        for (String arg : args) {
+            if (arg == '--') {
+                break
+            }
+            if (arg in ['-h', '--help', '-V', '--version']) {
+                return false
+            }
+            if (command == null && !arg.startsWith('-')) {
+                command = arg
+            }
+        }
+        return command == MCP
     }
 
     /**
@@ -105,9 +141,9 @@ final class GrailsCli {
      * without arguments is what is left of {@code ./grailsw update-wrapper}, and ends once the wrapper is
      * replaced.
      */
-    private static void mainOfEarlierWrapper(String[] args) {
+    private static void mainOfEarlierWrapper(String[] args, PrintStream out, PrintStream err) {
         // Gradle is given the output of the process for as long as it is the output of the command line
-        GradleBuild.outputOfProcess(System.out, System.err)
+        GradleBuild.outputOfProcess(out, err)
         Integer updated = updateWrapper(args)
         if (updated != null && args.length == 0) {
             System.exit(updated)

@@ -63,7 +63,8 @@ import org.gradle.tooling.ResultHandler
  * <p><strong>The connection.</strong> A command line that runs one command makes a connection for its
  * build and closes it. The interactive console keeps one, for the project it is in: every build after
  * the first is asked of it, which spares what making one costs each time, and it is closed when the
- * console is left. It is replaced when a command is run for another project, and when the file that
+ * console is left. {@code grails mcp} keeps one in the same way, for as long as it serves, and runs one
+ * build on it at a time. It is replaced when a command is run for another project, and when the file that
  * names the Gradle of the project has changed, as after {@code update-wrapper}. The checks of the
  * wrapper are made before every build all the same, and a build that failed or was cancelled leaves
  * the connection as it was. Closing a connection waits for the builds it still runs, for
@@ -77,15 +78,16 @@ import org.gradle.tooling.ResultHandler
  * arguments here: they are those of the Gradle daemon, which {@code org.gradle.jvmargs} sets.</p>
  *
  * <p><strong>What the build writes.</strong> Plain text, to the output and the error output of the
- * command line as they are when the build starts, each line when Gradle has written it: no colours and
+ * command that runs it as they are when the build starts ({@link CommandStreams#current()}), whatever
+ * thread of the Tooling API writes it, each line when Gradle has written it: no colours and
  * no display of progress, on a terminal too. The Tooling API can be told to write for a terminal, and
  * then draws the progress of the build over what it wrote to the error output, which it does not
  * write through the same console; the report of a build that failed loses its last lines that way.</p>
  *
  * <p><strong>What the build reads.</strong> The input of this JVM, where the command line is a program
  * that runs one command and ends, and nothing says that no one may be waited for. No input in the
- * interactive console, where the command line is run in the JVM of a caller, and with
- * {@code --non-interactive}: the Tooling API reads the stream it is given as soon as a build starts,
+ * interactive console and in {@code grails mcp}, where the command line is run in the JVM of a caller, and
+ * with {@code --non-interactive}: the Tooling API reads the stream it is given as soon as a build starts,
  * whether or not the build reads, and the thread that does goes on waiting for what is typed after the
  * build has ended, so it would take the next line from the prompt of the console, or from the caller.
  * The build is given no stream rather than one that has ended: Gradle takes a build that is given a
@@ -189,9 +191,10 @@ final class ToolingApiRunner extends GradleBuild {
     }
 
     /**
-     * Closes the connection the interactive console kept, when there is one. The console does it when it is left.
-     * Closing waits for the builds the connection still runs, for {@link #CLOSE_SECONDS} at most, and then gives the
-     * connection up, so that nothing waits for a build that does not end.
+     * Closes the connection the interactive console, or {@code grails mcp}, kept, when there is one. The console
+     * does it when it is left, and {@code grails mcp} when it ends. Closing waits for the builds the connection still
+     * runs, for {@link #CLOSE_SECONDS} at most, and then gives the connection up, so that nothing waits for a build
+     * that does not end.
      *
      * @return whether the connection closed, or there was none; {@code false} when it was given up on
      */
@@ -232,10 +235,11 @@ final class ToolingApiRunner extends GradleBuild {
         }
     }
 
-    // The connection for a build: in the interactive console the one that is kept, when it is for this
-    // project and for what names its Gradle now, and otherwise a new one, which is kept in its place there.
+    // The connection for a build: in the interactive console and in grails mcp the one that is kept, when it is for
+    // this project and for what names its Gradle now, and otherwise a new one, which is kept in its place there.
     private static ProjectConnection connect(ConsoleProject project, Path properties) throws IOException {
-        if (!ConsoleCommands.isInteractive()) {
+        ConsoleCommands.Session session = ConsoleCommands.getSession()
+        if (session == ConsoleCommands.Session.NONE) {
             ProjectConnection made = GradleConnector.newConnector().forProjectDirectory(project.directory.toFile()).useBuildDistribution().connect()
             int count
             synchronized (KEPT) {
@@ -247,12 +251,14 @@ final class ToolingApiRunner extends GradleBuild {
             return made
         }
         String wanted = "${project.directory.toRealPath()}\n${new String(Files.readAllBytes(properties), StandardCharsets.ISO_8859_1)}".toString()
+        // the diagnostics say which session keeps it, in the words the console has always had
+        String keeper = session == ConsoleCommands.Session.MCP ? 'grails mcp' : 'the console'
         ProjectConnection replaced = null
         try {
             synchronized (KEPT) {
                 if (kept != null && keptFor == wanted) {
                     if (Diagnostics.isOn()) {
-                        connection("reused: the one the console keeps for this project and its Gradle (${connectionsMade} made in this JVM)".toString())
+                        connection("reused: the one ${keeper} keeps for this project and its Gradle (${connectionsMade} made in this JVM)".toString())
                     }
                     return kept
                 }
@@ -263,8 +269,8 @@ final class ToolingApiRunner extends GradleBuild {
                 keptFor = wanted
                 connectionsMade++
                 if (Diagnostics.isOn()) {
-                    connection((replaced == null ? 'made, and kept for the next build of the console' :
-                            'made in the place of the one the console kept, which was for another project or another Gradle') +
+                    connection((replaced == null ? "made, and kept for the next build of ${keeper}".toString() :
+                            "made in the place of the one ${keeper} kept, which was for another project or another Gradle".toString()) +
                             " (${connectionsMade} made in this JVM)".toString())
                 }
                 return kept
@@ -344,8 +350,11 @@ final class ToolingApiRunner extends GradleBuild {
     }
 
     private int run(ProjectConnection connection, List<String> arguments, Consumer<GradleBuild.Running> started) {
-        PrintStream out = System.out
-        PrintStream err = System.err
+        // read once, on the thread of the command: the threads of the Tooling API write there for this build, also those
+        // a connection that is kept started for an earlier one
+        CommandStreams streams = CommandStreams.current()
+        PrintStream out = streams.out
+        PrintStream err = streams.err
         CancellationTokenSource cancellation = GradleConnector.newCancellationTokenSource()
         BuildLauncher launcher = connection.newBuild()
         // tasks and their options together, as on a command line: an option of a task is one only after its task
@@ -370,9 +379,9 @@ final class ToolingApiRunner extends GradleBuild {
             Map<String, String> environment = new LinkedHashMap<String, String>(System.getenv())
             environment.put(NON_INTERACTIVE, 'true')
             launcher.setEnvironmentVariables(environment)
-        } else if (!ConsoleCommands.isInteractive() && isProgram()) {
-            // The input of a program that runs one command. That of the console, or of a caller, is not given: whatever
-            // reads it for a build would still read it when the build has ended.
+        } else if (ConsoleCommands.getSession() == ConsoleCommands.Session.NONE && isProgram()) {
+            // The input of a program that runs one command. That of the console, of grails mcp, or of a caller, is not
+            // given: whatever reads it for a build would still read it when the build has ended.
             launcher.setStandardInput(System.in)
         }
         CountDownLatch ended = new CountDownLatch(1)

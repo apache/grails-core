@@ -19,14 +19,17 @@
 package org.apache.grails.forge.cli
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.CommandStreams
 
 /**
  * What the command line says of how it runs a command, when the environment variable
  * {@value #VARIABLE} is {@code true}: which way Gradle is run and why, whether a connection to Gradle
  * was made or used again, whether the classes of the command line were loaded ahead, and how many
  * templates of the feature packs of Forge were compiled while the command ran and how many were taken
- * as the build of Forge compiled them. Each is one line on the standard error, which starts with
- * {@value #PREFIX}, and none is written otherwise.
+ * as the build of Forge compiled them. Each is one line on the standard error of the process
+ * ({@link CommandStreams#processErr()}), which starts with {@value #PREFIX}, and none is written
+ * otherwise. A program that runs command lines and reads what they write, as {@code grails mcp} does,
+ * does not get them as the output of a command.
  *
  * <p>Asking whether it is on reads one field: the environment is read once, when this class is
  * initialized, and what a line says is put together only where it is on.</p>
@@ -77,7 +80,8 @@ final class Diagnostics {
         if (!isOn()) {
             return
         }
-        PrintStream err = System.err
+        // the user's, who turned them on: never the output of a command that a program such as grails mcp runs
+        PrintStream err = CommandStreams.processErr()
         err.println(PREFIX + topic + ': ' + text)
         err.flush()
     }

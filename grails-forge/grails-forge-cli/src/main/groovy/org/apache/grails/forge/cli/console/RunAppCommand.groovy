@@ -246,7 +246,8 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         stopped.each { InShell each -> GradleRunner.stop(each.build, STOP_SECONDS) }
         stopped.each { InShell each ->
             if (!StopAppCommand.closed(each.port, each.address)) {
-                System.err.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' +
+                // the errors of whatever command line runs on this thread, or of the process where none does
+                CommandStreams.current().err.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' +
                         "The shell ended the build of the application that run-app started in it for port ${each.port}, " +
                         "but something answers on that port still after ${StopAppCommand.PORT_SECONDS} seconds: the application may take longer to end, or it is another one"))
             }

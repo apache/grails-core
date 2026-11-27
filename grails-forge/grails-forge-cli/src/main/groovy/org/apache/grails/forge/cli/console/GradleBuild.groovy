@@ -98,7 +98,9 @@ abstract class GradleBuild {
      *
      * <p><strong>In the interactive console</strong>, which is the session {@code ForgeCli.interactive}
      * runs and {@link ConsoleCommands#isInteractive} tells of, the purpose decides. A command line that
-     * is run in the JVM of a caller, as {@code GrailsCli.execute} is, is not the console.</p>
+     * is run in the JVM of a caller, as {@code GrailsCli.execute} is, is not the console. {@code grails mcp},
+     * the other session that runs many command lines in one JVM ({@link ConsoleCommands.Session#MCP}), runs
+     * its builds as the console does.</p>
      *
      * <ul>
      * <li>A {@linkplain Purpose#BUILD build the command line asks for itself}, which is {@code compile},
@@ -152,7 +154,8 @@ abstract class GradleBuild {
                 }
             }
         }
-        boolean throughToolingApi = asked == TOOLING_API || (asked == AUTO && ConsoleCommands.isInteractive())
+        ConsoleCommands.Session session = ConsoleCommands.getSession()
+        boolean throughToolingApi = asked == TOOLING_API || (asked == AUTO && session != ConsoleCommands.Session.NONE)
         if (purpose != Purpose.BUILD || !throughToolingApi) {
             if (Diagnostics.isOn()) {
                 chosen(said, PROCESS, whyProcess(purpose, asked))
@@ -160,7 +163,8 @@ abstract class GradleBuild {
             return wrapper
         }
         if (Diagnostics.isOn()) {
-            chosen(said, TOOLING_API, asked == TOOLING_API ? "${RUNNER} is ${TOOLING_API}".toString() : 'a build of the interactive console')
+            chosen(said, TOOLING_API, asked == TOOLING_API ? "${RUNNER} is ${TOOLING_API}".toString() :
+                    session == ConsoleCommands.Session.MCP ? 'a build of grails mcp' : 'a build of the interactive console')
         }
         return new ToolingApiRunner(failure, windows, wrapper)
     }
@@ -221,10 +225,13 @@ abstract class GradleBuild {
     }
 
     /**
-     * @return whether nothing may wait for what a user types
+     * @return whether nothing may wait for what a user types: as the command line asked, and always in
+     * {@code grails mcp} ({@link ConsoleCommands.Session#MCP}), whose standard input is the protocol and
+     * which runs command lines on several threads at once, so that one that ends does not give the input
+     * of the process to the build of another
      */
     static boolean isNonInteractive() {
-        return nonInteractive
+        return nonInteractive || ConsoleCommands.getSession() == ConsoleCommands.Session.MCP
     }
 
     /**
@@ -248,10 +255,15 @@ abstract class GradleBuild {
     }
 
     /**
-     * @return whether the output of the command line is, now, the output the process was started with
+     * @return whether the output of the command line is, now, the output the process was started with:
+     * not where the command that runs writes to streams of its own ({@link CommandStreams#current()}), as
+     * each call of {@code grails mcp} does, and never where {@link CommandStreams#guard()} keeps the standard
+     * output of the process for a protocol. What Gradle and the tools write is then piped into the command
+     * that runs them.
      */
     protected static boolean isOutputOfProcess() {
-        return System.out.is(processOut) && System.err.is(processErr)
+        CommandStreams streams = CommandStreams.current()
+        return CommandStreams.guarded() == null && streams.out.is(processOut) && streams.err.is(processErr)
     }
 
     /**
@@ -265,8 +277,9 @@ abstract class GradleBuild {
 
     /**
      * Closes what was kept open between the builds of the interactive console, which is the
-     * connection to the Gradle of the project. The console does it when it is left. A connection
-     * a build still runs on is given up on after a while, so that leaving does not wait for good.
+     * connection to the Gradle of the project. The console does it when it is left, and
+     * {@code grails mcp} when it ends. A connection a build still runs on is given up on after a
+     * while, so that leaving does not wait for good.
      *
      * @return whether everything closed; {@code false} when a connection was given up on
      */

@@ -39,7 +39,8 @@ import groovy.transform.CompileStatic
  * environment variable {@code JAVA_HOME} names, and without it the one that runs the command line.
  * The class path is given to it in a file only the user can read, since it is longer than a command
  * line of Windows can be, and so are the arguments of the command, as they are for a command the
- * build runs. The process is given the input and the output of the command line, is ended with
+ * build runs. The process is given the input and the output of the command line, or of the command that
+ * runs it where that writes to streams of its own ({@link CommandStreams#current()}), is ended with
  * every process it started when the command is cancelled or the command line ends, and its exit code
  * is that of the command: 0 when the command succeeded.</p>
  *
@@ -218,8 +219,10 @@ final class StandaloneToolProcess {
     }
 
     private static int waitFor(List<String> command, Path directory, boolean windows, Consumer<String> failure, Consumer<ProcessHandle> started) {
-        PrintStream out = System.out
-        PrintStream err = System.err
+        // read once, on the thread of the command, and handed to the threads that copy what the command writes
+        CommandStreams streams = CommandStreams.current()
+        PrintStream out = streams.out
+        PrintStream err = streams.err
         boolean inherited = GradleBuild.isOutputOfProcess()
         ProcessBuilder builder = new ProcessBuilder(command).directory(directory.toFile())
         out.flush()

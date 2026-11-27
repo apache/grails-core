@@ -44,7 +44,9 @@ final class ForgeContext implements Supplier<ApplicationContext>, Closeable {
     private Properties before
     private Properties started
     private NotStartedException failure
-    private int notListing
+    // Of the thread that describes: a context that serves several command lines at once, as that of grails mcp does,
+    // lists the values of an option for one of them while another describes its commands without them.
+    private final ThreadLocal<int[]> notListing = ThreadLocal.withInitial({ new int[1] } as Supplier<int[]>)
 
     /** Whether the JVM is the command line's own, which the interactive shell may end; not so where a program runs the command line in its own JVM. */
     boolean endsJvm = true
@@ -115,26 +117,24 @@ final class ForgeContext implements Supplier<ApplicationContext>, Closeable {
      * Does something that describes the commands without the application: where the values of an
      * option are those the application has, the description says where they are listed and the
      * application is not asked for them. So are the commands described for a tool, and so is a
-     * command shown to be used after a mistake in the command line.
+     * command shown to be used after a mistake in the command line. It holds for what is done on this
+     * thread: a command line that another thread runs on the same context at the same time lists them.
      *
      * @param action what is done
      * @return what it returns
      */
     <T> T withoutListing(Supplier<T> action) {
-        synchronized (this) {
-            notListing++
-        }
+        int[] count = notListing.get()
+        count[0]++
         try {
             return action.get()
         } finally {
-            synchronized (this) {
-                notListing--
-            }
+            count[0]--
         }
     }
 
-    private synchronized boolean isListing() {
-        return notListing == 0
+    private boolean isListing() {
+        return notListing.get()[0] == 0
     }
 
     /**
