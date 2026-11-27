@@ -1089,6 +1089,12 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
         def alias = args[0] instanceof CharSequence ? args[0].toString() : null
 
+        // a block takes the join type as its first argument, as it does on a criteria builder (0 inner, 1 left, 2 right),
+        // and joins the association the way the builder does, which a query populated from this criteria also sees
+        if (args.size() > 1 && args[0] instanceof Number) {
+            join(methodName, joinTypeOf(((Number) args[0]).intValue()))
+        }
+
         // Explicit null checks: Groovy truth on a DetachedCriteria invokes asBoolean(),
         // which executes the criteria as a query - a spurious query for a repeated
         // reference to a persistent association, and an outright failure for a repeated
@@ -1121,6 +1127,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             } finally {
                 parentCallable.delegate = previous
             }
+        }
+    }
+
+    private static JoinType joinTypeOf(int value) {
+        switch (value) {
+            case 1: return JoinType.LEFT
+            case 2: return JoinType.RIGHT
+            default: return JoinType.INNER
         }
     }
 

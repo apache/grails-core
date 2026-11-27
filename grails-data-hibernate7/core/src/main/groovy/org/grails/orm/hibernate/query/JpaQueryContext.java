@@ -157,6 +157,10 @@ public class JpaQueryContext implements Cloneable {
         return resolver.resolveAssociation(path, joinType);
     }
 
+    boolean isLeftForAlternatives(String path) {
+        return joinTracker.plannedForAlternatives(path);
+    }
+
     public void registerAlias(String alias, Expression<?> expression) {
         aliasRegistry.realize(alias, expression);
     }

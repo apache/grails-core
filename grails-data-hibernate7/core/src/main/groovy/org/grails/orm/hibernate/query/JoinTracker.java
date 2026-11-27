@@ -112,6 +112,13 @@ public class JoinTracker {
         return owner.plan == null ? null : owner.plan.typeOf(key(path));
     }
 
+    /**
+     * Whether the join of a path relative to this scope is a left join the planner chose for a block in an {@code or}.
+     */
+    boolean plannedForAlternatives(String path) {
+        return owner.plan != null && owner.plan.isAlternative(key(path));
+    }
+
     public From<?, ?> getRoot() {
         return root;
     }
