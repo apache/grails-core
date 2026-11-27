@@ -141,8 +141,10 @@ ext {
             'mongodb.version'               : '5.11.1',
             // Security: overrides spring-boot-dependencies (4.1.135.Final), which no open source Spring Boot 3.5.x
             // release will move. 4.1.137.Final and later fix CVE-2026-75595 (SNI routing bypass via a fragmented
-            // TLS ClientHello) and the SPDY, HTTP/2 and CORS advisories against 4.1.135.Final.
-            'netty.version'                 : '4.1.139.Final',
+            // TLS ClientHello) and the SPDY, HTTP/2 and CORS advisories against 4.1.135.Final. 4.1.140.Final adds
+            // eight more security fixes, and 4.1.141.Final restores the glibc requirement of the native transports
+            // that 4.1.140.Final raised to 2.33 by mistake.
+            'netty.version'                 : '4.1.141.Final',
             'nimbus-jose-jwt.version'       : '10.5',
             'opentelemetry.version'         : '1.62.0',
             'plexus-utils.version'          : '4.0.3',
