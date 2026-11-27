@@ -34,7 +34,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 
 /** Binder for root classes. */
 @CompileStatic
-@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class RootBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(RootBinder)

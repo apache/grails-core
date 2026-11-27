@@ -27,11 +27,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 /**
  * Second pass class for grails relationships. This is required as all persistent classes need to be
  * loaded in the first pass and then relationships established in the second pass compile
- *
- * @author Graeme
  */
+@SuppressWarnings('deprecation')
 @CompileStatic
-@SuppressWarnings('PMD.NonSerializableClass')
 class SetSecondPass implements SecondPass, GrailsSecondPass, Serializable {
 
     private static final long serialVersionUID = -5540526942092611348L
@@ -59,8 +57,7 @@ class SetSecondPass implements SecondPass, GrailsSecondPass, Serializable {
         if (collection != null) {
             property.setHibernateCollection(collection)
         }
-        collectionSecondPassBinder.bindCollectionSecondPass(property)
-        createCollectionKeys(property.getCollection())
+        collectionSecondPassBinder.bindSetSecondPass(property)
     }
 
 }

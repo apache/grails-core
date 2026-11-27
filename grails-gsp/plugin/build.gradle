@@ -175,6 +175,8 @@ dependencies {
     testImplementation "jakarta.servlet.jsp:jakarta.servlet.jsp-api:$jspApiVersion"
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.springframework:spring-test'
+    // Test-only: ApplicationTagLibTests renders the nonce Spring Security's own nonce filter generates
+    testImplementation 'org.springframework.security:spring-security-web'
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation project(':grails-testing-support-core')

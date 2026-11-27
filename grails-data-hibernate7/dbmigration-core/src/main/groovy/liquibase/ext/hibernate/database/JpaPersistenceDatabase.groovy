@@ -1,70 +1,67 @@
-@SuppressWarnings('UnnecessarySemicolon')
-package liquibase.ext.hibernate.database;
+package liquibase.ext.hibernate.database
 
-import jakarta.persistence.spi.PersistenceUnitInfo;
+import jakarta.persistence.spi.PersistenceUnitInfo
 
-import groovy.transform.CompileStatic;
-import groovy.transform.stc.POJO;
-import liquibase.database.DatabaseConnection;
-import liquibase.ext.hibernate.database.connection.HibernateDriver;
-import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl;
-import org.hibernate.jpa.boot.spi.Bootstrap;
-import org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager;
+import groovy.transform.CompileStatic
+import groovy.transform.stc.POJO
+import liquibase.database.DatabaseConnection
+import liquibase.ext.hibernate.database.connection.HibernateDriver
+import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl
+import org.hibernate.jpa.boot.spi.Bootstrap
+import org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager
 
 /**
  * Database implementation for JPA configurations.
  * This supports passing a JPA persistence XML file reference.
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 @POJO // see HibernateDatabase
 class JpaPersistenceDatabase extends HibernateEjb3Database {
 
     @Override
     boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
-        String url = conn.getURL();
-        return url != null && url.startsWith('jpa:persistence:');
+        String url = conn.getURL()
+        return url != null && url.startsWith('jpa:persistence:')
     }
 
     @Override
     String getDefaultDriver(String url) {
-        if (url != null && url.startsWith("jpa:persistence:")) {
-            return HibernateDriver.getName();
+        if (url != null && url.startsWith('jpa:persistence:')) {
+            return HibernateDriver.getName()
         }
-        return null;
+        return null
     }
 
     @Override
     String getShortName() {
-        return "jpaPersistence";
+        return 'jpaPersistence'
     }
 
     @Override
     protected String getDefaultDatabaseProductName() {
-        return "JPA Persistence";
+        return 'JPA Persistence'
     }
 
     @Override
     protected EntityManagerFactoryBuilderImpl createEntityManagerFactoryBuilder() {
-        DefaultPersistenceUnitManager internalPersistenceUnitManager = new DefaultPersistenceUnitManager();
+        DefaultPersistenceUnitManager internalPersistenceUnitManager = new DefaultPersistenceUnitManager()
 
-        String path = getHibernateConnection().getPath();
+        String path = getHibernateConnection().getPath()
         if (path == null) {
-            throw new IllegalStateException('Hibernate connection path is null');
+            throw new IllegalStateException('Hibernate connection path is null')
         }
 
-        internalPersistenceUnitManager.setPersistenceXmlLocation(path);
+        internalPersistenceUnitManager.setPersistenceXmlLocation(path)
 
-        internalPersistenceUnitManager.preparePersistenceUnitInfos();
-        PersistenceUnitInfo persistenceUnitInfo = internalPersistenceUnitManager.obtainDefaultPersistenceUnitInfo();
+        internalPersistenceUnitManager.preparePersistenceUnitInfos()
+        PersistenceUnitInfo persistenceUnitInfo = internalPersistenceUnitManager.obtainDefaultPersistenceUnitInfo()
         if (persistenceUnitInfo == null) {
-            throw new IllegalStateException('No persistence unit info found for path: ' + path);
+            throw new IllegalStateException('No persistence unit info found for path: ' + path)
         }
 
         Map<String, Object> integration =
-                (Map<String, Object>) Map.of(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString());
-        return (EntityManagerFactoryBuilderImpl) Bootstrap.getEntityManagerFactoryBuilder(persistenceUnitInfo, integration);
+                (Map<String, Object>) Map.of(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString())
+        return (EntityManagerFactoryBuilderImpl) Bootstrap.getEntityManagerFactoryBuilder(persistenceUnitInfo, integration)
     }
 
 }

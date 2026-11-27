@@ -16,92 +16,89 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import groovy.transform.CompileStatic;
-import org.hibernate.mapping.PersistentClass;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.PersistentClass
 
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
-import org.grails.datastore.mapping.model.ClassMapping;
-import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
+import org.grails.datastore.mapping.model.ClassMapping
+import org.grails.datastore.mapping.model.EmbeddedPersistentEntity
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.orm.hibernate.cfg.Mapping
 
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<Mapping>
         implements GrailsHibernatePersistentEntity {
 
-    private final ClassMapping<Mapping> classMapping;
-    private String dataSourceName;
-    private PersistentClass persistentClass;
+    private final ClassMapping<Mapping> classMapping
+    private String dataSourceName
+    private PersistentClass persistentClass
 
     HibernateEmbeddedPersistentEntity(Class<?> type, MappingContext ctx) {
-        super(type, ctx);
-        this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
+        super(type, ctx)
+        this.classMapping = new HibernateEmbeddedClassMapping(this, ctx)
     }
 
     @Override
     Mapping getMappedForm() {
-        return classMapping.getMappedForm();
+        return classMapping.getMappedForm()
     }
 
     @Override
     String getDataSourceName() {
-        return dataSourceName;
+        return dataSourceName
     }
 
     @Override
     void setDataSourceName(String dataSourceName) {
-        this.dataSourceName = dataSourceName;
+        this.dataSourceName = dataSourceName
     }
 
     @Override
     HibernatePersistentProperty getIdentity() {
-        def identity = super.getIdentity();
-        return identity instanceof HibernatePersistentProperty ? (HibernatePersistentProperty) identity : null;
+        def identity = super.getIdentity()
+        return identity instanceof HibernatePersistentProperty ? (HibernatePersistentProperty) identity : null
     }
 
     @Override
     HibernatePersistentProperty[] getCompositeIdentity() {
-        return new HibernatePersistentProperty[0];
+        return new HibernatePersistentProperty[0]
     }
 
     @Override
     HibernatePersistentProperty getVersion() {
-        def version = super.getVersion();
-        return version instanceof HibernatePersistentProperty ? (HibernatePersistentProperty) version : null;
+        def version = super.getVersion()
+        return version instanceof HibernatePersistentProperty ? (HibernatePersistentProperty) version : null
     }
 
     @Override
     boolean forGrailsDomainMapping(String dataSourceName) {
-        return false;
+        return false
     }
 
     @Override
     boolean usesConnectionSource(String dataSourceName) {
-        return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
+        return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName)
     }
 
     @Override
     boolean isAbstract() {
-        return false;
+        return false
     }
 
     @Override
     ClassMapping<Mapping> getMapping() {
-        return classMapping;
+        return classMapping
     }
 
     @Override
     PersistentClass getPersistentClass() {
-        return persistentClass;
+        return persistentClass
     }
 
     @Override
     void setPersistentClass(PersistentClass persistentClass) {
-        this.persistentClass = persistentClass;
+        this.persistentClass = persistentClass
     }
 }

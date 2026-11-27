@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory
 
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
+import org.springframework.context.MessageSource
 import org.springframework.core.env.Environment
 
 import grails.config.Settings
@@ -32,10 +33,12 @@ import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.plugins.Plugin
 import grails.rest.Resource
+import grails.rest.render.errors.ValidationProblemDetailFactory
 import grails.util.GrailsUtil
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.plugins.web.rest.render.DefaultRendererRegistry
+import org.grails.plugins.web.rest.render.SpringMessageConverters
 
 /**
  * @since 2.3
@@ -64,6 +67,25 @@ class RestResponderGrailsPlugin extends Plugin {
                     return rendererRegistry
                 }
             }
+            // Both are infrastructure beans, which an application @Bean of the same name replaces, whereas
+            // configuration classes are read after plugins register their beans, and Spring keeps an
+            // application bean that is already defined.
+            registry.registerBean('defaultValidationProblemDetailFactory', ValidationProblemDetailFactory) {
+                // A fallback candidate: an application's own factory bean, whatever its name, is
+                // the one the renderers autowire.
+                it.fallback().infrastructure().supplier {
+                    // Resolves each error through the application's MessageSource, so a validation
+                    // response carries the message for the current locale with its arguments
+                    // substituted rather than the raw default template.
+                    new ValidationProblemDetailFactory(false, it.bean('messageSource', MessageSource))
+                }
+            }
+            registry.registerBean('validationProblemDetailFactory', ValidationProblemDetailFactory) {
+                // Controllers autowire by name: under this name, the factory the renderers autowire
+                // by type, which this bean is left out of.
+                it.notAutowirable().infrastructure().supplier { it.bean(ValidationProblemDetailFactory) }
+            }
+            registry.registerBean('springMessageConverters', SpringMessageConverters)
         }
     }
 

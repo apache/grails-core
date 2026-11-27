@@ -16,48 +16,45 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import groovy.transform.CompileStatic;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.UniqueKey;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.UniqueKey
 
-import org.grails.orm.hibernate.cfg.NaturalId;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePropertyIdentity;
-import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator;
+import org.grails.orm.hibernate.cfg.NaturalId
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePropertyIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
 
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class NaturalIdentifierBinder {
 
-    private final UniqueNameGenerator uniqueNameGenerator;
+    private final UniqueNameGenerator uniqueNameGenerator
 
     NaturalIdentifierBinder(UniqueNameGenerator uniqueNameGenerator) {
-        this.uniqueNameGenerator = uniqueNameGenerator;
+        this.uniqueNameGenerator = uniqueNameGenerator
     }
 
     NaturalIdentifierBinder() {
-        this(new UniqueNameGenerator());
+        this(new UniqueNameGenerator())
     }
 
     void bindNaturalIdentifier(
             GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
-        HibernatePropertyIdentity identity = persistentEntity.getHibernateMappedForm().getIdentity();
+        HibernatePropertyIdentity identity = persistentEntity.getHibernateMappedForm().getIdentity()
         if (identity == null) {
-            return;
+            return
         }
-        NaturalId natural = identity.getNatural();
+        NaturalId natural = identity.getNatural()
         if (natural == null) {
-            return;
+            return
         }
-        Optional<UniqueKey> uniqueKey = natural.createUniqueKey(persistentClass);
+        Optional<UniqueKey> uniqueKey = natural.createUniqueKey(persistentClass)
         if (uniqueKey.isPresent()) {
-            UniqueKey uk = uniqueKey.get();
-            uniqueNameGenerator.setGeneratedUniqueName(uk);
-            persistentClass.getTable().addUniqueKey(uk);
+            UniqueKey uk = uniqueKey.get()
+            uniqueNameGenerator.setGeneratedUniqueName(uk)
+            persistentClass.getTable().addUniqueKey(uk)
         }
     }
 }

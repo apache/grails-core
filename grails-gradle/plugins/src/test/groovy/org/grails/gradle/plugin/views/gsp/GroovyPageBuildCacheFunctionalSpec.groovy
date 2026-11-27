@@ -113,10 +113,13 @@ class GroovyPageBuildCacheFunctionalSpec extends GradleSpecification {
                 implementation files('groovy.jar')
             }
         ''')
-        // the page compiler comes from grails-web-gsp, which this build cannot depend on
-        File standIn = new File(checkout, 'compiler/org/grails/web/pages/GroovyPageForkedCompiler.class')
-        standIn.parentFile.mkdirs()
-        standIn.bytes = getClass().classLoader.getResource('org/grails/web/pages/GroovyPageForkedCompiler.class').bytes
+        // the page compiler comes from grails-web-gsp, which this build cannot depend on: a stand-in
+        // under its name, and the recorder it delegates to
+        ['org/grails/web/pages/GroovyPageForkedCompiler.class', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class'].each { String resource ->
+            File standIn = new File(checkout, "compiler/${resource}")
+            standIn.parentFile.mkdirs()
+            standIn.bytes = getClass().classLoader.getResource(resource).bytes
+        }
         groovy(checkout, '5.0.4')
         File page = new File(checkout, 'grails-app/views/book/index.gsp')
         page.parentFile.mkdirs()

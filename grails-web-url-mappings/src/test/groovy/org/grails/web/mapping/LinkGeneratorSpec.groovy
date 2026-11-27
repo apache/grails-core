@@ -299,8 +299,8 @@ class LinkGeneratorSpec extends Specification {
             MockHttpServletRequest request = webRequest.currentRequest
             baseUrl = null
             def cachingGenerator = getGenerator(true)
-            def w1 = new Widget(id: 1, name: 'Some Widget')
-            def w2 = new Widget(id: 2, name: 'Some Widget')
+            def w1 = new Widget(name: 'Some Widget').tap { id = 1 }
+            def w2 = new Widget(name: 'Some Widget').tap { id = 2 }
 
         when:
             def cacheKey = cachingGenerator.makeKey('somePrefix', [resource:w1]);
@@ -320,7 +320,7 @@ class LinkGeneratorSpec extends Specification {
         linkParams.method = 'GET'
 
         when: 'a resource is specified, ident() is used for id'
-        linkParams.resource = new Widget(id: 1, name: 'Some Widget')
+        linkParams.resource = new Widget(name: 'Some Widget').tap { id = 1 }
 
         then:
         link == "/bar/widget/show/1"

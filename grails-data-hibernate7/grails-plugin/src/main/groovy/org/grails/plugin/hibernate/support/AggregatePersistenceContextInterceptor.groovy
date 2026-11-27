@@ -25,9 +25,6 @@ import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * Concrete implementation of the {@link AbstractMultipleDataSourceAggregatePersistenceContextInterceptor} class for Hibernate 4
- *
- * @author Graeme Rocher
- * @author Burt Beckwith
  */
 @CompileStatic
 class AggregatePersistenceContextInterceptor

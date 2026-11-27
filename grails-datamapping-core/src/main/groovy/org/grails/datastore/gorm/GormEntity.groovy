@@ -29,6 +29,7 @@ import jakarta.persistence.Transient
 import org.springframework.transaction.TransactionDefinition
 
 import grails.gorm.DetachedCriteria
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.MappingContext
@@ -506,6 +507,35 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     static List<FinderMethod> getGormDynamicFinders() {
         currentGormStaticApi().gormDynamicFinders
     }
+
+    /**
+     * Returns the listener that sets this class's timestamp and auditor properties. Each datastore has a listener of
+     * its own, and so does each connection and each tenant with a database or schema of its own, so the
+     * {@code autoTimestampEventListener} bean may not be the one that handles this class. This one is the listener of
+     * the connection that a {@code save()} made from the same place goes to: the class's default connection, the
+     * connection of a running {@code Car.secondary.withTransaction { }} block or
+     * {@code @Transactional(connection = 'secondary')} method, or the current tenant's for a multi-tenant class.
+     *
+     * <pre>
+     * Car.autoTimestampEventListener.withoutTimestamps {
+     *     car.save(flush: true)
+     * }
+     * </pre>
+     *
+     * For another connection of a class mapped to several, ask that connection, as in
+     * {@code Car.secondary.autoTimestampEventListener}.
+     *
+     * @return the listener that handles this class
+     * @throws IllegalStateException when the class's datastore has no such listener
+     * @throws org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException for a multi-tenant class
+     * with a database or schema per tenant when no tenant is current, as a save would
+     * @since 9.0
+     */
+    @Generated
+    static AutoTimestampEventListener getAutoTimestampEventListener() {
+        currentGormStaticApi().autoTimestampEventListener
+    }
+
     /**
      *
      * @param callable Callable closure containing detached criteria definition

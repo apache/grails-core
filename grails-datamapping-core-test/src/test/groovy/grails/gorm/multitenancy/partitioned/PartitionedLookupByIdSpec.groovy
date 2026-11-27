@@ -284,10 +284,20 @@ class PartitionedLookupByIdSpec extends Specification {
         Note.withTenant('other') { Note.withNewSession { Note.get(ownId) } } == null
         Note.withTenant('other').get(ownId) == null
 
-        and: 'the tenant id DEFAULT restricts it as it restricts a query'
+        and: 'the tenant id default restricts it as it restricts a query'
         Note.withTenant(ConnectionSource.DEFAULT) {
             Note.withNewSession { [Note.findById(ownId), Note.get(ownId), Note.getAll(ownId, otherId)] }
         } == [null, null, [null, null]]
+    }
+
+    void 'a lookup by id through withTenant inside withoutId is restricted to that tenant as a query is'() {
+        expect:
+        Tenants.withoutId(datastore) {
+            Note.withNewSession {
+                def other = Note.withTenant('other')
+                [other.findById(ownId), other.get(ownId), other.exists(ownId), other.getAll(ownId, otherId)*.title]
+            }
+        } == [null, null, false, [null, 'Other']]
     }
 
     void 'a lookup by id inside withoutId is not restricted to a tenant'() {

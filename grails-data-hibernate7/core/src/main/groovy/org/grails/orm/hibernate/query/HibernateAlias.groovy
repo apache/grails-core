@@ -26,16 +26,18 @@ import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.mapping.query.Query
 
 /**
- * A internal criterion used to represent an alias for a basic collection join.
- *
- * @author walterduquedeestrada
+ * An internal criterion used to represent an explicit alias or an implicit association-path join.
  */
 @CompileStatic
 @SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
 @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
-@TupleConstructor(defaults = false)
-record HibernateAlias(String path, String alias, JoinType joinType)
+@TupleConstructor(defaults = false, namedVariant = false)
+record HibernateAlias(String path, String alias, JoinType joinType, boolean explicit)
         implements Query.Criterion, Query.QueryElement {
+
+    HibernateAlias(String path, String alias, JoinType joinType) {
+        this(path, alias, joinType, true)
+    }
 
     /** Creates an alias that joins with {@link JoinType#INNER}. */
     HibernateAlias(String path, String alias) {

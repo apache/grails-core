@@ -16,19 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.generator;
+package org.grails.orm.hibernate.cfg.domainbinding.generator
 
-import groovy.transform.CompileStatic;
-import jakarta.persistence.GenerationType;
-import org.hibernate.boot.model.relational.Database;
-import org.hibernate.boot.model.relational.SqlStringGenerationContext;
-import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.generator.EventType;
-import org.hibernate.generator.GeneratorCreationContext;
-import org.hibernate.id.NativeGenerator;
+import groovy.transform.CompileStatic
+import jakarta.persistence.GenerationType
+import org.hibernate.boot.model.relational.Database
+import org.hibernate.boot.model.relational.SqlStringGenerationContext
+import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.engine.spi.SharedSessionContractImplementor
+import org.hibernate.generator.EventType
+import org.hibernate.generator.GeneratorCreationContext
+import org.hibernate.id.NativeGenerator
 
 /**
  * A native generator that supports Grails assigned identifiers and fixes Hibernate 7 ClassCastException.
@@ -41,54 +40,51 @@ import org.hibernate.id.NativeGenerator;
  *
  * @since 8.0
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class GrailsNativeGenerator extends NativeGenerator {
 
     @Serial
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L
 
     /** Carries the default {@code @NativeGenerator} the way Hibernate reads it from an unannotated identifier. */
     @org.hibernate.annotations.NativeGenerator
     private static final class DefaultNativeGenerator { }
 
     private static final org.hibernate.annotations.NativeGenerator DEFAULT_ANNOTATION =
-            DefaultNativeGenerator.getAnnotation(org.hibernate.annotations.NativeGenerator);
+            DefaultNativeGenerator.getAnnotation(org.hibernate.annotations.NativeGenerator)
 
     GrailsNativeGenerator(GeneratorCreationContext context, JdbcEnvironment jdbcEnvironment) {
         // Picks the delegate for the dialect; for IDENTITY it also calls setIdentity(true) on the column.
-        this.initialize(DEFAULT_ANNOTATION, null, context);
-        this.configure(context, new Properties());
+        this.initialize(DEFAULT_ANNOTATION, null, context)
+        this.configure(context, new Properties())
 
-        Database database = context.getDatabase();
-        this.registerExportables(database);
+        Database database = context.getDatabase()
+        this.registerExportables(database)
 
-        org.hibernate.boot.model.relational.Namespace.Name physicalName = database.getDefaultNamespace().getPhysicalName();
-        String catalog = (physicalName.catalog() != null) ? physicalName.catalog().getCanonicalName() : null;
-        String schema = (physicalName.schema() != null) ? physicalName.schema().getCanonicalName() : null;
+        org.hibernate.boot.model.relational.Namespace.Name physicalName = database.getDefaultNamespace().getPhysicalName()
+        String catalog = (physicalName.catalog() != null) ? physicalName.catalog().getCanonicalName() : null
+        String schema = (physicalName.schema() != null) ? physicalName.schema().getCanonicalName() : null
         SqlStringGenerationContext sqlContext =
-                SqlStringGenerationContextImpl.fromExplicit(jdbcEnvironment, database, catalog, schema);
-        this.initialize(sqlContext);
+                SqlStringGenerationContextImpl.fromExplicit(jdbcEnvironment, database, catalog, schema)
+        this.initialize(sqlContext)
     }
 
     @Override
-    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
     Object generate(
             SharedSessionContractImplementor session, Object entity, Object currentValue, EventType eventType) {
         // 1. Support Grails assigned identifiers
         if (currentValue != null) {
-            return currentValue;
+            return currentValue
         }
 
         // 2. Fix the Hibernate 7 ClassCastException
         // NativeGenerator.generate() tries to cast the delegate to BeforeExecutionGenerator.
         // If the dialect chose IDENTITY, that cast fails. We bypass it by returning null.
         if (this.getGenerationType() == GenerationType.IDENTITY) {
-            return null;
+            return null
         }
 
         // 3. For Sequences/UUIDs, delegate to the standard logic
-        return super.generate(session, entity, null, eventType);
+        return super.generate(session, entity, null, eventType)
     }
 }

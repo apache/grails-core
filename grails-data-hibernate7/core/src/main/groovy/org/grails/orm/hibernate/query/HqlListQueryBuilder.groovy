@@ -54,7 +54,9 @@ class HqlListQueryBuilder {
             for (Map.Entry<String, Object> entry : fetchMap.entrySet()) {
                 if (HibernateQueryArgument.JOIN.value().equals(entry.value) || HibernateQueryArgument.EAGER.value().equals(entry.value)) {
                     requireMappedProperty(entry.key, HibernateQueryArgument.FETCH.value())
-                    hql.append(' join fetch e.').append(entry.key)
+                    // the fetch mode join never leaves out an instance whose association is null or empty, as it does for a
+                    // where query and a dynamic finder; only a join type asks for that
+                    hql.append(' left join fetch e.').append(entry.key)
                 }
             }
         }

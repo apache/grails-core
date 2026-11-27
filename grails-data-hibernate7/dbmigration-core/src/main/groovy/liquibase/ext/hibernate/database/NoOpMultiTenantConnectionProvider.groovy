@@ -1,39 +1,36 @@
-@SuppressWarnings('UnnecessarySemicolon')
-package liquibase.ext.hibernate.database;
+package liquibase.ext.hibernate.database
 
-import java.sql.Connection;
-import java.sql.SQLException;
+import java.sql.Connection
+import java.sql.SQLException
 
-import groovy.transform.CompileStatic;
-import groovy.transform.PackageScope;
-import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider
 
 /**
  * Used by hibernate to ensure no database access is performed.
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 @PackageScope
 class NoOpMultiTenantConnectionProvider implements MultiTenantConnectionProvider {
 
     // Fix: Classes implementing Serializable should set a serialVersionUID (PMD #13)
     @Serial
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L
 
     @Override
     boolean isUnwrappableAs(Class<?> unwrapType) {
-        return false;
+        return false
     }
 
     @Override
     def <T> T unwrap(Class<T> unwrapType) {
-        return null;
+        return null
     }
 
     @Override
     Connection getAnyConnection() {
-        return null;
+        return null
     }
 
     @Override
@@ -42,7 +39,7 @@ class NoOpMultiTenantConnectionProvider implements MultiTenantConnectionProvider
     }
 
     Connection getConnection(String tenantIdentifier) throws SQLException {
-        return null;
+        return null
     }
 
     void releaseConnection(String tenantIdentifier, Connection connection) {
@@ -52,7 +49,7 @@ class NoOpMultiTenantConnectionProvider implements MultiTenantConnectionProvider
     @Override
     Connection getConnection(Object tenantIdentifier) throws SQLException {
         // Fix: Added missing @Override annotation (PMD #14)
-        return null;
+        return null
     }
 
     @Override
@@ -63,7 +60,7 @@ class NoOpMultiTenantConnectionProvider implements MultiTenantConnectionProvider
 
     @Override
     boolean supportsAggressiveRelease() {
-        return false;
+        return false
     }
 
 }

@@ -128,6 +128,26 @@ class EmbeddedCollectionDecoderSpec extends Specification {
         1 * entityAccess.setPropertyNoConversion('someProperty', { it instanceof Map && it.k1 == 'value1' })
     }
 
+    void "a Map-typed property keeps an entry whose key names a bean property of the map"() {
+        given:
+        BsonPersistentEntityCodec associationCodec = Mock(BsonPersistentEntityCodec)
+        BsonReader reader = Mock(BsonReader) {
+            readBsonType() >>> [BsonType.DOCUMENT, BsonType.END_OF_DOCUMENT]
+            readName() >> 'properties'
+        }
+        EmbeddedCollection property = propertyFor(Map, false)
+        EntityAccess entityAccess = Mock(EntityAccess) {
+            getEntity() >> owningEntity
+        }
+
+        when:
+        decoderReturning(associationCodec).decode(reader, property, entityAccess, decoderContext, codecRegistry)
+
+        then:
+        1 * associationCodec.decode(reader, decoderContext) >> 'value1'
+        1 * entityAccess.setPropertyNoConversion('someProperty', { it instanceof Map && it.get('properties') == 'value1' })
+    }
+
     void "a property that is neither a Collection nor a Map skips the value"() {
         given:
         BsonPersistentEntityCodec associationCodec = Mock(BsonPersistentEntityCodec)

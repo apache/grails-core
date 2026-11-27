@@ -22,8 +22,7 @@ package grails.gorm.rx
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
 
-import rx.Observable
-import rx.Subscriber
+import io.reactivex.rxjava3.core.Observable
 
 import grails.gorm.rx.api.RxGormAllOperations
 import grails.gorm.rx.api.RxGormOperations
@@ -452,9 +451,7 @@ trait RxEntity<D> implements RxGormOperations<D>, GormValidateable, DirtyCheckab
     static Observable<Boolean> exists(Serializable id) {
         get(id).map { D o ->
             o != null
-        }.switchIfEmpty(Observable.create({ Subscriber s ->
-            s.onNext(false)
-        } as Observable.OnSubscribe))
+        }.defaultIfEmpty(false)
     }
 
     /**

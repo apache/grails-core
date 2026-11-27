@@ -27,7 +27,7 @@ class GrailsNamedStrategyContributorSpec extends Specification {
 
     GrailsNamedStrategyContributor contributor = new GrailsNamedStrategyContributor()
 
-    def "contributeStrategyImplementations registers TraitPropertyAccessStrategy under traitProperty"() {
+    def 'contributeStrategyImplementations registers TraitPropertyAccessStrategy under traitProperty'() {
         given:
         NamedStrategyContributions contributions = Mock(NamedStrategyContributions)
 
@@ -39,7 +39,7 @@ class GrailsNamedStrategyContributorSpec extends Specification {
                 PropertyAccessStrategy, TraitPropertyAccessStrategy, 'traitProperty')
     }
 
-    def "clearStrategyImplementations removes the TraitPropertyAccessStrategy registration"() {
+    def 'clearStrategyImplementations removes the TraitPropertyAccessStrategy registration'() {
         given:
         NamedStrategyContributions contributions = Mock(NamedStrategyContributions)
 

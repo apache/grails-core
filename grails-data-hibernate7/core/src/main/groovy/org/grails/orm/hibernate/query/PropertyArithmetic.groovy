@@ -33,7 +33,7 @@ import groovy.transform.RecordOptions
 @CompileStatic
 @SuppressWarnings(['ClassStartsWithBlankLine', 'Indentation'])
 @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
-@TupleConstructor(defaults = false)
+@TupleConstructor(defaults = false, namedVariant = false)
 record PropertyArithmetic(String propertyName, Operator operator, Number operand) {
 
     enum Operator {

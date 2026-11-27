@@ -29,7 +29,6 @@ import org.hibernate.id.enhanced.SequenceStyleGenerator
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 
 @CompileStatic
-@SuppressWarnings('PMD.ConstructorCallsOverridableMethod')
 class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
 
     private static final long serialVersionUID = 1L

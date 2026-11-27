@@ -23,6 +23,7 @@ import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -111,14 +112,24 @@ class GormApiResolver {
         return datastore
     }
 
+    /**
+     * The datastore of the default connection, the one that {@link grails.gorm.multitenancy.Tenants} and
+     * {@code @CurrentTenant} bind the tenant for. It is never a datastore of another connection or, in DATABASE mode,
+     * of a tenant, even inside {@link grails.gorm.multitenancy.Tenants#withId(Serializable, Closure)} or while a
+     * session of one is bound: such a datastore knows only its own connection, and no tenant is bound for it.
+     *
+     * @return The datastore
+     * @throws IllegalStateException if no datastore is registered for a connection, and no or more than one GORM
+     *         implementation is configured
+     */
     Datastore findSingleDatastore() {
-        if (registry.datastoresByQualifier.size() > 1) {
-            return findDatastore(null, null)
-        }
-
         Datastore defaultDs = registry.datastoresByQualifier.get(ConnectionSource.DEFAULT)
         if (defaultDs != null) {
             return defaultDs
+        }
+
+        if (registry.datastoresByQualifier.size() > 1) {
+            return findDatastore(null, null)
         }
 
         if (registry.datastoresByQualifier.size() == 1) {
@@ -137,7 +148,9 @@ class GormApiResolver {
 
     /**
      * Resolves the datastore for a tenant-management service lookup (e.g. the {@code @CurrentTenant}
-     * {@link grails.gorm.multitenancy.TenantService}). Unlike {@link #findDatastore}, this never
+     * {@link grails.gorm.multitenancy.TenantService}) and the datastore that
+     * {@link grails.gorm.multitenancy.Tenants#withId(Class, Serializable, Closure)} binds the tenant for. Unlike
+     * {@link #findDatastore}, this never
      * resolves the current tenant: it returns the entity's primary (DEFAULT) datastore — the tenant
      * MANAGER, where runtime schemas (e.g. {@code addTenantForSchema}) are registered — rather than a
      * per-tenant child datastore. Falls back to the single configured datastore when the entity is
@@ -156,12 +169,13 @@ class GormApiResolver {
 
     PersistentEntity findEntity(Class entity, String qualifier = null) {
         String resolvedQualifier = qualifier ?: findTenantId(entity)
-        return findDatastore(entity, resolvedQualifier)?.mappingContext?.getPersistentEntity(entity.name)
+        String className = entity != null ? NameUtils.getClassName(entity) : null
+        return findDatastore(entity, resolvedQualifier)?.mappingContext?.getPersistentEntity(className)
     }
 
     private String findTenantId(Class entity) {
         if (entity != null && MultiTenant.isAssignableFrom(entity)) {
-            Datastore defaultDatastore = registry.getDatastoreByString(entity.name, ConnectionSource.DEFAULT)
+            Datastore defaultDatastore = registry.getDatastore(entity, ConnectionSource.DEFAULT)
             if (defaultDatastore instanceof MultiTenantCapableDatastore) {
                 MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDatastore
                 try {
@@ -185,6 +199,15 @@ class GormApiResolver {
 @Slf4j
 class PreferredDatastoreSelector {
 
+    /**
+     * @return whether a lookup for the entity follows the tenant bound on the thread: a multi-tenant entity does, and
+     * so does a lookup that names no entity; any other entity keeps its own datastore inside a tenant block
+     */
+    @PackageScope
+    static boolean followsTenant(Class entity) {
+        return entity == null || MultiTenant.isAssignableFrom(entity)
+    }
+
     @CompileDynamic
     Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String qualifier, String className, int depth, GormApiResolver resolver) {
         Datastore preferred = stateRegistry.getPreferredDatastore()
@@ -203,11 +226,11 @@ class PreferredDatastoreSelector {
 
         boolean isDefaultQualifier = qualifier == null || ConnectionSource.DEFAULT.equals(qualifier)
         if (isDefaultQualifier) {
-            if (preferred instanceof MultiTenantCapableDatastore) {
+            if (preferred instanceof MultiTenantCapableDatastore && followsTenant(entity)) {
                 MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) preferred
                 try {
                     Serializable tid = CurrentTenantHolder.get((Datastore) mtds)
-                    if (tid == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
+                    if (tid == null && entity != null) {
                         tid = mtds.tenantResolver.resolveTenantIdentifier()
                     }
                     if (tid != null && !ConnectionSource.DEFAULT.equals(tid.toString())) {
@@ -219,7 +242,7 @@ class PreferredDatastoreSelector {
                         }
                     }
                 } catch (Throwable e) {
-                    if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
+                    if (entity != null && e instanceof TenantNotFoundException) {
                         throw e
                     }
                 }
@@ -410,13 +433,13 @@ class DefaultDatastoreSelector {
     @CompileDynamic
     Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String className, int depth, GormApiResolver resolver) {
         Datastore defaultDs = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
-        if (defaultDs instanceof MultiTenantCapableDatastore) {
+        if (defaultDs instanceof MultiTenantCapableDatastore && PreferredDatastoreSelector.followsTenant(entity)) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDs
             boolean isDatabaseMode = multiTenantCapableDatastore.getMultiTenancyMode() ==
                     MultiTenancySettings.MultiTenancyMode.DATABASE
             try {
                 Serializable currentTenantId = CurrentTenantHolder.get(defaultDs)
-                if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
+                if (currentTenantId == null && entity != null) {
                     currentTenantId = multiTenantCapableDatastore.tenantResolver.resolveTenantIdentifier()
                 }
 
@@ -433,7 +456,7 @@ class DefaultDatastoreSelector {
                     }
                 }
             } catch (Throwable e) {
-                if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
+                if (entity != null && e instanceof TenantNotFoundException) {
                     if (isDatabaseMode || multiTenantCapableDatastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
                         throw e
                     }

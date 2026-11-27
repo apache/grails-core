@@ -1,31 +1,28 @@
-@SuppressWarnings('UnnecessarySemicolon')
-package liquibase.ext.hibernate.diff;
+package liquibase.ext.hibernate.diff
 
-import groovy.transform.CompileStatic;
-import liquibase.change.Change;
-import liquibase.database.Database;
-import liquibase.diff.output.DiffOutputControl;
-import liquibase.diff.output.changelog.ChangeGeneratorChain;
-import liquibase.diff.output.changelog.core.UnexpectedIndexChangeGenerator;
-import liquibase.ext.hibernate.database.HibernateDatabase;
-import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.Index;
+import groovy.transform.CompileStatic
+import liquibase.change.Change
+import liquibase.database.Database
+import liquibase.diff.output.DiffOutputControl
+import liquibase.diff.output.changelog.ChangeGeneratorChain
+import liquibase.diff.output.changelog.core.UnexpectedIndexChangeGenerator
+import liquibase.ext.hibernate.database.HibernateDatabase
+import liquibase.structure.DatabaseObject
+import liquibase.structure.core.Index
 
 /**
  * Indexes tend to be added in the database that don't correspond to what is in Hibernate, so we suppress all dropIndex changes
  * based on indexes defined in the database but not in hibernate.
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class HibernateUnexpectedIndexChangeGenerator extends UnexpectedIndexChangeGenerator {
 
     @Override
     int getPriority(Class<? extends DatabaseObject> objectType, Database database) {
         if (Index.isAssignableFrom(objectType)) {
-            return PRIORITY_ADDITIONAL;
+            return PRIORITY_ADDITIONAL
         }
-        return PRIORITY_NONE;
+        return PRIORITY_NONE
     }
 
     @Override
@@ -36,9 +33,9 @@ class HibernateUnexpectedIndexChangeGenerator extends UnexpectedIndexChangeGener
             Database comparisonDatabase,
             ChangeGeneratorChain chain) {
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
-            return new Change[0];
+            return new Change[0]
         } else {
-            return super.fixUnexpected(unexpectedObject, control, referenceDatabase, comparisonDatabase, chain);
+            return super.fixUnexpected(unexpectedObject, control, referenceDatabase, comparisonDatabase, chain)
         }
     }
 

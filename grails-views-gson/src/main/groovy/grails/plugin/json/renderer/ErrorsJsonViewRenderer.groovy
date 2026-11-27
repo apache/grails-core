@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 
 import org.springframework.validation.Errors
+import org.springframework.web.servlet.View
 
 /**
  * Renderer for the errors view
@@ -35,4 +36,17 @@ import org.springframework.validation.Errors
 class ErrorsJsonViewRenderer extends AbstractJsonViewContainerRenderer<Errors, Object> {
 
     final Class<Object> componentType = Object
+
+    /**
+     * Validation errors are rendered by an errors template, the controller's or {@code /errors/_errors.gson}, and otherwise
+     * as the JSON renderer writes them, with a {@code 422}: the object template renders the value it is given as
+     * {@code object}, which validation errors are not given as.
+     *
+     * @since 9.0
+     */
+    @Override
+    protected View resolveTypeView(Locale locale) {
+        View view = super.resolveTypeView(locale)
+        view.is(jsonViewResolver.objectView) ? null : view
+    }
 }

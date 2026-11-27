@@ -18,15 +18,9 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import java.beans.PropertyDescriptor
-import java.lang.reflect.Field
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
-import java.lang.reflect.RecordComponent
 import java.lang.reflect.Type
 
 import groovy.transform.CompileStatic
-import org.hibernate.MappingException
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.mapping.BasicValue
@@ -41,25 +35,39 @@ import org.hibernate.usertype.CompositeUserType
 import org.jspecify.annotations.NonNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.beans.BeanUtils
-import org.springframework.util.ReflectionUtils
 
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.CompositeUserTypeColumns
+import org.grails.orm.hibernate.cfg.domainbinding.util.CompositeUserTypeColumns.Attribute
+import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
 /**
- * Binds a property mapped with a Hibernate {@link CompositeUserType} as a {@link Component} of that type, the way
- * Hibernate's own annotation binder binds {@code @CompositeType}: one property per attribute of the user type's
- * {@linkplain CompositeUserType#embeddable() embeddable class}, in alphabetical attribute order, each a basic value
- * typed by reflection on the embeddable class and accessed through Hibernate's composite-user-type property access.
- * The columns of the property mapping are assigned to the attributes in that order; an attribute without a configured
- * column is named {@code <property>_<attribute>}.
+ * Binds a property mapped with a Hibernate {@link CompositeUserType} as a {@link Component}.
+ * <p>
+ * Hibernate resolves the type of a {@link BasicValue} as a {@link org.hibernate.type.BasicType} or a
+ * {@link org.hibernate.usertype.UserType} only. A composite user type spans one column per attribute of its
+ * {@linkplain CompositeUserType#embeddable() embeddable class}, so it is a component whose type name is the
+ * user type, as Hibernate binds a {@link org.hibernate.annotations.CompositeType}: one property per attribute,
+ * in alphabetical attribute order, read through {@link CompositeUserType#getPropertyValue(Object, int)} with the
+ * index of the attribute in that order and assembled through
+ * {@link CompositeUserType#instantiate(org.hibernate.metamodel.spi.ValueAccess)}. The columns are the ones
+ * {@link CompositeUserTypeColumns} assigns to the attributes: the columns of the property mapping in the same
+ * order, and a name made of the property and the attribute for an attribute without a configured column. The
+ * component class is the {@linkplain CompositeUserType#returnedClass() value class} of the user type, not its
+ * embeddable class. A unique property has one unique key across all of its columns, together with the columns
+ * of its uniqueness group, rather than a unique key per column. The constraints of the property describe the
+ * whole value, so each column is defined from its own configuration and the type of its attribute: a numeric
+ * attribute without a configured precision gets the default precision of the dialect, as a numeric property
+ * without constraints does. The value class may be an enum. The user type is instantiated through
+ * {@link CompositeUserTypeColumns#userTypeOf}, as it is for a uniqueness group that names the property: as a
+ * managed bean when the building options allow extensions in CDI, through its default constructor otherwise.
  *
  * @since 8.0.1
  */
@@ -67,13 +75,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 class CompositeUserTypeBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(CompositeUserTypeBinder)
-    private static final String UNDERSCORE = '_'
 
     private final MetadataBuildingContext metadataBuildingContext
-    private final PersistentEntityNamingStrategy namingStrategy
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder
     private final ColumnBinder columnBinder
-    private final BackticksRemover backticksRemover
+    private final CreateKeyForProps createKeyForProps
+    private final CompositeUserTypeColumns compositeUserTypeColumns
 
     CompositeUserTypeBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -81,185 +88,105 @@ class CompositeUserTypeBinder {
             JdbcEnvironment jdbcEnvironment) {
         this(
                 metadataBuildingContext,
-                namingStrategy,
                 new ColumnConfigToColumnBinder(),
-                new ColumnBinder(namingStrategy, jdbcEnvironment.dialect),
-                new BackticksRemover())
+                new ColumnBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment.getDialect()),
+                new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(
+                        namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover(),
+                        metadataBuildingContext)),
+                new CompositeUserTypeColumns(namingStrategy, new BackticksRemover(), metadataBuildingContext))
     }
 
     protected CompositeUserTypeBinder(
             MetadataBuildingContext metadataBuildingContext,
-            PersistentEntityNamingStrategy namingStrategy,
             ColumnConfigToColumnBinder columnConfigToColumnBinder,
             ColumnBinder columnBinder,
-            BackticksRemover backticksRemover) {
+            CreateKeyForProps createKeyForProps,
+            CompositeUserTypeColumns compositeUserTypeColumns) {
         this.metadataBuildingContext = metadataBuildingContext
-        this.namingStrategy = namingStrategy
         this.columnConfigToColumnBinder = columnConfigToColumnBinder
         this.columnBinder = columnBinder
-        this.backticksRemover = backticksRemover
+        this.createKeyForProps = createKeyForProps
+        this.compositeUserTypeColumns = compositeUserTypeColumns
     }
 
+    /**
+     * Binds the property as a component of its composite user type.
+     *
+     * @param property the property, mapped with a composite user type
+     * @param parentProperty the embedded property that holds the property, or {@code null}
+     * @param path the path of the property within its entity
+     * @return the component
+     * @throws org.hibernate.MappingException when the property is not mapped with a composite user type, or maps
+     * more columns than its embeddable class has attributes
+     */
     Component bindCompositeUserType(
             @NonNull HibernatePersistentProperty property,
             HibernatePersistentProperty parentProperty,
             String path) {
-        PersistentClass owner = property.persistentClass
-        Class<? extends CompositeUserType<?>> userTypeClass = property.compositeUserType
-        if (userTypeClass == null) {
-            throw new MappingException("Property [${property.name}] of class [${owner.className}] is not mapped with a " +
-                    CompositeUserType.simpleName)
-        }
-        CompositeUserType<?> userType = instantiate(userTypeClass)
+        PersistentClass owner = property.getPersistentClass()
+        CompositeUserType<?> userType = compositeUserTypeColumns.userTypeOf(property)
+        Class<? extends CompositeUserType<?>> userTypeClass = property.getCompositeUserType()
         Class<?> embeddable = userType.embeddable()
-        PropertyConfig propertyConfig = property.hibernateMappedForm
-        Table table = property.table
+        PropertyConfig propertyConfig = property.getHibernateMappedForm()
+        Table table = property.getTable()
 
         Component component = new Component(metadataBuildingContext, owner)
-        component.roleName = GrailsHibernateUtil.qualify(
-                property.hibernateOwner.javaClass.name, property.getNameForPropertyAndPath(path))
-        component.typeName = userTypeClass.name
-        component.componentClassName = embeddable.name
+        component.setRoleName(GrailsHibernateUtil.qualify(
+                property.getHibernateOwner().getJavaClass().getName(), property.getNameForPropertyAndPath(path)))
+        component.setTypeName(userTypeClass.getName())
+        // The component describes the value class, as Hibernate's own binding of a composite type does: the
+        // embeddable class only supplies the attributes, so whole-value queries and parameters see the value class.
+        component.setComponentClassName(userType.returnedClass().getName())
 
-        Properties typeParams = propertyConfig.typeParams
+        Properties typeParams = propertyConfig.getTypeParams()
         if (typeParams != null && !typeParams.isEmpty()) {
             LOG.warn('Property [{}] of class [{}] sets typeParams, which Hibernate does not pass to the composite ' +
-                    'user type [{}]', property.name, owner.className, userTypeClass.name)
+                    'user type [{}]', property.getName(), owner.getClassName(), userTypeClass.getName())
         }
 
-        List<Attribute> attributes = attributesOf(embeddable)
-        List<ColumnConfig> columns = propertyConfig.columns ?: []
-        if (columns.size() > attributes.size()) {
-            throw new MappingException(String.format(
-                    'Property [%s] of class [%s] maps %d columns, but the embeddable class [%s] of its composite ' +
-                            'user type [%s] has %d attributes: %s',
-                    property.name, owner.className, columns.size(), embeddable.name,
-                    userTypeClass.name, attributes.size(), attributes*.name))
-        }
+        List<Attribute> attributes = CompositeUserTypeColumns.attributesOf(embeddable)
+        List<ColumnConfig> columnConfigs =
+                compositeUserTypeColumns.columnConfigsOf(property, path, embeddable, attributes)
 
         List<String> attributeNames = new ArrayList<>(attributes.size())
         List<Type> attributeTypes = new ArrayList<>(attributes.size())
+        List<Column> columns = new ArrayList<>(attributes.size())
         PropertyAccessStrategy accessStrategy =
                 new PropertyAccessStrategyCompositeUserTypeImpl(userType, attributeNames, attributeTypes)
         for (int i = 0; i < attributes.size(); i++) {
             Attribute attribute = attributes.get(i)
-            ColumnConfig columnConfig = withName(
-                    i < columns.size() ? columns.get(i) : null, defaultColumnName(property, path, attribute.name))
+            ColumnConfig columnConfig = columnConfigs.get(i)
 
             BasicValue value = new BasicValue(metadataBuildingContext, table)
-            value.setTypeUsingReflection(embeddable.name, attribute.name)
+            value.setTypeUsingReflection(embeddable.getName(), attribute.name())
+
             Column column = new Column()
             columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, propertyConfig)
-            columnBinder.bindColumn(
-                    property, parentProperty, column, columnConfig, path, table, userTypeClass.name)
+            // The column holds the attribute, so its constraints come from its own configuration and the type of
+            // the attribute, not from the constraints of the property, which describe the whole value
+            columnBinder.bindColumnWithoutUniqueness(property, parentProperty, column, columnConfig, path, table,
+                    userTypeClass.getName(), attribute.rawType())
             if (table != null) {
                 table.addColumn(column)
             }
             value.addColumn(column)
+            columns.add(column)
 
             Property attributeProperty = new Property()
-            attributeProperty.name = attribute.name
-            attributeProperty.value = value
-            attributeProperty.optional = column.nullable
-            attributeProperty.propertyAccessStrategy = accessStrategy
+            attributeProperty.setName(attribute.name())
+            attributeProperty.setValue(value)
+            attributeProperty.setOptional(column.isNullable())
+            attributeProperty.setPropertyAccessStrategy(accessStrategy)
             component.addProperty(attributeProperty)
-            attributeNames.add(attribute.name)
-            attributeTypes.add(attribute.type)
+
+            attributeNames.add(attribute.name())
+            attributeTypes.add(attribute.type())
+        }
+        if (table != null) {
+            // The bound columns themselves, so that the key keeps their quoting and case
+            createKeyForProps.createKeyForColumns(property, path, table, columns)
         }
         component.sortProperties()
         return component
-    }
-
-    private CompositeUserType<?> instantiate(Class<? extends CompositeUserType<?>> userTypeClass) {
-        if (metadataBuildingContext.buildingOptions.isAllowExtensionsInCdi()) {
-            return metadataBuildingContext.bootstrapContext
-                    .managedBeanRegistry
-                    .getBean(userTypeClass)
-                    .beanInstance
-        }
-        return BeanUtils.instantiateClass(userTypeClass)
-    }
-
-    /**
-     * The attributes of the embeddable class: the components of a record, or the fields and the readable bean properties of
-     * any other class, less the static, transient and synthetic ones, the ones every Groovy object has, the ones the class
-     * lists in {@code transients} and the ones backed by a transient field. A setter is not required, nor is an accessor at
-     * all: Hibernate never writes the embeddable class, it reads the attributes through
-     * {@link CompositeUserType#getPropertyValue(Object, int)}. The type of an attribute is the type of its field, or of its
-     * getter when it has no field, which is how Hibernate resolves it. Alphabetical, the order of that index.
-     */
-    private static List<Attribute> attributesOf(Class<?> embeddable) {
-        if (embeddable.isRecord()) {
-            return embeddable.recordComponents
-                    .collect { RecordComponent component -> new Attribute(component.name, component.genericType) }
-                    .sort { Attribute a, Attribute b -> a.name <=> b.name }
-        }
-        Map<String, Type> attributes = new TreeMap<String, Type>()
-        ReflectionUtils.doWithFields(embeddable,
-                { Field field -> attributes.putIfAbsent(field.name, field.genericType) },
-                { Field field ->
-                    !field.synthetic && !Modifier.isStatic(field.modifiers) && !Modifier.isTransient(field.modifiers)
-                })
-        for (PropertyDescriptor descriptor : BeanUtils.getPropertyDescriptors(embeddable)) {
-            Method getter = descriptor.readMethod
-            if (getter != null && !Modifier.isStatic(getter.modifiers)) {
-                attributes.putIfAbsent(descriptor.name, getter.genericReturnType)
-            }
-        }
-        Collection<?> transients =
-                ClassPropertyFetcher.getStaticPropertyValue(embeddable, GormProperties.TRANSIENT, Collection) ?: []
-        attributes.keySet().removeIf { String name ->
-            ClassPropertyFetcher.EXCLUDED_PROPERTIES.contains(name) || transients.contains(name) || hasTransientField(embeddable, name)
-        }
-        return attributes.collect { String name, Type type -> new Attribute(name, type) }
-    }
-
-    /** Whether the property is backed by a {@code transient} field, which makes it transient however it is read. */
-    private static boolean hasTransientField(Class<?> embeddable, String name) {
-        Field field = ReflectionUtils.findField(embeddable, name)
-        return field != null && Modifier.isTransient(field.modifiers)
-    }
-
-    private static ColumnConfig withName(ColumnConfig columnConfig, String defaultName) {
-        if (columnConfig != null && columnConfig.name != null && !columnConfig.name.isEmpty()) {
-            return columnConfig
-        }
-        ColumnConfig named = new ColumnConfig()
-        if (columnConfig != null) {
-            named.sqlType = columnConfig.sqlType
-            named.enumType = columnConfig.enumType
-            named.index = columnConfig.index
-            named.unique = columnConfig.unique
-            named.length = columnConfig.length
-            named.precision = columnConfig.precision
-            named.scale = columnConfig.scale
-            named.defaultValue = columnConfig.defaultValue
-            named.comment = columnConfig.comment
-            named.read = columnConfig.read
-            named.write = columnConfig.write
-        }
-        named.name = defaultName
-        return named
-    }
-
-    private String defaultColumnName(HibernatePersistentProperty property, String path, String attribute) {
-        String prefix = backticksRemover.apply(namingStrategy.resolveColumnName(property.name))
-        if (GrailsHibernateUtil.isNotEmpty(path)) {
-            prefix = backticksRemover.apply(namingStrategy.resolveColumnName(path)) + UNDERSCORE + prefix
-        }
-        return prefix + UNDERSCORE + backticksRemover.apply(namingStrategy.resolveColumnName(attribute))
-    }
-
-    /** An attribute of the embeddable class: its name and the generic type of its getter or record component. */
-    @CompileStatic
-    private static class Attribute {
-
-        final String name
-        final Type type
-
-        Attribute(String name, Type type) {
-            this.name = name
-            this.type = type
-        }
     }
 }

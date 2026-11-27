@@ -41,7 +41,7 @@ grails {
 }
 ----
 
-That adds two tasks. `extractAotCacheApplication` unpacks the executable jar into `build/aot-cache/application`, and `trainAotCache` runs what it unpacked, asks for each path, stops it, and leaves the cache beside the extracted application:
+That adds two tasks. `extractAotCacheApplication` unpacks the executable archive into `build/aot-cache/application`, and `trainAotCache` runs what it unpacked, asks for each path, stops it, and leaves the cache beside the extracted application:
 
 [source,bash]
 ----
@@ -53,7 +53,11 @@ That adds two tasks. `extractAotCacheApplication` unpacks the executable jar int
 Trained myapp.aot (167 MB) over 4 paths
 ----
 
-The application is unpacked first because a cache is read against the layout it was trained on. An executable jar loads its dependencies through a nested-jar classloader; the extracted form loads them as ordinary jars on the classpath, and only the second is a layout a cache can be reused against.
+The application is unpacked first because a cache is read against the layout it was trained on. An executable archive loads its dependencies through a nested-jar classloader; the extracted form loads them as ordinary jars on the classpath, and only the second is a layout a cache can be reused against.
+
+The archive unpacked is the one the application ships. An application that applies the `war` plugin, as a generated application does, ships the executable war that `bootWar` builds, and that is what is unpacked. Any other application, or one that switches `bootWar` off, ships the executable jar that `bootJar` builds.
+
+A war is unpacked as a jar of the same name, `myapp.jar` for `myapp.war`. The libraries in `WEB-INF/lib` and `WEB-INF/lib-provided` go to `lib/` beside it, and the files the war holds outside `WEB-INF`, such as the contents of `src/main/webapp`, go to the jar's `META-INF/resources`. The application serves those files as it serves them from the war. The executable jar leaves `src/main/webapp` out, which is why an application that ships its war is trained against the war.
 
 
 === Running with the cache

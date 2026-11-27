@@ -1143,14 +1143,20 @@ public class GrailsDomainBinder implements MetadataContributor {
     /**
      * A bidirectional many-to-many is written by its owning side, which {@code belongsTo} designates. When neither
      * side declares {@code belongsTo}, both sides are inverse and the relationship is never stored, so warn about it
-     * once per relationship.
+     * once per relationship. A Map-valued side is never inverse once its second pass has run, because
+     * {@code bindMapSecondPass} makes it write the join table, so a relationship with a Map on either side is stored
+     * and gets no warning. A circular many-to-many, whose two properties are on the same class, gets none either:
+     * {@code bindCollectionSecondPass} makes every circular collection non-inverse, so both properties write their own
+     * join table and the relationship is stored with or without {@code belongsTo}. Declaring {@code belongsTo} there
+     * would swap the names of the two join tables and break an existing schema.
      */
     protected void warnIfManyToManyHasNoOwningSide(ToMany property) {
         if (!(property instanceof ManyToMany) || !property.isBidirectional() || property.isCircular()) {
             return;
         }
         Association otherSide = property.getInverseSide();
-        if (otherSide == null || otherSide.isOwningSide()) {
+        if (otherSide == null || otherSide.isOwningSide() ||
+                Map.class.isAssignableFrom(property.getType()) || Map.class.isAssignableFrom(otherSide.getType())) {
             return;
         }
         if (property.getOwner().getName().compareTo(otherSide.getOwner().getName()) > 0) {

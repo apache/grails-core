@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.cfg
 /**
  * Settings for Hibernate
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 interface Settings extends org.grails.datastore.mapping.config.Settings {}

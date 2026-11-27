@@ -21,14 +21,16 @@ package org.grails.web.databinding.bindingsource.hal.json
 import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator
 
 import spock.lang.Specification
+import tools.jackson.core.json.JsonReadFeature
+import tools.jackson.databind.json.JsonMapper
 
 import java.nio.charset.StandardCharsets
 
 class HalJsonDataBindingSourceCreatorSpec extends Specification {
 
-    void 'Test JSON parsing'() {
+    void 'Test JSON parsing with #parser'() {
         given:
-        def json = '''
+        def json = comment + '''
             {
     "name": "Douglas",
     "age": "42",
@@ -39,7 +41,7 @@ class HalJsonDataBindingSourceCreatorSpec extends Specification {
 }
 '''
         def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
-        def bindingSource = new HalJsonDataBindingSourceCreator().createBindingSource(inputStream, StandardCharsets.UTF_8.name())
+        def bindingSource = creator.createBindingSource(inputStream, StandardCharsets.UTF_8.name())
 
         when:
         def propertyNames = bindingSource.propertyNames
@@ -60,5 +62,14 @@ class HalJsonDataBindingSourceCreatorSpec extends Specification {
         bindingSource['homeAddress']['city'] == "O'Fallon"
         bindingSource['workAddress']['state'] == 'California'
         bindingSource['workAddress']['city'] == 'San Mateo'
+
+        where: 'Jackson parses with the mapper the creator is given, which here reads a comment, as the legacy parser does not'
+        parser              | creator                                                                             | comment
+        'the legacy parser' | new HalJsonDataBindingSourceCreator()                                               | ''
+        'Jackson'           | new HalJsonDataBindingSourceCreator(jsonMapper: commentsMapper(), useJackson: true) | '/* a comment */'
+    }
+
+    private static JsonMapper commentsMapper() {
+        JsonMapper.builder().enable(JsonReadFeature.ALLOW_JAVA_COMMENTS).build()
     }
 }

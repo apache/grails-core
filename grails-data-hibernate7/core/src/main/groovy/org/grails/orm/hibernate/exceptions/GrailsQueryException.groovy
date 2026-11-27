@@ -23,8 +23,6 @@ import org.grails.datastore.mapping.core.DatastoreException
 
 /**
  * Base exception class for errors related to Domain class queries in Grails.
- *
- * @author Graeme Rocher
  */
 @CompileStatic
 class GrailsQueryException extends DatastoreException {

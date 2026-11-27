@@ -16,29 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import groovy.transform.CompileStatic;
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.SecondPass;
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.boot.spi.SecondPass
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['PMD.NonSerializableClass', 'UnnecessarySemicolon'])
+@SuppressWarnings('deprecation')
 @CompileStatic
 class ListSecondPass implements SecondPass, GrailsSecondPass, Serializable {
 
     @Serial
-    private static final long serialVersionUID = -3024674993774205193L;
+    private static final long serialVersionUID = -3024674993774205193L
 
-    protected final HibernateToManyProperty property;
-    private final org.hibernate.mapping.Collection collection;
-    private final ListSecondPassBinder listSecondPassBinder;
+    protected final HibernateToManyProperty property
+    private final org.hibernate.mapping.Collection collection
+    private final ListSecondPassBinder listSecondPassBinder
 
     ListSecondPass(ListSecondPassBinder listSecondPassBinder, HibernateToManyProperty property) {
-        this(listSecondPassBinder, property, null);
+        this(listSecondPassBinder, property, null)
     }
 
     /**
@@ -46,17 +44,16 @@ class ListSecondPass implements SecondPass, GrailsSecondPass, Serializable {
      * when its owner is an entity that is also embedded in another, and each binding has its own collection.
      */
     ListSecondPass(ListSecondPassBinder listSecondPassBinder, HibernateToManyProperty property, org.hibernate.mapping.Collection collection) {
-        this.listSecondPassBinder = listSecondPassBinder;
-        this.property = property;
-        this.collection = collection;
+        this.listSecondPassBinder = listSecondPassBinder
+        this.property = property
+        this.collection = collection
     }
 
     @Override
     void doSecondPass(Map persistentClasses) throws MappingException {
         if (collection != null) {
-            property.setHibernateCollection(collection);
+            property.setHibernateCollection(collection)
         }
-        listSecondPassBinder.bindListSecondPass(property);
-        createCollectionKeys(property.getCollection());
+        listSecondPassBinder.bindListSecondPass(property)
     }
 }

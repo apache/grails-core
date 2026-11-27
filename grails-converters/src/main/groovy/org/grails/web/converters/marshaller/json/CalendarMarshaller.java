@@ -33,7 +33,7 @@ import org.grails.web.json.JsonDateFormat;
  * the same as Spring Boot's default Jackson rendering. See {@link JsonDateFormat}.
  *
  * @since 7.0
- * @deprecated with {@code grails.converters.json.legacy} set to {@code false}, as a later release does by default,
+ * @deprecated with {@code grails.converters.json.legacy} set to {@code false}, as Grails 10 does by default,
  *     the converter writes {@code Calendar} values with the application's {@code JsonMapper}; this marshaller is registered while
  *     it is {@code true}, the default in Grails 9, to render JSON as Grails 8 did.
  */

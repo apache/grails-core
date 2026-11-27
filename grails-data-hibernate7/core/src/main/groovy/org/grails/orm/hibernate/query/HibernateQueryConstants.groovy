@@ -25,7 +25,6 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 @Deprecated(since = '8.0', forRemoval = true)
-@SuppressWarnings('PMD.ConstantsInInterface')
 interface HibernateQueryConstants {
 
     String ARGUMENT_FETCH_SIZE = HibernateQueryArgument.FETCH_SIZE.value()

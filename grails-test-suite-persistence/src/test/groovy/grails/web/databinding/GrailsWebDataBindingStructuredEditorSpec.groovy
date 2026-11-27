@@ -48,6 +48,21 @@ class GrailsWebDataBindingStructuredEditorSpec extends Specification {
         'Eddy' == company.vicePresident.firstName
         'Cue' == company.vicePresident.lastName                    
     }
+
+    void 'Test structured values whose suffix names a bean property of the values map'() {
+        given: 'a binding source whose structured suffixes include properties and metaClass'
+        def editor = new StucturedEmployeeEditor()
+        def source = [president: 'struct', president_properties: 'p', president_metaClass: 'm', president_firstName: 'Tim'] as SimpleMapDataBindingSource
+
+        when:
+        Map values = editor.getPropertyValuesMap('president', source)
+
+        then:
+        values.get('properties') == 'p'
+        values.get('metaClass') == 'm'
+        values.get('firstName') == 'Tim'
+        values.size() == 3
+    }
 }
 
 class Company {

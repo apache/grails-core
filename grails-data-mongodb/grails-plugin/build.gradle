@@ -95,6 +95,10 @@ dependencies {
     runtimeOnly project(':grails-data-mongodb-ext'), {
         // Include MongoDB groovy extensions for applications
     }
+    runtimeOnly project(':grails-datastore-web'), {
+        // MongoDbDataStoreSpringInitializer registers the open-session-in-view
+        // interceptor only when its class, from this module, is on the classpath
+    }
 
     testImplementation project(':grails-core'), {
         // api: GrailsPlugin, GrailsPluginManager, GrailsApplication, Config

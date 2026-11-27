@@ -50,14 +50,18 @@ class SqlGroupProjection extends Query.Projection {
 
     /**
      * Splits the group by clause of a {@code sqlGroupProjection}, a single expression or a comma separated list of
-     * them, into one projection per expression.
+     * them, into one projection per expression: at the commas outside parentheses, string literals, quoted
+     * identifiers and comments, read in the syntax of the database.
+     *
+     * @param groupBy the group by clause
+     * @param syntax the syntax of the database's native SQL
      */
-    static List<SqlGroupProjection> of(String groupBy) {
+    static List<SqlGroupProjection> of(String groupBy, SqlSyntax syntax) {
         if (groupBy == null || groupBy.isBlank()) {
             throw new IllegalArgumentException('The group by clause of a sqlGroupProjection must not be empty')
         }
         List<SqlGroupProjection> projections = []
-        for (String expression : SqlProjection.splitColumns(groupBy)) {
+        for (String expression : SqlText.of(groupBy, syntax).splitTopLevel(',' as char)) {
             projections.add(new SqlGroupProjection(expression))
         }
         return projections

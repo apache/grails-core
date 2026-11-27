@@ -1,33 +1,30 @@
-@SuppressWarnings('UnnecessarySemicolon')
-package liquibase.ext.hibernate.snapshot;
+package liquibase.ext.hibernate.snapshot
 
-import groovy.transform.CompileStatic;
-import liquibase.exception.DatabaseException;
-import liquibase.snapshot.DatabaseSnapshot;
-import liquibase.snapshot.InvalidExampleException;
-import liquibase.snapshot.SnapshotGenerator;
-import liquibase.snapshot.jvm.CatalogSnapshotGenerator;
-import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.Catalog;
+import groovy.transform.CompileStatic
+import liquibase.exception.DatabaseException
+import liquibase.snapshot.DatabaseSnapshot
+import liquibase.snapshot.InvalidExampleException
+import liquibase.snapshot.SnapshotGenerator
+import liquibase.snapshot.jvm.CatalogSnapshotGenerator
+import liquibase.structure.DatabaseObject
+import liquibase.structure.core.Catalog
 
 /**
  * Hibernate doesn't really support Catalogs, so just return the passed example back as if it had all the info it needed.
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class HibernateCatalogSnapshotGenerator extends HibernateSnapshotGenerator {
 
     HibernateCatalogSnapshotGenerator() {
-        super(Catalog);
+        super(Catalog)
     }
 
     @Override
     protected DatabaseObject snapshotObject(DatabaseObject example, DatabaseSnapshot snapshot)
             throws DatabaseException, InvalidExampleException {
-        Catalog catalog = new Catalog(snapshot.getDatabase().getDefaultCatalogName());
-        catalog.setDefault(true);
-        return catalog;
+        Catalog catalog = new Catalog(snapshot.getDatabase().getDefaultCatalogName())
+        catalog.setDefault(true)
+        return catalog
     }
 
     @Override
@@ -38,7 +35,7 @@ class HibernateCatalogSnapshotGenerator extends HibernateSnapshotGenerator {
 
     @Override
     Class<? extends SnapshotGenerator>[] replaces() {
-        return [CatalogSnapshotGenerator] as Class<? extends SnapshotGenerator>[];
+        return [CatalogSnapshotGenerator] as Class<? extends SnapshotGenerator>[]
     }
 
 }

@@ -53,6 +53,7 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation project(':grails-web-url-mappings')
+    testImplementation testFixtures(project(':grails-web-common')) // GrailsWebMockUtil
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests

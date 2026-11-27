@@ -18,7 +18,12 @@
  */
 package org.grails.async.factory.rxjava3
 
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+import grails.async.Promise
 import grails.async.PromiseList
+import grails.async.Promises
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -94,5 +99,76 @@ class RxPromiseListSpec extends Specification {
             !result
             error
             error.message == 'bad'
+    }
+
+    void 'onComplete over a list runs each task once'() {
+        given: 'a task that counts its runs'
+            AtomicInteger runs = new AtomicInteger()
+            Promise<Integer> task = Promises.createPromise { runs.incrementAndGet() }
+
+        when: 'the list completes'
+            List result = Promises.onComplete([task]) { it }.get(5, TimeUnit.SECONDS)
+
+        then: 'the task ran once and the callback received its value'
+            task.get() == 1
+            result == [1]
+            runs.get() == 1
+    }
+
+    void 'onError over a list runs each task once'() {
+        given: 'a task that counts its runs'
+            AtomicInteger runs = new AtomicInteger()
+            Promise<Integer> task = Promises.createPromise { runs.incrementAndGet() }
+
+        when: 'the list resolves without an error'
+            List result = Promises.onError([task]) { }.get(5, TimeUnit.SECONDS)
+
+        then: 'the task ran once and the list holds its value'
+            task.get() == 1
+            result == [1]
+            runs.get() == 1
+    }
+
+    void 'onComplete over a list completes when a promise in it was chained with then'() {
+        given: 'a promise chained from a task, with a callback that counts its runs'
+            AtomicInteger callbacks = new AtomicInteger()
+            Promise<Integer> chained = Promises.createPromise { 1 }.then { callbacks.incrementAndGet(); it + 1 }
+
+        when: 'the list completes'
+            List result = Promises.onComplete([chained]) { it }.get(5, TimeUnit.SECONDS)
+
+        then: 'the callback received the chained value and the then callback ran once'
+            result == [2]
+            callbacks.get() == 1
+    }
+
+    void 'onError over a list reports the failure a bound promise holds'() {
+        given: 'a bound promise whose then callback failed, after a task'
+            def failure = new IllegalStateException('bad')
+            Promise<Object> failed = Promises.createBoundPromise(null).then { throw failure }
+            Throwable observed = null
+
+        when: 'the list is read'
+            Promises.onError([Promises.createPromise { 1 }, failed]) { observed = it }.get(5, TimeUnit.SECONDS)
+
+        then: 'the aggregate throws the failure and the error callback received it'
+            IllegalStateException e = thrown()
+            e.is(failure)
+            observed.is(failure)
+    }
+
+    void 'onComplete over a list skips its callback when a bound promise holds a failure'() {
+        given: 'a bound promise whose then callback failed, after a task'
+            def failure = new IllegalStateException('bad')
+            Promise<Object> failed = Promises.createBoundPromise(null).then { throw failure }
+            List completed = null
+
+        when: 'the list is read'
+            Promises.onComplete([Promises.createPromise { 1 }, failed]) { completed = it }.get(5, TimeUnit.SECONDS)
+
+        then: 'the aggregate throws the failure and the completion callback never ran'
+            IllegalStateException e = thrown()
+            e.is(failure)
+            completed == null
     }
 }

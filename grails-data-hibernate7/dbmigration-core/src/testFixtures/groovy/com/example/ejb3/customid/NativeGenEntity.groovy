@@ -16,34 +16,37 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.example.ejb3.customid;
+package com.example.ejb3.customid
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.Table;
+import groovy.transform.CompileStatic
 
-import org.hibernate.annotations.NativeGenerator;
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.SequenceGenerator
+import jakarta.persistence.Table
+
+import org.hibernate.annotations.NativeGenerator
 
 /**
  * Entity using @NativeGenerator, matching the user's UserB pattern.
  */
+@CompileStatic
 @Entity
-@Table(name = "native_gen_entity")
+@Table(name = 'native_gen_entity')
 class NativeGenEntity {
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
+    @Column(name = 'id', nullable = false, updatable = false)
     @NativeGenerator(sequenceForm = @SequenceGenerator(
-            name = "native_gen_seq",
-            sequenceName = "native_gen_seq",
+            name = 'native_gen_seq',
+            sequenceName = 'native_gen_seq',
             allocationSize = 22,
             initialValue = 3
     ))
-    Long id;
+    Long id
 
-    @Column(name = "name", nullable = false, length = 100)
-    String name;
+    @Column(name = 'name', nullable = false, length = 100)
+    String name
 
 }

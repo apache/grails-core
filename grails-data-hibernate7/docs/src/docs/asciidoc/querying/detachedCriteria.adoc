@@ -53,7 +53,7 @@ def bartQuery = criteria.build {
 }
 ----
 
-A detached criteria also accepts `sqlRestriction`, which restricts the results with a native SQL condition as in a <<querying-criteria,criteria>> query. `{alias}` stands for the table alias of the class of the detached criteria, also when the detached criteria is used as a subquery:
+A detached criteria also accepts `sqlRestriction`, which restricts the results with a native SQL condition as in a <<querying-criteria,criteria>> query. A detached criteria does not know its database until it runs, so a number of `?` placeholders that differs from the number of values is reported when the query runs, by an exception whose cause is an `IllegalArgumentException`, and not when the criteria is built; the SQL is read in the syntax of the connection it runs on. `{alias}` stands for the table alias of the class of the detached criteria, also when the detached criteria is used as a subquery:
 
 [source,groovy]
 ----

@@ -18,6 +18,9 @@
  */
 package org.grails.plugins.web.rest.render.hal
 
+import groovy.json.JsonParserType
+import groovy.json.JsonSlurper
+import tools.jackson.core.json.JsonReadFeature
 import tools.jackson.databind.json.JsonMapper
 import grails.config.Config
 import grails.core.DefaultGrailsApplication
@@ -44,6 +47,9 @@ import org.grails.datastore.mapping.model.PropertyMapping
 import org.grails.plugins.web.mime.MimeTypesConfiguration
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.grails.support.MockApplicationContext
+import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry
+import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator
+import org.grails.web.databinding.bindingsource.InvalidRequestBodyException
 import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
@@ -62,11 +68,12 @@ import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.GenericWebApplicationContext
 import org.springframework.web.util.WebUtils
-import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Shared
+import org.grails.databinding.bindingsource.DataBindingSourceCreator
+import grails.databinding.SimpleMapDataBindingSource
 import spock.lang.Specification
 
 import jakarta.xml.bind.DatatypeConverter
@@ -86,22 +93,76 @@ class HalJsonRendererSpec extends Specification {
         ShutdownOperations.runOperations()
     }
 
-    void setup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
         ShutdownOperations.runOperations()
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
     }
 
     boolean jsonEquals(String json1, String json2) {
         def tree1 = objectMapper.readTree(json1)
         def tree2 = objectMapper.readTree(json2)
         tree1 == tree2
+    }
+
+    void 'a HAL body of the type of a renderer is parsed by the application HAL creator, as the application has it parse bodies'() {
+        given: 'the HAL creator of an application that parses bodies with a Jackson mapper reading comments'
+        def registry = new DefaultDataBindingSourceRegistry()
+        def renderer = new HalJsonRenderer(Product)
+        renderer.dataBindingSourceRegistry = registry
+        renderer.useJackson = true
+        renderer.halJsonDataBindingSourceCreator = new HalJsonDataBindingSourceCreator(
+                jsonMapper: JsonMapper.builder().enable(JsonReadFeature.ALLOW_JAVA_COMMENTS).build(), useJackson: true)
+        renderer.initialize()
+        def request = new MockHttpServletRequest()
+        request.contentType = HalJsonRenderer.MIME_TYPE.name
+        request.content = '/* a comment */ {"name": "MacBook"}'.bytes
+
+        when:
+        def source = registry.createDataBindingSource(HalJsonRenderer.MIME_TYPE, Product, request)
+
+        then:
+        source.getPropertyValue('name') == 'MacBook'
+    }
+
+    void 'a HAL body of the type of a renderer is parsed by a default JsonSlurper, as in Grails 8, where the application HAL creator does not parse with Jackson'() {
+        given: 'an application HAL creator whose JsonSlurper bean accepts keys without quotes'
+        def registry = new DefaultDataBindingSourceRegistry()
+        def renderer = new HalJsonRenderer(Product)
+        renderer.dataBindingSourceRegistry = registry
+        renderer.halJsonDataBindingSourceCreator = new HalJsonDataBindingSourceCreator(
+                jsonSlurper: new JsonSlurper(type: JsonParserType.LAX), useJackson: false)
+        renderer.initialize()
+        def request = new MockHttpServletRequest()
+        request.contentType = HalJsonRenderer.MIME_TYPE.name
+        request.content = '{name: "MacBook"}'.bytes
+
+        when:
+        registry.createDataBindingSource(HalJsonRenderer.MIME_TYPE, Product, request)
+
+        then: 'the default parser rejects it'
+        thrown(InvalidRequestBodyException)
+    }
+
+    void 'a HAL body of the type of a renderer is parsed by whatever creator the application names halJsonDataBindingSourceCreator, as the setting has it parse bodies'() {
+        given: 'an application creator of its own under that name'
+        def registry = new DefaultDataBindingSourceRegistry()
+        def renderer = new HalJsonRenderer(Product)
+        renderer.dataBindingSourceRegistry = registry
+        renderer.useJackson = true
+        renderer.halJsonDataBindingSourceCreator = Stub(DataBindingSourceCreator) {
+            getTargetType() >> Object
+            createDataBindingSource(_, _, _) >> new SimpleMapDataBindingSource([name: 'from the application creator'])
+        }
+        renderer.initialize()
+        def request = new MockHttpServletRequest()
+        request.contentType = HalJsonRenderer.MIME_TYPE.name
+        request.content = '{"name": "MacBook"}'.bytes
+
+        when:
+        def source = registry.createDataBindingSource(HalJsonRenderer.MIME_TYPE, Product, request)
+
+        then:
+        source.getPropertyValue('name') == 'from the application creator'
     }
 
     @Issue('GRAILS-10372')

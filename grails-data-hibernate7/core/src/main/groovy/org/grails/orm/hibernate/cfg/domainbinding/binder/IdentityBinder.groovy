@@ -16,39 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import groovy.transform.CompileStatic;
-import jakarta.annotation.Nonnull;
-import org.hibernate.MappingException;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.MappingException
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class IdentityBinder {
 
-    private final SimpleIdBinder simpleIdBinder;
-    private final CompositeIdBinder compositeIdBinder;
+    private final SimpleIdBinder simpleIdBinder
+    private final CompositeIdBinder compositeIdBinder
 
     IdentityBinder(SimpleIdBinder simpleIdBinder, CompositeIdBinder compositeIdBinder) {
-        this.simpleIdBinder = simpleIdBinder;
-        this.compositeIdBinder = compositeIdBinder;
+        this.simpleIdBinder = simpleIdBinder
+        this.compositeIdBinder = compositeIdBinder
     }
 
     void bindIdentity(@Nonnull HibernatePersistentEntity domainClass) {
-        HibernateIdentityProperty identityProperty = domainClass.getIdentityProperty();
+        HibernateIdentityProperty identityProperty = domainClass.getIdentityProperty()
         if (identityProperty instanceof HibernateCompositeIdentityProperty) {
-            compositeIdBinder.bindCompositeId(domainClass);
+            compositeIdBinder.bindCompositeId(domainClass)
         } else if (identityProperty instanceof HibernateSimpleIdentityProperty) {
-            simpleIdBinder.bindSimpleId(domainClass);
+            simpleIdBinder.bindSimpleId(domainClass)
         } else {
-            throw new MappingException('No identity found for ' + domainClass.getName());
+            throw new MappingException('No identity found for ' + domainClass.getName())
         }
     }
 }

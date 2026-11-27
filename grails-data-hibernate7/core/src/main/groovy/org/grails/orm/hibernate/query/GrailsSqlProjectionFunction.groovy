@@ -48,8 +48,14 @@ class GrailsSqlProjectionFunction extends AbstractSqmSelfRenderingFunctionDescri
 
     public static final String NAME = 'grails_sql_projection'
 
-    GrailsSqlProjectionFunction() {
+    private final SqlSyntax syntax
+
+    /**
+     * @param syntax the syntax of the native SQL of the database the session factory connects to
+     */
+    GrailsSqlProjectionFunction(SqlSyntax syntax) {
         super(NAME, StandardArgumentsValidators.between(1, 2), new ImpliedTypeResolver(), (FunctionArgumentTypeResolver) null)
+        this.syntax = syntax
     }
 
     @Override
@@ -72,8 +78,8 @@ class GrailsSqlProjectionFunction extends AbstractSqmSelfRenderingFunctionDescri
                     GrailsSqlRestrictionFunction.tableAlias(arguments.get(1)))
         }
         sqlAppender.appendSql(sql)
-        if (SqlRestriction.endsInLineComment(sql)) {
-            sqlAppender.appendSql('\n' as char)
+        if (SqlText.of(sql, syntax).endsInLineComment()) {
+            sqlAppender.appendSql('\n')
         }
     }
 

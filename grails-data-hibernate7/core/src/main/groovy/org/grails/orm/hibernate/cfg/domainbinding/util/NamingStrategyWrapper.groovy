@@ -16,99 +16,96 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.util;
+package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import groovy.transform.CompileStatic;
-import org.hibernate.boot.model.naming.Identifier;
-import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
+import groovy.transform.CompileStatic
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 
-import org.grails.datastore.mapping.reflect.NameUtils;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.datastore.mapping.reflect.NameUtils
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX;
-import static org.hibernate.boot.model.naming.Identifier.toIdentifier;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX
+import static org.hibernate.boot.model.naming.Identifier.toIdentifier
 
 /**
  * A wrapper for the Hibernate 6 PhysicalNamingStrategy to adapt it for use within the Grails
  * binding process, using a functional style.
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
 
-    private final PhysicalNamingStrategy namingStrategy;
-    private final JdbcEnvironment jdbcEnvironment;
+    private final PhysicalNamingStrategy namingStrategy
+    private final JdbcEnvironment jdbcEnvironment
 
     NamingStrategyWrapper(PhysicalNamingStrategy namingStrategy, JdbcEnvironment jdbcEnvironment) {
         if (namingStrategy == null) {
-            throw new IllegalArgumentException('PhysicalNamingStrategy argument cannot be null');
+            throw new IllegalArgumentException('PhysicalNamingStrategy argument cannot be null')
         }
         if (jdbcEnvironment == null) {
-            throw new IllegalArgumentException('JdbcEnvironment argument cannot be null');
+            throw new IllegalArgumentException('JdbcEnvironment argument cannot be null')
         }
-        this.namingStrategy = namingStrategy;
-        this.jdbcEnvironment = jdbcEnvironment;
+        this.namingStrategy = namingStrategy
+        this.jdbcEnvironment = jdbcEnvironment
     }
 
     JdbcEnvironment getJdbcEnvironment() {
-        return jdbcEnvironment;
+        return jdbcEnvironment
     }
 
     @Override
     String resolveColumnName(String logicalName) {
         if (logicalName == null) {
-            return logicalName;
+            return logicalName
         }
         // Safely handle a null return from the strategy.
         Identifier identifier = namingStrategy.toPhysicalColumnName(
-                toIdentifier(logicalName.replace('.' as char, '_' as char)), jdbcEnvironment);
+                toIdentifier(logicalName.replace('.' as char, '_' as char)), jdbcEnvironment)
         // Per Hibernate contract, if the strategy returns null, use the original logical name.
-        return identifier != null ? identifier.getText() : logicalName;
+        return identifier != null ? identifier.getText() : logicalName
     }
 
     @Override
     String resolveTableName(String logicalName) {
         if (logicalName == null) {
-            return logicalName;
+            return logicalName
         }
         // Safely handle a null return from the strategy.
         Identifier identifier = namingStrategy.toPhysicalTableName(
-                toIdentifier(logicalName.replace('.' as char, '_' as char)), jdbcEnvironment);
+                toIdentifier(logicalName.replace('.' as char, '_' as char)), jdbcEnvironment)
         // Per Hibernate contract, if the strategy returns null, use the original logical name.
-        return identifier != null ? identifier.getText() : logicalName;
+        return identifier != null ? identifier.getText() : logicalName
     }
 
     @Override
     String resolveForeignKeyForPropertyDomainClass(HibernatePersistentProperty property) {
         if (property == null) {
-            return null;
+            return null
         }
-        GrailsHibernatePersistentEntity owner = property.getHibernateOwner();
+        GrailsHibernatePersistentEntity owner = property.getHibernateOwner()
         if (owner == null) {
-            return null;
+            return null
         }
-        Class<?> javaClass = owner.getJavaClass();
+        Class<?> javaClass = owner.getJavaClass()
         if (javaClass == null) {
-            return null;
+            return null
         }
-        String decapitalized = NameUtils.decapitalize(javaClass.getSimpleName());
+        String decapitalized = NameUtils.decapitalize(javaClass.getSimpleName())
         if (decapitalized == null) {
-            return null;
+            return null
         }
-        String columnName = resolveColumnName(decapitalized);
+        String columnName = resolveColumnName(decapitalized)
         if (columnName == null || columnName.isBlank()) {
-            return null;
+            return null
         }
-        return columnName + FOREIGN_KEY_SUFFIX;
+        return columnName + FOREIGN_KEY_SUFFIX
     }
 
     @Override
     String resolveTableName(GrailsHibernatePersistentEntity entity) {
-        return resolveTableName(entity.getJavaClass().getSimpleName());
+        return resolveTableName(entity.getJavaClass().getSimpleName())
     }
 }

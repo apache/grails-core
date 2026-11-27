@@ -33,43 +33,43 @@ class GrailsHibernateExceptionSpec extends Specification {
         }
     }
 
-    def "constructor with message stores the message"() {
+    def 'constructor with message stores the message'() {
         when:
-        def ex = new TestHibernateException("invalid configuration")
+        def ex = new TestHibernateException('invalid configuration')
 
         then:
-        ex.message == "invalid configuration"
+        ex.message == 'invalid configuration'
         ex.cause == null
     }
 
-    def "constructor with message and cause stores both"() {
+    def 'constructor with message and cause stores both'() {
         given:
-        def cause = new IllegalStateException("bad state")
+        def cause = new IllegalStateException('bad state')
 
         when:
-        def ex = new TestHibernateException("configuration failed", cause)
+        def ex = new TestHibernateException('configuration failed', cause)
 
         then:
-        ex.message == "configuration failed"
+        ex.message == 'configuration failed'
         ex.cause.is(cause)
     }
 
-    def "GrailsHibernateException is a DatastoreException"() {
+    def 'GrailsHibernateException is a DatastoreException'() {
         expect:
-        new TestHibernateException("msg") instanceof DatastoreException
+        new TestHibernateException('msg') instanceof DatastoreException
     }
 
-    def "GrailsHibernateException is a RuntimeException"() {
+    def 'GrailsHibernateException is a RuntimeException'() {
         expect:
-        new TestHibernateException("msg") instanceof RuntimeException
+        new TestHibernateException('msg') instanceof RuntimeException
     }
 
-    def "can be thrown and caught as DatastoreException"() {
+    def 'can be thrown and caught as DatastoreException'() {
         when:
         try {
-            throw new TestHibernateException("fail")
+            throw new TestHibernateException('fail')
         } catch (DatastoreException e) {
-            assert e.message == "fail"
+            assert e.message == 'fail'
         }
 
         then:

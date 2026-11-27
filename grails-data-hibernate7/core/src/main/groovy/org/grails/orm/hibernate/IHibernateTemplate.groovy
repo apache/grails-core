@@ -25,9 +25,6 @@ import org.hibernate.query.Query
 
 /**
  * Template interface that can be used with both Hibernate 3 and Hibernate 4
- *
- * @author Burt Beckwith
- * @author Graeme Rocher
  */
 @CompileStatic
 interface IHibernateTemplate {

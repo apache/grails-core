@@ -23,8 +23,6 @@ import org.grails.datastore.mapping.core.DatastoreException
 
 /**
  * Base exception class for errors related to Hibernate configuration in Grails.
- *
- * @author Steven Devijver
  */
 @CompileStatic
 abstract class GrailsHibernateException extends DatastoreException {

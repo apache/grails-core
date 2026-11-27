@@ -49,6 +49,17 @@ class SqlQuerySpec extends Specification {
 
     }
 
+    void "a native query is run as written, whatever its literals lowercase to"() {
+        given:
+        setupTestData()
+
+        when: "the literal has a dotted capital I, which lowercases to a longer text"
+        List<Club> results = Club.findAllWithSql("select c.*, 'İİ' from club c order by c.name")
+
+        then:
+        results*.name == ['Arsenal', 'Barcelona', 'Manchester United']
+    }
+
     void "test simple sql query"() {
 
         given:

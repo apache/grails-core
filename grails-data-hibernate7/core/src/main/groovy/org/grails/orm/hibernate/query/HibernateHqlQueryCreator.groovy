@@ -32,7 +32,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /**
  * Bridges the Query API with the Hibernate HQL for SELECT queries.
  *
- * @author Graeme Rocher
  * @since 1.0
  */
 @CompileStatic

@@ -16,54 +16,56 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package liquibase.ext.hibernate.snapshot;
+package liquibase.ext.hibernate.snapshot
 
-import java.math.BigInteger;
+import groovy.transform.CompileStatic
+import java.math.BigInteger
 
-import liquibase.CatalogAndSchema;
-import liquibase.database.Database;
-import liquibase.database.jvm.JdbcConnection;
-import liquibase.ext.hibernate.database.HibernateSpringPackageDatabase;
-import liquibase.ext.hibernate.database.connection.HibernateConnection;
-import liquibase.resource.ClassLoaderResourceAccessor;
-import liquibase.snapshot.DatabaseSnapshot;
-import liquibase.snapshot.SnapshotControl;
-import liquibase.snapshot.SnapshotGeneratorFactory;
-import liquibase.structure.core.Sequence;
-import org.hibernate.dialect.PostgreSQLDialect;
-import org.junit.Test;
+import liquibase.CatalogAndSchema
+import liquibase.database.Database
+import liquibase.database.jvm.JdbcConnection
+import liquibase.ext.hibernate.database.HibernateSpringPackageDatabase
+import liquibase.ext.hibernate.database.connection.HibernateConnection
+import liquibase.resource.ClassLoaderResourceAccessor
+import liquibase.snapshot.DatabaseSnapshot
+import liquibase.snapshot.SnapshotControl
+import liquibase.snapshot.SnapshotGeneratorFactory
+import liquibase.structure.core.Sequence
+import org.hibernate.dialect.PostgreSQLDialect
+import org.junit.Test
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals
+import static org.junit.Assert.assertNotNull
 
 /**
  * Verifies that @SequenceGenerator-based sequences are captured in the snapshot.
  * This matches the UserC pattern.
  */
+@CompileStatic
 class SequenceGeneratorTest {
 
     @Test
     void sequenceGeneratorIsCaptured() throws Exception {
-        String packages = "com.example.ejb3.auction";
-        Database database = new HibernateSpringPackageDatabase();
-        database.setDefaultSchemaName("PUBLIC");
-        database.setDefaultCatalogName("TESTDB");
+        String packages = 'com.example.ejb3.auction'
+        Database database = new HibernateSpringPackageDatabase()
+        database.setDefaultSchemaName('PUBLIC')
+        database.setDefaultCatalogName('TESTDB')
         database.setConnection(new JdbcConnection(new HibernateConnection(
                 'hibernate:spring:' + packages + '?dialect=' + PostgreSQLDialect.name,
-                new ClassLoaderResourceAccessor())));
+                new ClassLoaderResourceAccessor())))
         DatabaseSnapshot snapshot = SnapshotGeneratorFactory.getInstance()
-                .createSnapshot(CatalogAndSchema.DEFAULT, database, new SnapshotControl(database));
+                .createSnapshot(CatalogAndSchema.DEFAULT, database, new SnapshotControl(database))
 
-        Sequence itemSeq = null;
+        Sequence itemSeq = null
         for (Sequence seq : snapshot.get(Sequence)) {
-            if (seq.getName().equalsIgnoreCase("ITEM_SEQ")) {
-                itemSeq = seq;
+            if (seq.getName().equalsIgnoreCase('ITEM_SEQ')) {
+                itemSeq = seq
             }
         }
 
-        assertNotNull("ITEM_SEQ should be in snapshot", itemSeq);
-        assertEquals("initialValue should be 1000", BigInteger.valueOf(1000), itemSeq.getStartValue());
-        assertEquals("allocationSize should be 100", BigInteger.valueOf(100), itemSeq.getIncrementBy());
+        assertNotNull('ITEM_SEQ should be in snapshot', itemSeq)
+        assertEquals('initialValue should be 1000', BigInteger.valueOf(1000), itemSeq.getStartValue())
+        assertEquals('allocationSize should be 100', BigInteger.valueOf(100), itemSeq.getIncrementBy())
     }
 
 }

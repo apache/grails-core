@@ -16,48 +16,45 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import groovy.transform.CompileStatic;
-import jakarta.annotation.Nonnull;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Table;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Table
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
+import org.grails.orm.hibernate.cfg.ColumnConfig
 
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class IndexBinder {
 
     void bindIndex(@Nonnull String columnName, @Nonnull Column column, ColumnConfig cc, @Nonnull Table table) {
         if (cc == null) {
-            return;
+            return
         }
-        Object indexObj = cc.getIndex();
+        Object indexObj = cc.getIndex()
         if (indexObj == null) {
-            return;
+            return
         }
-        String indexDef;
+        String indexDef
         if (indexObj instanceof Boolean) {
             if (!((Boolean) indexObj)) {
-                return;
+                return
             }
-            indexDef = String.format("%s_%s_idx", table.getName(), columnName);
+            indexDef = String.format('%s_%s_idx', table.getName(), columnName)
         } else {
-            String indexStr = indexObj.toString();
-            if ("true".equalsIgnoreCase(indexStr)) {
-                indexDef = String.format("%s_%s_idx", table.getName(), columnName);
-            } else if ("false".equalsIgnoreCase(indexStr)) {
-                return;
+            String indexStr = indexObj.toString()
+            if ('true'.equalsIgnoreCase(indexStr)) {
+                indexDef = String.format('%s_%s_idx', table.getName(), columnName)
+            } else if ('false'.equalsIgnoreCase(indexStr)) {
+                return
             } else {
-                indexDef = indexStr;
+                indexDef = indexStr
             }
         }
-        String[] indices = indexDef.split(",");
+        String[] indices = indexDef.split(',')
         for (String index : indices) {
-            table.getOrCreateIndex(index.trim()).addColumn(column);
+            table.getOrCreateIndex(index.trim()).addColumn(column)
         }
     }
 }

@@ -46,6 +46,7 @@ class JsonCollectionRenderer extends JsonRenderer implements ContainerRenderer {
     }
 
     @Override
+    @Deprecated(since = '9.0', forRemoval = true)
     protected void renderJson(JSON converter, RenderContext context) {
         converter.setExcludes(componentType, excludes != null ? excludes : context.excludes)
         converter.setIncludes(componentType, includes != null ? includes : context.includes)

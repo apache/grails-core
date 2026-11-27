@@ -16,134 +16,131 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.GrailsHibernateTemplate
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /**
  * A PagedResultList for Hibernate 7.
  *
  * @since 8.0
  */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class HibernatePagedResultList extends grails.gorm.PagedResultList {
 
-    private final GrailsHibernatePersistentEntity entity;
-    private final int max;
-    private final int offset;
+    private final GrailsHibernatePersistentEntity entity
+    private final int max
+    private final int offset
 
     HibernatePagedResultList(HibernateQuery query) {
-        super(query);
-        this.entity = query.entity;
-        this.max = resolveMax(query);
-        this.offset = resolveOffset(query);
+        super(query)
+        this.entity = query.entity
+        this.max = resolveMax(query)
+        this.offset = resolveOffset(query)
     }
 
     HibernatePagedResultList(Query query) {
-        super(query);
-        this.entity = (GrailsHibernatePersistentEntity) query.entity;
-        this.max = resolveMax(query);
-        this.offset = resolveOffset(query);
+        super(query)
+        this.entity = (GrailsHibernatePersistentEntity) query.entity
+        this.max = resolveMax(query)
+        this.offset = resolveOffset(query)
     }
 
     HibernatePagedResultList(GrailsHibernateTemplate template, GrailsHibernatePersistentEntity entity, Query query) {
-        super(query);
-        this.entity = entity;
-        this.max = resolveMax(query);
-        this.offset = resolveOffset(query);
+        super(query)
+        this.entity = entity
+        this.max = resolveMax(query)
+        this.offset = resolveOffset(query)
     }
 
     HibernatePagedResultList(GrailsHibernateTemplate template, PersistentEntity entity, Query query) {
-        this(template, (GrailsHibernatePersistentEntity) entity, query);
+        this(template, (GrailsHibernatePersistentEntity) entity, query)
     }
 
     private HibernatePagedResultList(GrailsHibernatePersistentEntity entity, int max, int offset, int totalCount, List resultList) {
-        super(null);
-        this.entity = entity;
-        this.max = max;
-        this.offset = offset;
-        this.@totalCount = totalCount;
-        this.@resultList = resultList;
+        super(null)
+        this.entity = entity
+        this.max = max
+        this.offset = offset
+        this.@totalCount = totalCount
+        this.@resultList = resultList
     }
 
     GrailsHibernatePersistentEntity getEntity() {
-        return entity;
+        return entity
     }
 
     @Override
     int getMax() {
-        return max;
+        return max
     }
 
     @Override
     int getOffset() {
-        return offset;
+        return offset
     }
 
     @Override
     int getTotalCount() {
         if (this.@totalCount == Integer.MIN_VALUE) {
-            Query query = getQuery();
+            Query query = getQuery()
             if (query == null) {
-                this.@totalCount = 0;
+                this.@totalCount = 0
             } else {
-                Object clonedQuery = query.clone();
+                Object clonedQuery = query.clone()
                 if (!(clonedQuery instanceof Query)) {
-                    this.@totalCount = 0;
+                    this.@totalCount = 0
                 } else {
-                    Query newQuery = (Query) clonedQuery;
-                    newQuery.offset(0);
-                    newQuery.max(-1);
-                    newQuery.clearOrders();
-                    newQuery.projections().count();
-                    Number result = (Number) newQuery.singleResult();
-                    this.@totalCount = result == null ? 0 : result.intValue();
+                    Query newQuery = (Query) clonedQuery
+                    newQuery.offset(0)
+                    newQuery.max(-1)
+                    newQuery.clearOrders()
+                    newQuery.projections().count()
+                    Number result = (Number) newQuery.singleResult()
+                    this.@totalCount = result == null ? 0 : result.intValue()
                 }
             }
         }
-        return this.@totalCount;
+        return this.@totalCount
     }
 
     private Object writeReplace() throws ObjectStreamException {
-        return new SerializationProxy(max, offset, getTotalCount(), this.@resultList);
+        return new SerializationProxy(max, offset, getTotalCount(), this.@resultList)
     }
 
     private static int resolveMax(Query query) {
-        Integer queryMax = query == null ? null : query.max;
-        return queryMax != null ? queryMax : -1;
+        Integer queryMax = query == null ? null : query.max
+        return queryMax != null ? queryMax : -1
     }
 
     private static int resolveOffset(Query query) {
-        Integer queryOffset = query == null ? null : query.offset;
-        return queryOffset != null ? queryOffset : 0;
+        Integer queryOffset = query == null ? null : query.offset
+        return queryOffset != null ? queryOffset : 0
     }
 
     private static final class SerializationProxy implements Serializable {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1L
 
-        private final int max;
-        private final int offset;
-        private final int totalCount;
-        private final List resultList;
+        private final int max
+        private final int offset
+        private final int totalCount
+        private final List resultList
 
         private SerializationProxy(int max, int offset, int totalCount, List resultList) {
-            this.max = max;
-            this.offset = offset;
-            this.totalCount = totalCount;
-            this.resultList = resultList;
+            this.max = max
+            this.offset = offset
+            this.totalCount = totalCount
+            this.resultList = resultList
         }
 
         private Object readResolve() {
-            return new HibernatePagedResultList(null, max, offset, totalCount, resultList);
+            return new HibernatePagedResultList(null, max, offset, totalCount, resultList)
         }
 
     }

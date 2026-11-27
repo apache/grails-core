@@ -68,7 +68,20 @@ class HttpServletRequestExtension {
     }
 
     /**
-     * Obtains a list of configured {@link grails.web.mime.MimeType} instances for the request
+     * The type a request's {@code Content-Type} names where no configured type matches it, with its type and subtype in
+     * lower case, as Spring reads them, so that it equals the type of a binding source creator whatever case the client
+     * sends.
+     */
+    private static MimeType requestedMimeType(String header) {
+        MimeType mimeType = new MimeType(header)
+        mimeType.name = mimeType.name?.toLowerCase(Locale.ROOT)
+        mimeType
+    }
+
+    /**
+     * Obtains a list of configured {@link grails.web.mime.MimeType} instances for the request: with
+     * {@code grails.mime.negotiation.spring}, the type of its {@code Content-Type} as Spring reads it, as the format
+     * {@code grails.mime.types} gives it
      *
      * @param request The request
      * @return A list of configured mime types
@@ -76,6 +89,12 @@ class HttpServletRequestExtension {
     static MimeType[] getMimeTypes(HttpServletRequest request) {
         MimeType[] result = (MimeType[]) request.getAttribute(GrailsApplicationAttributes.REQUEST_FORMATS)
         if (!result) {
+            GrailsContentNegotiationStrategy strategy = GrailsContentNegotiationStrategy.forRequest(request)
+            if (strategy.springNegotiation) {
+                result = strategy.resolveContentMimeTypes(request)
+                request.setAttribute(GrailsApplicationAttributes.REQUEST_FORMATS, result)
+                return result
+            }
             // First try to get context from GrailsWebRequest
             ApplicationContext context = null
             GrailsWebRequest webRequest = GrailsWebRequest.lookup()
@@ -86,11 +105,12 @@ class HttpServletRequestExtension {
             if (context == null) {
                 context = WebApplicationContextUtils.getWebApplicationContext(request.servletContext)
             }
-            MimeType[] mimeTypes = context != null ? context.getBean(MimeUtility).getKnownMimeTypes() as MimeType[] : MimeType.getConfiguredMimeTypes()
+            MimeUtility mimeUtility = context?.getBeanProvider(MimeUtility)?.getIfAvailable()
+            MimeType[] mimeTypes = mimeUtility != null ? mimeUtility.getKnownMimeTypes() as MimeType[] : MimeType.getConfiguredMimeTypes()
             def parser = new DefaultAcceptHeaderParser(mimeTypes)
             String header = request.contentType
             if (!header) header = request.getHeader(HttpHeaders.CONTENT_TYPE)
-            result = parser.parse(header, header ? new MimeType(header) : MimeType.HTML)
+            result = parser.parse(header, header ? requestedMimeType(header) : MimeType.HTML)
 
             request.setAttribute(GrailsApplicationAttributes.REQUEST_FORMATS, result)
         }

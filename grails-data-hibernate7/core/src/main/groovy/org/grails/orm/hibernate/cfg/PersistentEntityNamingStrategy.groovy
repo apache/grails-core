@@ -18,15 +18,17 @@
  */
 package org.grails.orm.hibernate.cfg
 
+import groovy.transform.CompileStatic
+
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
 /**
  * Allows plugging into to custom naming strategies
  *
- * @author Graeme Rocher
  * @since 5.0
  */
+@CompileStatic
 interface PersistentEntityNamingStrategy {
 
     String resolveColumnName(String logicalName)

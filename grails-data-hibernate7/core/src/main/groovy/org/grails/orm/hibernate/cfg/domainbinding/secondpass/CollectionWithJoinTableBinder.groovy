@@ -36,7 +36,6 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 
 /** Binds a collection with a join table. */
 @CompileStatic
-@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class CollectionWithJoinTableBinder {
 
     private final PersistentEntityNamingStrategy namingStrategy

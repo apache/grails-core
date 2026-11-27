@@ -95,6 +95,17 @@ class PathCapturingJSONWriterWrapperApiSpec extends Specification {
         objectOutput.toString() == '{"boolean":true,"double":2.5,"long":7,"null":null}'
     }
 
+    void "the nesting depth is the wrapped writer's"() {
+        given:
+        def writer = new PathCapturingJSONWriterWrapper(new JSONWriter(new StringWriter()))
+
+        when:
+        writer.object().key('list').array()
+
+        then:
+        writer.nestingDepth() == 2
+    }
+
     void "public raw append delegates to the wrapped writer and comma writes nothing"() {
         given: 'the generator writes the separators itself, so comma() has nothing to add'
         def output = new StringWriter()

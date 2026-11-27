@@ -31,7 +31,6 @@ import javax.sql.DataSource
  * Implements the {@link org.grails.datastore.mapping.core.connections.ConnectionSource} interface
  * for Hibernate
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic

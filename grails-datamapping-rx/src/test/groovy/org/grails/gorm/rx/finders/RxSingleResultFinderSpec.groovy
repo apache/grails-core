@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.rx.RxDatastoreClient
 import org.springframework.core.convert.support.DefaultConversionService
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 /**
@@ -116,7 +116,7 @@ class RxSingleResultFinderSpec extends Specification {
         // passes it through unchanged rather than unwrapping it, so the caller (e.g.
         // RxGormStaticApi.methodMissing) receives an Observable, not the raw entity.
         Observable observable = finder.invoke(Book, 'findByTitle', ['Shogun'] as Object[]) as Observable
-        Book result = observable.toBlocking().first() as Book
+        Book result = observable.blockingFirst() as Book
 
         then:
         1 * datastoreClient.createQuery(Book) >> query
@@ -139,7 +139,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Book, 'findByTitle', detachedCriteria, ['Shogun'] as Object[]) as Observable
-        Book result = observable.toBlocking().first() as Book
+        Book result = observable.blockingFirst() as Book
 
         then:
         1 * datastoreClient.createQuery(Book) >> query
@@ -155,7 +155,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Book, 'findByTitle', (grails.gorm.DetachedCriteria) null, ['Shogun'] as Object[]) as Observable
-        Book result = observable.toBlocking().first() as Book
+        Book result = observable.blockingFirst() as Book
 
         then:
         1 * datastoreClient.createQuery(Book) >> query
@@ -176,7 +176,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Book, 'findByTitle', { -> }, ['Shogun'] as Object[]) as Observable
-        Book result = observable.toBlocking().first() as Book
+        Book result = observable.blockingFirst() as Book
 
         then:
         1 * datastoreClient.createQuery(Book) >> query
@@ -191,7 +191,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Book, 'findByTitle', ['Shogun', [max: 5]] as Object[]) as Observable
-        Book result = observable.toBlocking().first() as Book
+        Book result = observable.blockingFirst() as Book
 
         then:
         1 * datastoreClient.createQuery(Book) >> query
@@ -211,7 +211,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Person, 'findActiveByNameOrCity', ['Fred', 'London'] as Object[]) as Observable
-        Person result = observable.toBlocking().first() as Person
+        Person result = observable.blockingFirst() as Person
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
@@ -233,7 +233,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Person, 'findOrCreateByName', ['Fred'] as Object[]) as Observable
-        Person result = observable.toBlocking().first() as Person
+        Person result = observable.blockingFirst() as Person
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
@@ -247,7 +247,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Person, 'findOrCreateByName', ['Fred'] as Object[]) as Observable
-        Person result = observable.toBlocking().first() as Person
+        Person result = observable.blockingFirst() as Person
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
@@ -261,39 +261,38 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Person, 'findOrCreateByName', ['Fred'] as Object[]) as Observable
-        def subscriber = new rx.observers.TestSubscriber()
+        def subscriber = new io.reactivex.rxjava3.observers.TestObserver()
         observable.subscribe(subscriber)
-        subscriber.awaitTerminalEvent(5, java.util.concurrent.TimeUnit.SECONDS)
+        subscriber.await(5, java.util.concurrent.TimeUnit.SECONDS)
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
         1 * query.singleResult() >> Observable.empty()
-        subscriber.assertCompleted()
+        subscriber.assertComplete()
         subscriber.assertNoErrors()
-        subscriber.onNextEvents.size() == 1
-        (subscriber.onNextEvents[0] as Person).name == 'Fred'
+        subscriber.values().size() == 1
+        (subscriber.values()[0] as Person).name == 'Fred'
     }
 
     void "findOrCreateBy signals an error rather than hanging when a non-Equal expression reaches the empty-result construction path"() {
         given:
-        // The empty-result construction path runs inside a spawned Thread - unlike the
+        // The empty-result construction path runs on the IO scheduler - unlike the
         // synchronous SingleResultFinder, a thrown exception there does not propagate as a normal
-        // method-call exception, so it must be forwarded to the Observable's error channel
-        // explicitly (via Subscriber#onError) or it would kill the thread silently and hang any
-        // blocking call on the returned Observable forever.
+        // method-call exception, so it must reach the Observable's error channel (Observable.defer
+        // forwards it) or a blocking call on the returned Observable would hang forever.
         def finder = RxSingleResultFinder.findOrCreateBy(datastoreClient)
 
         when:
         Observable observable = finder.invoke(Person, 'findOrCreateByNameLike', ['Fre%'] as Object[]) as Observable
-        def subscriber = new rx.observers.TestSubscriber()
+        def subscriber = new io.reactivex.rxjava3.observers.TestObserver()
         observable.subscribe(subscriber)
-        subscriber.awaitTerminalEvent(5, java.util.concurrent.TimeUnit.SECONDS)
+        subscriber.await(5, java.util.concurrent.TimeUnit.SECONDS)
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
         1 * query.singleResult() >> Observable.empty()
         subscriber.assertError(groovy.lang.MissingMethodException)
-        subscriber.onNextEvents.isEmpty()
+        subscriber.values().isEmpty()
     }
 
     void "findOrSaveBy isMethodMatch matches findOrSaveBy method names only"() {
@@ -309,7 +308,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(Person, 'findOrSaveByName', ['Fred'] as Object[]) as Observable
-        Person result = observable.toBlocking().first() as Person
+        Person result = observable.blockingFirst() as Person
 
         then:
         1 * datastoreClient.createQuery(Person) >> query
@@ -324,7 +323,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(PersonThatSavesSuccessfully, 'findOrSaveByName', ['Fred'] as Object[]) as Observable
-        PersonThatSavesSuccessfully result = observable.toBlocking().first() as PersonThatSavesSuccessfully
+        PersonThatSavesSuccessfully result = observable.blockingFirst() as PersonThatSavesSuccessfully
 
         then:
         1 * datastoreClient.createQuery(PersonThatSavesSuccessfully) >> query
@@ -338,7 +337,7 @@ class RxSingleResultFinderSpec extends Specification {
 
         when:
         Observable observable = finder.invoke(PersonThatFailsToSave, 'findOrSaveByName', ['Fred'] as Object[]) as Observable
-        observable.toBlocking().first()
+        observable.blockingFirst()
 
         then:
         1 * datastoreClient.createQuery(PersonThatFailsToSave) >> query

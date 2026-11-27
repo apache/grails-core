@@ -58,4 +58,15 @@ class GPathCollectionDataBindingSourceSpec extends Specification {
         dataBindingSources[2]['firstName'] == 'Steve'
         dataBindingSources[2]['lastName'] == 'Hackett'
     }
+
+    void 'Test an element without child elements'() {
+        given:
+        def xml = new XmlSlurper().parseText('<list/>')
+
+        when:
+        def source = new GPathResultCollectionDataBindingSource(xml)
+
+        then:
+        source.dataBindingSources.empty
+    }
 }

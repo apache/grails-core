@@ -29,7 +29,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior
 /**
  * A {@link org.grails.datastore.mapping.model.ClassMapping} implementation for Hibernate
  *
- * @author Graeme Rocher
  * @since 5.0
  */
 @CompileStatic

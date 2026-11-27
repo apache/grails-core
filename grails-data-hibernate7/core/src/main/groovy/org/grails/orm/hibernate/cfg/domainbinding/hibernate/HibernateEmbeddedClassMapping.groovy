@@ -27,7 +27,6 @@ import org.grails.datastore.mapping.model.PersistentEntity
  * A {@link org.grails.datastore.mapping.model.ClassMapping} implementation for embedded entities in
  * Hibernate
  *
- * @author Graeme Rocher
  * @since 5.0
  */
 @CompileStatic

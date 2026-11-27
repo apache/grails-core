@@ -37,12 +37,16 @@ class NumberLikeCriterionHandlerProvider implements PredicateGenerator.Criterion
         NumberLikeCriterion
     }
 
+    /**
+     * A contextual handler: the property is resolved through the query context, so {@code numberLike} also
+     * works on an association path such as {@code 'supplier.rating'}, on the join GORM created for it.
+     */
     @Override
     PredicateGenerator.CriterionHandler criterionHandler() {
-        { query, root, cb, criterion ->
+        { query, root, cb, criterion, context ->
             NumberLikeCriterion nlc = criterion as NumberLikeCriterion
-            def cast = cb.cast(root.get(nlc.property) as JpaExpression, String)
+            def cast = cb.cast(context.getFullyQualifiedPath(nlc.property) as JpaExpression, String)
             cb.like(cast, nlc.value as String)
-        } as PredicateGenerator.CriterionHandler
+        } as PredicateGenerator.ContextualCriterionHandler
     }
 }

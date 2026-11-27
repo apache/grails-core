@@ -1,0 +1,4 @@
+rootProject.name = 'test-fork-query-tail-classloaders'
+
+include 'first'
+include 'second'

@@ -24,9 +24,9 @@ import grails.gorm.hibernate.mapping.MappingBuilder
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
-import spock.lang.PendingFeature
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * An inverse {@code hasMany} on an entity with a composite identifier must load its elements whatever
@@ -46,7 +46,7 @@ class InverseHasManyCompositeIdentifierOrderSpec extends Specification {
                     'dataSource.dialect'    : H2Dialect.name,
                     'hibernate.hbm2ddl.auto': 'create',
             ],
-            IhmSortedParent, IhmSortedKid, IhmParent, IhmKid)
+            IhmSortedParent, IhmSortedKid)
 
     void "an inverse hasMany on a parent whose composite identifier is declared in name order loads its kids"() {
         when:
@@ -60,8 +60,18 @@ class InverseHasManyCompositeIdentifierOrderSpec extends Specification {
         }
     }
 
-    @PendingFeature(reason = 'the collection key re-sorts the copied to-one columns by the identifier permutation, see the follow-up issue')
-    void "an inverse hasMany on a parent whose composite identifier is declared out of name order loads its kids"() {
+    @Unroll
+    void "an inverse hasMany on a parent whose composite identifier is declared out of name order loads its kids when registered as #order"() {
+        given:
+        HibernateDatastore ordered = new HibernateDatastore(
+                [
+                        'dataSource.url'        : "jdbc:h2:mem:inverseHasManyCompositeIdOrder${classes*.simpleName.join('')};LOCK_TIMEOUT=10000".toString(),
+                        'dataSource.dbCreate'   : 'create-drop',
+                        'dataSource.dialect'    : H2Dialect.name,
+                        'hibernate.hbm2ddl.auto': 'create',
+                ],
+                classes as Class[])
+
         when:
         IhmParent.withNewTransaction {
             new IhmParent(zeta: 'z', alpha: 'a').addToKids(new IhmKid(name: 'kid')).save(failOnError: true, flush: true)
@@ -71,6 +81,17 @@ class InverseHasManyCompositeIdentifierOrderSpec extends Specification {
         IhmParent.withNewSession {
             IhmParent.findByZetaAndAlpha('z', 'a').kids*.name == ['kid']
         }
+
+        and: 'the collection is loaded by the columns of the to-one side, in the same order'
+        ordered.metadata.getCollectionBinding(IhmParent.name + '.kids').key.columns*.name ==
+                ForeignKeyPairs.of(ordered, 'IHM_KID')['ihm_parent']*.first()
+
+        cleanup:
+        ordered?.close()
+
+        where:
+        classes << [IhmParent, IhmKid].permutations()
+        order = classes*.simpleName.join(', ')
     }
 }
 

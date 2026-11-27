@@ -16,36 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import groovy.transform.CompileStatic;
-import org.codehaus.groovy.transform.trait.Traits;
-import org.hibernate.boot.spi.AccessType;
-import org.hibernate.mapping.Property;
-import org.hibernate.mapping.Value;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.transform.trait.Traits
+import org.hibernate.boot.spi.AccessType
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.Value
 
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher;
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.reflect.EntityReflector
+import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher
 
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class PropertyBinder {
 
-    private final CascadeBehaviorFetcher cascadeBehaviorFetcher;
+    private final CascadeBehaviorFetcher cascadeBehaviorFetcher
 
     PropertyBinder(CascadeBehaviorFetcher cascadeBehaviorFetcher) {
-        this.cascadeBehaviorFetcher = cascadeBehaviorFetcher;
+        this.cascadeBehaviorFetcher = cascadeBehaviorFetcher
     }
 
     PropertyBinder() {
-        this(new CascadeBehaviorFetcher());
+        this(new CascadeBehaviorFetcher())
     }
 
     /**
@@ -77,44 +74,44 @@ class PropertyBinder {
      * @return The Hibernate property
      */
     Property bindProperty(HibernatePersistentProperty persistentProperty, Value value) {
-        Property prop = new Property();
-        prop.setValue(value);
+        Property prop = new Property()
+        prop.setValue(value)
         // set the property name
-        prop.setName(persistentProperty.getName());
-        PropertyConfig config = persistentProperty.getHibernateMappedForm();
+        prop.setName(persistentProperty.getName())
+        PropertyConfig config = persistentProperty.getHibernateMappedForm()
         if (config == null) {
-            config = new PropertyConfig();
+            config = new PropertyConfig()
         }
 
         // The mapping's insertable/updatable flags; the value's columns can only narrow them further, below. The
         // many-to-one side of a bidirectional list mapping is left to its columns, as it always was.
-        boolean insertable = true;
-        boolean updatable = true;
+        boolean insertable = true
+        boolean updatable = true
         if (!(persistentProperty instanceof HibernateAssociation &&
                 ((HibernateAssociation) persistentProperty).isBidirectionalManyToOneWithListMapping(prop))) {
-            insertable = config.getInsertable();
-            updatable = config.getUpdatable();
+            insertable = config.getInsertable()
+            updatable = config.getUpdatable()
         }
 
         prop.propertyAccessorName = accessorName(persistentProperty)
 
-        prop.setOptional(persistentProperty.isNullable());
+        prop.setOptional(persistentProperty.isNullable())
         // No enum type is excluded here on its own account: a plain scalar enum property is never an
         // Association, so instanceof Association<?> already excludes it. A hasMany-of-enum collection IS
         // an Association (Basic), and CascadeBehaviorFetcher already dispatches Basic -> ALL correctly,
         // so it must go through the same path as every other collection type.
         if (persistentProperty instanceof Association) {
-            prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour((Association) persistentProperty));
+            prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour((Association) persistentProperty))
         }
 
         // Use centralized laziness determination
-        prop.setLazy(persistentProperty.isLazy());
+        prop.setLazy(persistentProperty.isLazy())
 
         // An explicit false in the mapping is honoured, and a value without insertable/updatable columns
         // (a formula, a collection, an inverse side) is never written.
-        prop.setInsertable(insertable && value.hasAnyInsertableColumns());
-        prop.setUpdatable(updatable && value.hasAnyUpdatableColumns());
+        prop.setInsertable(insertable && value.hasAnyInsertableColumns())
+        prop.setUpdatable(updatable && value.hasAnyUpdatableColumns())
 
-        return prop;
+        return prop
     }
 }

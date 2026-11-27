@@ -23,9 +23,17 @@ To use this library in your project, add the following dependency to the
 For Grails applications
 
 [source,groovy,subs="attributes"]
-compile "org.grails.plugins:gorm-graphql-plugin:{version}"
+implementation "org.apache.grails:grails-data-graphql:{project-version}"
+
+The version can be omitted when the Grails BOM manages the dependencies of the
+application, which is the case for applications created with Grails Forge.
+
+New applications can also select the `gorm-graphql` feature in
+https://grails.apache.org/start/[Grails Forge], or pass `--features=gorm-graphql`
+to the `create-app` or `create-restapi` command of the Forge CLI, and the
+dependency is added to the generated build for you.
 
 For standalone projects
 
 [source,groovy,subs="attributes"]
-compile "org.grails:gorm-graphql:{version}"
+implementation "org.apache.grails.data:grails-data-graphql-core:{project-version}"

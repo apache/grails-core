@@ -51,6 +51,9 @@ security {
     // Also consider using fii.rejectPublicInvocations = true
     rejectIfNoRule = true
 
+    // respond with 503 to requests received before the application has started
+    rejectRequestsDuringStartup = true
+
     // hierarchical roles
     roleHierarchy = ''
 
@@ -129,6 +132,15 @@ security {
     // requestCache
     requestCache {
         createSession = true
+        // what browsers and their tools request on their own, which Spring Security's DSL does not save either
+        ignoredPatterns = [
+                '/favicon.*',
+                '/apple-touch-icon*.png',
+                '/manifest.json',
+                '/manifest.webmanifest',
+                '/browserconfig.xml',
+                '/.well-known/appspecific/com.chrome.devtools.json'
+        ]
     }
 
     // redirectStrategy

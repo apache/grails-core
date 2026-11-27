@@ -123,3 +123,18 @@ for (fieldName in modifiedFieldNames) {
 }
 ----
 
+==== Dirty Checking and Abstract Base Classes
+
+A domain class can extend an abstract base class defined in a source location other than `grails-app/domain`. GORM only tracks changes to properties of such a base class if the base class is annotated with `@DirtyCheck`:
+
+[source,groovy]
+----
+import grails.gorm.dirty.checking.DirtyCheck
+
+@DirtyCheck
+abstract class BaseDomainObject {
+    String baseClassField
+}
+----
+
+Without the annotation, changes to the inherited properties are not tracked: `isDirty()` and `getDirtyPropertyNames()` do not report them, and because GORM uses this tracking to decide whether an instance needs updating, a change to an inherited property alone is not saved. A base class that is itself a domain class does not need the annotation.

@@ -81,6 +81,16 @@ But this query with throw an exception due to a missing tenant id:
 Book.find("MATCH (p:Book) WHERE p.title={title} RETURN p", [name:"The Stand"])
 ----
 
+Lookups by id are restricted to the current tenant as well. `get`, `read`, `exists` and `getAll` find no node of another tenant, and the proxy returned by `load` fails to initialize for one, as it does for an id that does not exist:
+
+[source,groovy]
+----
+// null if the book belongs to another tenant
+Book.get(id)
+----
+
+Without a current tenant a lookup by id throws `TenantNotFoundException`, as a query does. A tenant id of `default` restricts a lookup by id to that tenant as it restricts a query.
+
 When an instance is saved, GORM sets its `tenantId` to the current tenant id, also when that tenant id is `default`, the name of the default connection source. Only inside `Tenants.withoutId` or a method annotated with `@WithoutTenant` does an instance keep the `tenantId` that is set on it.
 
 Also if you obtain the driver directly the the tenant id will not be included in the query:

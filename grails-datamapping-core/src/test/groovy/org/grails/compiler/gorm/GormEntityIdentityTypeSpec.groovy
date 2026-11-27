@@ -105,6 +105,63 @@ class GormEntityIdentityTypeSpec extends Specification {
         bookClass.getDeclaredField('version').type == Long
     }
 
+    void 'inherited explicit identity and version types are preserved'() {
+        given:
+        System.setProperty(GormEntityTransformation.DEFAULT_ID_TYPE_PROPERTY, setting)
+        def loader = new GroovyClassLoader()
+        def entity = loader.parseClass('''
+            import grails.gorm.annotation.Entity
+
+            @Entity
+            class InheritedIdentity extends PlainIdentity { }
+
+            abstract class PlainIdentity {
+                String id
+                Integer version
+            }
+        ''')
+
+        expect:
+        entity.getMethod('getId').returnType == String
+        entity.getMethod('getVersion').returnType == Integer
+        !entity.declaredFields*.name.contains('id')
+        !entity.declaredFields*.name.contains('version')
+
+        cleanup:
+        loader.close()
+
+        where:
+        setting << ['long', 'native']
+    }
+
+    void 'identity settings do not cause fields to leak into plain superclasses'() {
+        given:
+        System.setProperty(GormEntityTransformation.DEFAULT_ID_TYPE_PROPERTY, setting)
+        def loader = new GroovyClassLoader()
+        def entity = loader.parseClass('''
+            import grails.gorm.annotation.Entity
+
+            @Entity
+            class GeneratedIdentity extends PlainDetails { }
+
+            abstract class PlainDetails {
+                String name
+            }
+        ''')
+
+        expect:
+        entity.getDeclaredField('id').type == Long
+        entity.getDeclaredField('version').type == Long
+        !entity.superclass.declaredFields*.name.contains('id')
+        !entity.superclass.declaredFields*.name.contains('version')
+
+        cleanup:
+        loader.close()
+
+        where:
+        setting << ['long', 'native']
+    }
+
     private static Class<?> compileBook(String declaredId = '') {
         new GroovyClassLoader().parseClass("""
             import grails.gorm.annotation.Entity

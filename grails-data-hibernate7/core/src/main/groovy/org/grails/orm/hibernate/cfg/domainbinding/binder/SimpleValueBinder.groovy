@@ -16,37 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.binder;
+package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import groovy.transform.CompileStatic;
-import jakarta.annotation.Nonnull;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.Formula;
-import org.hibernate.mapping.SimpleValue;
-import org.hibernate.mapping.Table;
-import org.jspecify.annotations.NonNull;
+import groovy.transform.CompileStatic
+import jakarta.annotation.Nonnull
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.DependantValue
+import org.hibernate.mapping.Formula
+import org.hibernate.mapping.SimpleValue
+import org.hibernate.mapping.Table
+import org.jspecify.annotations.NonNull
 
-import org.grails.datastore.mapping.model.types.TenantId;
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator;
+import org.grails.datastore.mapping.model.types.TenantId
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['PMD.NullAssignment', 'UnnecessarySemicolon'])
 @CompileStatic
 class SimpleValueBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
-    private final ColumnBinder columnBinder;
-    private final BasicValueCreator basicValueCreator;
+    private final MetadataBuildingContext metadataBuildingContext
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder
+    private final ColumnBinder columnBinder
+    private final BasicValueCreator basicValueCreator
 
     /** Private constructor that accepts all collaborators. */
     private SimpleValueBinder(
@@ -54,10 +51,10 @@ class SimpleValueBinder {
             ColumnConfigToColumnBinder columnConfigToColumnBinder,
             ColumnBinder columnBinder,
             BasicValueCreator basicValueCreator) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
-        this.columnBinder = columnBinder;
-        this.basicValueCreator = basicValueCreator;
+        this.metadataBuildingContext = metadataBuildingContext
+        this.columnConfigToColumnBinder = columnConfigToColumnBinder
+        this.columnBinder = columnBinder
+        this.basicValueCreator = basicValueCreator
     }
 
     SimpleValueBinder(
@@ -67,17 +64,17 @@ class SimpleValueBinder {
         this(
                 metadataBuildingContext,
                 new ColumnConfigToColumnBinder(),
-                new ColumnBinder(namingStrategy, jdbcEnvironment.getDialect()),
-                new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy));
+                new ColumnBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment.getDialect()),
+                new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy))
     }
 
     BasicValue bindBasicValue(
             @NonNull HibernatePersistentProperty property,
             HibernatePersistentProperty parentProperty,
             String path) {
-        BasicValue basicValue = basicValueCreator.bindBasicValue(property);
-        bindSimpleValue(property, parentProperty, basicValue, path);
-        return basicValue;
+        BasicValue basicValue = basicValueCreator.bindBasicValue(property)
+        bindSimpleValue(property, parentProperty, basicValue, path)
+        return basicValue
     }
 
     SimpleValue bindSimpleValue(
@@ -86,35 +83,35 @@ class SimpleValueBinder {
             SimpleValue simpleValue,
             String path) {
 
-        PropertyConfig propertyConfig = property.getHibernateMappedForm();
-        String typeName = property.getTypeName(simpleValue);
-        simpleValue.setTypeName(typeName);
-        simpleValue.setTypeParameters(property.getTypeParameters(simpleValue));
+        PropertyConfig propertyConfig = property.getHibernateMappedForm()
+        String typeName = property.getTypeName(simpleValue)
+        simpleValue.setTypeName(typeName)
+        simpleValue.setTypeParameters(property.getTypeParameters(simpleValue))
 
         if (propertyConfig.isDerived() && !(property instanceof TenantId)) {
-            Formula formula = new Formula();
-            formula.setFormula(propertyConfig.getFormula());
-            simpleValue.addFormula(formula);
+            Formula formula = new Formula()
+            formula.setFormula(propertyConfig.getFormula())
+            simpleValue.addFormula(formula)
         } else {
-            Table table = simpleValue.getTable();
+            Table table = simpleValue.getTable()
 
-            List<ColumnConfig> columnConfigs = propertyConfig.getColumns();
+            List<ColumnConfig> columnConfigs = propertyConfig.getColumns()
             if (columnConfigs == null || columnConfigs.isEmpty()) {
-                columnConfigs = [null];
+                columnConfigs = [null]
             }
             for (ColumnConfig cc : columnConfigs) {
-                Column column = new Column();
-                columnConfigToColumnBinder.bindColumnConfigToColumn(column, cc, propertyConfig);
-                columnBinder.bindColumn(property, parentProperty, column, cc, path, table, typeName);
+                Column column = new Column()
+                columnConfigToColumnBinder.bindColumnConfigToColumn(column, cc, propertyConfig)
+                columnBinder.bindColumn(property, parentProperty, column, cc, path, table, typeName)
                 if (simpleValue instanceof DependantValue) {
-                    column.setNullable(true);
+                    column.setNullable(true)
                 }
                 if (table != null) {
-                    table.addColumn(column);
+                    table.addColumn(column)
                 }
-                simpleValue.addColumn(column);
+                simpleValue.addColumn(column)
             }
         }
-        return simpleValue;
+        return simpleValue
     }
 }

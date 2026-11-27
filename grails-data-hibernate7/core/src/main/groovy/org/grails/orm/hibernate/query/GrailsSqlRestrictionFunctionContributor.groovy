@@ -34,7 +34,9 @@ class GrailsSqlRestrictionFunctionContributor implements FunctionContributor {
     void contributeFunctions(FunctionContributions functionContributions) {
         functionContributions.functionRegistry.register(
                 GrailsSqlRestrictionFunction.NAME,
-                new GrailsSqlRestrictionFunction(functionContributions.typeConfiguration))
+                new GrailsSqlRestrictionFunction(
+                        functionContributions.typeConfiguration,
+                        SqlSyntax.forDialect(functionContributions.dialect)))
     }
 
 }

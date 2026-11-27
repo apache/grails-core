@@ -1,16 +1,16 @@
-package com.example.pojo.auction;
+package com.example.pojo.auction
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
 @CompileStatic
 class BuyNow extends Bid {
 
     boolean isBuyNow() {
-        return true;
+        return true
     }
 
     String toString() {
-        return super.toString() + " (buy now)";
+        return super.toString() + ' (buy now)'
     }
 
 }

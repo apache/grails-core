@@ -35,7 +35,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
  * is bound later in the first pass than the entity holding the key, so the sort could not run yet.
  */
 @CompileStatic
-@SuppressWarnings('PMD.NonSerializableClass')
 class CompositeForeignKeySecondPass implements SecondPass, Serializable {
 
     private static final long serialVersionUID = 4312279830117492651L

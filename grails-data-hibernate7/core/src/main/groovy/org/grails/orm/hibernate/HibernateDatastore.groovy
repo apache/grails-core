@@ -65,6 +65,7 @@ import org.springframework.util.ReflectionUtils
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.events.AutoTimestampEventListener
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
@@ -122,16 +123,9 @@ import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor
 /**
  * Datastore implementation that uses a Hibernate SessionFactory underneath.
  *
- * @author Graeme Rocher
  * @since 2.0
  */
 @CompileStatic
-@SuppressWarnings([
-    'PMD.CloseResource',
-    'PMD.DataflowAnomalyAnalysis',
-    'PMD.ConstructorCallsOverridableMethod',
-    'PMD.AvoidFieldNameMatchingMethodName'
-])
 class HibernateDatastore extends AbstractDatastore
         implements ApplicationContextAware,
                 Settings,
@@ -139,7 +133,8 @@ class HibernateDatastore extends AbstractDatastore
                 Closeable,
                 MessageSourceAware,
                 TransactionCapableDatastore,
-                MultipleConnectionSourceCapableDatastore {
+                MultipleConnectionSourceCapableDatastore,
+                AutoTimestampingDatastore {
 
     private static final Logger LOG = LoggerFactory.getLogger(HibernateDatastore)
 
@@ -262,7 +257,8 @@ class HibernateDatastore extends AbstractDatastore
         HibernateConnectionSourceSettings.HibernateSettings hibernateSettings = settings.hibernate
         this.osivReadOnly = hibernateSettings.osiv.readonly
         this.passReadOnlyToHibernate = hibernateSettings.isReadOnly()
-        this.isCacheQueries = hibernateSettings.cache.queries
+        Boolean cacheQueries = hibernateSettings.cache.queries
+        this.isCacheQueries = cacheQueries != null && cacheQueries
         this.failOnError = settings.isFailOnError()
         Boolean markDirty = settings.markDirty
         this.markDirty = markDirty != null && markDirty
@@ -437,7 +433,6 @@ class HibernateDatastore extends AbstractDatastore
         this(new ClasspathEntityScanner().scan(packageToScan))
     }
 
-    @SuppressWarnings('PMD.NullAssignment')
     protected HibernateDatastore(
             MappingContext mappingContext,
             SessionFactory sessionFactory,
@@ -1001,6 +996,7 @@ class HibernateDatastore extends AbstractDatastore
         return eventTriggeringInterceptor
     }
 
+    @Override
     AutoTimestampEventListener getAutoTimestampEventListener() {
         return autoTimestampEventListener
     }

@@ -332,11 +332,11 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
 
             @Override
             RecordComponentVisitor visitRecordComponent(String name, String descriptor, String signature) {
-                model.properties[name] = new PropertyModel(
+                model.properties.put(name, new PropertyModel(
                         name: name,
                         type: fieldType(descriptor, signature),
                         constructorBound: true,
-                        readable: true)
+                        readable: true))
                 null
             }
 
@@ -360,10 +360,10 @@ abstract class GenerateConfigurationMetadataTask extends DefaultTask {
                             boolean implicit = (parameterAccess & (Opcodes.ACC_SYNTHETIC | Opcodes.ACC_MANDATED)) != 0
                             int typeIndex = implicitParametersOmitted ? parameterIndex - implicitParameters : parameterIndex
                             if (parameterName && !implicit && typeIndex < argumentTypeNames.size()) {
-                                constructor.properties[parameterName] = new PropertyModel(
+                                constructor.properties.put(parameterName, new PropertyModel(
                                         name: parameterName,
                                         type: argumentTypeNames[typeIndex],
-                                        constructorBound: true)
+                                        constructorBound: true))
                             }
                             if (implicit) {
                                 implicitParameters++

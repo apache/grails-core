@@ -33,6 +33,7 @@ class UserService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User.findByUsername(username, [fetch: [roles: 'join']]) ?: { throw new UsernameNotFoundException(username) }()
+        Optional.ofNullable(User.findByUsername(username, [fetch: [roles: 'join']]))
+                .orElseThrow { new UsernameNotFoundException(username) }
     }
 }

@@ -47,6 +47,22 @@ class OpenApiSpec extends ApplicationContextSpec implements CommandOutputFixture
         template.contains('implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui"')
     }
 
+    void 'keeps the Swagger UI webjar out of the asset pipeline'() {
+        when:
+        String template = new BuildBuilder(beanContext)
+                .features(['openapi', 'asset-pipeline-grails'])
+                .render()
+
+        then: 'springdoc serves Swagger UI from the webjar, and assetCompile fails trying to minify its bundles'
+        template.contains('''
+    excludes = [
+            'webjars/jquery/**',
+            'webjars/bootstrap/**',
+            'webjars/bootstrap-icons/**',
+            'webjars/swagger-ui/**',
+    ]''')
+    }
+
     void 'does not serve the document or Swagger UI in production'() {
         when:
         GeneratorContext ctx = buildGeneratorContext(['openapi'])

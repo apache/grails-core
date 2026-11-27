@@ -53,6 +53,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.PrimaryKeyValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SharedJoinTableUniqueKeyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ToManyEntityMultiTenantFilterBinder
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyInverseValuesBinder
@@ -67,7 +68,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
  * @since 8.0
  */
 @CompileStatic
-@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class CollectionBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(CollectionBinder)
@@ -120,7 +120,7 @@ class CollectionBinder {
                         new ColumnConfigToColumnBinder()))
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(
                 new CollectionKeyColumnUpdater(new CollectionKeyBinder(
-                        new BidirectionalOneToManyLinker(grailsPropertyResolver),
+                        new BidirectionalOneToManyLinker(grailsPropertyResolver, compositeIdentifierToManyToOneBinder),
                         new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
                         simpleValueColumnBinder,
                         new PrimaryKeyValueCreator(metadataBuildingContext))),
@@ -129,7 +129,8 @@ class CollectionBinder {
                 new BidirectionalMapElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
                 new ManyToOneElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
                 new HibernateToManyEntityOrderByBinder(),
-                new ToManyEntityMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy))
+                new ToManyEntityMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy)),
+                new SharedJoinTableUniqueKeyBinder(metadataBuildingContext)
         )
         this.listSecondPassBinder = new ListSecondPassBinder(
                 metadataBuildingContext, namingStrategy, collectionSecondPassBinder, simpleValueColumnBinder, mappings)

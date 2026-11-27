@@ -29,7 +29,7 @@ def query = Book.where {
 
 Note that no query is actually executed directly, instead the `where(Closure)` method returns an instance of link:../api/grails/gorm/rx/DetachedCriteria.html[DetachedCriteria].
 
-Like an `rx.Observable`, the `DetachedCriteria` class can be subscribed to:
+The `DetachedCriteria` class is an `io.reactivex.rxjava3.core.ObservableSource`, so it composes with any RxJava 3 operator, for example through `Observable.wrap(..)`. Execute one of its query methods to invoke the query and subscribe to the `io.reactivex.rxjava3.core.Observable` it returns:
 
 
 [source,groovy]
@@ -37,12 +37,15 @@ Like an `rx.Observable`, the `DetachedCriteria` class can be subscribed to:
 Book.where {
     title == 'The Stand'
 }
+.findAll()
 .subscribe { Book book ->
     println "Title = ${book.title}"
 }
 ----
 
-Alternatively you can execute one of the query methods to invoke the query and return an `rx.Observable`:
+NOTE: A closure cannot be subscribed to an `ObservableSource` directly, because `io.reactivex.rxjava3.core.Observer` has four methods. Subscribe to the `Observable` a query method returns, as above, or pass the criteria to `Observable.wrap(..)`.
+
+The other query methods invoke the query and return an `io.reactivex.rxjava3.core.Observable` too:
 
 
 [source,groovy]

@@ -84,7 +84,8 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
                 setter = new SetterMethodImpl(containerJavaType, propertyName, writeMethod);
             }
             else {
-
+                // Groovy generates the trait field as private, and Hibernate's field accessors do not make it accessible
+                ReflectionUtils.makeAccessible(field);
                 getter = new GetterFieldImpl(containerJavaType, propertyName, field);
                 setter = new SetterFieldImpl(containerJavaType, propertyName, field);
             }
