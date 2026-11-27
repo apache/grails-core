@@ -1559,6 +1559,16 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         throw t;
     }
 
+    /**
+     * Closes the session this builder opened when a call fails, unless the builder already closed it for this
+     * failure. A session of the caller that the builder only participates in is left as it is.
+     */
+    void closeSessionAfterFailure() {
+        if (!participate && TransactionSynchronizationManager.hasResource(sessionFactory)) {
+            closeSession();
+        }
+    }
+
     @SuppressWarnings("PMD.NullAssignment")
     private void closeSessionFollowingException() {
         closeSession();

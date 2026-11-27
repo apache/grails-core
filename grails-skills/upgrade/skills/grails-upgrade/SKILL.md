@@ -1583,6 +1583,11 @@ Apply this part when the application is on Grails 7 or on Grails 8.0.0.
 
 - Collection criteria such as `isNotEmpty`, `isEmpty`, or `sizeEq` resolve properly to the parent collection property even when placed adjacent to an association block of the same name. Applications that reordered criteria or replaced `isEmpty('pets')` with a size projection to work around earlier 8.0 `ClassCastException` issues can retain standard criteria syntax.
 
+## GORM for Hibernate 7: Query Arguments and Criteria get
+
+- `readOnly`, `fetchSize`, `timeout` and `flushMode` now apply to criteria queries (`where`, `findAll(args) { }`, dynamic finders with a map, `withCriteria(args)`, `createCriteria().list(args)`), as they do with Hibernate 5; before, Hibernate 7 ignored them there. A `fetchSize` or `timeout` that is not a whole number throws `IllegalArgumentException`.
+- `createCriteria().get { }` throws `NonUniqueResultException` when several rows match; on 8.0.0 it returned the first. To keep the first row, add an `order` and `maxResults(1)` to the closure.
+
 ## Map Entries Named `properties` or `metaClass`
 
 - **A map entry named `properties` or `metaClass` is not reachable as a property or by subscript, on any `Map`.** In Groovy 4 `map.properties` and `map['properties']` read the map entry. In Groovy 5 both return the Groovy meta-properties of the map object, in dynamic and in statically compiled code alike, and `map['properties'] = value` throws `groovy.lang.ReadOnlyPropertyException`. `metaClass` reads the same way; assigning to it through a subscript sets the metaclass of the map, as it did in Groovy 4, and a value that is not a `MetaClass` throws `groovy.lang.GroovyCastException`. `class` and `empty` are exempt and still address the entry. Search for maps holding data the application does not control, such as the `properties` member of a GeoJSON `Feature`, and read these keys with `get('properties')`. Grails stores and loads them through the `Map` API, so they round-trip through a `Map` property or an embedded map of a GORM for MongoDB entity, and through data binding of a `Map` property, whether the value arrives as a nested map or as an indexed key such as `attributes[properties]`.
