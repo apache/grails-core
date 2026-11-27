@@ -1583,7 +1583,7 @@ None for an application. A test that asserts the line of a GSP error asserts the
 
 ==== 32. Compiled Tools Carry a Descriptor, and Tool Tasks Take Arguments One at a Time
 
-NOTE: Notes 32 to 39, 41 to 55, 63 to 66 and 71 to 73 are about the command line. Grails 9 has one `grails` command, which is not the Grails shell of Grails 8, and it has no profiles. To translate a command line of Grails 8, start at <<cliMappingGrails8,note 55>>: its tables have every command of the Grails shell and of its profiles, every command and option of the Grails Forge command line, and every command and script of the plugins of the framework, each with what it is in Grails 9, and the rules for the environment, the options and the exit codes. The other notes say why, and what else differs.
+NOTE: Notes 32 to 39, 41 to 55, 63 to 66 and 71 to 74 are about the command line. Grails 9 has one `grails` command, which is not the Grails shell of Grails 8, and it has no profiles. To translate a command line of Grails 8, start at <<cliMappingGrails8,note 55>>: its tables have every command of the Grails shell and of its profiles, every command and option of the Grails Forge command line, and every command and script of the plugins of the framework, each with what it is in Grails 9, and the rules for the environment, the options and the exit codes. The other notes say why, and what else differs.
 
 Compiling a tool, in `src/cli` or `src/standalone` of an application or a plugin, or in the deprecated `grails-app/commands` (note 46), now also writes the file `META-INF/grails-tools/<class name>.json` into the compiled classes, beside `META-INF/grails-cli.factories`. It holds the name and the description of the tool and how it is run, and it goes wherever the compiled classes of the tool go, as the registration already does: into the jar of a plugin's `-cli` or `-cli-standalone` companion, and never into the archive of an application or the jar of a plugin (note 63). The new `grailsToolCatalog` task lists the tools of a project from these files, into `.grails/cache/tool-catalog.json` in the directory of the project, without loading a class. See xref:commandLine#creatingTools[Creating Tools].
 
@@ -2048,8 +2048,8 @@ A tool that reads `applicationContext` and no longer starts the application find
 * *When something a standalone tool is made from was changed, the build runs once, and then the tool.* After a change to `build.gradle`, `settings.gradle` or `gradle.properties`, or to a source of `src/standalone`, `grails <name>` says so in one line, runs the Gradle task `grailsStandaloneTools`, which compiles `src/standalone` and not the application, and then starts the tool. A change to the application or to `src/cli` does not make the build run first. Nothing is run that is older than its sources.
 * *What is started has to be yours.* `.grails/cache/tool-catalog.json`, `.grails/cache/standalone-tools.json` and their directories have to be owned by you, be no links and not be writable by everybody, and every entry of the class path has to be in the build of the project, in the Gradle user home or in `~/.m2/repository`, owned by you or by root, and not writable by everybody, with every directory on the way. Otherwise `grails <name>` starts nothing, runs no Gradle, ends with exit code 1 and names what is wrong; `grails run-tool <name>` runs the tool with the build. A directory named in `GRAILS_SAFE_DIRECTORY` is used whoever owns it (note 49).
 * *The environment of a tool is `development`.* `grails prod dbm-update` is `grails run-tool -Dgrails.env=production dbm-update`, with the option in front of the name of the tool that is run, or `./gradlew -Dgrails.env=production runTool --arg=dbm-update`. After the name everything is an argument of the tool: `grails dbm-update -Dgrails.env=production` runs it in `development` with the option as an argument, and a warning on the standard error says so and names the form above.
-* *`help` shows the usage of a tool only where the tool declares it.* For a tool of the application or of a plugin `grails help <name>` has its description, where it comes from and how it is run, and its options and parameters where the tool declares them (note 72); a tool of Grails 8 declares none, so its arguments are not shown and nothing completes them. For a script it has no description. `grails help <name>` runs nothing; `grails <name> --help` gives `--help` to the tool and runs it.
-* *Everything after the name goes to the tool*, `--help` and `-x` included.
+* *`help` shows the usage of a tool only where the tool declares it.* For a tool of the application or of a plugin `grails help <name>` has its description, where it comes from and how it is run, and its options and parameters where the tool declares them (note 72); a tool of Grails 8 declares none, so its arguments are not shown and nothing completes them. For a script it has no description. `grails help <name>` runs nothing. `grails <name> --help` shows the same help for a tool that declares its options or parameters, and runs nothing; it gives `--help` to a tool that declares none, and runs it.
+* *Everything after the name goes to the tool*, `--help` and `-x` included, held to the declarations of a tool that has them (note 72).
 * *The list is written also when the class path of the tools does not resolve.* A build that compiles a project writes the list of the tools of the application and its plugins also when the runtime class path, or `grailsCliClasspath`, does not resolve completely (a dependency that is not found, or two versions of one module that are both required). The compilation succeeds as it did in Grails 8, which never resolved the runtime class path to compile. The list then has the tools of what resolves and `complete` is `false`. A line of `diagnostics`, which the build also prints as a warning, names the class path and what Gradle could not resolve. `grails help` shows the line, a name that is none of the commands is refused with a line saying the list is not complete, and `grails project health` advises with `tool-catalog.incomplete`. Running the application, its tests or a tool still fails until the dependencies are corrected. To make a build fail on such a class path, run a task that resolves it, such as `./gradlew dependencies --configuration runtimeClasspath`.
 
 ===== Required Actions
@@ -2159,8 +2159,8 @@ An IDE integration or a tool that ran Grails commands by starting the class `org
 ** The commands of `grails` itself have `create-tool`, with the option `--standalone` and the parameter `TOOL-NAME`, and `run-tool`, which has `"aliases": ["run-command"]`. `create-command` and `run-command` are not entries of `commands` (5).
 ** *New:* a command of `grails` that has a name that still works and is deprecated, and warns when it is typed, has the member `deprecatedNames`, the list of those names: `["run-script"]` on `run-script` and `["run-command"]` on `run-tool`. The other commands do not have the member. A program that completes what can be typed offers the name of the command and not those (6).
 ** The values of `origin` are as they were; `registration` no longer has the value `legacy` (note 65), and has `descriptor`, `factories` and `script` (7).
-** *New:* every option and parameter of a command has the member `type`, the type of the value it takes: `string`, `integer` or `number`, and `map` for an option whose values are `name=value` pairs, as those of `-D`. A program that checks or completes a value goes by it, as `grails mcp` does for the input schemas of its tools (8).
-** *New:* a tool that declares them has the members `options` and `parameters`, described as those of a command are, with `type`; `hints`, the four booleans `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint` of its `@ToolHints`; `readsInput`, `true` for a tool that reads what is typed, which `--non-interactive` refuses (note 73); and `incomplete`, the list of what the compiler found it does not declare, of `description`, `arguments` and `hints`. Each is there only where the tool has it, after `deprecated` and before `commands`, so the members of a tool come in the order `name`, `aliases`, `description`, `project`, `origin`, `target`, `startsApplication`, `registration`, `deprecated`, `options`, `parameters`, `hints`, `readsInput`, `incomplete` and `commands`. A tool without `options` and `parameters` takes whatever it is given; one with them is held to them (note 72). A tool still has no `relations` (9).
+** *New:* every option and parameter of a command has the member `type`, after `arity`, the type of the value it takes: `boolean` for an option that takes no value, `map` for an option whose values are `name=value` pairs, as those of `-D`, and otherwise `string`, `integer` or `number`; a value of an enum is a `string` with its `choices`. A program that checks or completes a value goes by it, as `grails mcp` does for the input schemas of its tools (8).
+** *New:* a tool that declares them has the members `options` and `parameters`, with every member the options and parameters of a command have, `type` among them, and its options in the same order; `hints`, the four booleans `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint` of its `@ToolHints`; `readsInput`, `true` for a tool that reads what is typed, which `--non-interactive` refuses (note 73); and `incomplete`, the list of what the compiler found it does not declare, of `description`, `arguments` and `hints`. Each is there only where it says something, after `deprecated` and before `commands`, so the members of a tool come in the order `name`, `aliases`, `description`, `project`, `origin`, `target`, `startsApplication`, `registration`, `deprecated`, `options`, `parameters`, `hints`, `readsInput`, `incomplete` and `commands`. A tool without `options` and `parameters` takes whatever it is given; one with them is held to them (note 72). A tool still has no `relations` (9).
 ** The catalog the build writes is `.grails/cache/tool-catalog.json`, by the task `grailsToolCatalog`, and its array is `tools`. That matters only to a program that reads the file itself: `help --json` is the documented way to the tools of a project.
 ** A program that runs Gradle tasks and nothing else runs every tool with `runTool --arg=<name>`, which runs a standalone tool too, and `runCommand` still works. A program that starts the command line gets the faster start for a standalone tool, and its output is that of the tool and not of a build.
 * *The MCP Java SDK is a dependency of `grails-forge-cli`.* `org.apache.grails.forge:grails-forge-cli` brings `io.modelcontextprotocol.sdk:mcp`, with which `grails mcp` serves an AI agent (see xref:commandLine#mcp[Driving Grails from an AI Agent]), and with it Reactor (`io.projectreactor`) and Jackson 3 (`tools.jackson`), at the versions the Grails BOM manages, which are those of Spring AI. Nothing else of the command line uses them, so a program that calls `GrailsCli.execute` and never runs `mcp` can exclude the groups `io.modelcontextprotocol.sdk`, `io.projectreactor` and `tools.jackson`, as "Starting the Command Line from a Tool" in xref:commandLine[The Command Line] shows; `execute` refuses `mcp` in any case, with exit code 1, since the server needs the standard input and output of a process of its own. A program that starts the command line as a process gets the protocol on the standard output of `grails mcp` and nothing else, and the Grails wrapper writes its own messages to the standard error (note 71) (10).
@@ -2303,7 +2303,7 @@ What the tools do differently from the scripts:
 * *`create-functional-test`* is a command of `grails` in a REST API application or REST API plugin, where it writes a test that calls the application with the HTTP client of the JDK, and in a web application or web plugin whose record has a Geb feature, where it writes a Geb test: one that extends `ContainerGebSpec` with `geb-with-testcontainers`, which a web application has by default, and `GebSpec` with `geb-with-local-browsers`. The script of the Geb plugin only wrote a `GebSpec`. `create-functional-test BookSpec` writes `BookSpec.groovy`, where the script wrote `BookSpecSpec.groovy`, and a file that is there already is kept and fails the command unless `--force` is given. In a web application without a Geb feature it is no command: `grails feature add geb-with-testcontainers` adds the feature, and `grails project migrate` finds it in the build of an application that was not generated by Grails 9 (note 45).
 * *The templates of `create-job` and `create-functional-test`* that a project has under `src/main/templates/Job.groovy` and `src/main/templates/FunctionalSpec.groovy` are still used, as text in which `${className}` and the other names in braces are replaced (note 45). The templates of the Spring Security commands are still replaced by a file of the same name under `src/main/templates` of the project.
 
-*`query-tail` is new in Grails 9, and is a tool.* Grails 8 has no `query-tail`. Earlier builds of Grails 9 had it as a script that was run with `./gradlew runScriptCommand --arg=query-tail`; it is a tool of Grails Data now, run with `grails run-tool query-tail`, with `./gradlew runTool --arg=query-tail`, or as `grails query-tail`. It is a tool the build runs without the application (it declares `startsApplication = false`, note 46), because the build tells it where the build directory is: it reads the capture file a running application writes, and starts no second instance of that application. It takes the options the script took, and `--help` prints them. See link:conf.html#queryTail[Finding Query-Heavy Pages with query-tail].
+*`query-tail` is new in Grails 9, and is a tool.* Grails 8 has no `query-tail`. Earlier builds of Grails 9 had it as a script that was run with `./gradlew runScriptCommand --arg=query-tail`; it is a tool of Grails Data now, run with `grails run-tool query-tail`, with `./gradlew runTool --arg=query-tail`, or as `grails query-tail`. It is a tool the build runs without the application (it declares `startsApplication = false`, note 46), because the build tells it where the build directory is: it reads the capture file a running application writes, and starts no second instance of that application. It takes the options the script took, which it declares: `grails help query-tail` and `grails query-tail --help` list them, and it refuses any other (note 74). See link:conf.html#queryTail[Finding Query-Heavy Pages with query-tail].
 
 *`run-app --query-tail` is an option Grails Data declares.* The option that starts the application with capture on is not part of `run-app` itself: the command line artifact of Grails Data (`grails-datamapping-core-cli`) declares it, and it is an option of `run-app` in a project that has GORM once a build has compiled the project (`grails compile`, or any build). Earlier builds of Grails 9 had `--query-tail`, and `-query-tail` with one dash, built into `run-app`, and gave the build `-Pgrails.gorm.queryTail.enabled`; the option now gives it `-Dgrails.grails.gorm.queryTail.enabled=true`, which reaches the application as the same system property, `grails.gorm.queryTail.enabled=true`. `-query-tail` with one dash is gone. `./gradlew bootRun -Pgrails.gorm.queryTail.enabled` is unchanged.
 
@@ -2574,7 +2574,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`help`
 |the shell
-|Kept. `help NAME` for every command, without running it; `NAME --help` for the commands of `grails` itself, while a tool of the application or a plugin is given `--help` and run; `help --json` for a program (43).
+|Kept. `help NAME` for every command, without running it; `NAME --help` for the commands of `grails` itself and for a tool that declares its options or parameters, while a tool that declares none is given `--help` and run; `help --json` for a program (43, 72).
 
 |`install`
 |plugin projects
@@ -2765,11 +2765,11 @@ The Grails shell ran a command or a script of a plugin by its name as soon as th
 
 |`dbm-create-changelog`, `dbm-changelog-to-groovy` (Database Migration, Hibernate 5 and 7)
 |`grails NAME`, scripts
-|The three ways: they are tools of the plugin now (34).
+|The three ways: they are tools of the plugin now (34). They declare their options and parameters, and refuse others (74).
 
 |The 29 other `dbm-*` commands, which are listed below
 |`grails NAME`, `runCommand`
-|The three ways. Unchanged otherwise.
+|The three ways. They declare their options and parameters, and refuse others (74).
 
 |`url-mappings-report` (URL mappings)
 |`grails NAME`, `runCommand`
@@ -2781,19 +2781,19 @@ The Grails shell ran a command or a script of a plugin by its name as soon as th
 
 |`schema-export` (Hibernate 5 and 7)
 |`grails NAME`, `runCommand`
-|The three ways. Unchanged otherwise.
+|The three ways. It declares its option and parameters, and refuses others (74).
 
 |`generate-open-api` (OpenAPI)
 |`grails NAME`, `runCommand`
-|The three ways. Unchanged otherwise.
+|The three ways. It declares its options, and refuses others (74).
 
 |`generate-all`, `generate-controller`, `generate-views`, `generate-async-controller`, `generate-scaffold-all`, `create-scaffold-controller`, `create-scaffold-service` (scaffolding)
 |`grails NAME`, scripts; `runCommand`, commands that differed
-|The three ways; standalone tools, in `grails-scaffolding-cli-standalone` (46, 66). The scripts are removed and the tools do what the scripts did (41). `generate-all`, `generate-controller` and `generate-views` generate a REST controller and JSON views in a REST API project, and take `--views=json` or `--views=gsp` (42).
+|The three ways; standalone tools, in `grails-scaffolding-cli-standalone` (46, 66). The scripts are removed and the tools do what the scripts did (41). `generate-all`, `generate-controller` and `generate-views` generate a REST controller and JSON views in a REST API project, and take `--views=json` or `--views=gsp` (42). They declare their options and parameters, and refuse others (74).
 
 |`generate-service` (scaffolding)
 |`grails NAME`, `runCommand`
-|The three ways; a standalone tool (46, 41).
+|The three ways; a standalone tool (46, 41), which declares its option and parameter (74).
 
 |`install-templates` (scaffolding)
 |`grails install-templates`, a script
@@ -2801,7 +2801,7 @@ The Grails shell ran a command or a script of a plugin by its name as soon as th
 
 |`s2-quickstart`, `s2-create-persistent-token`, `s2-create-role-hierarchy-entry` (Spring Security Core)
 |`grails NAME`, scripts; `runCommand`, commands that differed
-|The three ways. `s2-quickstart` is run by the build without the application; the two others are standalone tools (46). The scripts are removed (54).
+|The three ways. `s2-quickstart` is run by the build without the application; the two others are standalone tools (46). The scripts are removed (54). They declare their options and parameters, and refuse others (74).
 
 |`s2-create-acl-domains` (Spring Security ACL)
 |`grails NAME`, a script
@@ -2809,11 +2809,11 @@ The Grails shell ran a command or a script of a plugin by its name as soon as th
 
 |`init-oauth2` (Spring Security OAuth2)
 |`grails init-oauth2`, a script; `runCommand` with `init-o-auth2`
-|The three ways, as `init-oauth2`; a standalone tool (46, 54).
+|The three ways, as `init-oauth2`; a standalone tool (46, 54), which declares its parameters (74).
 
 |`s2ui-override`, `s2ui-create-challenge-questions` (Spring Security UI)
 |`grails NAME`, scripts
-|The three ways; standalone tools (46, 54).
+|The three ways; standalone tools (46, 54), which declare their parameters (74).
 
 |`create-job` (Quartz)
 |`grails create-job`, a script of the plugin
@@ -2825,7 +2825,7 @@ The Grails shell ran a command or a script of a plugin by its name as soon as th
 
 |`query-tail` (Grails Data)
 |Not in Grails 8
-|The three ways. The build runs it without the application (46, 54).
+|The three ways. The build runs it without the application (46, 54). It declares its options (74).
 
 |A command of your own in `grails-app/commands`, or of a plugin in `src/cli/groovy`
 |`grails NAME`, `runCommand`
@@ -3331,18 +3331,19 @@ What the command line says is not changed by this: `update-wrapper` and the repl
 None for a project. A script or a job that reads the lines of the wrapper from its standard output, such as one that waits for `Updated wrapper to version:` or looks for `...The Grails CLI was not found in the overridden repository` (note 50), reads its standard error instead, or both.
 
 [[upgradingToolDeclarations]]
-==== 72. A Tool That Declares Its Options and Parameters Refuses Others, and the Tools of Grails Declare Theirs
+==== 72. A Tool That Declares Its Options and Parameters Is Held to Them
 
-A tool can declare what it takes and what it does: a `description` of one line, its options and parameters with `@ToolOption` and `@ToolParameter` of `org.apache.grails.core.cli` on its fields, what running it does with `@ToolHints`, and that it asks what is typed with `readsInput` (note 73). `help`, completion in interactive mode, `help --json` (note 51) and `grails mcp` read the declarations, and the fields are given their values before `handle()` runs. `create-tool` writes a tool that declares all of it. See "Options and Parameters" in xref:commandLine#creatingTools[Creating Tools].
+A tool can declare what it takes and what it does: a `description` of one line, its options and parameters with `@ToolOption` and `@ToolParameter` of `org.apache.grails.core.cli` on its fields, what running it does with `@ToolHints`, and that it asks what is typed with `readsInput` (note 73). `help`, completion in interactive mode, `help --json` (note 51) and `grails mcp` read the declarations, and the fields are given their values before `handle()` runs. `create-tool` writes a tool that declares all of it. See "Options and Parameters" in xref:commandLine#creatingTools[Creating Tools]. The tools of Grails declare theirs (note 74).
 
-* *A tool that declares an option or a parameter is held to its declarations.* An option it does not declare, a required option or parameter that is not given, a value that is not of the type of its field or not among its choices, and one argument more than its parameters take are refused before the tool runs, with exit code 2 and the line `| Error NAME: ... grails help NAME shows its options`. `grails NAME` checks this before it starts Gradle or the process of a standalone tool. `./gradlew runTool` and the task of a tool run the same check in the tool, which then does not run, and the task fails.
-* *The tools of Grails declare theirs.* The `dbm-*` tools of both lines of Hibernate, the tools of the Spring Security plugins and of scaffolding, `query-tail`, `schema-export`, `url-mappings-report`, `generate-open-api` and `config-report` declare their options and parameters, under the names they had: the `dbm-*` tools keep `--dataSource`, `--defaultSchema` and `--contexts`, written in camel case. A command line that gives one of them an option it does not have, which it used to ignore, or more arguments than it takes, now ends with exit code 2 and runs nothing.
-* *A tool of your own that declares nothing runs as before*, with every argument it is given. The compiler warns where it has no description, and where it reads its arguments (`args`, `executionContext.commandLine`) without declaring them; `grails project health` advises with `tools.description-missing`, `tools.arguments-undeclared` and `tools.hints-missing`. Neither fails a build.
+* *A tool that declares an option or a parameter is held to its declarations.* An option it does not declare, a value given to a switch, an option without the value it takes, a value that is not of the type of its field or not among its choices, an option given twice that cannot be, a required option or parameter that is not given, and an argument more than its parameters take end the tool before `handle()` runs, with the line `| Error NAME: <what>. grails help NAME shows its options` and exit code 2. This happens at the terminal, under `./gradlew runTool` and the task of the tool, and for a standalone tool alike: `grails NAME` checks the arguments before it starts Gradle or the process of a standalone tool, where the list of the tools the build wrote is current, and the tool itself checks them when it is started, with the same line.
+* *Its command line is read with its declarations.* A switch never takes the next argument as its value, `--` ends the options, an option that was given is found by each of its names (`hasOption('f')` and `hasOption('force')`), and `args` are the values of its parameters. `executionContext.commandLine.rawArguments` is what the tool was given, as before.
+* *`grails NAME --help` shows the help of the command line* for such a tool, as `grails help NAME` does, and runs nothing; so does `-h`, unless the tool declares `-h`. A tool cannot declare `--help`, `--version` or `-D`. A tool that declares nothing is given `--help` as before.
+* *A tool of your own that declares nothing runs as before*, with every argument it is given. The compiler warns where it has no description, and where it reads its arguments (`args`, `executionContext.commandLine`) without declaring them; `grails project health` advises with `tools.description-missing`, `tools.arguments-undeclared` and `tools.hints-missing`. Neither fails a build. The compiler prints its warnings when it compiles the tool, and not when the build takes the compiled classes from its build cache; `project health` and `grails help NAME` say what the tool lacks in both cases.
 
 ===== Required Actions
 
-* Run the scripts and jobs that call a tool of Grails with options, and correct an option that is now refused: `grails help NAME` lists the options and parameters each takes.
-* None for a tool of your own. When one is touched, give it a description, declare its options, its parameters and its `@ToolHints`, as `create-tool` writes them. Once it declares one option or parameter, declare every option it reads, since it refuses the others.
+* None for a tool of your own. When one is touched, give it a description, declare its options, its parameters and its `@ToolHints`, as `create-tool` writes them. Once it declares one option or parameter, declare every option it reads, also those it reads through `executionContext.commandLine`, which are declared on the class with `arity`: it refuses the others.
+* A script or a job that runs `grails NAME --help` of a tool that now declares its arguments gets the help of the command line, with exit code 0, and the tool does not run.
 * A template of the project at `src/main/templates/artifacts/Tool.groovy` or `StandaloneTool.groovy` writes tools without declarations: copy the templates of this version with `grails install-templates`, or add the declarations to it.
 
 [[upgradingToolReadsInput]]
@@ -3360,3 +3361,23 @@ The compiler warns about a tool that reads `System.in` or `System.console()` and
 
 * Declare `boolean readsInput = true` in a tool of your own that asks what is typed, where the compiler names one.
 * A script or a job that runs such a tool with `--non-interactive` ends with exit code 2 once the tool declares it. Have the tool take what it would ask as an option, and not ask.
+
+[[upgradingFrameworkToolDeclarations]]
+==== 74. The Tools of Grails Declare Their Arguments
+
+The tools Grails and its plugins ship declare the options and parameters they take, by the names they always had, and are held to them (note 72): `query-tail`, `generate-open-api`, the tools of the scaffolding plugin (`create-scaffold-controller`, `create-scaffold-service`, `generate-all`, `generate-async-controller`, `generate-controller`, `generate-scaffold-all`, `generate-service`, `generate-views`), the tools of the Spring Security plugins (`s2-quickstart`, `s2-create-persistent-token`, `s2-create-role-hierarchy-entry`, `init-oauth2`, `s2ui-create-challenge-questions`, `s2ui-override`), the tools of the Database Migration plugin (`dbm-*`, of both lines of Hibernate) and `schema-export` of the Hibernate plugin. `grails help NAME` lists what each takes.
+
+* *What a tool does not take ends it before it runs*, with exit code 2 and one line, as `| Error dbm-update: --datasource is not one of its options. grails help dbm-update shows its options`: an option it does not have, a value given to a switch, an option without the value it takes, a parameter it needs that is not given, such as the domain class of a scaffolding tool, and an argument more than it takes. A tool that starts the application ends before the application is started. Before, such arguments were ignored, or the tool failed after the application had started; the scaffolding tools said `No domain-class specified` and the Spring Security tools showed their usage, both with exit code 1; and `create-scaffold-controller`, `create-scaffold-service`, `generate-scaffold-all`, `generate-service` and `init-oauth2` ignored the arguments after the ones they take.
+* *A switch takes no value, and no longer takes the word after it.* `grails generate-views --force Book` generates the views of `Book`, where `Book` was the value of `--force` and the tool said `No domain-class specified`; `grails dbm-create-changelog --force changelog.groovy` replaces `changelog.groovy`, where the file name was the value of `--force`. `--force=true` is refused.
+* *An option is written with two hyphens*: `-force` is refused, where it was read as `--force`.
+* *`grails NAME --help` shows the help of the command line*, as `grails help NAME` does, and the tool does not run: `grails query-tail --help` lists the options of `query-tail`.
+* *The options of the `dbm-*` tools.* Every `dbm-*` tool takes `--dataSource`, `--defaultSchema` and `--contexts`, written in camel case. `--force` and `--add`, both switches, are taken by `dbm-changelog-to-groovy`, `dbm-create-changelog`, `dbm-diff`, `dbm-generate-changelog`, `dbm-generate-gorm-changelog` and `dbm-gorm-diff`; `--skip` by `dbm-previous-changeset-sql`; and `--verbose` by `dbm-status`, which takes its value, as `--verbose=false`: leave it out for the default, `true`. `dbm-generate-changelog --diffTypes` is accepted and, as before, not used. `dbm-mark-next-changeset-ran` takes no file name: it always updated the database, so a file name is now refused, and `dbm-mark-next-changeset-ran-sql FILE` writes the SQL instead.
+* *`schema-export`* takes `--datasource`, in lower case, and at most three parameters: the action, `stdout` and the file.
+* *`s2-quickstart --salt`* still fails with the reason it is no longer supported.
+
+`config-report`, `url-mappings-report`, `s2-create-acl-domains` and the `install-templates` tool of the scaffolding plugin take no arguments, declare none, and run as before. Every tool of Grails declares its hints, which `grails mcp` passes on to agents; `dbm-validate`, `query-tail` and `url-mappings-report` say that they change nothing.
+
+===== Required Actions
+
+* Run the scripts and jobs that call a tool of Grails with options and arguments, and correct what is now refused: `grails help NAME` lists the options and parameters each takes. Look for `--force FILE` and `--add FILE` (the file is now the parameter), a bare `--verbose` on `dbm-status`, `--datasource` in lower case on a `dbm-*` tool, `--dataSource` on `schema-export`, a file name given to `dbm-mark-next-changeset-ran`, and an option written with one hyphen.
+* Change a script that relies on an argument that was ignored, or on exit code 1 for a missing domain class or a missing argument.
