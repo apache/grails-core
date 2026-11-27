@@ -202,14 +202,22 @@ class QueryTailToolSpec extends Specification {
         out.text.readLines().last() == 'hooks left: 0'
     }
 
-    void "the command says what its options are"() {
-        when:
+    void "the command says what its options are by declaring them, which grails help shows, and --help is refused as an option of its own"() {
+        when: 'what the compiler wrote for the command, which grails help query-tail shows'
+        InputStream resource = QueryTailTool.classLoader.getResourceAsStream(ToolDescriptor.location(QueryTailTool.name))
+        ToolDescriptor.Described described = ToolDescriptor.read(QueryTailTool.name, resource.bytes)
+
+        then: 'every option, each with what it does'
+        described.declarations.options.collect { Map option -> option.names } == QueryTailTool.FLAGS.collect { String flag -> ["--${flag}".toString()] }
+        described.declarations.options.every { Map option -> option.description }
+
+        when: '--help, which the command line keeps for itself and a tool cannot declare'
         Map help = run(tempDir, 'query-tail', '--help')
 
-        then:
-        help.exit == 0
-        help.out.readLines().containsAll(QueryTailTool.USAGE)
-        QueryTailTool.FLAGS.every { String flag -> help.out.contains("--${flag}") }
+        then: 'the command is refused before it runs, and is told where its options are shown'
+        help.exit == 2
+        help.err.readLines().last() == '| Error query-tail: --help is not one of its options. grails help query-tail shows its options'
+        !help.out.contains('Usage: grails query-tail')
     }
 
     void "the command is listed by a build from its descriptor, as one the build runs without the application"() {

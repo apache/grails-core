@@ -100,7 +100,7 @@ $ ./gradlew runTool -Pargs="generate-all org.bookstore.Book"       <3>
 
 A file that is there already is kept: the command warns that it skips the file and goes on. With `--force` the file is replaced.
 
-Without a domain class the command says `No domain-class specified` and fails. With a `--views` that is neither `gsp` nor `json` it says what the option takes, writes nothing and fails. A domain class that is not found is named (`Domain class not found for name: ...`); the controllers and the views of the other classes are generated, and the command fails.
+Without a domain class, and with an option it does not have, the command is refused before it runs, with exit code 2 and one line, such as `| Error generate-all: DOMAIN-CLASS is required. grails help generate-all shows its options`. `grails help generate-all` lists the options and the parameter it takes. With a `--views` that is neither `gsp` nor `json` it says what the option takes, writes nothing and fails. A domain class that is not found is named (`Domain class not found for name: ...`); the controllers and the views of the other classes are generated, and the command fails.
 
 When the command fails, the Gradle task fails, and `grails` ends with exit code 1.
 

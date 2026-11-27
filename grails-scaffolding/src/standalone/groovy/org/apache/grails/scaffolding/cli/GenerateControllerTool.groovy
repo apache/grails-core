@@ -24,6 +24,9 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
 import org.apache.grails.core.cli.ToolSupport
 import org.grails.io.support.Resource
 
@@ -35,6 +38,12 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
+@ToolParameter(index = 0, label = 'DOMAIN-CLASS', arity = '1..*',
+        description = 'Domain classes of the project, each by its simple or its full name, or * for every domain class under grails-app/domain')
+@ToolOption(names = ['--force'], arity = '0', description = 'Replaces files that are there already')
+@ToolOption(names = ['--views'], arity = '1', label = 'VIEWS',
+        description = 'gsp or json: the kind of views the controller is for, in place of the kind the project is given by itself')
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false)
 class GenerateControllerTool implements StandaloneTool, ToolSupport, CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a controller that performs CRUD operations'

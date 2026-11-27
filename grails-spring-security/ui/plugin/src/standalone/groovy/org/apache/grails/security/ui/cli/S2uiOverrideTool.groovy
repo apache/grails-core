@@ -24,6 +24,8 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.util.GrailsNameUtils
 import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 import org.apache.grails.core.cli.ToolSupport
 import org.grails.io.support.Resource
 
@@ -36,9 +38,17 @@ import org.grails.io.support.Resource
  * {@code src/main/templates} at the same path is taken in its place. A controller that is there is kept, a GSP
  * that is there is written again.</p>
  *
+ * <p>The parameters are declared on the class, and the command reads them from its command line itself, which
+ * says which types there are: the type is not case-sensitive.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
+@ToolParameter(index = 0, label = 'TYPE', arity = '1',
+        description = 'What to copy, not case-sensitive: aclclass, aclentry, aclobjectidentity, aclsid, persistentlogin, register, registrationcode, requestmap, role, securityinfo, user, auth or layout')
+@ToolParameter(index = 1, label = 'CONTROLLER-PACKAGE', arity = '0..1', required = false,
+        description = 'The package of the controller that is written; required for every type but auth and layout, which take none')
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false)
 class S2uiOverrideTool implements StandaloneTool, ToolSupport, CommandLineHelper {
 
     static final String USAGE_MESSAGE = '''

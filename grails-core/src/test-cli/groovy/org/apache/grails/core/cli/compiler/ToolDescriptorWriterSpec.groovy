@@ -34,6 +34,7 @@ import org.apache.grails.core.cli.GrailsTool
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ApplicationContextCommandRegistry
 import org.apache.grails.core.cli.ConfigReportTool
+import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
 import org.apache.grails.gradle.model.cli.ToolDescriptor
 import spock.lang.Specification
@@ -337,9 +338,13 @@ class ToolDescriptorWriterSpec extends Specification {
         given: 'the compiler does not describe a command of the module its transformation is in'
         ConfigReportTool command = new ConfigReportTool()
         InputStream resource = ConfigReportTool.classLoader.getResourceAsStream(ToolDescriptor.location(ConfigReportTool.name))
+        ToolHints hints = ConfigReportTool.getAnnotation(ToolHints)
+        Map<String, Boolean> declared = [readOnlyHint: hints.readOnlyHint(), destructiveHint: hints.destructiveHint(),
+                                         idempotentHint: hints.idempotentHint(), openWorldHint: hints.openWorldHint()]
 
-        expect:
-        resource.getText('US-ASCII') == ToolDescriptor.toJson(ConfigReportTool.name, command.name, command.description)
+        expect: 'with the hints its class declares, and no options or parameters, since it takes no arguments'
+        resource.getText('US-ASCII') == ToolDescriptor.toJson(ConfigReportTool.name, command.name, command.description,
+                ToolDescriptor.TARGET_APPLICATION, command.startsApplication, [], new ToolDescriptor.Declarations(null, null, declared, false, null))
         ToolDescriptor.isCommandName(command.name)
         ToolDescriptor.isDescription(command.description)
     }

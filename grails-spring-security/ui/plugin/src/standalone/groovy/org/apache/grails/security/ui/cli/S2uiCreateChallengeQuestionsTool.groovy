@@ -24,6 +24,8 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 import org.apache.grails.core.cli.ToolSupport
 
 /**
@@ -35,9 +37,21 @@ import org.apache.grails.core.cli.ToolSupport
  * {@code grails-app/i18n/messages.properties}. A file that is there is kept; the two files that are added to are
  * added to each time the command runs.</p>
  *
+ * <p>The parameters are declared on the class, and the command reads them from its command line itself, which
+ * says what a number of questions that is none is.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
+@ToolParameter(index = 0, label = 'DOMAIN-CLASS-PACKAGE', arity = '1',
+        description = 'The package the domain class, the services and the controller of the challenge questions are created in')
+@ToolParameter(index = 1, label = 'CHALLENGE-QA-CLASS-NAME', arity = '1',
+        description = 'The name of the domain class that stores the questions and the answers, without a package')
+@ToolParameter(index = 2, label = 'USER-DOMAIN-CLASS-NAME', arity = '1',
+        description = 'The user class: its name, in the package of the domain class, or its full name')
+@ToolParameter(index = 3, label = 'NUMBER-OF-QUESTIONS', arity = '0..1', required = false,
+        description = 'How many questions a user answers, a whole number from 1; 2 when it is left out')
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false)
 class S2uiCreateChallengeQuestionsTool implements StandaloneTool, ToolSupport, CommandLineHelper {
 
     static final String USAGE_MESSAGE = '''

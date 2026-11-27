@@ -40,4 +40,4 @@ grails s2-create-persistent-token com.yourapp.PersistentLogin
 
 This creates the domain class in the specified package, and also registers the name in the configuration of the project, `grails-app/conf/application.groovy` or `grails-app/conf/application.yml` (see <<core-scripts>>), along with enabling persistent remember-me.
 
-The class name is given with its package. A class that already exists is kept and the settings are still added. The command fails without writing anything when it is given no class name, more than one, a name without a package, or an option.
+The class name is given with its package. A class that already exists is kept and the settings are still added. The command fails without writing anything when it is given no class name, more than one, a name without a package, or an option. No class name, more than one and an option are refused before the command runs, with exit code 2 and a line that names what is wrong.

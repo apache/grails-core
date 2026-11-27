@@ -24,6 +24,9 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
 import org.apache.grails.core.cli.ToolSupport
 
 /**
@@ -33,6 +36,14 @@ import org.apache.grails.core.cli.ToolSupport
  * @since 5.0.0
  */
 @CompileStatic
+@ToolParameter(index = 0, label = 'DOMAIN-CLASS', arity = '1',
+        description = 'The domain class, by its simple or its full name; one the project has no source of, as a domain class of a plugin, by its full name')
+@ToolOption(names = ['--service'], arity = '0', description = 'The controller uses the scaffolded service of the domain class')
+@ToolOption(names = ['--namespace'], arity = '1', label = 'NAMESPACE',
+        description = 'The namespace of the controller: its static namespace, the last part of its package and the directory it is written to')
+@ToolOption(names = ['--extends'], arity = '1', label = 'CLASS', description = 'The full name of the class the controller extends')
+@ToolOption(names = ['--force'], arity = '0', description = 'Replaces a file that is there already')
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false)
 class CreateScaffoldControllerTool implements StandaloneTool, ToolSupport, CommandLineHelper, SkipBootstrap {
 
     String description = 'Creates a scaffolded controller'

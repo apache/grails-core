@@ -75,7 +75,7 @@ $ ./gradlew runTool -Pargs="generate-async-controller org.bookstore.Book"       
 
 A file that is there already is kept: the command warns that it skips the file and goes on. With `--force` the file is replaced.
 
-Without a domain class the command says `No domain-class specified` and fails. A domain class that is not found is named (`Domain class not found for name: ...`); the files of the other classes are generated, and the command fails.
+Without a domain class, and with an option it does not have, the command is refused before it runs, with exit code 2 and one line, such as `| Error generate-async-controller: DOMAIN-CLASS is required. grails help generate-async-controller shows its options`. `grails help generate-async-controller` lists the options and the parameter it takes. A domain class that is not found is named (`Domain class not found for name: ...`); the files of the other classes are generated, and the command fails.
 
 When the command fails, the Gradle task fails, and `grails` ends with exit code 1.
 

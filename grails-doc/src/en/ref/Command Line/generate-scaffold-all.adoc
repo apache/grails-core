@@ -76,7 +76,7 @@ $ ./gradlew runTool -Pargs="generate-scaffold-all org.bookstore.Book"       <3>
 
 A file that is there already is kept: the command warns that it skips the file and goes on. With `--force` the file is replaced.
 
-Without a domain class the command says `No domain-class specified` and fails.
+Without a domain class, with more than one, and with an option it does not have, the command is refused before it runs, with exit code 2 and one line, such as `| Error generate-scaffold-all: DOMAIN-CLASS is required. grails help generate-scaffold-all shows its options`. `grails help generate-scaffold-all` lists the options and the parameter it takes.
 
 When the command fails, the Gradle task fails, and `grails` ends with exit code 1.
 

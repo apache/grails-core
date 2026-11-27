@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
 import org.apache.grails.datastore.core.querytail.QueryTailSettings
 import org.grails.build.parsing.CommandLine
 import org.grails.config.CodeGenConfig
@@ -32,9 +34,24 @@ import org.grails.config.CodeGenConfig
  * application ({@code startsApplication} is {@code false}): a second instance of the application, with its data
  * source and its {@code BootStrap}, is not what reads a file.
  *
+ * <p>Its options ({@link #FLAGS}) are declared on the class, and the command reads them from its command line
+ * itself, as {@link QueryTailOptions#from} reads them, which says what a number of rows that is none is. It
+ * only reads the capture: it changes no file and no data.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
+@ToolOption(names = ['--statements'], arity = '0', description = 'Ranks the statements themselves instead of the pages that run them')
+@ToolOption(names = ['--stream'], arity = '0', description = 'Prints every statement as it runs, grouped by request, instead of a summary')
+@ToolOption(names = ['--page'], arity = '1', label = 'PAGE',
+        description = 'Only the statements of one page, as controller/action or a controller name')
+@ToolOption(names = ['--top'], arity = '1', label = 'ROWS', defaultValue = '30',
+        description = 'How many rows to show, a whole number from 0, where 0 shows all of them')
+@ToolOption(names = ['--all'], arity = '0', description = 'Reads what the application has run so far, not only what it runs from now on')
+@ToolOption(names = ['--once'], arity = '0', description = 'Prints the summary of what has been captured and ends')
+@ToolOption(names = ['--file'], arity = '1', label = 'PATH',
+        description = 'The capture file, a relative one read against the application directory; by default the one the application writes')
+@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false)
 class QueryTailTool implements ApplicationTool {
 
     boolean startsApplication = false

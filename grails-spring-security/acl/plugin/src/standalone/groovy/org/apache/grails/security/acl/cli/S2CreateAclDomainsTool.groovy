@@ -22,6 +22,7 @@ package org.apache.grails.security.acl.cli
 import groovy.transform.CompileStatic
 
 import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolSupport
 
 /**
@@ -30,11 +31,13 @@ import org.apache.grails.core.cli.ToolSupport
  * refer to them, and a class of the application replaces the class of the plugin that has its name.
  *
  * <p>Usage: {@code grails s2-create-acl-domains}, or {@code ./gradlew runTool -Pargs="s2-create-acl-domains"}.
- * The command takes no arguments. A class that is already in the project is kept as it is.</p>
+ * The command takes no arguments. A class that is already in the project is kept as it is, so the command only
+ * adds files, and a second run adds nothing.</p>
  *
  * @since 9.0
  */
 @CompileStatic
+@ToolHints(readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = false)
 class S2CreateAclDomainsTool implements StandaloneTool, ToolSupport {
 
     private static final List<String> DOMAIN_CLASSES = ['AclClass', 'AclEntry', 'AclObjectIdentity', 'AclSid']

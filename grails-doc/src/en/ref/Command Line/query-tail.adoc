@@ -39,7 +39,7 @@ grails query-tail --statements          // the statements themselves, the most r
 grails query-tail --page=book/show      // the statements of one page
 grails query-tail --stream              // every statement as it runs, grouped by request
 grails query-tail --all --once          // a report of everything captured so far, then exit
-grails query-tail --help                // the options
+grails help query-tail                  // the options
 ----
 
 === Description
@@ -57,7 +57,7 @@ grails query-tail [--statements | --stream] [--page=<controller/action>] [--top=
 * `grails run-tool query-tail`, the same;
 * `./gradlew runTool --arg=query-tail`, with each option as a further `--arg`, such as `--arg=--once`, or `./gradlew runTool -Pargs="query-tail --all --once"`.
 
-Each option is given with its two dashes: `--statements`, `--stream`, `--page=<controller/action>`, `--top=<n>`, `--all`, `--once`, `--file=<path>`, and `--help`, which prints them. The build is no terminal, so the summary is written as plain text again each time it changes and is not redrawn in place: `--once` and `--stream` read best.
+Each option is given with its two dashes: `--statements`, `--stream`, `--page=<controller/action>`, `--top=<n>`, `--all`, `--once` and `--file=<path>`. A value follows `=` or is the next word: `--top=10` and `--top 10` are the same. The command declares these options, so `grails help query-tail` lists them, and it is refused any other, with exit code 2, before it runs; `--help` after the name is one of those others, since the command line keeps `--help` for itself. The build is no terminal, so the summary is written as plain text again each time it changes and is not redrawn in place: `--once` and `--stream` read best.
 
 Without options the command follows the capture and shows the pages, the ones running the most
 statements per request first: for each page how many requests were seen, the average and the

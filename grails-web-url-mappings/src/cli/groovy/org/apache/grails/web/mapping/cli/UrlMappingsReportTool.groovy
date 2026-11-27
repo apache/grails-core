@@ -23,12 +23,14 @@ import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
 import org.grails.web.mapping.reporting.AnsiConsoleUrlMappingsRenderer
 import org.apache.grails.core.cli.ExecutionContext
 import grails.web.mapping.UrlMappingsHolder
 
 /**
- * An {@link ApplicationTool} that renders the URL mappings.
+ * An {@link ApplicationTool} that renders the URL mappings. It takes no arguments, and only prints: it
+ * changes no file and no data.
  *
  * @author Graeme Rocher
  * @since 3.0
@@ -36,6 +38,7 @@ import grails.web.mapping.UrlMappingsHolder
 @Slf4j
 @CompileStatic
 @EqualsAndHashCode
+@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false)
 class UrlMappingsReportTool implements ApplicationTool {
 
     final String description = /Prints out a report of the project's URL mappings/

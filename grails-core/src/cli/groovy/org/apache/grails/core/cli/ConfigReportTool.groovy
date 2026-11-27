@@ -44,12 +44,15 @@ import org.springframework.core.env.PropertySource
  *     ./gradlew configReport
  * </pre>
  *
- * <p>The report is written to {@code config-report.adoc} in the project's base directory.
+ * <p>The report is written to {@code config-report.adoc} in the project's base directory, in place of
+ * the one an earlier run wrote. The tool takes no arguments. Its descriptor is written by hand, with the
+ * hints below, since the compiler does not describe a tool of the module it is compiled in.
  *
  * @since 7.0
  */
 @Slf4j
 @CompileStatic
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false)
 class ConfigReportTool implements ApplicationTool {
 
     static final String DEFAULT_REPORT_FILE = 'config-report.adoc'

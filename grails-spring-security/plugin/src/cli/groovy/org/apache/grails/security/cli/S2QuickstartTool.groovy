@@ -25,6 +25,9 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
 import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.security.cli.standalone.ApplicationConfigAppender
 import org.apache.grails.security.cli.standalone.CommandLineHelper
@@ -49,9 +52,30 @@ import org.apache.grails.security.cli.standalone.SkipBootstrap
  * 3. <code>s2-quickstart com.yourapp Person Authority Requestmap</code>
  * 4. <code>s2-quickstart --uiOnly</code>
  *
+ * <p>The options and the parameters are declared on the class, and the command reads them from its command line
+ * itself. The parameters can each be left out, since {@code --uiOnly} takes none; without it the command says
+ * that it needs three or four. {@code --salt} is declared only so that the command can say why it no longer
+ * takes it.</p>
+ *
  * @since 6.0.0
  */
 @CompileStatic
+@ToolParameter(index = 0, label = 'DOMAIN-CLASS-PACKAGE', arity = '0..1', required = false,
+        description = 'The package the domain classes are created in; required unless --uiOnly is given')
+@ToolParameter(index = 1, label = 'USER-CLASS-NAME', arity = '0..1', required = false,
+        description = 'The name of the user class, without a package; required unless --uiOnly is given')
+@ToolParameter(index = 2, label = 'ROLE-CLASS-NAME', arity = '0..1', required = false,
+        description = 'The name of the role class, without a package; required unless --uiOnly is given')
+@ToolParameter(index = 3, label = 'REQUESTMAP-CLASS-NAME', arity = '0..1', required = false,
+        description = 'The name of a requestmap class to create, without a package')
+@ToolOption(names = ['--groupClassName'], arity = '1', label = 'GROUP-CLASS-NAME',
+        description = 'The name of a role group class to create, with the classes that join it to users and to roles, without a package')
+@ToolOption(names = ['--uiOnly'], arity = '0', description = 'Creates no domain class, and adds only the static rules and the filter chain to the configuration')
+@ToolOption(names = ['--force'], arity = '0',
+        description = 'Writes even where the configuration has settings the command writes, and keeps the class files that are there already')
+@ToolOption(names = ['--salt'], arity = '0',
+        description = 'No longer supported, and refused: the password encoders of the plugin salt a password themselves')
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false)
 class S2QuickstartTool implements ApplicationTool, ToolSupport, CommandLineHelper, SkipBootstrap {
 
     private static final String SETTINGS = 'grails.plugin.springsecurity'

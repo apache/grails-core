@@ -31,6 +31,8 @@ import grails.openapi.OpenApiSelection
 import grails.openapi.OpenApiSettings
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
 import org.grails.openapi.springdoc.GroupedOpenApiContributor
 
 /**
@@ -43,10 +45,16 @@ import org.grails.openapi.springdoc.GroupedOpenApiContributor
  * {@code openapi-<group>.yaml}. Where springdoc is configured, its method filters and customizers
  * are applied as they are to the documents it serves. The directory and format come
  * from {@code grails.openapi.output-directory} and {@code grails.openapi.output-format}, and can be
- * overridden with the {@code --output-directory} and {@code --format} options.</p>
+ * overridden with the {@code --output-directory} and {@code --format} options, which the tool reads from
+ * its command line itself. A file of an earlier run is written over.</p>
  */
 @Slf4j
 @CompileStatic
+@ToolOption(names = ['--format'], arity = '1', label = 'FORMAT',
+        description = 'yaml or json, in place of grails.openapi.output-format, which is yaml unless it is set')
+@ToolOption(names = ['--output-directory'], arity = '1', label = 'DIRECTORY',
+        description = 'The directory to write to, a relative one read against the project, in place of grails.openapi.output-directory, which is build/openapi unless it is set')
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = true, openWorldHint = false)
 class GenerateOpenApiTool implements ApplicationTool {
 
     private static final String SPRINGDOC_GROUP = 'org.springdoc.core.models.GroupedOpenApi'

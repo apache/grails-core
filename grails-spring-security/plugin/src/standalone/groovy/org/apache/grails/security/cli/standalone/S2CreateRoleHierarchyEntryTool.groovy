@@ -25,6 +25,8 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolParameter
 import org.apache.grails.core.cli.ToolSupport
 
 /**
@@ -33,9 +35,13 @@ import org.apache.grails.core.cli.ToolSupport
  *
  * For example: <code>s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry</code>
  *
+ * <p>The parameter is declared on the class, and the command reads it from its command line itself.</p>
+ *
  * @since 6.0.0
  */
 @CompileStatic
+@ToolParameter(index = 0, label = 'DOMAIN-CLASS-NAME', arity = '1', description = 'The full name of the domain class, with its package')
+@ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false)
 class S2CreateRoleHierarchyEntryTool implements StandaloneTool, ToolSupport, CommandLineHelper, SkipBootstrap {
 
     private static final String USAGE_MESSAGE = '''
