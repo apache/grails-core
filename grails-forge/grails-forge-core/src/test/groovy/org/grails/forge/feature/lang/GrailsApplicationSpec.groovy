@@ -42,6 +42,7 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
         output.containsKey("grails-app/init/example/grails/Application.${Language.GROOVY.extension}".toString())
         def applicationGroovyFile = output.get("grails-app/init/example/grails/Application.${Language.GROOVY.extension}".toString())
         applicationGroovyFile.contains("@CompileStatic")
+        applicationGroovyFile.contains("@ComponentScan(value = 'example.grails')")
         !applicationGroovyFile.contains("@PluginSource")
 
         where:
@@ -58,9 +59,24 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
         output.containsKey("grails-app/init/example/grails/Application.${Language.GROOVY.extension}".toString())
         def applicationGroovyFile = output.get("grails-app/init/example/grails/Application.${Language.GROOVY.extension}".toString())
         applicationGroovyFile.contains("@PluginSource")
+        applicationGroovyFile.contains("@ComponentScan(value = 'example.grails')")
 
         where:
         applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN]
+    }
+
+    void 'profile Application skeletons configure base-package component scanning'() {
+        given:
+        File profiles = findProfilesDirectory()
+
+        expect:
+        ['base', 'plugin'].every { String profile ->
+            File application = new File(profiles, "${profile}/skeleton/grails-app/init/@grails.codegen.defaultPackage.path@/Application.groovy")
+            assert application.file, "missing profile Application skeleton ${application}"
+            assert application.text.contains('import org.springframework.context.annotation.ComponentScan')
+            assert application.text.contains("@ComponentScan(value = '@grails.codegen.defaultPackage@')")
+            true
+        }
     }
 
     void "REST-API application should have ApplicationController"() {
@@ -126,5 +142,14 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
         where:
         applicationType << ApplicationType.values().toList()
 
+    }
+
+    private static File findProfilesDirectory() {
+        File current = new File(GrailsApplicationSpec.getProtectionDomain().getCodeSource().getLocation().toURI())
+        while (current && !new File(current, 'grails-profiles').isDirectory()) {
+            current = current.parentFile
+        }
+        assert current != null: 'Unable to locate the grails-core repository root'
+        new File(current, 'grails-profiles')
     }
 }
