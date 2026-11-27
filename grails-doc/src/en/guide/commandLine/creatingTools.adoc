@@ -426,7 +426,7 @@ A tool that declares an option or a parameter declares every option it reads, al
 
 | `readOnlyHint`
 | `false`
-| The tool changes nothing: no data, and no file but one whose name the caller gives it for what it writes.
+| The tool changes nothing: no data, and no file but a new one inside the project whose name the caller gives it for what it writes.
 
 | `destructiveHint`
 | `true`
@@ -443,7 +443,7 @@ A tool that declares an option or a parameter declares every option it reads, al
 
 The members and their defaults are those of the hints of the Model Context Protocol. A tool without `@ToolHints` has the defaults, which are the most cautious: a client takes it to change something that it may not be able to undo, and asks before every call of it. Choose them by what the tool does:
 
-* `readOnlyHint = true` for a tool that changes nothing, such as a report printed to the terminal, or written to a file whose name the caller gives it: who names the file has chosen to have it written. `dbm-status` and `dbm-list-locks` of the Database Migration plugin are read-only for that reason: they never change the database, and write a file only when the caller names one.
+* `readOnlyHint = true` for a tool that changes nothing, such as a report printed to the terminal, or written to a file whose name the caller gives it, where the tool writes that file new and inside the project, and refuses a file that is there or outside the project: it then only adds the file the caller asked for. The tools of the Database Migration plugin that write SQL Liquibase only prints, such as `dbm-rollback-sql`, are read-only for that reason. A tool that also changes something else is not, as `dbm-status`, which makes the tables Liquibase keeps in a database that does not have them.
 * `destructiveHint = false` for a tool that only adds, such as one that writes files that are not there yet.
 * Leave the defaults for a tool that changes or deletes what is there, such as a migration of the database or a generator with `--force`.
 

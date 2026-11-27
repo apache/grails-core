@@ -48,9 +48,9 @@ import java.lang.annotation.Target
 @interface ToolHints {
 
     /**
-     * @return whether the tool changes nothing: no data, and no file of the project but one whose name
-     * the caller gives it for what it writes, which the caller has chosen to have written. Then the
-     * other hints say nothing
+     * @return whether the tool changes nothing: no data, and no file. A tool that writes what it prints to
+     * a file whose name the caller gives it is read-only only when it writes that file new, inside the
+     * project, and refuses one that is there or outside it. Then the other hints say nothing
      */
     boolean readOnlyHint() default false
 
