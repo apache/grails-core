@@ -167,11 +167,14 @@ ext {
             // Do not upgrade to 3.2.3 until cleared by the sitemesh author. 3.2.3 is not a small patch:
             // it adds a spring-webmvc-sitemesh module and an opt-in view-resolver integration.
             'starter-sitemesh.version'      : '3.2.2',
-            // Security: overrides spring-boot-dependencies (10.1.55). 10.1.61 fixes CVE-2026-101356 (HTTP/2
-            // request/response mix-up after an async error) and CVE-2026-101296 (JNDIRealm bind validation fails
-            // open), and retains the 10.1.60 fixes for CVE-2026-65905, CVE-2026-65182, CVE-2026-68525 and
-            // CVE-2026-65927. 10.1.58, named by those advisories, failed its release vote; keep the Tomcat family aligned.
-            'tomcat.version'                : '10.1.61',
+            // Security: overrides spring-boot-dependencies (10.1.55). 10.1.62 fixes the Important CVE-2026-116600 (OWB
+            // memory leak), CVE-2026-116830 (HTTP/2 frame size DoS), CVE-2026-118028 (RewriteValve rules that do not
+            // stop processing) and CVE-2026-121649 (ExpiresFilter drops Cache-Control: private) and six Moderate or
+            // Low CVEs, and retains the 10.1.61 fixes for CVE-2026-101356 and CVE-2026-101296 and the 10.1.60 fixes
+            // for CVE-2026-65905, CVE-2026-65182, CVE-2026-68525 and CVE-2026-65927. 10.1.58, named by those
+            // advisories, failed its release vote; keep the Tomcat family aligned. Move to 10.1.63 once released:
+            // it fixes CVE-2026-133325, which only affects 10.1.62 with cluster TLS-PSK over TLS 1.3.
+            'tomcat.version'                : '10.1.62',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
