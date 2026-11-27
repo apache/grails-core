@@ -641,15 +641,23 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
      * Supertypes can come from dependencies, whose class files may be newer than the bundled ASM
      * reads, or whose bytecode may be damaged or unreadable. One that cannot be read is taken to
      * declare no namespace, with a warning, rather than failing the build.
+     *
+     * <p>Read through a connection of its own rather than {@code getResourceAsStream}, which hands
+     * out a stream of the jar file the JVM caches for every reader of the jar, and has the class
+     * loader close that jar file when the loader is closed: the build's other readers of the jar,
+     * such as this task of another project running beside it, then fail with {@code zip file
+     * closed}.</p>
      */
     private boolean ancestorHasNamespace(String internalName, ClassLoader resources, Map<String, Boolean> ancestors,
                                          LogLevel failureLevel) {
         try {
-            InputStream parent = resources.getResourceAsStream("${internalName}.class")
+            URL parent = resources.getResource("${internalName}.class")
             if (parent == null) {
                 return false
             }
-            ClassReader reader = parent.withCloseable { InputStream input -> new ClassReader(input) }
+            URLConnection connection = parent.openConnection()
+            connection.useCaches = false
+            ClassReader reader = connection.inputStream.withCloseable { InputStream input -> new ClassReader(input) }
             return hasNamespace(reader, resources, ancestors, failureLevel)
         }
         catch (IllegalArgumentException | IOException | IndexOutOfBoundsException e) {

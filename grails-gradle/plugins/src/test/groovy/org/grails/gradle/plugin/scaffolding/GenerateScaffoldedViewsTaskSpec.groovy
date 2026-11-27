@@ -17,6 +17,7 @@
 package org.grails.gradle.plugin.scaffolding
 
 import java.util.jar.JarEntry
+import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 
 import groovyjarjarasm.asm.AnnotationVisitor
@@ -452,6 +453,34 @@ class GenerateScaffoldedViewsTaskSpec extends Specification {
 
         then:
             handed(task) == ['com.example.User/show': ['show ${className}']]
+    }
+
+    void 'a superclass read from a jar leaves that jar open for the rest of the build'() {
+        given: 'a controller whose superclass, declaring a namespace, is in a jar the JVM shares between its readers'
+            writeTemplateJar(templateJar, [show: 'show ${className}', 'admin/show': 'admin show ${className}'])
+            File library = new File(projectDir, 'library.jar')
+            writeJar(library, ['com/library/AdminController.class': plain('com/library/AdminController', 'java/lang/Object') { ClassWriter writer ->
+                writer.visitField(Opcodes.ACC_STATIC, 'namespace', 'Ljava/lang/String;', null, null).visitEnd()
+            }])
+            writeClass(classesDir, 'com/example/UserController',
+                    scaffolded('com/example/UserController', 'com/example/User', 'com/library/AdminController'))
+            def task = task()
+            task.runtimeClasspath.from(library)
+            URLConnection connection = new URL("jar:${library.toURI()}!/com/library/AdminController.class").openConnection()
+            connection.useCaches = true
+            JarFile shared = ((JarURLConnection) connection).jarFile
+
+        when: 'the controllers are read, to fingerprint the task and to expand the pages'
+            List<String> controllers = task.projectControllers
+            task.generate()
+
+        then: 'the namespace is seen, and the jar is still open for another task of the build reading it'
+            controllers == ['com/example/UserController.class com.example.User namespaced']
+            handed(task).containsKey('com.example.User/admin/show')
+            shared.getInputStream(shared.getEntry('com/library/AdminController.class')).withCloseable { InputStream input -> input.bytes }
+
+        cleanup:
+            shared?.close()
     }
 
     void 'the templates the application packages are read from where they are packaged'() {
