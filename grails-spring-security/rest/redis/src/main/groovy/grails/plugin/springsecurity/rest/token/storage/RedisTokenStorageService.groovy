@@ -79,10 +79,9 @@ class RedisTokenStorageService implements TokenStorageService {
     void removeToken(String tokenValue) throws TokenNotFoundException {
         log.debug "Removing token: ${tokenValue}"
 
-        long removed = 0
-        redisService.withRedis { Jedis jedis ->
-            removed = jedis.del(buildKey(tokenValue))
-        }
+        long removed = redisService.withRedis { Jedis jedis ->
+            jedis.del(buildKey(tokenValue))
+        } as long
 
         if (!removed) {
             throw new TokenNotFoundException("Token ${tokenValue} not found")

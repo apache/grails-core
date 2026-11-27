@@ -40,6 +40,23 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
 
     Cache cache
 
+    private boolean cacheReportsEviction
+
+    /**
+     * Sets the cache that holds the tokens. A cache that does not implement {@link Cache#evictIfPresent}, whose
+     * default evicts the key and reports that the cache did not hold it, is asked for the token before the token is
+     * removed, and a warning says so.
+     */
+    void setCache(Cache cache) {
+        this.cache = cache
+        cacheReportsEviction = cache == null || reportsEviction(cache)
+        if (!cacheReportsEviction) {
+            log.warn("The cache '${cache.name}' (${cache.getClass().name}) does not implement Cache.evictIfPresent, " +
+                    'so a token is looked up before it is removed, and two logouts of the same token at the same ' +
+                    'time can both succeed')
+        }
+    }
+
     @Override
     void storeToken(String tokenValue, UserDetails principal) {
         cache.put(tokenValue, principal)
@@ -60,17 +77,31 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
 
     /**
      * Removes the token in one step with {@link Cache#evictIfPresent}, so of two removals of the same token only the
-     * one that removed it returns, and the other throws {@link TokenNotFoundException}. The cache must report whether
-     * it held the token, as both caches of the Grails cache plugin do.
+     * one that removed it returns, and the other throws {@link TokenNotFoundException}. Both caches of the Grails
+     * cache plugin implement it. With a cache that does not, the token is looked up and then evicted, so two removals
+     * of the same token at the same time can both return.
      */
     @Override
     void removeToken(String tokenValue) throws TokenNotFoundException {
-        if (!cache.evictIfPresent(tokenValue)) {
+        boolean removed = cacheReportsEviction ? cache.evictIfPresent(tokenValue) : lookUpAndEvict(tokenValue)
+        if (!removed) {
             def tokenNotFoundMsg = "No principal found for token $tokenValue"
             log.debug tokenNotFoundMsg
             throw new TokenNotFoundException(tokenNotFoundMsg)
         }
         log.debug "Removed principal for token ${tokenValue}"
+    }
+
+    private boolean lookUpAndEvict(String tokenValue) {
+        if (cache.get(tokenValue) == null) {
+            return false
+        }
+        cache.evict(tokenValue)
+        return true
+    }
+
+    private static boolean reportsEviction(Cache cache) {
+        cache.getClass().getMethod('evictIfPresent', Object).declaringClass != Cache
     }
 
     @PostConstruct
@@ -83,7 +114,7 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
             throw new IllegalStateException('Cache name for TokenStorageService was not injected. ' +
                     'Use grails.plugin.springsecurity.rest.token.storage.grailsCacheName to specify a cache name')
         }
-        cache = grailsCacheManager.getCache(cacheName)
+        setCache(grailsCacheManager.getCache(cacheName))
         if (!cache) {
             throw new IllegalStateException("Could not retrieve a cache for name $cacheName. " +
                     "Did you specify a cache '$cacheName' in the cache configuration?")

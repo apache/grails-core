@@ -18,8 +18,11 @@
  */
 package grails.plugin.springsecurity.rest.token.storage.memcached
 
+import java.util.concurrent.ExecutionException
+
 import net.spy.memcached.CASValue
 import net.spy.memcached.MemcachedClient
+import net.spy.memcached.internal.CheckedOperationTimeoutException
 import net.spy.memcached.internal.OperationFuture
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -75,7 +78,7 @@ class MemcachedTokenStorageServiceSpec extends Specification {
 
         then:
         1 * memcachedClient.delete(token) >> deleted
-        0 * memcachedClient.getAndTouch(*_)
+        0 * memcachedClient._
 
         where:
         // the plugin configures the client for the binary protocol, whose keys can hold a space or a line break
@@ -99,18 +102,29 @@ class MemcachedTokenStorageServiceSpec extends Specification {
 
         then:
         1 * memcachedClient.delete('12345') >> notDeleted
+        0 * memcachedClient._
         thrown(TokenNotFoundException)
     }
 
-    void "throw token not found exception if another removal deleted the token first"() {
-        given: 'memcached holds the token when it is looked up, but no longer when it is deleted'
-        memcachedClient.getAndTouch('12345', 3600) >> new CASValue<Object>(1L, new User('foo', 'bar', []))
+    @Unroll
+    void "a delete that #description is not taken for a token that was not found"() {
+        given:
+        OperationFuture<Boolean> unfinished = Stub(OperationFuture) {
+            get() >> { throw failure }
+        }
 
         when:
         service.removeToken('12345')
 
         then:
-        1 * memcachedClient.delete('12345') >> notDeleted
-        thrown(TokenNotFoundException)
+        1 * memcachedClient.delete('12345') >> unfinished
+        Exception exception = thrown()
+        exception.is(failure)
+
+        where:
+        description | failure
+        'fails'     | new ExecutionException(new IOException('Connection reset'))
+        'times out' | new RuntimeException('Timed out waiting for operation',
+                new CheckedOperationTimeoutException('Timed out waiting for operation', []))
     }
 }

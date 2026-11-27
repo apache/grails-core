@@ -19,11 +19,17 @@
 package grails.plugin.springsecurity.rest.token.storage
 
 import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
+import org.slf4j.LoggerFactory
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -119,21 +125,81 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
         cacheManager << [new GrailsConcurrentMapCacheManager(), new GrailsConcurrentLinkedMapCacheManager()]
     }
 
-    void "throw token not found exception if another removal evicted the token first"() {
-        given: 'a cache that holds the token when it is looked up, but no longer when it is evicted'
-        Cache cache = Stub(Cache) {
-            get('12345') >> new SimpleValueWrapper(new User('foo', 'bar', []))
-            evictIfPresent('12345') >> false
-        }
-        def storage = newService(Stub(GrailsCacheManager) {
-            getCache('tokenStorage') >> cache
-        })
+    void "a token is evicted without a lookup from a cache that implements evictIfPresent"() {
+        given:
+        Cache cache = Mock(Cache)
+        def storage = newService(cacheManagerOf(cache))
+
+        when:
+        storage.removeToken('12345')
+
+        then: 'the cache is asked once, and reports that it did not hold the token'
+        1 * cache.evictIfPresent('12345') >> false
+        0 * cache._
+        thrown(TokenNotFoundException)
+    }
+
+    @Unroll
+    void "a token is removed once from a cache that #description"() {
+        given:
+        def storage = newService(cacheManagerOf(cache))
+        storage.storeToken('12345', new User('foo', 'bar', []))
+
+        when:
+        storage.removeToken('12345')
+
+        then:
+        !storage.cache.get('12345')
 
         when:
         storage.removeToken('12345')
 
         then:
         thrown(TokenNotFoundException)
+
+        when:
+        storage.removeToken('token-does-not-exist')
+
+        then:
+        thrown(TokenNotFoundException)
+
+        where:
+        description                         | cache
+        'implements evictIfPresent'         | new EvictIfPresentMapCache()
+        'does not implement evictIfPresent' | new MapCache()
+    }
+
+    @Unroll
+    void "a cache that #description is #warning"() {
+        given:
+        ListAppender<ILoggingEvent> appender = new ListAppender<>()
+        appender.start()
+        Logger logger = (Logger) LoggerFactory.getLogger(GrailsCacheTokenStorageService)
+        logger.addAppender(appender)
+        logger.level = Level.WARN
+
+        when: 'the token storage starts, and two tokens are stored and removed'
+        def storage = newService(cacheManagerOf(cache))
+        ['12345', '67890'].each { String token ->
+            storage.storeToken(token, new User('foo', 'bar', []))
+            storage.removeToken(token)
+        }
+
+        then:
+        def warnings = appender.list.findAll { it.level == Level.WARN }*.formattedMessage
+        warnings.size() == count
+        warnings.every { String message ->
+            message.startsWith("The cache 'tokenStorage' (${MapCache.name}) does not implement Cache.evictIfPresent")
+        }
+
+        cleanup:
+        logger.detachAppender(appender)
+        logger.level = null
+
+        where:
+        description                         | cache                        || warning             | count
+        'implements evictIfPresent'         | new EvictIfPresentMapCache() || 'not warned about'  | 0
+        'does not implement evictIfPresent' | new MapCache()               || 'warned about once' | 1
     }
 
     @Unroll
@@ -211,5 +277,69 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
         def storage = new GrailsCacheTokenStorageService(grailsCacheManager: cacheManager, cacheName: 'tokenStorage')
         storage.init()
         storage
+    }
+
+    private GrailsCacheManager cacheManagerOf(Cache cache) {
+        Stub(GrailsCacheManager) {
+            getCache('tokenStorage') >> cache
+        }
+    }
+
+    /**
+     * A cache that leaves {@link Cache#evictIfPresent} to its default, which evicts the key and reports that the
+     * cache did not hold it.
+     */
+    private static class MapCache implements Cache {
+
+        protected final Map<Object, Object> store = new ConcurrentHashMap<>()
+
+        @Override
+        String getName() {
+            'tokenStorage'
+        }
+
+        @Override
+        Object getNativeCache() {
+            store
+        }
+
+        @Override
+        Cache.ValueWrapper get(Object key) {
+            Object value = store.get(key)
+            value == null ? null : new SimpleValueWrapper(value)
+        }
+
+        @Override
+        <T> T get(Object key, Class<T> type) {
+            type.cast(store.get(key))
+        }
+
+        @Override
+        <T> T get(Object key, Callable<T> valueLoader) {
+            (T) store.computeIfAbsent(key) { valueLoader.call() }
+        }
+
+        @Override
+        void put(Object key, Object value) {
+            store.put(key, value)
+        }
+
+        @Override
+        void evict(Object key) {
+            store.remove(key)
+        }
+
+        @Override
+        void clear() {
+            store.clear()
+        }
+    }
+
+    private static class EvictIfPresentMapCache extends MapCache {
+
+        @Override
+        boolean evictIfPresent(Object key) {
+            store.remove(key) != null
+        }
     }
 }
