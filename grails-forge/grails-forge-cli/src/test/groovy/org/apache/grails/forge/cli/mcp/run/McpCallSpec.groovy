@@ -36,6 +36,7 @@ import io.modelcontextprotocol.modern.McpSchema.ProgressParams
 import io.modelcontextprotocol.modern.McpSchema.ResourceLink
 import io.modelcontextprotocol.modern.McpSchema.TextContent
 import io.modelcontextprotocol.modern.McpSchema.TextResourceContents
+import io.modelcontextprotocol.modern.McpSchema.Tool
 import io.modelcontextprotocol.modern.client.McpSyncClient
 import io.modelcontextprotocol.modern.client.McpSyncSubscriptionListener
 import io.modelcontextprotocol.modern.client.McpTimeoutException
@@ -181,6 +182,28 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         mcp.client.resources().list().resources()*.uri() == ['grails://commands', 'grails://project', 'grails://project/health']
         new JsonSlurper().parseText(((TextResourceContents) mcp.client.resource('grails://project').read().contents()[0]).text()) == result.structuredContent()
         new JsonSlurper().parseText(((TextResourceContents) mcp.client.resource('grails://project/health').read().contents()[0]).text()) instanceof Map
+    }
+
+    void "the list of the tools has in _meta only what an entry says of where its command comes from and how it runs, and grails://tools/NAME has the whole entry"() {
+        given:
+        project()
+        serve()
+
+        when:
+        Tool listed = mcp.client.tools().list().tools().find { Tool tool -> tool.name() == 'create-controller' }
+        Map<String, Object> described = (Map<String, Object>) new JsonSlurper().parseText(
+                ((TextResourceContents) mcp.client.resource('grails://tools/create-controller').read().contents()[0]).text())
+
+        then: 'the tool says where its command comes from, and how the server runs it'
+        listed.meta()[McpNames.META_COMMAND] == [origin: 'built-in', project: true]
+        ((Map) listed.meta()[McpNames.META_RUN]).commandLine == ['--plain-output', '--non-interactive', 'create-controller']
+
+        and: 'its resource has the whole entry of help --json, with the options the input schema was made from'
+        described.name == 'create-controller'
+        described.command.description == 'Creates a Grails Controller'
+        ((List<Map>) described.command.options)*.names.flatten().contains('--force')
+        ((List<Map>) described.command.parameters)*.label == ['CONTROLLER-NAME']
+        described.run == listed.meta()[McpNames.META_RUN]
     }
 
     void "a report whose command ends with exit code 1 is a result and not an error, with the exit code in its _meta, and a failure that writes a document is still an error"() {
@@ -536,7 +559,8 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         then:
         [inProject, outside].every { it.length() <= GrailsMcpServer.MAX_INSTRUCTIONS }
         inProject.startsWith("grails mcp is the Grails command line of one directory, ${dir.path}, which is in a Grails project. ".toString())
-        ['refresh_tools', 'run-tool', 'development', 'run-app', 'stop-app', 'shortened', 'grails://commands', 'https://grails.apache.org/docs/'].every { inProject.contains(it) }
+        ['refresh_tools', 'run-tool', 'development', 'run-app', 'stop-app', 'shortened', 'grails://commands', 'grails://tools/NAME is the whole entry of one tool',
+         'https://grails.apache.org/docs/'].every { inProject.contains(it) }
         outside.contains('in no Grails project')
         outside.contains('(--read-only)')
         outside.endsWith('/guide/commandLine.html#mcp')

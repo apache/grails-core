@@ -20,6 +20,7 @@ package org.apache.grails.forge.cli.mcp.tools
 
 import java.nio.charset.StandardCharsets
 
+import groovy.json.JsonOutput
 import org.apache.grails.forge.cli.console.CommandCatalog
 import org.apache.grails.forge.cli.mcp.Lane
 import org.apache.grails.forge.cli.mcp.McpNames
@@ -104,6 +105,27 @@ class ToolProjectionSpec extends Specification {
         refresh.annotations == [readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true]
         refresh.inputSchema == [type: 'object', properties: [:], additionalProperties: false]
         !refresh.meta.containsKey(McpNames.META_COMMAND)
+    }
+
+    @Unroll
+    void "the list of the tools of #sample is small: the whole entries of their commands are not in it"() {
+        when:
+        McpToolSet tools = McpToolSamples.tools(sample)
+        String listed = JsonOutput.toJson(tools.tools.collect { McpTool tool ->
+            [name: tool.name, title: tool.title, description: tool.description, inputSchema: tool.inputSchema, annotations: tool.annotations, _meta: tool.meta]
+        })
+
+        then: 'with the whole entries in _meta it came to about 110,000, 223,000 and 231,000 characters'
+        listed.length() <= most
+        tools.tools.every { McpTool tool ->
+            !((Map) tool.meta[McpNames.META_COMMAND] ?: [:]).keySet().any { it in ['options', 'parameters', 'relations', 'description', 'aliases', 'commands', 'name'] }
+        }
+
+        where:
+        sample                   | most
+        'outside-project'        | 40_000
+        'web-application'        | 80_000
+        'application-with-tools' | 85_000
     }
 
     void "a tool whose JSON document is a report says in how it runs which outcomes of the document are a report, and in its description what that means"() {
@@ -218,7 +240,7 @@ class ToolProjectionSpec extends Specification {
     }
 
     @Unroll
-    void "every tool of #sample has the whole entry of its command in _meta, a schema clients take, and a description of at most 2,000 characters"() {
+    void "every tool of #sample has in _meta what its entry says of where it comes from and how it runs, its whole entry for its resource, a schema clients take, and a description of at most 2,000 characters"() {
         given:
         Map<String, Object> document = McpToolSamples.sample(sample)
         Map<String, Map<String, Object>> entries = McpToolSamples.leaves((List<Map<String, Object>>) document.commands).collectEntries { List<String> path, Map entry ->
@@ -230,8 +252,11 @@ class ToolProjectionSpec extends Specification {
 
         then:
         tools.tools.findAll { it.name != McpNames.REFRESH_TOOLS }.every { McpTool tool ->
-            tool.meta[McpNames.META_COMMAND] == entries[tool.name].findAll { it.key != 'commands' } && tool.title == "grails ${tool.name.replace('_', ' ')}"
+            tool.meta[McpNames.META_COMMAND] == entries[tool.name].findAll { it.key in ToolProjection.COMMAND_MEMBERS } &&
+                    ToolProjection.entry(tools.helpDocument, tool.name) == entries[tool.name].findAll { it.key != 'commands' } &&
+                    tool.title == "grails ${tool.name.replace('_', ' ')}"
         }
+        ToolProjection.entry(tools.helpDocument, McpNames.REFRESH_TOOLS) == null
         tools.tools.every { McpTool tool ->
             tool.inputSchema.type == 'object' && tool.inputSchema.additionalProperties == false &&
                     ((Map<String, Object>) tool.inputSchema.get('properties')).keySet().every { it ==~ /[A-Za-z0-9-]{1,64}/ } &&

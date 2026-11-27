@@ -82,6 +82,11 @@ class McpResourcesSpec extends Specification {
         described.name == 'run-app'
         described.command.name == 'run-app'
         described.command.origin == 'built-in'
+
+        and: 'the whole entry of the command, which the list of the tools does not repeat'
+        described.command.description == ToolProjection.entry(tools.helpDocument, 'run-app').description
+        ((List<Map>) described.command.options)*.names.flatten().contains('--port')
+        !((Map) tools.tools.find { it.name == 'run-app' }.meta[McpNames.META_COMMAND]).containsKey('options')
         described.run == [commandLine: ['--plain-output', '--non-interactive', 'run-app', '--detach'], arguments: 'declared', lane: 'build', json: 'never',
                           leftOut: ['--detach', '--foreground', '--debug-jvm']]
 
@@ -91,7 +96,7 @@ class McpResourcesSpec extends Specification {
         then:
         refresh.keySet() == ['name', 'run'] as Set
         refresh.run.commandLine == ['--plain-output', '--non-interactive', 'gradle', 'grailsToolCatalog', '--rerun']
-        McpResources.described(tools.tools.find { it.name == McpNames.REFRESH_TOOLS }).name == McpNames.REFRESH_TOOLS
+        McpResources.described(tools, tools.tools.find { it.name == McpNames.REFRESH_TOOLS }).name == McpNames.REFRESH_TOOLS
     }
 
     void "the resources of a project are what their commands write, and are read only in a project"() {

@@ -521,7 +521,7 @@ final class GrailsMcpServer implements McpHandler, Closeable {
                 "They run in the ${ToolCommand.ENVIRONMENT} environment: run-tool with system-properties {\"grails.env\": \"test\"} runs one in another. " +
                 'run-app leaves the application running after the call and after grails mcp, until stop-app stops it. ' +
                 'A long output is shortened, and the result links the whole of it as a resource. ' +
-                'The resource grails://commands lists every command and tool, and says why one is not offered. ' +
+                'The resource grails://commands lists every command and tool, and says why one is not offered; grails://tools/NAME is the whole entry of one tool. ' +
                 (readOnly ? 'Only the tools that change nothing are offered (--read-only). ' : '') +
                 "Guide: https://grails.apache.org/docs/${VersionInfo.getDocumentationVersion()}/guide/commandLine.html#mcp"
         return text.length() <= MAX_INSTRUCTIONS ? text : text.substring(0, MAX_INSTRUCTIONS - 1) + '…'

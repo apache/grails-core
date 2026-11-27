@@ -36,7 +36,10 @@ final class McpNames {
     /** The title of the server. */
     public static final String SERVER_TITLE = 'Grails'
 
-    /** The key of {@code _meta} of a tool with the entry {@code help --json} has for its command, without its commands. */
+    /**
+     * The key of {@code _meta} of a tool with what the entry {@code help --json} has for its command or tool says of where
+     * it comes from and how it runs; the whole entry is the resource {@code grails://tools/NAME}.
+     */
     public static final String META_COMMAND = 'org.apache.grails/command'
 
     /** The key of {@code _meta} of a tool with the command line a call of it runs. */

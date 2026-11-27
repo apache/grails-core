@@ -50,8 +50,11 @@ import org.apache.grails.forge.cli.mcp.McpToolSet
  * by {@link ArgumentMapping}.</li>
  * <li>Its annotations are those of its policy, for a command; for a tool, those {@link ProjectToolHints}
  * passes on.</li>
- * <li>Its {@code _meta} has, under {@link McpNames#META_COMMAND}, the whole entry {@code help --json}
- * has for it, without its commands, and under {@link McpNames#META_RUN} the command line each call
+ * <li>Its {@code _meta} has, under {@link McpNames#META_COMMAND}, what the entry {@code help --json} has
+ * for it says of where it comes from and how it runs, and what it declares that a client cannot read
+ * from the input schema ({@link #COMMAND_MEMBERS}); the whole entry, with every option, is the
+ * resource {@code grails://tools/NAME} ({@link #entry}), so that the list of the tools stays small.
+ * Under {@link McpNames#META_RUN} it has the command line each call
  * starts with, its lane, whether its output is JSON, and the outcomes of that JSON that are a report
  * and not an error, where a command has such outcomes ({@link CommandPolicy#reportOutcomes}).</li>
  * </ul>
@@ -87,6 +90,17 @@ final class ToolProjection {
 
     /** How the arguments of a tool that declares nothing are given, in {@link McpNames#META_RUN}: as they are. */
     public static final String FREE_FORM = 'free-form'
+
+    /**
+     * The members of the entry {@code help --json} has for a command or tool that the {@code _meta} of its tool
+     * has under {@link McpNames#META_COMMAND}, where the entry has them: where it comes from, whether it is a
+     * command of a project, how a tool runs, what of it is deprecated or not declared, whether it reads what is
+     * typed, and the hints a tool declares, which its annotations have only where the server vouches for its
+     * origin. Its options, parameters, relations, names and description are not among them: the input schema
+     * and the description of the tool have what a client needs of them, and the resource
+     * {@code grails://tools/NAME} the whole entry.
+     */
+    public static final List<String> COMMAND_MEMBERS = ['origin', 'project', 'target', 'startsApplication', 'deprecated', 'incomplete', 'readsInput', 'hints'].asImmutable()
 
     /**
      * The member of {@link McpNames#META_RUN} with the outcomes of the JSON document of a command that are a
@@ -156,6 +170,22 @@ final class ToolProjection {
         said.addAll(diagnostics)
         document.put('diagnostics', said)
         return new McpToolSet(tools, document, project, fingerprint)
+    }
+
+    /**
+     * @param helpDocument the document of {@code help --json} the tools were made from
+     * @param toolName the name of a tool
+     * @return the whole entry the document has for the command or tool of the tool, without the commands
+     * below it, as the first entry whose words make that name, which is the one the tool was made from;
+     * {@code null} for a tool that has none, as {@code refresh_tools}
+     */
+    static Map<String, Object> entry(Map<String, Object> helpDocument, String toolName) {
+        for (Map.Entry<List<String>, Map<String, Object>> leaf : leaves(maps(helpDocument.get('commands')), [])) {
+            if (McpNames.toolName(leaf.getKey()) == toolName) {
+                return withoutCommands(leaf.getValue())
+            }
+        }
+        return null
     }
 
     /**
@@ -353,15 +383,25 @@ final class ToolProjection {
 
     private static Map<String, Object> meta(Map<String, Object> entry, Map<String, Object> run) {
         Map<String, Object> described = new LinkedHashMap<>()
-        entry.each { String member, Object value ->
-            if (member != 'commands') {
-                described.put(member, value)
+        for (String member : COMMAND_MEMBERS) {
+            if (entry.containsKey(member)) {
+                described.put(member, entry.get(member))
             }
         }
         Map<String, Object> meta = new LinkedHashMap<>()
         meta.put(McpNames.META_COMMAND, described)
         meta.put(McpNames.META_RUN, run)
         return meta
+    }
+
+    private static Map<String, Object> withoutCommands(Map<String, Object> entry) {
+        Map<String, Object> described = new LinkedHashMap<>()
+        entry.each { String member, Object value ->
+            if (member != 'commands') {
+                described.put(member, value)
+            }
+        }
+        return described
     }
 
     // every command that has no commands of its own, with its words, in the order of the document; twice where it is there twice

@@ -30,8 +30,9 @@ import org.apache.grails.forge.cli.mcp.McpToolSet
  * <ul>
  * <li>{@code grails://commands}, the document of {@code help --json} of the directory, with
  * {@code complete} and the {@code diagnostics}, which also say why a command or tool is not offered;</li>
- * <li>{@code grails://tools/{name}}, a template: the entry of the command or tool of one tool, and how
- * the server runs it;</li>
+ * <li>{@code grails://tools/{name}}, a template: the whole entry {@code help --json} has for the command
+ * or tool of one tool, with every option and parameter, which the list of the tools does not repeat, and
+ * how the server runs it;</li>
  * <li>in a project, {@code grails://project} and {@code grails://project/health}, what
  * {@code project show --json} and {@code project health --json} write.</li>
  * </ul>
@@ -113,8 +114,8 @@ final class McpResources {
         template.put('uriTemplate', TOOL_TEMPLATE)
         template.put('name', 'tool')
         template.put('title', 'A tool of grails mcp')
-        template.put('description', 'The entry help --json has for the command or tool of a tool, and how grails mcp runs it: the command line every call starts with, ' +
-                'its lane, and whether its output is JSON.')
+        template.put('description', 'The whole entry help --json has for the command or tool of a tool, with every option and parameter, which the list of the tools ' +
+                'does not repeat, and how grails mcp runs it: the command line every call starts with, its lane, and whether its output is JSON.')
         template.put('mimeType', MIME_TYPE)
         return [template]
     }
@@ -140,7 +141,7 @@ final class McpResources {
             if (tool == null) {
                 throw unknown(uri)
             }
-            text = JsonOutput.toJson(described(tool))
+            text = JsonOutput.toJson(described(tools, tool))
         } else if (tools.project && uri == PROJECT) {
             text = documents.read(PROJECT_COMMAND)
         } else if (tools.project && uri == PROJECT_HEALTH) {
@@ -158,15 +159,17 @@ final class McpResources {
     }
 
     /**
-     * @param tool a tool
-     * @return what {@code grails://tools/{name}} says of it: its name, the entry {@code help --json} has
+     * @param tools the tools of the directory, with the document of {@code help --json} they were made from
+     * @param tool one of them
+     * @return what {@code grails://tools/{name}} says of it: its name, the whole entry {@code help --json} has
      * for its command or tool, where it has one, and how the server runs it
      */
-    static Map<String, Object> described(McpTool tool) {
+    static Map<String, Object> described(McpToolSet tools, McpTool tool) {
         Map<String, Object> described = new LinkedHashMap<>()
         described.put('name', tool.name)
-        if (tool.meta.containsKey(McpNames.META_COMMAND)) {
-            described.put('command', tool.meta.get(McpNames.META_COMMAND))
+        Map<String, Object> entry = ToolProjection.entry(tools.helpDocument, tool.name)
+        if (entry != null) {
+            described.put('command', entry)
         }
         described.put('run', tool.meta.get(McpNames.META_RUN))
         return described
