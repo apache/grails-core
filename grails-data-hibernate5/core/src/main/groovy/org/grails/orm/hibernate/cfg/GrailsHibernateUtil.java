@@ -834,6 +834,48 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
+     * Returns a path from the queried class for a path that can start with the alias of the queried
+     * class, as {@code t.club} does for the alias {@code t}. The alias is stripped once, and not at
+     * all when the whole path is a path of the queried class, as when the alias is also the name of
+     * one of its associations.
+     *
+     * @param entity The queried entity
+     * @param rootAlias The alias of the queried class, or null
+     * @param path The path
+     * @return The path from the queried class
+     */
+    public static String stripRootAlias(PersistentEntity entity, String rootAlias, String path) {
+        if (path == null || rootAlias == null || !path.startsWith(rootAlias + '.') || isPropertyPath(entity, path)) {
+            return path;
+        }
+        return path.substring(rootAlias.length() + 1);
+    }
+
+    /**
+     * Whether a path consists of associations of the given entity, each of the entity before it, and
+     * ends with a property or the identifier of the last one.
+     *
+     * @param entity The entity the path starts from
+     * @param path The path
+     * @return Whether the path resolves from the entity
+     */
+    public static boolean isPropertyPath(PersistentEntity entity, String path) {
+        PersistentEntity current = entity;
+        String[] tokens = path.split("\\.");
+        for (int i = 0; i < tokens.length; i++) {
+            PersistentProperty property = current != null ? current.getPropertyByName(tokens[i]) : null;
+            if (i == tokens.length - 1) {
+                return property != null || current != null && current.getIdentity() != null && current.getIdentity().getName().equals(tokens[i]);
+            }
+            if (!(property instanceof Association)) {
+                return false;
+            }
+            current = ((Association) property).getAssociatedEntity();
+        }
+        return false;
+    }
+
+    /**
      * Applies the join type that a criteria query requests for an association, with the {@code fetch}
      * argument or with {@code join(String, JoinType)}. The association is fetched, as it is for the
      * {@code 'join'} fetch mode. A fetch mode alone always joins with an outer join, so a join type

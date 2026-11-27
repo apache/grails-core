@@ -128,6 +128,35 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         results*.name - 'Unattached First Team' == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
     }
 
+    void '#operation changes the teams that list returns when #description'() {
+        given: 'a team without a club'
+        new Team(name: 'Unattached First Team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final listed = query.call().list()*.name.sort()
+        final counted = query.call().count()
+        final changed = operation == 'updateAll' ? query.call().updateAll(name: 'Changed Team') : query.call().deleteAll()
+        manager.session.clear()
+
+        then:
+        listed == expected
+        counted == expected.size()
+        changed == expected.size()
+        Team.list()*.name.findAll { it != 'Changed Team' }.sort() == TEAMS_BY_NAME - expected
+
+        where:
+        [operation, description, query, expected] << [
+                ['updateAll', 'deleteAll'],
+                [
+                        ['the root alias qualifies an inner join', { new DetachedCriteria(Team, 't').join('t.club', JoinType.INNER) }, TEAMS_WITH_A_CLUB],
+                        ['an alias named like the association qualifies an inner join', { new DetachedCriteria(Team, 'club').join('club.club', JoinType.INNER) }, TEAMS_WITH_A_CLUB],
+                        ['the alias Hibernate gives a where query qualifies an inner join', { Team.where { name ==~ '%' }.join('this.club', JoinType.INNER) }, TEAMS_WITH_A_CLUB],
+                        ['a fetch mode through the root alias replaces an inner join', { new DetachedCriteria(Team, 't').join('club', JoinType.INNER).join('t.club') }, TEAMS_BY_NAME],
+                ],
+        ].combinations().collect { List row -> [row[0]] + row[1] }
+    }
+
     void 'a root alias matching #alias preserves the full #property path with #sortForm and pagination #paged'() {
         given:
         final first = new Team(name: 'Collision Z', club: Club.findByName('Arsenal')).save(failOnError: true)
@@ -225,6 +254,7 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
     }
 
     private static final List<String> TEAMS_BY_NAME = ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']
+    private static final List<String> TEAMS_WITH_A_CLUB = TEAMS_BY_NAME - 'Unattached First Team'
 
     void 'a sort by an alias that the query defines still sorts'() {
         when:

@@ -933,6 +933,7 @@ A sort that starts with the alias that a detached criteria gives the queried cla
 - Search for `new DetachedCriteria(` with an alias argument, and for the sorts of those queries. To get the results without a sort, as before, remove the sort.
 - A remaining association path, such as `b.author.name`, can now exclude roots without that association from the results, count and totalCount. Enable `grails.gorm.leftJoinAssociationSort` or request LEFT to retain them while sorting. An invalid remaining property now fails instead of being ignored.
 - If an alias is also an association name, a valid association path keeps its existing meaning. The root alias is stripped once only when the full path does not resolve through the association.
+- A join type requested through the root alias, with `join`, `select` or the `fetch` argument, as in `new DetachedCriteria(Book, 'b').join('b.author', JoinType.INNER)` or `Book.where { ... }.join('this.author', JoinType.INNER)`, was ignored. It is now applied as the same request without the alias: INNER leaves out the books without an author, also from count, totalCount, `updateAll` and `deleteAll`. Search for `join('<alias>.`, `select('<alias>.` and `fetch: ['<alias>.`, and remove the request to keep the former results. Request each association once, either with or without the alias.
 
 ## GORM for Hibernate: a join type requested for an association is always applied
 

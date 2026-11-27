@@ -843,19 +843,7 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     private boolean isAssociationSortPath(String path) {
-        PersistentEntity current = entity;
-        String[] tokens = path.split("\\.");
-        for (int i = 0; i < tokens.length; i++) {
-            PersistentProperty property = current != null ? current.getPropertyByName(tokens[i]) : null;
-            if (i == tokens.length - 1) {
-                return property != null || current != null && current.getIdentity() != null && current.getIdentity().getName().equals(tokens[i]);
-            }
-            if (!(property instanceof Association)) {
-                return false;
-            }
-            current = ((Association) property).getAssociatedEntity();
-        }
-        return false;
+        return GrailsHibernateUtil.isPropertyPath(entity, path);
     }
 
     /**
@@ -1240,10 +1228,7 @@ public abstract class AbstractHibernateQuery extends Query {
      */
     private String normalizeFetchPath(String property) {
         String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria != null ? detachedCriteria.getAlias() : null;
-        if (property != null && rootAlias != null && property.startsWith(rootAlias + '.') && !isAssociationSortPath(property)) {
-            return property.substring(rootAlias.length() + 1);
-        }
-        return property;
+        return GrailsHibernateUtil.stripRootAlias(entity, rootAlias, property);
     }
 
     @Override
