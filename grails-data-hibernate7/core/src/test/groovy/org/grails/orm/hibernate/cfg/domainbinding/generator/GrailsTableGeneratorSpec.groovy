@@ -57,7 +57,7 @@ class GrailsTableGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test constructor logic"() {
         given:
-        def binder = getGrailsDomainBinder()
+        def binder = getMappingContributor()
         def context = Mock(GeneratorCreationContext)
         def property = new Property()
         property.setName("id")
@@ -84,7 +84,7 @@ class GrailsTableGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test constructor with null mappedId"() {
         given:
-        def binder = getGrailsDomainBinder()
+        def binder = getMappingContributor()
         def context = Mock(GeneratorCreationContext)
         def property = new Property()
         property.setName("id")
@@ -103,7 +103,7 @@ class GrailsTableGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test constructor with existing parameters"() {
         given:
-        def binder = getGrailsDomainBinder()
+        def binder = getMappingContributor()
         def context = Mock(GeneratorCreationContext)
         def property = new Property()
         property.setName("id")

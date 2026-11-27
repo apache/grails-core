@@ -43,10 +43,9 @@ class HibernateEmbeddedCollectionProperty extends EmbeddedCollectionWithMapping<
     }
 
     /**
-     * Returns {@code null} so that {@link org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType}
-     * does not set a Hibernate type name on the collection mapping. For embedded value-object collections
-     * the element is bound as a Hibernate {@link org.hibernate.mapping.Component}, not as a basic type,
-     * so propagating the Java class name here would cause Hibernate to reject it at boot.
+     * Returns {@code null} so that no Hibernate type name is set on the collection mapping. For embedded
+     * value-object collections the element is bound as a Hibernate {@link org.hibernate.mapping.Component},
+     * not as a basic type, so propagating the Java class name here would cause Hibernate to reject it at boot.
      */
     @Override
     String getTypeName() {

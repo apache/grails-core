@@ -32,9 +32,9 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A contributor that runs after the domain binder, such as Hibernate Envers building the audit mappings, reads the entities
- * bound so far. The generated classes are bound when the domain binder runs, with their second passes, so that such a
- * contributor finds the same bound model whether the domain binder or the generated classes bound the entities.
+ * A contributor that runs after GORM's mapping contributor, such as Hibernate Envers building the audit mappings, reads the
+ * entities bound so far. The generated classes are bound when GORM's contributor runs, with their second passes, so that such a
+ * contributor finds the bound model complete, as it did with the classic binding of Grails 8.
  */
 class GeneratedDomainClassesContributorSpec extends Specification {
 
@@ -50,29 +50,23 @@ class GeneratedDomainClassesContributorSpec extends Specification {
         datastore?.close()
     }
 
-    private HibernateDatastore boot(boolean generated) {
+    private HibernateDatastore boot() {
         datastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver([
-                        'dataSource.url'                  : "jdbc:h2:mem:gdcContributor${generated};LOCK_TIMEOUT=10000".toString(),
-                        'dataSource.dbCreate'             : 'create-drop',
-                        'hibernate.generatedDomainClasses': generated,
+                        'dataSource.url'     : 'jdbc:h2:mem:gdcContributor;LOCK_TIMEOUT=10000',
+                        'dataSource.dbCreate': 'create-drop',
                 ]), GdcContributorShelf, GdcContributorItem)
     }
 
-    def "a contributor sees the bound entities, with their collections complete, in #mode mode"() {
+    def "a contributor sees the bound entities, with their collections complete"() {
         when:
-        boot(generated)
+        boot()
 
         then: 'the entities are bound under the domain class names'
         RecordingMappingContributor.seen.keySet() == [GdcContributorShelf.name, GdcContributorItem.name].toSet()
 
         and: 'the collection of the owner has its element and key'
         RecordingMappingContributor.seen[GdcContributorShelf.name] == ['items:true']
-
-        where:
-        generated | mode
-        true      | 'generated'
-        false     | 'binder'
     }
 }
 

@@ -39,7 +39,7 @@ class NaturalIdSpec extends HibernateGormDatastoreSpec {
         property.value = value
         def column = new Column("id1")
         def table = new Table("test_table")
-        def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def rootClass = new RootClass(getMappingContributor().getMetadataBuildingContext())
         rootClass.addProperty(property)
         rootClass.table = table
         value.getSelectables() >> [column]
@@ -73,7 +73,7 @@ class NaturalIdSpec extends HibernateGormDatastoreSpec {
         def column2 = new Column("id2")
         
         def table = new Table("test_table")
-        def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def rootClass = new RootClass(getMappingContributor().getMetadataBuildingContext())
         rootClass.addProperty(property1)
         rootClass.addProperty(property2)
         rootClass.table = table
@@ -100,7 +100,7 @@ class NaturalIdSpec extends HibernateGormDatastoreSpec {
         given:
         def naturalId = new NaturalId(propertyNames: [], mutable: false)
         def table = new Table("test_table")
-        def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def rootClass = new RootClass(getMappingContributor().getMetadataBuildingContext())
         rootClass.table = table
 
         when:

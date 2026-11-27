@@ -29,10 +29,9 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A registered type name for a different Java type than the property's, for example {@code type: 'string'} on an {@code Integer}. The
- * domain binder resolves the name and not the property's class: the column has the registered type's SQL type, and the type cannot
- * convert the value, so a value that is not null fails when it is saved with a {@code ClassCastException}. The generated mode boots with the
- * same column and fails the same way.
+ * A registered type name for a different Java type than the property's, for example {@code type: 'string'} on an {@code Integer}. As
+ * the classic binding of Grails 8 did, the name is resolved and not the property's class: the column has the registered type's SQL type,
+ * and the type cannot convert the value, so a value that is not null fails when it is saved with a {@code ClassCastException}.
  */
 class GeneratedDomainClassesTypeMismatchSpec extends Specification {
 
@@ -41,12 +40,11 @@ class GeneratedDomainClassesTypeMismatchSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:tm${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:tm${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
@@ -81,13 +79,11 @@ class GeneratedDomainClassesTypeMismatchSpec extends Specification {
     }
 
     @Unroll
-    void "#label has the column type the domain binder gives it"() {
+    void "#label has the column type classic binding gave it"() {
         when:
-        Map<String, Map> binder = schema(boot([type], false))
-        Map<String, Map> generated = schema(boot([type], true))
+        Map<String, Map> generated = schema(boot([type]))
 
         then:
-        generated == binder
         generated[table].columns.tag.startsWith(sqlType)
 
         where:
@@ -102,22 +98,19 @@ class GeneratedDomainClassesTypeMismatchSpec extends Specification {
     }
 
     @Unroll
-    void "#label fails to save a value as the domain binder does, and stores null and the other properties"() {
+    void "#label fails to save a value as classic binding did, and stores null and the other properties"() {
         when:
-        Map<Boolean, Map> outcome = [false, true].collectEntries { boolean generated ->
-            boot([type], generated)
-            Map steps = [:]
-            steps.saveValue = attempt { type.withTransaction { type.newInstance(tag: value, name: 'a').save(failOnError: true, flush: true).id } }
-            Long id = null
-            steps.saveNull = attempt { id = type.withTransaction { type.newInstance(name: 'b').save(failOnError: true, flush: true).id } }
-            steps.reload = attempt { type.withNewSession { Object found = type.get(id); [found.name, found.tag] } }
-            [(generated): steps]
-        }
+        boot([type])
+        Map steps = [:]
+        steps.saveValue = attempt { type.withTransaction { type.newInstance(tag: value, name: 'a').save(failOnError: true, flush: true).id } }
+        Long id = null
+        steps.saveNull = attempt { id = type.withTransaction { type.newInstance(name: 'b').save(failOnError: true, flush: true).id } }
+        steps.reload = attempt { type.withNewSession { Object found = type.get(id); [found.name, found.tag] } }
 
         then:
-        outcome[true] == outcome[false]
-        outcome[true].saveValue == 'failed: ClassCastException'
-        outcome[true].reload.startsWith('ok: [b, null]')
+        steps.saveValue == 'failed: ClassCastException'
+        steps.saveNull.startsWith('ok: ')
+        steps.reload.startsWith('ok: [b, null]')
 
         where:
         label                       | type           | value

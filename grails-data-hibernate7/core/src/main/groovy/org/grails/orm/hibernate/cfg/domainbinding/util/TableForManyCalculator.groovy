@@ -32,9 +32,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE
+import static org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher.UNDERSCORE
 
 @CompileStatic
+@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class TableForManyCalculator {
 
     private final PersistentEntityNamingStrategy namingStrategy
@@ -54,33 +55,33 @@ class TableForManyCalculator {
     }
 
     String getTableName(HibernateToManyProperty property) {
-        PropertyConfig config = property.getHibernateMappedForm()
-        JoinTable joinTable = config.getJoinTable()
+        PropertyConfig config = property.hibernateMappedForm
+        JoinTable joinTable = config.joinTable
 
         String logicalName = calculateTableForMany(property)
-        return (joinTable != null && joinTable.getName() != null) ?
-                joinTable.getName() : namingStrategy.resolveTableName(logicalName)
+        return (joinTable != null && joinTable.name != null) ?
+                joinTable.name : namingStrategy.resolveTableName(logicalName)
     }
 
     String getJoinTableSchema(HibernateToManyProperty property) {
-        PropertyConfig config = property.getHibernateMappedForm()
-        JoinTable joinTable = config.getJoinTable()
+        PropertyConfig config = property.hibernateMappedForm
+        JoinTable joinTable = config.joinTable
 
-        if (joinTable != null && joinTable.getSchema() != null) {
-            return joinTable.getSchema()
+        if (joinTable != null && joinTable.schema != null) {
+            return joinTable.schema
         }
         String schemaName = NamespaceNameExtractor.getSchemaName(mappings)
         // Ask the owning entity directly: property.getTable() may already return the
         // (partially built) collection table for a basic collection element at this point.
-        return (schemaName == null) ? property.getPersistentClass().getTable().getSchema() : schemaName
+        return (schemaName == null) ? property.persistentClass.table.schema : schemaName
     }
 
     String getJoinTableCatalog(HibernateToManyProperty property) {
-        PropertyConfig config = property.getHibernateMappedForm()
-        JoinTable joinTable = config.getJoinTable()
+        PropertyConfig config = property.hibernateMappedForm
+        JoinTable joinTable = config.joinTable
 
-        if (joinTable != null && joinTable.getCatalog() != null) {
-            return joinTable.getCatalog()
+        if (joinTable != null && joinTable.catalog != null) {
+            return joinTable.catalog
         }
         return NamespaceNameExtractor.getCatalogName(mappings)
     }
@@ -91,21 +92,22 @@ class TableForManyCalculator {
      * and right_left
      */
     String calculateTableForMany(HibernatePersistentProperty property) {
-        String propertyColumnName = namingStrategy.resolveColumnName(property.getName())
-        PropertyConfig config = property.getMappedForm()
-        JoinTable jt = config.getJoinTable()
-        boolean hasJoinTableMapping = jt != null && jt.getName() != null
-        GrailsHibernatePersistentEntity domainClass1 = property.getHibernateOwner()
+        String propertyColumnName = namingStrategy.resolveColumnName(property.name)
+        PropertyConfig config = property.mappedForm
+        JoinTable jt = config.joinTable
+        boolean hasJoinTableMapping = jt != null && jt.name != null
+        GrailsHibernatePersistentEntity domainClass1 = property.hibernateOwner
         String left = domainClass1.getTableName(namingStrategy)
 
-        if (Map.isAssignableFrom(property.getType())) {
+        if (Map.isAssignableFrom(property.type)) {
             if (hasJoinTableMapping) {
-                return jt.getName()
+                return jt.name
             }
             return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(propertyColumnName)
-        } else if (property instanceof Basic) {
+        }
+        else if (property instanceof Basic) {
             if (hasJoinTableMapping) {
-                return jt.getName()
+                return jt.name
             }
             return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(propertyColumnName)
         }
@@ -113,34 +115,33 @@ class TableForManyCalculator {
         // Only proceed with association logic if it's an actual Association and has an associated
         // entity
         if (!(property instanceof Association<?>)) {
-            throw new MappingException('Property [' + property.getName() +
-                    '] is not an association and is not a basic type for table calculation.')
+            throw new MappingException("Property [${property.name}] is not an association and is not a basic type for table calculation.".toString())
         }
         Association<?> association = (Association<?>) property
 
         GrailsHibernatePersistentEntity domainClass =
-                (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
+                (GrailsHibernatePersistentEntity) association.associatedEntity
         if (domainClass == null) {
             throw new MappingException(
-                    'Expected an entity to be associated with the association (' + property + ') and none was found. ')
+                    "Expected an entity to be associated with the association (${property}) and none was found. ".toString())
         }
         String right = domainClass.getTableName(namingStrategy)
 
         if (property instanceof HibernateManyToManyProperty) {
             HibernateManyToManyProperty property1 = (HibernateManyToManyProperty) property
             if (hasJoinTableMapping) {
-                return jt.getName()
+                return jt.name
             }
             if (association.isOwningSide()) {
                 return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(propertyColumnName)
             }
-            String s2 = namingStrategy.resolveColumnName(property1.getInversePropertyName())
+            String s2 = namingStrategy.resolveColumnName(property1.inversePropertyName)
             return backticksRemover.apply(right) + UNDERSCORE.toString() + backticksRemover.apply(s2)
         }
 
         if (property.supportsJoinColumnMapping()) {
             if (hasJoinTableMapping) {
-                return jt.getName()
+                return jt.name
             }
             return backticksRemover.apply(left) + UNDERSCORE.toString() + backticksRemover.apply(right)
         }

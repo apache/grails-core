@@ -22,6 +22,11 @@ import jakarta.persistence.Column
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import jakarta.persistence.FetchType
+import jakarta.persistence.ManyToMany
+import jakarta.persistence.OneToMany
+import org.hibernate.annotations.Fetch
+import org.hibernate.annotations.FetchMode
 import org.hibernate.annotations.Filter
 import org.hibernate.annotations.FilterDef
 import org.hibernate.boot.Metadata
@@ -36,9 +41,10 @@ import org.hibernate.mapping.PersistentClass
 
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.orm.hibernate.cfg.domainbinding.column.ColumnConfigToColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.NumericColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.StringColumnConstraintsBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.jpa.facets.TenantFacets
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
@@ -62,7 +68,7 @@ class GrailsDomainGeneratorTenantSpec extends HibernateGormDatastoreSpec {
                 'grails.gorm.multiTenancy.tenantResolver': new SystemPropertyTenantResolver()
         ]
         manager.registerDomainClasses(GenTenantBook, GenTenantNamed, GenTenantRoot, GenTenantLeaf, GenTenantJoinedRoot, GenTenantJoinedLeaf, GenTenantPlain,
-                GenTenantTyped)
+                GenTenantTyped, GenTenantCatalog, GenTenantEntry, GenTenantNote, GenTenantTag)
     }
 
     void cleanup() {
@@ -197,12 +203,44 @@ class GrailsDomainGeneratorTenantSpec extends HibernateGormDatastoreSpec {
         return newGenerator().generate(entity(domainClass), getClass().classLoader)
     }
 
+    void "a collection of a multi-tenant entity carries the tenant filter, and a join fetch of it becomes an eager select"() {
+        given:
+        Map<GrailsHibernatePersistentEntity, Class<?>> classes = generateAll(GenTenantCatalog, GenTenantEntry, GenTenantNote, GenTenantTag)
+        Class<?> catalog = classes[entity(GenTenantCatalog)]
+
+        expect: "the many-to-many and the one-to-many both carry the filter on the generated field"
+        catalog.getDeclaredField('entries').isAnnotationPresent(ManyToMany)
+        catalog.getDeclaredField('entries').getAnnotation(Filter).name() == GormProperties.TENANT_IDENTITY
+        catalog.getDeclaredField('notes').getAnnotation(Filter).name() == GormProperties.TENANT_IDENTITY
+
+        and: "the collection mapped fetch: 'join' is loaded eagerly with a select of its own, because a join would bypass the filter"
+        catalog.getDeclaredField('notes').getAnnotation(OneToMany).fetch() == FetchType.EAGER
+        catalog.getDeclaredField('notes').getAnnotation(Fetch).value() == FetchMode.SELECT
+
+        and: "a collection of an entity that is not multi-tenant has no filter and keeps its join fetch"
+        !catalog.getDeclaredField('tags').isAnnotationPresent(Filter)
+        catalog.getDeclaredField('tags').getAnnotation(Fetch).value() == FetchMode.JOIN
+
+        when: "Hibernate reads the generated classes"
+        Metadata metadata = annotationMetadata(classes.values())
+        org.hibernate.mapping.Collection entries = metadata.getCollectionBinding("${catalog.name}.entries")
+        org.hibernate.mapping.Collection notes = metadata.getCollectionBinding("${catalog.name}.notes")
+
+        then: "the many-to-many filters its element rows, as the classic binder's many-to-many filter did, and the one-to-many its own"
+        entries.manyToManyFilters*.name == ['tenantId']
+        entries.filters.isEmpty()
+        notes.filters*.name == ['tenantId']
+        notes.manyToManyFilters.isEmpty()
+        notes.fetchMode == org.hibernate.FetchMode.SELECT
+        !notes.lazy
+    }
+
     private GrailsHibernatePersistentEntity entity(Class<?> domainClass) {
         return getPersistentEntity(domainClass)
     }
 
     private GrailsDomainGenerator newGenerator() {
-        def naming = getGrailsDomainBinder().getNamingStrategy()
+        def naming = getMappingContributor().getNamingStrategy()
         return new GrailsDomainGenerator(
                 naming,
                 new ColumnNameForPropertyAndPathFetcher(naming, new DefaultColumnNameFetcher(naming), new BackticksRemover()),
@@ -283,4 +321,48 @@ class GenTenantTyped implements MultiTenant<GenTenantTyped> {
             companyId type: GenUpperType
         }
     }
+}
+
+@Entity
+class GenTenantCatalog {
+
+    String name
+    Set<GenTenantEntry> entries
+    Set<GenTenantNote> notes
+    Set<GenTenantTag> tags
+
+    static hasMany = [entries: GenTenantEntry, notes: GenTenantNote, tags: GenTenantTag]
+
+    static mapping = {
+        notes fetch: 'join'
+        tags fetch: 'join'
+    }
+}
+
+@Entity
+class GenTenantEntry implements MultiTenant<GenTenantEntry> {
+
+    String label
+    String tenantId
+    Set<GenTenantCatalog> catalogs
+
+    static hasMany = [catalogs: GenTenantCatalog]
+    static belongsTo = [GenTenantCatalog]
+}
+
+@Entity
+class GenTenantNote implements MultiTenant<GenTenantNote> {
+
+    String label
+    String tenantId
+
+    static belongsTo = [catalog: GenTenantCatalog]
+}
+
+@Entity
+class GenTenantTag {
+
+    String label
+
+    static belongsTo = [catalog: GenTenantCatalog]
 }

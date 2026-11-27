@@ -69,9 +69,8 @@ class HibernateBasicEnumProperty extends HibernateBasicProperty implements Hiber
      * collection's join table rather than the owning entity's table. Before the collection
      * table has been assigned (e.g. while it is itself being computed), falls back to the
      * owning entity's table, matching the pre-collection-binding default. Scoped to the enum
-     * subclass because only {@link org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder}
-     * binds through {@code getTable()}; the non-enum element binding reads the collection
-     * table directly.
+     * subclass because only an enum element is bound through {@code getTable()}; the non-enum
+     * element binding reads the collection table directly.
      */
     @Override
     Table getTable() {

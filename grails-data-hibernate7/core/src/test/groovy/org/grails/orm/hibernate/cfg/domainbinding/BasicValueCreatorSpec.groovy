@@ -48,7 +48,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
     PersistentEntityNamingStrategy namingStrategy
 
     def setup() {
-        metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        metadataBuildingContext = getMappingContributor().getMetadataBuildingContext()
         jdbcEnvironment = Mock(JdbcEnvironment)
         namingStrategy = Mock(PersistentEntityNamingStrategy)
         grailsSequenceWrapper = Mock(GrailsSequenceWrapper)

@@ -26,17 +26,16 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * What the generated-domain-class binding boots (an entity with a composite identifier) and the plain binder boots too.
+ * What boots through the generated classes (an entity with a composite identifier), with a data source stated and with the defaults.
  */
 class GeneratedDomainClassesBootSpec extends Specification {
 
-    def "a composite identifier boots through the generated classes, and the entity has no identifier property of its own"() {
+    def "a composite identifier boots, and the entity has no identifier property of its own"() {
         when:
         HibernateDatastore datastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver([
-                        'dataSource.url'                  : 'jdbc:h2:mem:gdcBoot;LOCK_TIMEOUT=10000',
-                        'dataSource.dbCreate'             : 'create-drop',
-                        'hibernate.generatedDomainClasses': true,
+                        'dataSource.url'     : 'jdbc:h2:mem:gdcBoot;LOCK_TIMEOUT=10000',
+                        'dataSource.dbCreate': 'create-drop',
                 ]), GdcComposite)
         EntityPersister persister = datastore.sessionFactory.mappingMetamodel.getEntityDescriptor(GdcComposite)
 
@@ -50,7 +49,7 @@ class GeneratedDomainClassesBootSpec extends Specification {
         datastore?.close()
     }
 
-    def "the same entity boots through the domain binder"() {
+    def "the same entity boots with the default settings"() {
         when:
         HibernateDatastore datastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver([

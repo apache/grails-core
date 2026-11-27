@@ -37,8 +37,8 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * {@code params} on a {@code type}. The domain binder hands them to the type: a registered type name ignores them, a
- * {@code UserType} that implements {@code ParameterizedType} receives them. The generated mode does the same.
+ * {@code params} on a {@code type}. They are handed to the type, as the classic binding of Grails 8 handed them: a registered type
+ * name ignores them, a {@code UserType} that implements {@code ParameterizedType} receives them.
  */
 class GeneratedDomainClassesTypeParametersSpec extends Specification {
 
@@ -47,12 +47,11 @@ class GeneratedDomainClassesTypeParametersSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:tns${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:tns${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
@@ -110,13 +109,11 @@ class GeneratedDomainClassesTypeParametersSpec extends Specification {
     }
 
     @Unroll
-    void "#label has the column type the domain binder gives it"() {
+    void "#label has the column type classic binding gave it"() {
         when:
-        Map<String, Map> binder = schema(boot(group, false))
-        Map<String, Map> generated = schema(boot(group, true))
+        Map<String, Map> generated = schema(boot(group))
 
         then:
-        generated == binder
         generated[table].columns[column] == type
 
         where:
@@ -126,23 +123,19 @@ class GeneratedDomainClassesTypeParametersSpec extends Specification {
         'a string with a user type that takes parameters'    | [TnPrefixed]           | 'tn_prefixed'         | 'label'         | 'varchar(255)'
     }
 
-    void "a type with type parameters is saved and read back as the domain binder does, which hands the parameters to a registered type that ignores them"() {
+    void "a type with type parameters is saved and read back as with classic binding, which handed the parameters to a registered type that ignores them"() {
         when:
-        Map binder = roundTrip(boot([TnStringParams], false), TnStringParams, [myProperty: 'hello'], 'myProperty', 'select my_property from tn_string_params')
-        Map generated = roundTrip(boot([TnStringParams], true), TnStringParams, [myProperty: 'hello'], 'myProperty', 'select my_property from tn_string_params')
+        Map generated = roundTrip(boot([TnStringParams]), TnStringParams, [myProperty: 'hello'], 'myProperty', 'select my_property from tn_string_params')
 
         then:
-        generated == binder
         generated == [stored: [['hello']], reloaded: 'hello']
     }
 
     void "the parameters of a user type reach the user type"() {
         when:
-        Map binder = roundTrip(boot([TnPrefixed], false), TnPrefixed, [label: 'hello'], 'label', 'select label from tn_prefixed')
-        Map generated = roundTrip(boot([TnPrefixed], true), TnPrefixed, [label: 'hello'], 'label', 'select label from tn_prefixed')
+        Map generated = roundTrip(boot([TnPrefixed]), TnPrefixed, [label: 'hello'], 'label', 'select label from tn_prefixed')
 
         then:
-        generated == binder
         generated == [stored: [['p:hello']], reloaded: 'hello']
     }
 }

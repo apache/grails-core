@@ -90,15 +90,6 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
          */
         boolean hibernateDirtyChecking = false
 
-        // the JVM-wide system property switches the default off to run an existing test suite through the classic domain binder; a configured value wins
-        /**
-         * Whether Hibernate's annotation binder binds classes generated from the GORM mapping (native domain binding),
-         * instead of the classic domain binder building Hibernate's boot model by hand. The application's real domain
-         * classes are still what is persisted and loaded. On by default. {@code false} selects the classic domain
-         * binding, which is deprecated and will be removed.
-         */
-        boolean generatedDomainClasses = !Boolean.getBoolean('grails.hibernate.classicDomainBinding')
-
         /**
          * Cache settings
          */

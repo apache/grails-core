@@ -112,7 +112,7 @@ class HibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
     def "getRootClass returns root class from persistent class"() {
         given:
         def entity = getPersistentEntity(HPESimple) as HibernatePersistentEntity
-        def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def rootClass = new RootClass(getMappingContributor().getMetadataBuildingContext())
         entity.setPersistentClass(rootClass)
 
         expect:

@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.domains.Person
 class GeneratedDomainClassesQuerySpec extends HibernateQuerySpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses()
+        manager.registerDomainClasses()
     }
 
     def "the inherited features run against the generated mapping"() {

@@ -19,6 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
@@ -51,8 +52,12 @@ class CreateKeyForPropsSpec extends Specification {
         }
         grailsProp.getMappedForm() >> mappedForm
 
-        def otherProp1 = Mock(HibernatePersistentProperty)
-        def otherProp2 = Mock(HibernatePersistentProperty)
+        def otherProp1 = Mock(HibernatePersistentProperty) {
+            getHibernateMappedForm() >> new PropertyConfig()
+        }
+        def otherProp2 = Mock(HibernatePersistentProperty) {
+            getHibernateMappedForm() >> new PropertyConfig()
+        }
         owner.getHibernatePropertyByName("p1") >> otherProp1
         owner.getHibernatePropertyByName("p2") >> otherProp2
 
@@ -195,7 +200,9 @@ class CreateKeyForPropsSpec extends Specification {
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
         def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
         def owner = Mock(GrailsHibernatePersistentEntity)
-        def otherProp = Mock(HibernatePersistentProperty)
+        def otherProp = Mock(HibernatePersistentProperty) {
+            getHibernateMappedForm() >> new PropertyConfig()
+        }
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> true
             isUniqueWithinGroup() >> true
@@ -366,7 +373,9 @@ class CreateKeyForPropsSpec extends Specification {
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
         def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
         def owner = Mock(GrailsHibernatePersistentEntity)
-        def otherProp = Mock(HibernatePersistentProperty)
+        def otherProp = Mock(HibernatePersistentProperty) {
+            getHibernateMappedForm() >> new PropertyConfig()
+        }
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> true
             isUniqueWithinGroup() >> true

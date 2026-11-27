@@ -28,7 +28,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX
+import static org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher.FOREIGN_KEY_SUFFIX
 import static org.hibernate.boot.model.naming.Identifier.toIdentifier
 
 /**
@@ -65,7 +65,7 @@ class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
         Identifier identifier = namingStrategy.toPhysicalColumnName(
                 toIdentifier(logicalName.replace('.' as char, '_' as char)), jdbcEnvironment)
         // Per Hibernate contract, if the strategy returns null, use the original logical name.
-        return identifier != null ? identifier.getText() : logicalName
+        return identifier != null ? identifier.text : logicalName
     }
 
     @Override
@@ -77,7 +77,7 @@ class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
         Identifier identifier = namingStrategy.toPhysicalTableName(
                 toIdentifier(logicalName.replace('.' as char, '_' as char)), jdbcEnvironment)
         // Per Hibernate contract, if the strategy returns null, use the original logical name.
-        return identifier != null ? identifier.getText() : logicalName
+        return identifier != null ? identifier.text : logicalName
     }
 
     @Override
@@ -85,15 +85,15 @@ class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
         if (property == null) {
             return null
         }
-        GrailsHibernatePersistentEntity owner = property.getHibernateOwner()
+        GrailsHibernatePersistentEntity owner = property.hibernateOwner
         if (owner == null) {
             return null
         }
-        Class<?> javaClass = owner.getJavaClass()
+        Class<?> javaClass = owner.javaClass
         if (javaClass == null) {
             return null
         }
-        String decapitalized = NameUtils.decapitalize(javaClass.getSimpleName())
+        String decapitalized = NameUtils.decapitalize(javaClass.simpleName)
         if (decapitalized == null) {
             return null
         }
@@ -106,6 +106,7 @@ class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
 
     @Override
     String resolveTableName(GrailsHibernatePersistentEntity entity) {
-        return resolveTableName(entity.getJavaClass().getSimpleName())
+        return resolveTableName(entity.javaClass.simpleName)
     }
+
 }

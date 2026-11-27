@@ -45,7 +45,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
     @Unroll
     def "Test calculateTableForMany for #scenario"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
         collector.addTable(_, _, _, _, _, _, _) >> { schema, catalog, name, sub, isAbstract, context, isView ->
@@ -118,7 +118,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "Test getTableName delegates to calculateTableForMany or uses explicit name"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def collector = Mock(InFlightMetadataCollector)
         def calculator = new TableForManyCalculator(namingStrategy, collector)
         
@@ -141,7 +141,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "Test getJoinTableSchema and getJoinTableCatalog"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def collector = Mock(InFlightMetadataCollector)
         def database = Mock(Database)
         def namespace = Mock(Namespace)
@@ -184,7 +184,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "getJoinTableSchema falls back to the owning entity's table schema when no default schema exists"() {
         given: "a metadata collector whose default namespace has no schema"
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def collector = Mock(InFlightMetadataCollector)
         def database = Mock(Database)
         def namespace = Mock(Namespace)
@@ -196,7 +196,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         and: "a property whose owning entity's table carries a schema"
         def ownerTable = new org.hibernate.mapping.Table("owner_table")
         ownerTable.setSchema("owner_schema")
-        def rootClass = new org.hibernate.mapping.RootClass(getGrailsDomainBinder().metadataBuildingContext)
+        def rootClass = new org.hibernate.mapping.RootClass(getMappingContributor().metadataBuildingContext)
         rootClass.setTable(ownerTable)
         def property = Mock(HibernateToManyProperty)
         property.getHibernateMappedForm() >> new PropertyConfig()
@@ -208,7 +208,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "calculateTableForMany Map property with explicit joinTable name returns joinTable name (L103)"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
         collector.addTable(_, _, _, _, _, _, _) >> { a, b, name, d, e, f, isView -> new org.hibernate.mapping.Table("test", name) }
@@ -236,7 +236,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "calculateTableForMany Map property without joinTable returns left_propName (L105)"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
         collector.addTable(_, _, _, _, _, _, _) >> { a, b, name, d, e, f, isView -> new org.hibernate.mapping.Table("test", name) }
@@ -263,7 +263,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "calculateTableForMany Basic property with explicit joinTable name returns joinTable name (L108)"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
         collector.addTable(_, _, _, _, _, _, _) >> { a, b, name, d, e, f, isView -> new org.hibernate.mapping.Table("test", name) }
@@ -291,7 +291,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "calculateTableForMany with non-Association non-Basic property throws MappingException (L117)"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
         def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
@@ -318,7 +318,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "calculateTableForMany with Association having null associated entity throws MappingException (L124)"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
         def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
@@ -346,7 +346,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "calculateTableForMany owning ManyToMany without joinTable returns left_propName (L134)"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
         def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
@@ -377,7 +377,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "calculateTableForMany supportsJoinColumnMapping with explicit joinTable returns joinTable name (L142)"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
         def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
@@ -410,7 +410,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
     def "calculateTableForMany non-owning Association returns right_left (L150)"() {
         given:
-        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def namingStrategy = getMappingContributor().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
         def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)

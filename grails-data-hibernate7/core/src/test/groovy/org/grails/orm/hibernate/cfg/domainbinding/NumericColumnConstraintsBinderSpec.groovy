@@ -26,7 +26,7 @@ import org.hibernate.dialect.OracleDialect
 import org.hibernate.dialect.PostgreSQLDialect
 import org.hibernate.mapping.Column
 import spock.lang.Specification
-import org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.NumericColumnConstraintsBinder
 
 class NumericColumnConstraintsBinderSpec extends Specification {
 

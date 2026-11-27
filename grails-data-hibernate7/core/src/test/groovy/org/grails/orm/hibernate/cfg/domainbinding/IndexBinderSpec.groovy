@@ -25,7 +25,7 @@ import org.hibernate.mapping.Index
 import org.hibernate.mapping.Table
 import spock.lang.Specification
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.IndexBinder
+import org.grails.orm.hibernate.cfg.domainbinding.column.IndexBinder
 
 class IndexBinderSpec extends Specification {
 

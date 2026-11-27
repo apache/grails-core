@@ -33,11 +33,11 @@ import spock.lang.Unroll
 import org.grails.orm.hibernate.HibernateDatastore
 
 /**
- * A self-referencing many-to-many (one entity on both sides) over the generated classes names its join table columns as the
- * domain binder does. The binder renames the join key of one side while it binds the other, so which side keeps the default key
- * name depends on the order the two collections are bound in, which is the order of the properties of the entity. A user whose
- * database was created by the binder and who turns generated mode on must not see {@code update} add new columns beside the old
- * ones, and a relationship the binder wrote must still be read.
+ * A self-referencing many-to-many (one entity on both sides) names its join table columns as the classic binding of Grails 8 did.
+ * Classic binding renamed the join key of one side while it bound the other, so which side keeps the default key name depends on
+ * the order the two collections are bound in, which is the order of the properties of the entity. A user whose database was created
+ * by Grails 8 must not see {@code update} add new columns beside the old ones, and a relationship written then must still be read.
+ * The join tables stated here are the ones classic binding created, recorded before it was removed.
  */
 class GeneratedDomainClassesCircularManyToManySpec extends Specification {
 
@@ -46,19 +46,18 @@ class GeneratedDomainClassesCircularManyToManySpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:cmmCircular${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:cmmCircular${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The collections and the join tables the boot model holds, as plain data. */
-    private Map<String, Object> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Object> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Object> result = [:]
         for (HibernateCollection collection : booted.metadata.collectionBindings) {
             Table table = collection.collectionTable
@@ -76,42 +75,55 @@ class GeneratedDomainClassesCircularManyToManySpec extends Specification {
     }
 
     @Unroll
-    void "the join tables of #label have the column names the domain binder gives them"() {
+    void "the join tables of #label have the column names classic binding gave them"() {
         when:
-        Map<String, Object> binder = schema(group, false)
-        Map<String, Object> generated = schema(group, true)
+        Map<String, Object> generated = schema(group)
 
         then:
-        !binder.isEmpty()
-        generated == binder
+        generated == expected
 
         where:
-        label                                                    | group
-        'a bidirectional self many-to-many'                      | [CmFollowers]
-        'the same with the properties declared the other way'    | [CmFollowersSwapped]
-        'the same with the properties and hasMany in two orders' | [CmFollowersMixed]
-        'the same with names that sort the other way'            | [CmZebras]
-        'a self many-to-many inside a hierarchy'                 | [CmHierarchyRoot, CmHierarchySub]
-        'a superclass collection and a circular subclass one'    | [CmMammal, CmDog]
-        'a unidirectional self many-to-many'                     | [CmFriends]
-        'a first side that names its join key'                   | [CmKeyedFirst]
-        'a second side that names its join key'                  | [CmKeyedSecond]
+        label << ['a bidirectional self many-to-many', 'the same with the properties declared the other way',
+                  'the same with the properties and hasMany in two orders', 'the same with names that sort the other way',
+                  'a self many-to-many inside a hierarchy', 'a superclass collection and a circular subclass one',
+                  'a unidirectional self many-to-many', 'a first side that names its join key', 'a second side that names its join key']
+        group << [[CmFollowers], [CmFollowersSwapped], [CmFollowersMixed], [CmZebras], [CmHierarchyRoot, CmHierarchySub], [CmMammal, CmDog],
+                  [CmFriends], [CmKeyedFirst], [CmKeyedSecond]]
+        expected << [
+                ['grails.gorm.tests.generated.CmFollowers.following': [table: 'cm_followers_following', inverse: false, key: ['following_id'], element: ['followers_id'], columns: ['followers_id', 'following_id'], primaryKey: ['followers_id', 'following_id'], foreignKeys: [['followers_id'], ['following_id']]],
+                 'grails.gorm.tests.generated.CmFollowers.followers': [table: 'cm_followers_followers', inverse: false, key: ['cm_followers_id'], element: ['following_id'], columns: ['cm_followers_id', 'following_id'], primaryKey: ['cm_followers_id', 'following_id'], foreignKeys: [['cm_followers_id'], ['following_id']]]],
+                ['grails.gorm.tests.generated.CmFollowersSwapped.following': [table: 'cm_followers_swapped_following', inverse: false, key: ['cm_followers_swapped_id'], element: ['followers_id'], columns: ['cm_followers_swapped_id', 'followers_id'], primaryKey: ['cm_followers_swapped_id', 'followers_id'], foreignKeys: [['cm_followers_swapped_id'], ['followers_id']]],
+                 'grails.gorm.tests.generated.CmFollowersSwapped.followers': [table: 'cm_followers_swapped_followers', inverse: false, key: ['followers_id'], element: ['following_id'], columns: ['followers_id', 'following_id'], primaryKey: ['followers_id', 'following_id'], foreignKeys: [['followers_id'], ['following_id']]]],
+                ['grails.gorm.tests.generated.CmFollowersMixed.following': [table: 'cm_followers_mixed_following', inverse: false, key: ['cm_followers_mixed_id'], element: ['followers_id'], columns: ['cm_followers_mixed_id', 'followers_id'], primaryKey: ['cm_followers_mixed_id', 'followers_id'], foreignKeys: [['cm_followers_mixed_id'], ['followers_id']]],
+                 'grails.gorm.tests.generated.CmFollowersMixed.followers': [table: 'cm_followers_mixed_followers', inverse: false, key: ['followers_id'], element: ['following_id'], columns: ['followers_id', 'following_id'], primaryKey: ['followers_id', 'following_id'], foreignKeys: [['followers_id'], ['following_id']]]],
+                ['grails.gorm.tests.generated.CmZebras.zebras': [table: 'cm_zebras_zebras', inverse: false, key: ['cm_zebras_id'], element: ['apples_id'], columns: ['apples_id', 'cm_zebras_id'], primaryKey: ['apples_id', 'cm_zebras_id'], foreignKeys: [['apples_id'], ['cm_zebras_id']]],
+                 'grails.gorm.tests.generated.CmZebras.apples': [table: 'cm_zebras_apples', inverse: false, key: ['apples_id'], element: ['zebras_id'], columns: ['apples_id', 'zebras_id'], primaryKey: ['apples_id', 'zebras_id'], foreignKeys: [['apples_id'], ['zebras_id']]]],
+                ['grails.gorm.tests.generated.CmHierarchySub.pals': [table: 'cm_hierarchy_sub_pals', inverse: false, key: ['cm_hierarchy_sub_id'], element: ['pal_of_id'], columns: ['cm_hierarchy_sub_id', 'pal_of_id'], primaryKey: null, foreignKeys: [['cm_hierarchy_sub_id'], ['pal_of_id']]],
+                 'grails.gorm.tests.generated.CmHierarchySub.palOf': [table: 'cm_hierarchy_sub_pal_of', inverse: false, key: ['pal_of_id'], element: ['pals_id'], columns: ['pal_of_id', 'pals_id'], primaryKey: null, foreignKeys: [['pal_of_id'], ['pals_id']]]],
+                ['grails.gorm.tests.generated.CmMammal.dogs': [table: 'cm_mammal_dogs', inverse: false, key: ['cm_mammal_id'], element: ['animals_id'], columns: ['animals_id', 'cm_mammal_id'], primaryKey: null, foreignKeys: [['animals_id'], ['cm_mammal_id']]],
+                 'grails.gorm.tests.generated.CmDog.animals': [table: 'cm_mammal_dogs', inverse: true, key: ['animals_id'], element: ['cm_mammal_id'], columns: ['animals_id', 'cm_mammal_id'], primaryKey: null, foreignKeys: [['animals_id'], ['cm_mammal_id']]]],
+                ['grails.gorm.tests.generated.CmFriends.friends': [table: 'cm_friends_cm_friends', inverse: false, key: ['cm_friends_friends_id'], element: ['cm_friends_id'], columns: ['cm_friends_friends_id', 'cm_friends_id'], primaryKey: null, foreignKeys: [['cm_friends_friends_id'], ['cm_friends_id']]]],
+                ['grails.gorm.tests.generated.CmKeyedFirst.following': [table: 'cm_keyed_first_following', inverse: false, key: ['following_id'], element: ['owner_ref'], columns: ['following_id', 'owner_ref'], primaryKey: ['following_id', 'owner_ref'], foreignKeys: [['following_id'], ['owner_ref']]],
+                 'grails.gorm.tests.generated.CmKeyedFirst.followers': [table: 'cm_keyed_first_f', inverse: false, key: ['owner_ref'], element: ['following_id'], columns: ['following_id', 'owner_ref'], primaryKey: ['following_id', 'owner_ref'], foreignKeys: [['following_id'], ['owner_ref']]]],
+                ['grails.gorm.tests.generated.CmKeyedSecond.following': [table: 'cm_keyed_second_f', inverse: false, key: ['owner_ref'], element: ['followers_id'], columns: ['followers_id', 'owner_ref'], primaryKey: ['followers_id', 'owner_ref'], foreignKeys: [['followers_id'], ['owner_ref']]],
+                 'grails.gorm.tests.generated.CmKeyedSecond.followers': [table: 'cm_keyed_second_followers', inverse: false, key: ['cm_keyed_second_id'], element: ['owner_ref'], columns: ['cm_keyed_second_id', 'owner_ref'], primaryKey: ['cm_keyed_second_id', 'owner_ref'], foreignKeys: [['cm_keyed_second_id'], ['owner_ref']]]],
+        ]
     }
 
-    void "a non-circular owning side that names the key and the column of its join table gives the generated mode the same columns"() {
+    void "a non-circular owning side that names the key and the column of its join table gets those columns, and the inverse side shares them"() {
         when:
-        Map<String, Object> binder = schema([CmNamedOwner, CmNamedOther], false)
-        Map<String, Object> generated = schema([CmNamedOwner, CmNamedOther], true)
+        Map<String, Object> generated = schema([CmNamedOwner, CmNamedOther])
 
         then:
-        generated == binder
         generated['grails.gorm.tests.generated.CmNamedOwner.others'].key == ['owner_ref']
         generated['grails.gorm.tests.generated.CmNamedOwner.others'].element == ['other_ref']
+        generated['grails.gorm.tests.generated.CmNamedOther.owners'] == [table: 'cm_named_join', inverse: true, key: ['other_ref'], element: ['owner_ref'],
+                                                                         columns: ['other_ref', 'owner_ref'], primaryKey: ['other_ref', 'owner_ref'], foreignKeys: [['other_ref'], ['owner_ref']]]
     }
 
     void "the side bound first keeps the default key name and the side bound second is named after its property"() {
         when:
-        Map<String, Object> generated = schema([CmFollowers], true)
+        Map<String, Object> generated = schema([CmFollowers])
 
         then:
         generated['grails.gorm.tests.generated.CmFollowers.followers'].key == ['cm_followers_id']
@@ -123,7 +135,7 @@ class GeneratedDomainClassesCircularManyToManySpec extends Specification {
 
     void "which side is bound first follows the order of the properties"() {
         when:
-        Map<String, Object> generated = schema([CmFollowersSwapped], true)
+        Map<String, Object> generated = schema([CmFollowersSwapped])
 
         then:
         generated['grails.gorm.tests.generated.CmFollowersSwapped.following'].key == ['cm_followers_swapped_id']
@@ -145,8 +157,8 @@ class GeneratedDomainClassesCircularManyToManySpec extends Specification {
     }
 
     /** Writes a relationship through one side, then reads it through both sides, in a fresh session. */
-    private Map<String, Object> behaviour(boolean generated) {
-        HibernateDatastore booted = boot([CmFollowers], generated)
+    private Map<String, Object> behaviour() {
+        HibernateDatastore booted = boot([CmFollowers])
         Map<String, Object> result = [:]
         CmFollowers.withTransaction {
             CmFollowers a = new CmFollowers(name: 'a').save(failOnError: true)
@@ -166,18 +178,16 @@ class GeneratedDomainClassesCircularManyToManySpec extends Specification {
         return result
     }
 
-    void "a relationship written through one side is read through the sides exactly as with the domain binder"() {
+    void "a relationship written through one side is read through the sides as classic binding read it"() {
         when:
-        Map<String, Object> binder = behaviour(false)
-        Map<String, Object> generated = behaviour(true)
+        Map<String, Object> generated = behaviour()
 
         then:
-        generated == binder
-        binder.followersOfA == ['b']
-        binder.followingOfB == ['a']
-        binder.followingOfA.isEmpty()
-        binder.followersOfB.isEmpty()
-        binder.joinTables == ['cm_followers_followers': ['1'], 'cm_followers_following': ['1']]
+        generated.followersOfA == ['b']
+        generated.followingOfB == ['a']
+        generated.followingOfA.isEmpty()
+        generated.followersOfB.isEmpty()
+        generated.joinTables == ['cm_followers_followers': ['1'], 'cm_followers_following': ['1']]
     }
 }
 

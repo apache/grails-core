@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.jpa
 
+import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -25,9 +26,9 @@ import spock.lang.Unroll
 /**
  * The frozen oracle itself ({@link ClassicOracle}): that its serialisation is deterministic, that the recorded files are the canonical
  * rendering of what they hold and cover every scanned fixture, that a fixture without recorded data is refused with a message that says how
- * to record it, and that the VERIFY mode notices a recorded group the classic binder no longer produces. That a changed recorded fact makes
- * the comparison fail is proven in {@code GrailsDomainGeneratorDifferentialSpec} and {@code GeneratedDomainClassesDdlDifferentialSpec},
- * which own the comparisons.
+ * to record it, and that the RECORD mode records exactly the groups that have no record and writes every other record back as it is. That
+ * a changed recorded fact makes the comparison fail is proven in {@code GrailsDomainGeneratorDifferentialSpec} and
+ * {@code GeneratedDomainClassesDdlDifferentialSpec}, which own the comparisons.
  */
 class ClassicOracleSpec extends Specification {
 
@@ -100,6 +101,8 @@ class ClassicOracleSpec extends Specification {
         oracle << ORACLES
     }
 
+    @IgnoreIf(value = { ClassicOracle.currentMode() == ClassicOracle.Mode.RECORD },
+            reason = 'a recording run writes the file the differential specs read from the classpath; run again to check it')
     @Unroll
     void "the recorded file #oracle holds every scanned group, and only those"() {
         given:
@@ -128,6 +131,8 @@ class ClassicOracleSpec extends Specification {
         oracle << ORACLES
     }
 
+    @IgnoreIf(value = { ClassicOracle.currentMode() == ClassicOracle.Mode.RECORD },
+            reason = 'a recording run writes the file the differential specs read from the classpath; run again to check it')
     void "the groups the classic binder booted have their entities in the generator oracle and their tables and statements in the DDL oracle"() {
         given:
         ClassicOracle generator = new ClassicOracle('generator-differential', ClassicOracle.Mode.FROZEN)
@@ -156,7 +161,7 @@ class ClassicOracleSpec extends Specification {
         then:
         IllegalStateException e = thrown()
         e.message.contains('org.example.NewFixture')
-        e.message.contains('-Pgrails.test.refreezeClassicOracle=true')
+        e.message.contains('-Pgrails.test.recordClassicOracle=true')
         e.message.contains('src/test/resources/classic-oracle/')
         !booted
 
@@ -176,13 +181,13 @@ class ClassicOracleSpec extends Specification {
 
         then:
         IllegalStateException e = thrown()
-        e.message.contains('-Pgrails.test.refreezeClassicOracle=true')
+        e.message.contains('-Pgrails.test.recordClassicOracle=true')
 
         where:
         oracle << ORACLES
     }
 
-    void "the frozen mode does not call the classic binder for a recorded group and returns the recorded section"() {
+    void "the frozen mode does not call the recorder for a recorded group and returns the recorded section"() {
         given:
         ClassicOracle frozen = new ClassicOracle('ddl-differential', ClassicOracle.Mode.FROZEN)
         String key = frozen.recordedKeys().first()
@@ -194,49 +199,101 @@ class ClassicOracleSpec extends Specification {
 
         then:
         !booted
-        !frozen.isLive()
         section.is(frozen.recordedSection(key))
         frozen.drift.isEmpty()
     }
 
-    void "the verify mode notices a group the classic binder no longer produces as it was recorded"() {
+    void "the frozen mode reports recorded groups that were not visited, with the way to drop them"() {
         given:
-        ClassicOracle verify = new ClassicOracle('ddl-differential', ClassicOracle.Mode.VERIFY)
-        ClassicOracle.Section recorded = verify.recordedSection(verify.recordedKeys().find {
-            verify.recordedSection(it).header.unbootable == null
-        })
-        List<String> members = (List<String>) recorded.header.members
-        ClassicOracle.Section same = new ClassicOracle.Section(recorded.key, recorded.header)
-        same.records.addAll(recorded.records)
-        ClassicOracle.Section other = new ClassicOracle.Section(recorded.key, recorded.header)
-        other.records.addAll(recorded.records)
-        other.records[0] = [other.records[0][0], other.records[0][1], '{"changed":true}']
+        ClassicOracle frozen = new ClassicOracle('generator-differential', ClassicOracle.Mode.FROZEN)
 
         when:
-        verify.section(recorded.key, members) { same }
-
-        then: "the same section is the recorded one"
-        verify.isLive()
-        verify.drift.isEmpty()
-
-        when:
-        verify.section(recorded.key, members) { other }
-
-        then: "a section that differs is reported with the first line that does"
-        verify.drift.size() == 1
-        verify.drift[0].contains(recorded.key)
-        verify.drift[0].contains('differs')
-    }
-
-    void "the verify mode reports recorded groups that were not visited"() {
-        given:
-        ClassicOracle verify = new ClassicOracle('generator-differential', ClassicOracle.Mode.VERIFY)
-
-        when:
-        verify.finish()
+        frozen.finish()
 
         then:
-        verify.drift.size() == verify.recordedKeys().size()
-        verify.drift.every { String line -> line.contains('no scanned fixture') }
+        frozen.drift.size() == frozen.recordedKeys().size()
+        frozen.drift.every { String line -> line.contains('no scanned fixture') && line.contains('-Pgrails.test.recordClassicOracle=true') }
+    }
+
+    void "the record mode returns a recorded group without calling the recorder, and writes nothing when every record is backed"() {
+        given:
+        File directory = File.createTempDir('classic-oracle', 'record')
+        ClassicOracle record = new ClassicOracle('ddl-differential', ClassicOracle.Mode.RECORD, directory)
+        boolean booted = false
+
+        when:
+        record.recordedKeys().each { String key ->
+            record.section(key, (List<String>) record.recordedSection(key).header.members) { booted = true; null }
+        }
+        record.finish()
+
+        then:
+        !booted
+        record.recordedNow.isEmpty()
+        record.dropped.isEmpty()
+        !new File(directory, 'ddl-differential.txt').exists()
+
+        cleanup:
+        directory.deleteDir()
+    }
+
+    void "the record mode records a group that has no record from the recorder, at its place in the scan order, and writes every other record back as it is"() {
+        given:
+        File directory = File.createTempDir('classic-oracle', 'record')
+        String original = ClassicOracle.getResourceAsStream("/${ClassicOracle.RESOURCE_DIRECTORY}/ddl-differential.txt").getText('UTF-8')
+        ClassicOracle record = new ClassicOracle('ddl-differential', ClassicOracle.Mode.RECORD, directory)
+        List<String> keys = record.recordedKeys().toList()
+        ClassicOracle.Section fresh = new ClassicOracle.Section('org.example.NewFixture', [members: ['org.example.NewFixture']])
+        fresh.add('table', 'new_fixture', [columns: [id: [type: 'bigint']]], true)
+        int booted = 0
+
+        when: "the scan visits the new group after the third recorded one"
+        keys.eachWithIndex { String key, int index ->
+            record.section(key, (List<String>) record.recordedSection(key).header.members) { booted++; null }
+            if (index == 2) {
+                record.section('org.example.NewFixture', ['org.example.NewFixture']) { booted++; fresh }
+            }
+        }
+        record.finish()
+        String written = new File(directory, 'ddl-differential.txt').getText('UTF-8')
+
+        then: "the recorder ran for the new group only"
+        booted == 1
+        record.recordedNow == ['org.example.NewFixture']
+        record.dropped.isEmpty()
+
+        and: "the file is the original with the new section inserted after the third group, byte for byte otherwise"
+        written.length() == original.length() + fresh.render().length()
+        written.startsWith(original.substring(0, original.indexOf("@group\t${keys[3]}\t")))
+        written.endsWith(original.substring(original.indexOf("@group\t${keys[3]}\t")))
+        written.contains(fresh.render())
+        ClassicOracle.parseText(written).keySet().toList() == keys[0..2] + ['org.example.NewFixture'] + keys[3..-1]
+
+        cleanup:
+        directory.deleteDir()
+    }
+
+    void "the record mode drops a recorded group no scanned fixture makes up any more and says so"() {
+        given:
+        File directory = File.createTempDir('classic-oracle', 'record')
+        ClassicOracle record = new ClassicOracle('ddl-differential', ClassicOracle.Mode.RECORD, directory)
+        List<String> keys = record.recordedKeys().toList()
+        String gone = keys.last()
+
+        when:
+        keys.findAll { it != gone }.each { String key ->
+            record.section(key, (List<String>) record.recordedSection(key).header.members) { null }
+        }
+        record.finish()
+        Map<String, ClassicOracle.Section> written = ClassicOracle.parseText(new File(directory, 'ddl-differential.txt').getText('UTF-8'))
+
+        then:
+        record.dropped == [gone]
+        record.recordedNow.isEmpty()
+        written.keySet().toList() == keys - gone
+        written.values()*.render() == (keys - gone).collect { String key -> record.recordedSection(key).render() }
+
+        cleanup:
+        directory.deleteDir()
     }
 }

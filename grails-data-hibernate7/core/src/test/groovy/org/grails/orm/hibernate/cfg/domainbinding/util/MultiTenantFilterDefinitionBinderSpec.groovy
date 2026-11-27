@@ -35,7 +35,7 @@ class MultiTenantFilterDefinitionBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test create adds filter definition"() {
         given:
-        def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        def buildingContext = getMappingContributor().getMetadataBuildingContext()
         def property = new Property()
         property.setName("tenantId")
         

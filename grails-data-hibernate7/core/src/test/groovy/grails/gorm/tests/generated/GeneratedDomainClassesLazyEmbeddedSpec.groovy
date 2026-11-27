@@ -30,7 +30,7 @@ import org.hibernate.mapping.PersistentClass
 class GeneratedDomainClassesLazyEmbeddedSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        registerGeneratedDomainClasses(GdcLazyHome, GdcPlainHome)
+        manager.registerDomainClasses(GdcLazyHome, GdcPlainHome)
     }
 
     def "an embedded property mapped lazy is a lazy property of the bound entity, one mapped by default is not"() {

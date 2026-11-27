@@ -31,8 +31,8 @@ import org.grails.orm.hibernate.HibernateDatastore
 /**
  * A discriminator column with a precision or a scale, and a discriminator of a type other than string, integer or character.
  * {@code @DiscriminatorColumn} cannot state either. The precision and the scale change nothing in the DDL of a string or an integer
- * column, but the domain binder puts them on the column, and a mapping that sets them must boot in the generated mode as it does in the
- * domain binder, with the same column. A discriminator typed {@code 'long'} is a bigint column in both.
+ * column, but the classic binding of Grails 8 put them on the column, and a mapping that sets them boots with the same column. A
+ * discriminator typed {@code 'long'} is a bigint column, as it was. The columns stated here are the ones classic binding created.
  */
 class GeneratedDomainClassesDiscriminatorSpec extends Specification {
 
@@ -41,19 +41,18 @@ class GeneratedDomainClassesDiscriminatorSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
-    private HibernateDatastore boot(List<Class> group, boolean generated) {
+    private HibernateDatastore boot(List<Class> group) {
         datastore?.close()
         datastore = new HibernateDatastore([
-                'dataSource.url'                  : "jdbc:h2:mem:gdd${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
-                'dataSource.dbCreate'             : 'create-drop',
-                'hibernate.generatedDomainClasses': generated,
+                'dataSource.url'     : "jdbc:h2:mem:gdd${BOOTS.incrementAndGet()};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate': 'create-drop',
         ], group as Class[])
         return datastore
     }
 
     /** The columns of the boot model with their SQL type and nullability, and the precision and scale the model holds for the discriminator. */
-    private Map<String, Map> schema(List<Class> group, boolean generated) {
-        HibernateDatastore booted = boot(group, generated)
+    private Map<String, Map> schema(List<Class> group) {
+        HibernateDatastore booted = boot(group)
         Map<String, Map> result = new TreeMap<String, Map>()
         for (Table table : booted.metadata.collectTableMappings()) {
             if (table.physicalTable) {
@@ -67,13 +66,11 @@ class GeneratedDomainClassesDiscriminatorSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the generated mode creates the discriminator column of the domain binder, with its precision and scale"() {
+    void "#label: the discriminator column of classic binding is created, with its precision and scale"() {
         when:
-        Map<String, Map> binder = schema(group, false)
-        Map<String, Map> generated = schema(group, true)
+        Map<String, Map> generated = schema(group)
 
         then:
-        generated == binder
         generated[table]['kind'] == column
 
         where:
@@ -84,16 +81,13 @@ class GeneratedDomainClassesDiscriminatorSpec extends Specification {
     }
 
     @Unroll
-    void "#label: the rows of the hierarchy are stored and found by the discriminator in both modes"() {
+    void "#label: the rows of the hierarchy are stored and found by the discriminator"() {
         when:
-        Map<Boolean, List> results = [false, true].collectEntries { boolean generated ->
-            boot(group, generated)
-            [(generated): this."${cycle}"()]
-        }
+        boot(group)
+        List results = this."${cycle}"()
 
         then:
-        results[true] == results[false]
-        results[true] == [2, 1, ['sub']]
+        results == [2, 1, ['sub']]
 
         where:
         label                | group                         | cycle

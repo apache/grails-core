@@ -18,14 +18,12 @@
  */
 /**
  * Native domain binding: Hibernate's own annotation binder binds the GORM domain classes, from classes generated out of
- * the GORM mapping, instead of {@code GrailsDomainBinder} building Hibernate's boot model by hand. The application's
- * real domain classes stay what Hibernate persists, loads and proxies.
+ * the GORM mapping. The application's real domain classes stay what Hibernate persists, loads and proxies.
  *
  * <p>Where to start, in the order the binding runs:</p>
  * <ol>
- *   <li>{@code hibernate.generatedDomainClasses} ({@code HibernateConnectionSourceSettings}) switches it on.
- *   {@code HibernateMappingContextConfiguration} then creates a {@link GeneratedDomainClassBinder} and gives it to
- *   {@code GrailsDomainBinder}, which hands the entities to it instead of binding them itself.</li>
+ *   <li>{@code HibernateMappingContextConfiguration} creates a {@link GeneratedDomainClassBinder} and the
+ *   {@link GormMappingContributor} that hands the entities to it.</li>
  *   <li>{@link GeneratedDomainClassBinder#contribute} is the entry point of the binding: it has
  *   {@link GrailsDomainGenerator#generateAll} generate an annotated class for every entity and hands those classes to
  *   Hibernate's annotation binder.</li>
@@ -40,9 +38,9 @@
  *   <li>{@link GrailsIdGenerator} marks a generated identifier with the GORM generator the binder installs on it.</li>
  * </ol>
  *
- * <p>The tests under {@code grails.gorm.tests.generated} run the behaviour through both bindings. The two differential
- * specs of the test package of this package compare what the generator states with what the classic binder bound,
- * recorded under {@code src/test/resources/classic-oracle}.</p>
+ * <p>The tests under {@code grails.gorm.tests.generated} cover the behaviour. The two differential specs of the test
+ * package of this package compare what the generator states with what the classic binder of Grails 8 bound, recorded
+ * under {@code src/test/resources/classic-oracle}.</p>
  *
  * @since 9.0
  */
