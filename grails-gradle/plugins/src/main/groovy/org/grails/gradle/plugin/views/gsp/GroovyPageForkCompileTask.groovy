@@ -74,7 +74,8 @@ import org.grails.gradle.plugin.views.ViewCompileOptions
  * Groovy and the compiler among them, by content, as {@link #getLibraryClasspath()}, so a build that
  * resolves another Groovy is not handed this one's pages; the project's own classes by their ABI, as
  * {@link #getProjectClasses()}, since a page sees no more of them than a class compiled against
- * them does; and the project's AST transformations by content, with the resources that register them,
+ * them does, with the files among them other than classes by content, as
+ * {@link #getProjectResources()}; and the project's AST transformations by content, with the resources that register them,
  * as {@link #getAstTransformationClasses()}, since they run while the pages are compiled, as are all of
  * the project's classes when an {@code application.groovy} runs with them, as
  * {@link #getConfigurationClasses()}.
@@ -118,6 +119,22 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
      */
     @CompileClasspath
     final ConfigurableFileCollection projectClasses
+
+    /**
+     * The files of {@link #getProjectClasses()} other than classes, by content: the ABI they are
+     * otherwise compared by leaves them out. The page compiler loads from them what registers an AST
+     * transformation or an extension module, which a build or a plugin's {@code ast} source set can
+     * copy into the classes directory; what Grails writes there,
+     * such as {@code META-INF/grails.factories}, changes only with the classes it lists.
+     *
+     * @since 9.0
+     */
+    @InputFiles
+    @IgnoreEmptyDirectories
+    @PathSensitive(PathSensitivity.RELATIVE)
+    FileTree getProjectResources() {
+        projectClasses.asFileTree.matching { PatternFilterable files -> files.exclude('**/*.class') }
+    }
 
     /**
      * The project's AST transformations, which run while the pages are compiled, so what their method
@@ -306,7 +323,8 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     /**
      * The classpath the compiler runs from. Not an input as such: it is fingerprinted as
-     * {@link #getLibraryClasspath()}, by content, and {@link #getProjectClasses()}, by ABI. Overridden
+     * {@link #getLibraryClasspath()}, by content, and {@link #getProjectClasses()}, by ABI, with
+     * {@link #getProjectResources()} by content. Overridden
      * only to say so, in place of the classpath input {@code AbstractCompile} declares it as.
      */
     @Override

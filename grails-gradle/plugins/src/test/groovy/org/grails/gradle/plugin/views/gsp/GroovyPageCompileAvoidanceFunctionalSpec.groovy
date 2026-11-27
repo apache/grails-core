@@ -125,6 +125,33 @@ class GroovyPageCompileAvoidanceFunctionalSpec extends GradleSpecification {
                      'META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule']
     }
 
+    def "a change to a file other than a class in the project's classes directory compiles the pages again"() {
+        given: 'a transformation registration a task of the build copies into the main classes directory'
+        project()
+        new File(projectDir, 'build.gradle').append('''
+            def copyRegistrations = tasks.register('copyRegistrations', Copy) {
+                from('registrations')
+                into(layout.buildDirectory.dir('classes/groovy/main'))
+            }
+            sourceSets.main.output.classesDirs.builtBy(copyRegistrations)
+            tasks.named('classes') { dependsOn(copyRegistrations) }
+        ''')
+        write('registrations/META-INF/services/org.codehaus.groovy.transform.ASTTransformation', 'Shelf')
+        write('src/main/webapp/index.gsp', 'a webapp page')
+        BuildResult first = compile('compileGroovyPages')
+        assert first.task(':compileWebappGroovyPages').outcome == TaskOutcome.SUCCESS
+
+        when: 'only the registration changes'
+        write('registrations/META-INF/services/org.codehaus.groovy.transform.ASTTransformation', 'Shelf\nBookController')
+        BuildResult result = compile('compileGroovyPages')
+
+        then: 'no class changed, and what the page compiler loads from the classpath did, so both page compilations run again'
+        result.task(':copyRegistrations').outcome == TaskOutcome.SUCCESS
+        result.task(':compileGroovy').outcome == TaskOutcome.UP_TO_DATE
+        result.task(':compileGroovyPages').outcome == TaskOutcome.SUCCESS
+        result.task(':compileWebappGroovyPages').outcome == TaskOutcome.SUCCESS
+    }
+
     def "a change to a scaffolded controller that is not read for its pages leaves them as they were"() {
         given:
         project()
