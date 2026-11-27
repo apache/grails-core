@@ -32,6 +32,7 @@ import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.CodeVisitorSupport
 import org.codehaus.groovy.ast.GenericsType
+import org.codehaus.groovy.ast.InnerClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.PropertyNode
@@ -455,15 +456,8 @@ class AstUtils {
         if (implementsInterface(classNode, 'org.grails.datastore.gorm.GormEntity')) {
             return true
         }
-        String filePath = classNode.getModule() != null ? classNode.getModule().getDescription() : null
-        if (filePath != null) {
-            try {
-                if (isDomainClass(new File(filePath).toURI().toURL())) {
-                    return true
-                }
-            } catch (MalformedURLException e) {
-                // ignore
-            }
+        if (isEntityByLocation(classNode)) {
+            return true
         }
         List<AnnotationNode> annotations = classNode.getAnnotations()
         if (annotations != null && !annotations.isEmpty()) {
@@ -475,6 +469,29 @@ class AstUtils {
             }
         }
         return false
+    }
+
+    /**
+     * Whether a class is an entity because its source file is under {@code grails-app/domain}. That holds only
+     * for the classes the entity transformation turns into entities there. It skips enums, interfaces, traits
+     * and nested classes, so once compiled they are not recognised as entities, and judging their source form
+     * by its location would make the compiled output of the classes that refer to them depend on whether they
+     * are compiled together. Whether such a class implements {@code GormEntity} or carries an entity
+     * annotation is checked as for any other class. A property type that refers to a nested class is a
+     * node that redirects to it, so the nested class is recognised by the node the reference redirects to.
+     *
+     * @param classNode the class node to inspect
+     * @return whether the class is declared under {@code grails-app/domain} and becomes an entity there
+     */
+    private static boolean isEntityByLocation(ClassNode classNode) {
+        if (classNode.isEnum() || classNode.isInterface() || classNode.redirect() instanceof InnerClassNode) return false
+        String filePath = classNode.getModule() != null ? classNode.getModule().getDescription() : null
+        if (filePath == null) return false
+        try {
+            return isDomainClass(new File(filePath).toURI().toURL())
+        } catch (MalformedURLException ignored) {
+            return false
+        }
     }
 
     static ClassNode nonGeneric(ClassNode type) {

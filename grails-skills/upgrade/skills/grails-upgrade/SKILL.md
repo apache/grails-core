@@ -936,6 +936,14 @@ With GORM for Hibernate, a where query, a detached criteria, a dynamic finder or
 - To keep the previous result of a query, remove the join type that it requests, or request `JoinType.LEFT`.
 - Check queries that store a sort with `sort()` before passing a `fetch` argument to `list` or `find`. `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])` now also returns books without an author. Request `JoinType.INNER` to keep leaving them out; nested paths follow the same rule.
 
+## Enums, interfaces, traits and nested classes under `grails-app/domain`
+
+An enum, an interface, a trait or a nested class is no longer a domain class at compile time because its source file is under `grails-app/domain`. While such a type was compiled together with a domain class that has a property of its type, the domain class got an association id getter for the property, such as `getStatusId()` for a `status` property. Compiled against the already compiled type, as in an incremental build or when the type comes from another module, it did not. As of 7.0.18 the getter is not generated in either case.
+
+- Search for calls to `get<Property>Id()` on domain classes where the property's type is an enum, an interface, a trait or a nested class declared under `grails-app/domain`. Such a call no longer compiles when it is statically compiled, and fails at runtime otherwise. Read the property itself instead.
+- A nested class that implements `GormEntity` or carries an entity annotation such as `jakarta.persistence.Entity`, and an interface or a trait that extends `GormEntity`, are still domain classes. Nothing changes for them.
+- No setting restores the getter.
+
 # After the Upgrade
 
 ## Verification Checklist
