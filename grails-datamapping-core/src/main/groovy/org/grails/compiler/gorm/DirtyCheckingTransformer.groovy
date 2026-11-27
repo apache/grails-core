@@ -184,6 +184,21 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             }
         }
 
+        Set<String> jpaIdPropertyNames = new LinkedHashSet<String>()
+        for (PropertyNode pn in propertyNodes) {
+            final List<AnnotationNode> idCandidates = pn.annotations + pn.getField().annotations
+            final GetterAndSetter idGetterAndSetter = gettersAndSetters[pn.name]
+            if (idGetterAndSetter?.getter != null) {
+                idCandidates.addAll(idGetterAndSetter.getter.annotations)
+            }
+            if (hasAnnotation(idCandidates, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
+                jpaIdPropertyNames.add(pn.name)
+            }
+        }
+        // an identifier declared on a superclass belongs to the same key, so it counts as well, once, also when the entity declares it again
+        jpaIdPropertyNames.addAll(inheritedJpaIdNames(classNode))
+        int jpaIdPropertyCount = jpaIdPropertyNames.size()
+
         boolean hasVersion = false
         for (PropertyNode pn in propertyNodes) {
             final propertyName = pn.name
@@ -208,8 +223,9 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
                 if (hasAnnotation(allAnnotationNodes, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
                     if (!propertyName.equals(GormProperties.IDENTITY)) {
-                        // if the property is a JPA @Id but the property name is not id add a transient getter to retrieve the id called getId
-                        if (classNode.getField(GormProperties.IDENTITY) == null && gettersAndSetters[GormProperties.IDENTITY] == null) {
+                        // if the property is the only JPA @Id but the property name is not id add a transient getter to retrieve the id called getId,
+                        // a composite id has no single value to return
+                        if (jpaIdPropertyCount == 1 && classNode.getField(GormProperties.IDENTITY) == null && gettersAndSetters[GormProperties.IDENTITY] == null) {
                             def getIdMethod = new MethodNode(
                                     'getId',
                                     Modifier.PUBLIC,
@@ -475,6 +491,47 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
     String[] getArtefactTypes() {
         return ['Domain'] as String[]
+    }
+
+    private static final Set<String> MAPPED_SUPERCLASS_ANNOTATIONS = [
+            'jakarta.persistence.MappedSuperclass', 'jakarta.persistence.Entity', 'grails.persistence.Entity', 'grails.gorm.annotation.Entity'
+    ] as Set<String>
+
+    /**
+     * Whether the mapping of a superclass is kept by the classes below it: a mapped superclass or an entity. The identifiers of
+     * a plain class are not part of the key of a class that extends it.
+     */
+    private static boolean keepsMapping(ClassNode superClass) {
+        superClass.annotations.any { AnnotationNode annotation -> MAPPED_SUPERCLASS_ANNOTATIONS.contains(annotation.classNode.name) }
+    }
+
+    /**
+     * Counts the JPA {@code @Id} properties that the mapped superclasses of a class declare, by field, property or getter.
+     */
+    private static Set<String> inheritedJpaIdNames(ClassNode classNode) {
+        Set<String> names = new LinkedHashSet<String>()
+        for (ClassNode superClass = classNode.superClass; superClass != null && superClass != ClassHelper.OBJECT_TYPE; superClass = superClass.superClass) {
+            if (!keepsMapping(superClass)) {
+                continue
+            }
+            for (FieldNode field in superClass.fields) {
+                if (!field.isStatic() && hasAnnotation(field.annotations, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
+                    names.add(field.name)
+                }
+            }
+            for (PropertyNode property in superClass.properties) {
+                if (hasAnnotation(property.annotations, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
+                    names.add(property.name)
+                }
+            }
+            for (MethodNode method in superClass.methods) {
+                if (method.parameters.length == 0 && method.name.startsWith('get') && method.name.length() > 3 &&
+                        hasAnnotation(method.annotations, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
+                    names.add(NameUtils.getPropertyNameForGetterOrSetter(method.name))
+                }
+            }
+        }
+        return names
     }
 
     @CompileStatic
