@@ -30,8 +30,10 @@ fi
 
 STAGING_DESCRIPTION="$1"
 NEXUS_USER="$2"
-read -r -s -p "Password: " NEXUS_PASS
-echo
+if [[ -z "${GRAILS_NEXUS_PASSWORD:-}" ]]; then
+  read -r -s -p "Password: " GRAILS_NEXUS_PASSWORD
+  echo
+fi
 
 if [[ -z "${STAGING_DESCRIPTION}" ]]; then
   echo "ERROR: Staging Description must not be empty." >&2
@@ -41,7 +43,7 @@ if [[ -z "${NEXUS_USER}" ]]; then
   echo "ERROR: Username must not be empty." >&2
   exit 1
 fi
-if [[ -z "${NEXUS_PASS}" ]]; then
+if [[ -z "${GRAILS_NEXUS_PASSWORD}" ]]; then
   echo "ERROR: Password must not be empty." >&2
   exit 1
 fi
@@ -51,7 +53,7 @@ NEXUS_URL="https://repository.apache.org"
 nexusApi() {
   local request_method="$1"; shift
   local path="$1"; shift
-  curl -fsS -u "${NEXUS_USER}:${NEXUS_PASS}" \
+  curl -fsS -u "${NEXUS_USER}:${GRAILS_NEXUS_PASSWORD}" \
     -H 'Accept: application/json' \
     -H 'Content-Type: application/json' \
     -X "${request_method}" "${NEXUS_URL}/service/local/${path}" "$@"
