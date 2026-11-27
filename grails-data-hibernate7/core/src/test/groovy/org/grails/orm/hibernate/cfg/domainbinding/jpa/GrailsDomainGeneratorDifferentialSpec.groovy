@@ -610,9 +610,12 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
             [(index.name): index.columns]
         } as Map<String, List<String>>
         Map<String, List<String>> boundKeys = tableKeysWithoutNaturalId(classic[entity.name], naturalKeySets(generator, entity))
-        Map<String, List<String>> generatedIndexes = facets.indexes().collectEntries { IndexFacets index -> [(index.name()): index.columns()] } as Map<String, List<String>>
+        // the annotations state a quoted column with backticks, so that a key or an index is rendered quoted like the column; the recorded
+        // facts of the binder hold the names without the quotes
+        Map<String, List<String>> generatedIndexes = facets.indexes()
+                .collectEntries { IndexFacets index -> [(index.name()): index.columns()*.replace('`', '')] } as Map<String, List<String>>
         Map<String, List<String>> generatedKeys = facets.uniqueKeys()
-                .collectEntries { UniqueKeyFacets key -> [(key.name()): key.columns()] } as Map<String, List<String>>
+                .collectEntries { UniqueKeyFacets key -> [(key.name()): key.columns()*.replace('`', '')] } as Map<String, List<String>>
         constraints['indexes'] += boundIndexes.size()
         constraints['unique keys'] += boundKeys.size()
         List<String> found = []
@@ -2074,6 +2077,10 @@ class GrailsDomainGeneratorDifferentialSpec extends HibernateGormDatastoreSpec {
                     ((ColumnFacets) triple[2]).sqlType(), part != 'index', known)
             if (!leaf.isEmpty() && part == 'key' && facets.manyToMany() && circularSelf) {
                 known['the binder writes the renamed join key of a circular many-to-many into the mapping while it binds, so a generator that reads the bound mapping states the renamed key for the side the binder bound first (the generator flow reads the unbound mapping; the DDL differential compares the key names)']++
+            } else if (part == 'index' && !leaf.isEmpty() && leaf.every { String message ->
+                message ==~ /(?s).*index columns: generator=\[(\w+)\]\[false\] binder=\[\1\]\[true\]/
+            }) {
+                known['the binder makes the index column of a list or a map nullable, and drops the primary key that would fill it, when several collections share its join table; annotations cannot state it, GeneratedDomainClassBinder.shareJoinTables does it after binding']++
             } else if (inverseManyToMany && !leaf.isEmpty() && part != 'index') {
                 known['the binder names the key and element columns of the inverse side of a many-to-many from its own mapping, so they differ from the owning side\'s when only the owner names them; Hibernate uses the owning side\'s']++
             } else {
