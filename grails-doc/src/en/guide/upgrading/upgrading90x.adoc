@@ -1645,3 +1645,16 @@ API that Hibernate Validator 9 uses. This fixes message interpolation in standal
 
 If the application replaces GORM's default EL implementation, supply an EL 6-compatible implementation and remove
 explicit EL 5 version overrides. Applications using the default dependencies need no code changes.
+
+==== 35. Spring AI 2.1 for Applications Using Spring AI
+
+Spring AI 2.1 is the Spring AI line for Spring Boot 4.2, so the Grails BOM moves applications that use the `grails-spring-ai` plugin, or Spring AI directly, from Spring AI 2.0.1 to 2.1.0.
+The {springAiReference}upgrade-notes.html[Spring AI upgrade notes] list the changes of 2.0.2, 2.0.3 and 2.1.0, provider by provider and for the `ChatClient`, chat memory and advisors.
+
+Spring AI 2.1 adds decision models, which pick among known outcomes and report how likely each is; the OpenAI and Ollama starters auto-configure one.
+The provider of the decision model is selected with `spring.ai.model.decision`, and in the test environment `grails-testing-support-ai` defaults it to `none`, like the other selection properties, so a test needs no credentials for it.
+
+===== Required Actions
+
+* An application that takes the Spring AI version from the Grails BOM changes nothing in its build; follow the Spring AI upgrade notes for the provider APIs it calls.
+* An application that pins `spring-ai-bom` itself moves the pin to 2.1, the line for Spring Boot 4.2.
