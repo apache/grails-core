@@ -172,6 +172,9 @@ class HqlQueryContextSpec extends Specification {
         "select title, (select count(*) from Author) from Book" | "select title, (select count(*) from Author) from Book e" | Object[]
         "/* the book's (title) */ select title from Book"       | "/* the book's (title) */ select e.title from Book e"     | Object
         "SELECT DISTINCT title FROM Book"                       | "select distinct e.title from Book e"                     | Object
+        '(select b.title from Book b)'                          | '(select b.title from Book b)'                           | Object
+        '(select b.title from Book b) union (select a.name from Author a)' | '(select b.title from Book b) union (select a.name from Author a)' | Object
+        "(select b.title from Book b) union select 'extra' from Book" | "(select b.title from Book b) union select 'extra' from Book" | Object
     }
 
     @Unroll
