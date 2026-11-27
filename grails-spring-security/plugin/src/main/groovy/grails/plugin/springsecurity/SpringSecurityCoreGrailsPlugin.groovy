@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 
 import jakarta.servlet.DispatcherType
 
+import org.springframework.beans.SimpleTypeConverter
 import org.springframework.boot.autoconfigure.security.SecurityProperties
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
@@ -1075,6 +1076,12 @@ to default to 'Annotation'; setting value to 'Annotation'
         x509AuthenticationFailureHandler(NullAuthenticationFailureHandler)
         x509AuthenticationSuccessHandler(NullAuthenticationSuccessHandler)
 
+        // a value from application.properties or the command line is a string, and the filter has always been given it for
+        // Spring to convert (true, on, yes and 1, with any letter case and surrounding space, are true; false, off, no and 0 are
+        // false), so the entry point is decided by the same conversion, not by Groovy truth or Boolean.parseBoolean
+        Object configuredContinue = conf.x509.continueFilterChainOnUnsuccessfulAuthentication
+        boolean continueFilterChain = configuredContinue == null ? true : (Boolean) new SimpleTypeConverter().convertIfNecessary(configuredContinue, Boolean)
+
         x509ProcessingFilter(classFor('x509ProcessingFilter', X509AuthenticationFilter)) {
             authenticationDetailsSource = ref('authenticationDetailsSource')
             authenticationFailureHandler = ref('x509AuthenticationFailureHandler')
@@ -1082,8 +1089,7 @@ to default to 'Annotation'; setting value to 'Annotation'
             authenticationSuccessHandler = ref('x509AuthenticationSuccessHandler')
             principalExtractor = ref('x509PrincipalExtractor')
             checkForPrincipalChanges = conf.x509.checkForPrincipalChanges // false
-            continueFilterChainOnUnsuccessfulAuthentication = conf.x509.continueFilterChainOnUnsuccessfulAuthentication
-            // true
+            continueFilterChainOnUnsuccessfulAuthentication = continueFilterChain // true
             invalidateSessionOnPrincipalChange = conf.x509.invalidateSessionOnPrincipalChange // true
         }
 
@@ -1101,7 +1107,11 @@ to default to 'Annotation'; setting value to 'Annotation'
             throwExceptionWhenTokenRejected = conf.x509.throwExceptionWhenTokenRejected // false
         }
 
-        authenticationEntryPoint(classFor('authenticationEntryPoint', Http403ForbiddenEntryPoint))
+        if (!continueFilterChain) {
+            // certificates are the only way in, so a request without a usable one is simply forbidden; otherwise the
+            // default entry point stays, which sends the request to the login form (or the Ajax equivalent)
+            authenticationEntryPoint(classFor('authenticationEntryPoint', Http403ForbiddenEntryPoint))
+        }
     }
 
     private Class classFor(String beanName, Class defaultType) {
