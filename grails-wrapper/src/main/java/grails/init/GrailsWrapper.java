@@ -33,6 +33,10 @@ import grails.proxy.SystemPropertiesAuthenticator;
  * 1. in testing a grails release (run from a non-project directory) - requires GRAILS_REPO_URL set to `~/.m2/repository`
  * 2. running from a non-project directory (end user usage)
  * 3. running from inside a grails project
+ * <p>
+ * Every message of the wrapper, about a download, an update, or why it cannot start the command line, is written
+ * to standard error. Standard output is the command line's own: under {@code grailsw mcp} it carries the Model
+ * Context Protocol, and a line of the wrapper there would be a line the client cannot read.
  */
 public class GrailsWrapper {
 
@@ -58,11 +62,11 @@ public class GrailsWrapper {
         // wrapper that did not look into what it downloaded. It is downloaded again, once.
         String installedDefect = updater.getInstalledDefect();
         if (installedDefect != null) {
-            System.out.println("The installed Grails command line at [" + updater.getExecutedJarFile().getAbsolutePath() + "] cannot be started (" + installedDefect + "). Downloading it again.");
+            System.err.println("The installed Grails command line at [" + updater.getExecutedJarFile().getAbsolutePath() + "] cannot be started (" + installedDefect + "). Downloading it again.");
         }
         if (installedDefect != null || forceUpdate || updater.needsUpdating()) {
             String allowTypesString = allowedTypes.stream().map(GrailsReleaseType::name).collect(Collectors.joining(","));
-            System.out.printf("Updating Grails wrapper, allowed versions to update to are [%s]...%n", allowTypesString);
+            System.err.printf("Updating Grails wrapper, allowed versions to update to are [%s]...%n", allowTypesString);
 
             updated = installedDefect != null ? updater.repair() : updater.update();
 
@@ -75,7 +79,7 @@ public class GrailsWrapper {
         }
 
         if (updated) {
-            System.out.println("Updated wrapper to version: " + updater.getSelectedVersion().toString());
+            System.err.println("Updated wrapper to version: " + updater.getSelectedVersion().toString());
         }
 
         // every download is verified before it is installed, so this is a file no download of this run replaced

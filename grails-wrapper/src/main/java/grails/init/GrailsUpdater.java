@@ -221,8 +221,8 @@ public class GrailsUpdater {
      */
     private static void reportSkippedOverride(GrailsWrapperRepo repo, GrailsReleaseNotFoundException reason) {
         if (repo.overridden) {
-            System.out.println("...The Grails CLI was not found in the overridden repository [" + repo.getDisplayUrl() + "]: " + said(reason));
-            System.out.println("...Trying the next repository.");
+            System.err.println("...The Grails CLI was not found in the overridden repository [" + repo.getDisplayUrl() + "]: " + said(reason));
+            System.err.println("...Trying the next repository.");
         }
     }
 
@@ -267,7 +267,7 @@ public class GrailsUpdater {
         String remoteJarFilename = GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME + "-" + (snapshotVersion != null ? snapshotVersion : version.version) + "-all.jar";
         String wrapperUrl = repo.getFileUrl(version, remoteJarFilename);
         if (snapshotVersion != null) {
-            System.out.println("... Using Snapshot URL: " + GrailsWrapperRepo.withoutCredentials(wrapperUrl));
+            System.err.println("... Using Snapshot URL: " + GrailsWrapperRepo.withoutCredentials(wrapperUrl));
         }
 
         File directory = grailsWrapperHome.getVersionDirectory(version);
@@ -399,7 +399,7 @@ public class GrailsUpdater {
                         int progressPercent = (int) (totalBytesRead * 100 / expectedSize);
                         if (progressPercent != lastProgressPercent) {
                             String transferSpeed = readableSize((long) bytesPerSecond, true);
-                            System.out.printf("\r... %3d%% (%s)", progressPercent, transferSpeed);
+                            System.err.printf("\r... %3d%% (%s)", progressPercent, transferSpeed);
                             lastProgressPercent = progressPercent;
                         }
 
@@ -408,10 +408,10 @@ public class GrailsUpdater {
                     }
                 } else {
                     // cannot determine the size
-                    System.out.printf("\r... %s", readableSize(totalBytesRead, false));
+                    System.err.printf("\r... %s", readableSize(totalBytesRead, false));
                 }
             }
-            System.out.print("\n");
+            System.err.print("\n");
 
             if (expectedSize >= 0 && totalBytesRead != expectedSize) {
                 throw cutOff(totalBytesRead, expectedSize, null);
@@ -574,12 +574,12 @@ public class GrailsUpdater {
             // it is whole it is used, and what was downloaded is dropped. StartClass waits for the move of
             // another wrapper to end before it says whether the jar is whole.
             if (StartClass.defect(jarFile.toFile()) == null) {
-                System.out.println("...The Grails command line at [" + jarFile.toAbsolutePath() + "] could not be replaced by the download (" + describe(e) + ") and is used as it is: it may be in use by a command that is running.");
+                System.err.println("...The Grails command line at [" + jarFile.toAbsolutePath() + "] could not be replaced by the download (" + describe(e) + ") and is used as it is: it may be in use by a command that is running.");
                 return false;
             }
             throw unwritableHome(jarFile.getParent().toFile(), e);
         }
-        System.out.println("...Moved " + (isLocal ? "local" : "remotely") + " downloaded jar to: " + jarFile.toAbsolutePath());
+        System.err.println("...Moved " + (isLocal ? "local" : "remotely") + " downloaded jar to: " + jarFile.toAbsolutePath());
         removeStaleParts(jarFile.getParent().toFile());
         return true;
     }
@@ -663,7 +663,7 @@ public class GrailsUpdater {
     }
 
     private String fetchSnapshotForVersion(GrailsWrapperRepo repo, GrailsVersion baseVersion) throws GrailsReleaseNotFoundException, GrailsDownloadException {
-        System.out.println("...A Grails snapshot version has been detected. Downloading latest snapshot.");
+        System.err.println("...A Grails snapshot version has been detected. Downloading latest snapshot.");
 
         FindLastSnapshotHandler findVersionHandler = new FindLastSnapshotHandler();
         parseMetadata(repo, repo.getMetadataUrl(baseVersion), findVersionHandler);

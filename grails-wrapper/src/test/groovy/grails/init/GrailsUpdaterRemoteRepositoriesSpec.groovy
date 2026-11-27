@@ -70,11 +70,11 @@ class GrailsUpdaterRemoteRepositoriesSpec extends Specification {
         when:
         Map result = runWrapper([PREFERRED_GRAILS_VERSION: '9.0.0'], ['help'])
 
-        then: 'the message names Maven Central and why'
+        then: 'the message names Maven Central and why, on standard error, where every message of the wrapper is'
         result.status == 1
-        result.out.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${CENTRAL}] gave is not installed: " +
+        result.err.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${CENTRAL}] gave is not installed: " +
                 "the download does not match the SHA-1 checksum of the repository: it was cut off or is corrupt. ${NOT_WHOLE}")
-        !result.out.contains('\tat ')
+        result.out.empty
         !result.err.contains('\tat ')
 
         and: 'the jar and its checksum files were asked of Maven Central, and nothing of the ASF repository'
@@ -101,10 +101,10 @@ class GrailsUpdaterRemoteRepositoriesSpec extends Specification {
 
         then: 'the message names the ASF repository and why, and is not that no repository has the snapshot'
         result.status == 1
-        result.out.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${ASF}] gave is not installed: " +
+        result.err.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${ASF}] gave is not installed: " +
                 "the download does not match the SHA-256 checksum of the repository: it was cut off or is corrupt. ${NOT_WHOLE}")
-        !result.out.contains('Could not find the Grails CLI in any repository')
-        !result.out.contains(CliJars.STARTED)
+        !result.err.contains('Could not find the Grails CLI in any repository')
+        result.out.empty
         new File(home, 'wrapper').list().length == 0
 
         and: 'Maven Central was asked for the metadata of the snapshot, which it does not have'
@@ -128,9 +128,9 @@ class GrailsUpdaterRemoteRepositoriesSpec extends Specification {
 
         then: 'the message is the same whichever layer found the end: the wrapper, the HTTP stream of the JDK, or TLS'
         result.status == 1
-        result.out.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${CENTRAL}] gave is not installed: " +
+        result.err.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${CENTRAL}] gave is not installed: " +
                 "the download failed: IOException: it was cut off after ${length.intdiv(2)} of ${length} bytes. ${NOT_WHOLE}")
-        !result.out.contains(CliJars.STARTED)
+        result.out.empty
         new File(home, 'wrapper').list().length == 0
         proxy.requests == ["${RepositoryProxy.CENTRAL} ${RELEASE_JAR}".toString()]
         proxy.requestedHosts == [RepositoryProxy.CENTRAL]
@@ -157,15 +157,15 @@ class GrailsUpdaterRemoteRepositoriesSpec extends Specification {
         when:
         Map result = runWrapper([PREFERRED_GRAILS_VERSION: '9.0.0'], ['help'])
 
-        then:
+        then: 'standard output has what the command line writes, and nothing else'
         result.status == 0
-        result.out.contains("${CliJars.STARTED}help")
+        result.out.readLines() == ["${CliJars.STARTED}help".toString()]
         CliJars.marker(new File(home, 'wrapper/9.0.0/grails-cli-9.0.0-all.jar')) == 'the jar of the ASF repository'
         proxy.requestedHosts.first() == RepositoryProxy.CENTRAL
         proxy.requests.contains("${RepositoryProxy.ASF} ${RELEASE_JAR}".toString())
 
         and: 'Maven Central is named on standard error where it failed, and not where it does not have the jar'
-        result.err.readLines() == (line == null ? [] : [line])
+        result.err.readLines().findAll { String said -> said.contains(CENTRAL) } == (line == null ? [] : [line])
 
         where:
         situation               | served | status || line

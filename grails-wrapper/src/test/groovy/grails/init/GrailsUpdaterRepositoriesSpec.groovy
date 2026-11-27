@@ -76,13 +76,14 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         result.updater.executedJarFile.canonicalFile == installed('9.0.0').canonicalFile
         proxy.requestedHosts.empty
 
-        and: 'the repository that was named and did not have it is said in the line a snapshot has, without a stack trace'
-        result.out.contains("...The Grails CLI was not found in the overridden repository [${cliDirectory(first).path}]: " +
+        and: 'the repository that was named and did not have it is said in the line a snapshot has, on standard error and without a stack trace'
+        result.err.contains("...The Grails CLI was not found in the overridden repository [${cliDirectory(first).path}]: " +
                 "${new File(cliDirectory(first), '9.0.0/grails-cli-9.0.0-all.jar').absolutePath} does not exist")
-        result.out.contains('...Trying the next repository.')
-        !result.out.contains("overridden repository [${cliDirectory(second).path}]")
+        result.err.contains('...Trying the next repository.')
+        !result.err.contains("overridden repository [${cliDirectory(second).path}]")
         !result.err.contains('\tat ')
-        !result.err.contains(cliDirectory(first).path)
+        !result.err.contains("could not be taken from the repository [${cliDirectory(first).path}]")
+        result.out.empty
     }
 
     def "without a version the newest allowed one of the first repository that lists versions is taken"() {
@@ -104,9 +105,10 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         proxy.requestedHosts.empty
 
         and: 'the repository that was named and did not have it is said, the one that had it is not'
-        result.out.contains("...The Grails CLI was not found in the overridden repository [${cliDirectory(first).path}]: ")
-        result.out.contains('...Trying the next repository.')
-        !result.out.contains("overridden repository [${cliDirectory(second).path}]")
+        result.err.contains("...The Grails CLI was not found in the overridden repository [${cliDirectory(first).path}]: ")
+        result.err.contains('...Trying the next repository.')
+        !result.err.contains("overridden repository [${cliDirectory(second).path}]")
+        result.out.empty
     }
 
     def "a repository that lists no version of an allowed type is passed over"() {
@@ -123,7 +125,7 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         then:
         result.updated
         CliJars.marker(installed('9.0.0')) == 'the release'
-        result.out.contains("overridden repository [${cliDirectory(first).path}]: No Grails Releases were found for the allowed types: RELEASE")
+        result.err.contains("overridden repository [${cliDirectory(first).path}]: No Grails Releases were found for the allowed types: RELEASE")
     }
 
     def "a snapshot that no repository has is an error that names every repository that was tried"() {
@@ -213,14 +215,14 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
 
         then:
         result.status == 1
-        result.out.contains('Unable to execute Grails Wrapper: ')
-        result.out.contains('Unable to execute Grails Wrapper: Could not find the Grails CLI in any repository:')
-        result.out.contains(message)
+        result.err.contains('Unable to execute Grails Wrapper: ')
+        result.err.contains('Unable to execute Grails Wrapper: Could not find the Grails CLI in any repository:')
+        result.err.contains(message)
         proxy.requestedHosts == REMOTE_HOSTS
         !installed(version).exists()
 
-        and: 'the message is all that is said: there is no stack trace'
-        !result.out.contains('\tat ')
+        and: 'the message is all that is said, on standard error: there is no stack trace'
+        result.out.empty
         !result.err.contains('\tat ')
 
         where:
@@ -247,14 +249,15 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         }
         Map result = runWrapper(environment, ['help'])
 
-        then: 'the command line of the second repository is installed and started'
+        then: 'the command line of the second repository is installed and started, and has standard output to itself'
         result.status == 0
-        result.out.contains("${CliJars.STARTED}help")
+        result.out.readLines() == ["${CliJars.STARTED}help".toString()]
         CliJars.marker(installed('9.0.0-SNAPSHOT')) == 'the command line'
         proxy.requestedHosts.empty
 
         and: 'one line names the repository and what is wrong with it, with nothing of the file that a version does not have'
-        result.err.readLines() == ["The Grails CLI could not be taken from the repository [${cliDirectory(broken).path}]: ${message}".toString()]
+        result.err.readLines().findAll { String line -> line.contains(cliDirectory(broken).path) } ==
+                ["The Grails CLI could not be taken from the repository [${cliDirectory(broken).path}]: ${message}".toString()]
 
         where:
         situation                                        | version          | path                                      | content                                         | message
@@ -279,13 +282,14 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
 
         then: 'the wrapper looks into what it downloads, and ends there: the other repositories are not asked'
         result.status == 1
-        result.out.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${cliDirectory(named).path}] gave is not installed: " +
+        result.err.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${cliDirectory(named).path}] gave is not installed: " +
                 'the download is not a Grails command line that can be started: it does not open as a jar: ')
-        result.out.contains('No other repository was asked: the command line of another repository does not take the place of a download that is not whole. ' +
+        result.err.contains('No other repository was asked: the command line of another repository does not take the place of a download that is not whole. ' +
                 'Run the command again; if the repository gives the same download, correct the repository or remove it from GRAILS_REPO_URL.')
-        !result.out.contains('Could not find the Grails CLI in any repository')
-        result.err.empty
-        !result.out.contains('Updated wrapper to version')
+        !result.err.contains('Could not find the Grails CLI in any repository')
+        !result.err.contains('could not be taken from the repository')
+        !result.err.contains('Updated wrapper to version')
+        result.out.empty
         proxy.requestedHosts.empty
 
         and: 'neither the jar nor the file it was downloaded to is in the home'
@@ -312,10 +316,10 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         when: 'the wrapper is run'
         Map result = runWrapper(GRAILS_REPO_URL: named.path, PREFERRED_GRAILS_VERSION: '9.0.0')
 
-        then: 'it ends with status 1 and the message, without a stack trace'
+        then: 'it ends with status 1 and the message, on standard error and without a stack trace'
         result.status == 1
-        result.out.contains("Unable to execute Grails Wrapper: The Grails wrapper cannot write to [${new File(home.canonicalFile, 'wrapper').absolutePath}]")
-        !result.out.contains('\tat ')
+        result.err.contains("Unable to execute Grails Wrapper: The Grails wrapper cannot write to [${new File(home.canonicalFile, 'wrapper').absolutePath}]")
+        result.out.empty
         !result.err.contains('\tat ')
         proxy.requestedHosts.empty
 
@@ -362,8 +366,9 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         then:
         result.thrown instanceof GrailsWrapperException
         result.thrown.message == notInstalled(first, message)
-        result.err.empty
-        !result.out.contains(cliDirectory(second).path)
+        !result.err.contains('could not be taken from the repository')
+        !result.err.contains(cliDirectory(second).path)
+        result.out.empty
         proxy.requestedHosts.empty
 
         and: 'nothing is installed, and nothing of the download is left'
@@ -440,11 +445,11 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
 
         then:
         result.status == 0
-        result.out.readLines().count { String line ->
+        result.err.readLines().count { String line ->
             line.startsWith("The installed Grails command line at [${installed('9.0.0').canonicalPath}] cannot be started (it does not open as a jar: ") &&
                     line.endsWith('). Downloading it again.')
         } == 1
-        result.out.contains("${CliJars.STARTED}help")
+        result.out.readLines() == ["${CliJars.STARTED}help".toString()]
         CliJars.marker(installed('9.0.0')) == 'the command line'
         proxy.requestedHosts.empty
     }
@@ -460,8 +465,9 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
 
         then: 'every repository was asked once'
         result.status == 1
-        result.out.contains('). Downloading it again.')
-        result.out.contains('Unable to execute Grails Wrapper: Could not find the Grails CLI in any repository:')
+        result.err.contains('). Downloading it again.')
+        result.err.contains('Unable to execute Grails Wrapper: Could not find the Grails CLI in any repository:')
+        result.out.empty
         proxy.requestedHosts == REMOTE_HOSTS
 
         and: 'the file is as it was, and nothing is beside it'
@@ -565,7 +571,7 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         then:
         result.updated
         proxy.requestedHosts == ['repository.example.invalid']
-        result.out.contains('...Update Repository is overridden to prefer [https://***@repository.example.invalid/releases].')
+        result.err.contains('...Update Repository is overridden to prefer [https://***@repository.example.invalid/releases].')
         result.err.contains('The Grails CLI could not be taken from the repository [https://***@repository.example.invalid/releases/org/apache/grails/grails-cli]: ')
         !result.out.contains('s3cret')
         !result.err.contains('s3cret')
@@ -630,18 +636,16 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         when:
         Map result = runWrapper([GRAILS_REPO_URL: "${first.path};${second.path}".toString(), PREFERRED_GRAILS_VERSION: version], ['help'])
 
-        then: 'the message names the repository and why, without a stack trace'
+        then: 'the message names the repository and why, on standard error and without a stack trace'
         result.status == 1
-        result.out.contains("Unable to execute Grails Wrapper: ${notInstalled(first, 'the download does not match the SHA-1 checksum of the repository: it was cut off or is corrupt')}")
-        !result.out.contains('\tat ')
+        result.err.contains("Unable to execute Grails Wrapper: ${notInstalled(first, 'the download does not match the SHA-1 checksum of the repository: it was cut off or is corrupt')}")
         !result.err.contains('\tat ')
 
         and: 'nothing is installed or started, and neither the second repository nor a remote one is asked'
-        !result.out.contains(CliJars.STARTED)
-        !result.out.contains('Updated wrapper to version')
+        result.out.empty
+        !result.err.contains('Updated wrapper to version')
         new File(home, 'wrapper').list().length == 0
-        !result.out.contains('...Trying the next repository.')
-        !result.out.contains(cliDirectory(second).path)
+        !result.err.contains('...Trying the next repository.')
         !result.err.contains(cliDirectory(second).path)
         proxy.requestedHosts.empty
 
@@ -672,9 +676,10 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         proxy.requestedHosts.empty
 
         and: 'no line says that a repository was passed over'
-        result.err.empty
-        !result.out.contains('...Trying the next repository.')
-        !result.out.contains(cliDirectory(second).path)
+        !result.err.contains('could not be taken from the repository')
+        !result.err.contains('...Trying the next repository.')
+        !result.err.contains(cliDirectory(second).path)
+        result.out.empty
 
         where:
         kind       | version          | type
@@ -694,10 +699,10 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
 
         then:
         result.status == 0
-        result.out.contains("${CliJars.STARTED}help")
+        result.out.readLines() == ["${CliJars.STARTED}help".toString()]
         CliJars.marker(installed(version)) == 'the jar of the second'
-        result.out.contains("...The Grails CLI was not found in the overridden repository [${cliDirectory(first).path}]: ")
-        result.out.contains('...Trying the next repository.')
+        result.err.contains("...The Grails CLI was not found in the overridden repository [${cliDirectory(first).path}]: ")
+        result.err.contains('...Trying the next repository.')
         proxy.requestedHosts.empty
 
         where:
@@ -720,8 +725,8 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
 
         then:
         result.status == 1
-        result.out.contains("Unable to execute Grails Wrapper: ${notInstalled(named, 'the download does not match the SHA-256 checksum of the repository: it was cut off or is corrupt')}")
-        !result.out.contains(CliJars.STARTED)
+        result.err.contains("Unable to execute Grails Wrapper: ${notInstalled(named, 'the download does not match the SHA-256 checksum of the repository: it was cut off or is corrupt')}")
+        result.out.empty
         CliJars.marker(installed('9.0.0-SNAPSHOT')) == 'the first build'
         installed('9.0.0-SNAPSHOT').parentFile.list() == ['grails-cli-9.0.0-SNAPSHOT-all.jar']
         proxy.requestedHosts.empty

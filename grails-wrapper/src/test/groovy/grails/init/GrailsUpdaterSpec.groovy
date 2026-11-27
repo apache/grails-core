@@ -329,17 +329,21 @@ class GrailsUpdaterSpec extends Specification {
 
         when:
         boolean updated = false
-        String output = SystemStubs.tapSystemOut {
-            SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', home.absolutePath).execute {
-                updated = new GrailsUpdater(new LinkedHashSet<>([GrailsReleaseType.SNAPSHOT]), new GrailsVersion('9.0.0-SNAPSHOT')).update()
+        String standardOutput = null
+        String output = SystemStubs.tapSystemErr {
+            standardOutput = SystemStubs.tapSystemOut {
+                SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', home.absolutePath).execute {
+                    updated = new GrailsUpdater(new LinkedHashSet<>([GrailsReleaseType.SNAPSHOT]), new GrailsVersion('9.0.0-SNAPSHOT')).update()
+                }
             }
         }
 
-        then:
+        then: 'the wrapper says it on standard error, and nothing on standard output'
         updated
         output.contains("...The Grails CLI was not found in the overridden repository [${new File(empty, 'org/apache/grails/grails-cli').path}]: ")
         output.contains('...Trying the next repository.')
         !output.contains("overridden repository [${new File(repository, 'org/apache/grails/grails-cli').path}]")
+        standardOutput.empty
 
         cleanup:
         System.clearProperty('grails.repo.url')

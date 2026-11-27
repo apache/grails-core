@@ -203,7 +203,7 @@ public class GrailsWrapperRepo {
         // Prefer the override repo first
         for (String overRepoUrl : getOverriddenMavenRepos()) {
             if (overRepoUrl != null) {
-                System.out.println("...Update Repository is overridden to prefer [" + withoutCredentials(overRepoUrl) + "].");
+                System.err.println("...Update Repository is overridden to prefer [" + withoutCredentials(overRepoUrl) + "].");
                 GrailsWrapperRepo overriddenRepo = createGrailsWrapperRepo(overRepoUrl);
                 overriddenRepo.overridden = true;
                 repos.add(overriddenRepo);

@@ -277,10 +277,11 @@ class WrapperUpgradeSpec extends Specification {
         when:
         Map result = current(project, home, 'update-wrapper')
 
-        then:
+        then: 'the wrapper says what it downloaded on standard error, which has nothing else, and standard output has what the command line writes'
         result.status == 0
-        result.err.isEmpty()
-        result.out.contains("Updated wrapper to version: ${VERSION}")
+        result.err.contains("Updated wrapper to version: ${VERSION}")
+        ofTheWrapperOnly(result.err)
+        !result.out.contains('Updated wrapper to version')
         new File(home, "wrapper/${VERSION}/grails-cli-${VERSION}-all.jar").length() == allJar.length()
         result.out.readLines().last() == "The Grails wrapper of the project in ${project.path} is now that of Grails ${cliVersion()}: grailsw was replaced. Commit it."
         new File(project, 'grailsw').bytes == inJar('grailsw')
@@ -397,7 +398,7 @@ class WrapperUpgradeSpec extends Specification {
         then:
         assert result.status == 0: said(result, project)
         assert result.out.readLines().last() == "The Grails wrapper of the project in ${project.path} is now that of Grails ${cliVersion()}: grailsw.bat was replaced. Commit it.": said(result, project)
-        assert result.err.isEmpty(): said(result, project)
+        assert ofTheWrapperOnly(result.err): said(result, project)
         new File(project, 'grailsw.bat').bytes == inJar('grailsw.bat')
         !project.list().any { String name -> name.endsWith('.new') }
 
@@ -408,6 +409,14 @@ class WrapperUpgradeSpec extends Specification {
         then: 'the exit code is that of the command'
         assert failing.status == 2: said(failing, project)
         failing.err.contains('update-wrapper takes no argument stats')
+    }
+
+    // Whether every line is one the wrapper of this version writes about a download, which it writes to standard error:
+    // the command line wrote nothing there. A line of its progress ends with a carriage return, which ends a line here too.
+    private static boolean ofTheWrapperOnly(String err) {
+        return err.readLines().every { String line ->
+            line.isEmpty() || line.startsWith('...') || line.startsWith('Updating Grails wrapper') || line.startsWith('Updated wrapper to version')
+        }
     }
 
     // on Windows the JVM of the wrapper has its jar open, and the system replaces no file that is: the new one is beside it

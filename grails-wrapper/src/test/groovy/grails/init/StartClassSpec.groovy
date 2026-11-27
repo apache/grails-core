@@ -232,10 +232,10 @@ class StartClassSpec extends Specification {
         when:
         Map result = run([wrapperClasses, other.path].join(File.pathSeparator), home, ['help'])
 
-        then:
+        then: 'the wrapper says why on standard error, and nothing is written to standard output'
         result.status == 1
-        result.out.contains("Unable to execute Grails Wrapper: The start class [${START_CLASS}] of the Grails command line at [${installed.canonicalPath}] is not a class of that file.")
-        !result.out.contains('the class of the class path')
+        result.err.contains("Unable to execute Grails Wrapper: The start class [${START_CLASS}] of the Grails command line at [${installed.canonicalPath}] is not a class of that file.")
+        result.out.empty
     }
 
     @Unroll
