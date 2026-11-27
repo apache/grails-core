@@ -57,7 +57,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         manager.grailsConfig.grails.gorm.leftJoinAssociationSort = leftJoinSort
         manager.grailsConfig.hibernate.session_factory.statement_inspector = sqlCapture
         manager.registerDomainClasses(Club, Team, Player, Contract, AssociationSortBook, AssociationSortAuthor,
-                AssociationSortOwner, AssociationSortScore, AssociationSortPet, AssociationSortEmployee)
+                AssociationSortOwner, AssociationSortScore, AssociationSortPet, AssociationSortEmployee, AssociationSortLeague)
     }
 
     void setup() {
@@ -580,6 +580,90 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'a list'        | { int offset -> AssociationSortOwner.list(max: 2, offset: offset, sort: 'scores.score') }
     }
 
+    void '#api sorted by a property of an association after a collection returns a team once for each player with a contract'() {
+        given: 'a second player of a team, and a player without a contract'
+        saveArsenalPlayers()
+
+        when:
+        final results = query.call()
+
+        then: 'as for a collection, also with the setting, the contract is joined with an inner join after the players'
+        results*.name.sort() == ['Arsenal First Team', 'Arsenal First Team', 'Chelsea First Team',
+                                 'Manchester United First Team', 'Unattached First Team']
+        results.last().name == 'Arsenal First Team'
+
+        where:
+        api                | query
+        'list'             | { Team.list(sort: 'players.contract.salary') }
+        'a paged list'     | { Team.list(sort: 'players.contract.salary', max: 10) }
+        'a criteria query' | { Team.withCriteria { order('players.contract.salary') } }
+        'a paged criteria' | { Team.createCriteria().list(sort: 'players.contract.salary', max: 10) {} }
+    }
+
+    void 'the total of #api sorted by a property of an association after a collection counts the rows that it pages through'() {
+        given: 'a second player of a team, and a player without a contract'
+        saveArsenalPlayers()
+
+        expect: 'a row for each player with a contract, as the list has, also with the setting'
+        query.call() == 5
+
+        where:
+        api             | query
+        'where count'   | { Team.where { name ==~ '%' }.sort('players.contract.salary').count() }
+        'criteria page' | { Team.createCriteria().list(max: 10, sort: 'players.contract.salary') {}.totalCount }
+        'detached page' | { new DetachedCriteria(Team).list(max: 10, sort: 'players.contract.salary').totalCount }
+        'static page'   | { Team.list(max: 10, sort: 'players.contract.salary').totalCount }
+    }
+
+    void '#api sorted by a property of a collection of a collection returns a league once for each score'() {
+        given:
+        saveLeagues()
+
+        expect: 'the scores of the owners of each league, which the inner joins leave out for a league without an owner'
+        query.call()*.name.sort() == ['Premier', 'Premier', 'Premier', 'Premier', 'Third', 'Third']
+
+        where:
+        api                | query
+        'list'             | { AssociationSortLeague.list(sort: 'owners.scores.score') }
+        'a criteria query' | { AssociationSortLeague.withCriteria { order('owners.scores.score') } }
+    }
+
+    void 'a page of #api sorted by a property of a collection of a collection counts the rows that it pages through'() {
+        given:
+        saveLeagues()
+
+        when:
+        final page = query.call()
+
+        then:
+        page.totalCount == 6
+
+        where:
+        api             | query
+        'a list'        | { AssociationSortLeague.list(max: 10, sort: 'owners.scores.score') }
+        'a criteria'    | { AssociationSortLeague.createCriteria().list(max: 10, sort: 'owners.scores.score') {} }
+        'a where query' | { AssociationSortLeague.where { name ==~ '%' }.list(max: 10, sort: 'owners.scores.score') }
+    }
+
+    protected void saveArsenalPlayers() {
+        final arsenal = Team.findByName('Arsenal First Team')
+        new Player(name: 'Aaron', team: arsenal, contract: new Contract(salary: 2)).save(failOnError: true)
+        new Player(name: 'Free Agent', team: arsenal).save(failOnError: true, flush: true)
+        manager.session.clear()
+    }
+
+    protected void saveLeagues() {
+        final ann = AssociationSortOwner.findByName('Ann')
+        final bob = AssociationSortOwner.findByName('Bob')
+        final annPet = AssociationSortPet.findByName("Ann's pet")
+        final stray = new AssociationSortPet(name: 'Stray').save(failOnError: true)
+        new AssociationSortLeague(name: 'Premier', mascot: annPet).addToOwners(ann).addToOwners(bob).addToPets(annPet)
+                .save(failOnError: true)
+        new AssociationSortLeague(name: 'Second', mascot: stray).addToPets(stray).save(failOnError: true)
+        new AssociationSortLeague(name: 'Third').addToOwners(ann).save(failOnError: true, flush: true)
+        manager.session.clear()
+    }
+
     void 'a detached page retains its sort restriction when counting at offset #offset'() {
         given:
         final query = new DetachedCriteria(Team).like('name', '%First%').sort('club.name')
@@ -1024,6 +1108,13 @@ class AssociationSortScore {
 class AssociationSortPet {
     String name
     AssociationSortOwner owner
+}
+
+@Entity
+class AssociationSortLeague {
+    String name
+    AssociationSortPet mascot
+    static hasMany = [owners: AssociationSortOwner, pets: AssociationSortPet]
 }
 
 @Entity

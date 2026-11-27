@@ -21,6 +21,7 @@ import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.Expression
 import jakarta.persistence.metamodel.Attribute
+import jakarta.persistence.metamodel.PluralAttribute
 import jakarta.persistence.metamodel.SingularAttribute
 import org.hibernate.metamodel.model.domain.PersistentAttribute
 import org.hibernate.query.sqm.tree.domain.SqmPath
@@ -367,6 +368,60 @@ class ExpressionResolverSpec extends Specification {
         1 * teamJoin.join('club', JoinType.LEFT) >> clubJoin
         1 * clubJoin.get('name') >> namePath
         result == namePath
+    }
+
+    def 'a count joins an association after a collection with an inner join, as the path of the list does, also with the setting'() {
+        given:
+        def root = Mock(SqmFrom)
+        def playersJoin = Mock(SqmAttributeJoin)
+        def contractJoin = Mock(SqmAttributeJoin)
+        def salaryPath = Mock(SqmPath)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+        resolver.leftJoinSort = true
+
+        when:
+        def result = resolver.resolveSort('players.contract.salary', false, true)
+
+        then:
+        _ * root.get('players') >> collectionPath()
+        _ * root.getSqmJoins() >> []
+        1 * root.join('players', JoinType.INNER) >> playersJoin
+        _ * playersJoin.get('contract') >> attributePath(Attribute.PersistentAttributeType.ONE_TO_ONE)
+        _ * playersJoin.getSqmJoins() >> []
+        1 * playersJoin.join('contract', JoinType.INNER) >> contractJoin
+        0 * playersJoin.join('contract', JoinType.LEFT)
+        1 * contractJoin.get('salary') >> salaryPath
+        result == salaryPath
+    }
+
+    def 'a list reads the rest of a path through a collection through the path'() {
+        given:
+        def root = Mock(SqmFrom)
+        def playersPath = collectionPath()
+        def contractPath = Mock(SqmPath)
+        def salaryPath = Mock(SqmPath)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+        resolver.leftJoinSort = true
+
+        when:
+        def result = resolver.resolveSort('players.contract.salary', false, false)
+
+        then: 'Hibernate joins the path with inner joins and lists an instance once for each element'
+        _ * root.get('players') >> playersPath
+        _ * root.getSqmJoins() >> []
+        0 * root.join(_, _)
+        1 * playersPath.get('contract') >> contractPath
+        1 * contractPath.get('salary') >> salaryPath
+        result == salaryPath
+    }
+
+    private SqmPath collectionPath() {
+        def attribute = Mock(PluralAttribute)
+        attribute.isAssociation() >> true
+        attribute.isCollection() >> true
+        def path = Mock(SqmPath)
+        path.getModel() >> attribute
+        path
     }
 
     def 'a sort reuses a join that the query already has for the association'() {

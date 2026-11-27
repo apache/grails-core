@@ -55,6 +55,8 @@ public class HqlListQueryBuilder {
     private final Map<String, String> fetchJoins = new LinkedHashMap<>();
     // the sort joins that join a collection, which has a row for each element
     private final Set<String> collectionSortJoins = new HashSet<>();
+    // the sort joins of the associations after a collection, which the count joins with an inner join in both modes
+    private final Set<String> afterCollectionSortJoins = new HashSet<>();
     // whether the query being built is the count, which joins a collection that the list reads by its elements
     private boolean counting;
 
@@ -75,6 +77,7 @@ public class HqlListQueryBuilder {
         sortJoins.clear();
         fetchJoins.clear();
         collectionSortJoins.clear();
+        afterCollectionSortJoins.clear();
         counting = count;
         StringBuilder hql = new StringBuilder("from ");
         hql.append(entity.getName()).append(" e");
@@ -101,10 +104,12 @@ public class HqlListQueryBuilder {
             }
         });
         // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null,
-        // as with Hibernate 5. A collection that only the count joins is joined with an inner join in both modes
+        // as with Hibernate 5. A collection that only the count joins, and an association after it, are joined with
+        // an inner join in both modes, as the list reads them through the elements of the collection
         String sortJoin = ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort() ? " left join " : " join ";
         sortJoins.forEach((path, alias) ->
-                hql.append(collectionSortJoins.contains(path) ? " join " : sortJoin).append(path).append(' ').append(alias));
+                hql.append(collectionSortJoins.contains(path) || afterCollectionSortJoins.contains(path) ? " join " : sortJoin)
+                        .append(path).append(' ').append(alias));
         if (count) {
             // The list has a row for each element of a collection that it sorts by, and max and offset page
             // through those rows, so the total counts them. A list that fetches a collection has each instance
@@ -179,9 +184,16 @@ public class HqlListQueryBuilder {
     /**
      * Builds one part of the order clause from a caller-supplied property path. The path is resolved against the
      * mapping before it is interpolated into HQL, in the one walk that also decides where it is read from: a path
-     * that the mapping does not know is rejected, and a property of an association is read from a left join of
-     * the association and not from the path through it, which Hibernate joins with an implicit inner join that
-     * leaves out the rows where the association is {@code null}.
+     * that the mapping does not know is rejected, and a property of an association is read from a join of the
+     * association that the query makes for the sort, or from the join of a fetch of it. The join is a left join,
+     * which keeps the rows where the association is {@code null}, with the {@code grails.gorm.leftJoinAssociationSort}
+     * setting, and an inner join without it.
+     * <p>
+     * A collection is read with an inner join in both modes. The list reads its elements through the path, with
+     * {@code element()}, which Hibernate joins with an inner join and which lists an instance once for each element,
+     * and it reads the rest of the path through the elements, which Hibernate joins with inner joins as well. The
+     * count joins the collection and every association after it with an inner join, so that it counts the rows that
+     * the list pages through.
      *
      * @param propertyName The property path
      * @param direction The direction of the sort
@@ -196,6 +208,10 @@ public class HqlListQueryBuilder {
         String[] tokens = propertyName.split("\\.");
         PersistentEntity current = entity;
         String alias = "e";
+        // whether the list reads the rest of the path through the elements of a collection
+        boolean throughElements = false;
+        // whether the count has joined a collection of the path, after which it joins with inner joins
+        boolean afterCollection = false;
         for (int i = 0; i < tokens.length - 1; i++) {
             if (!(current.getPropertyByName(tokens[i]) instanceof Association<?> association) ||
                     association.getAssociatedEntity() == null) {
@@ -218,6 +234,10 @@ public class HqlListQueryBuilder {
             } else if (i == tokens.length - 2 && isForeignKey(association, tokens[i + 1])) {
                 // Hibernate reads the foreign key without a join, which keeps the rows where it is null
                 alias = joined;
+            } else if (throughElements) {
+                // the rest of a path through the elements of a collection is read through them, with the elements of
+                // a further collection, as a join of the query would make Hibernate list an instance once
+                alias = association instanceof ToMany<?> ? "element(" + joined + ")" : joined;
             } else if (fetchJoins.containsKey(joined)) {
                 // the query already joins the association to fetch it, and the sort uses that join
                 alias = fetchJoins.get(joined);
@@ -232,10 +252,14 @@ public class HqlListQueryBuilder {
                 // instance once
                 collectionSortJoins.add(joined);
                 alias = "element(" + joined + ")";
+                throughElements = true;
             } else {
                 alias = sortJoins.computeIfAbsent(joined, path -> "s" + sortJoins.size());
                 if (association instanceof ToMany<?>) {
                     collectionSortJoins.add(joined);
+                    afterCollection = true;
+                } else if (afterCollection) {
+                    afterCollectionSortJoins.add(joined);
                 }
             }
             current = association.getAssociatedEntity();

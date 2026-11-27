@@ -151,9 +151,11 @@ public class ExpressionResolver {
      * key, so the caller says whether the path ends with one.
      * <p>
      * A collection that only the sort uses is read through its path, as with Hibernate 5, also with the setting:
-     * Hibernate joins the path with an inner join and returns a row for each element. A count selects no instance
-     * and orders nothing, so the path would not join the collection at all; it asks for the join, to count those
-     * rows. A path through an embedded component is read as it is.
+     * Hibernate joins the path with an inner join and returns a row for each element, and it joins the rest of the
+     * path, read through the elements, with inner joins as well. A count selects no instance and orders nothing, so
+     * the path would not join the collection at all; it asks for the join, to count those rows, and joins the
+     * associations after the collection with an inner join, as the path does. A path through an embedded component
+     * is read as it is.
      *
      * @param path the property path of the order
      * @param endsWithForeignKey whether the last two attributes of the path are an association and its
@@ -184,15 +186,34 @@ public class ExpressionResolver {
             first = 1;
         }
 
+        // whether the count has joined a collection that the list reads through its path, after which it joins
+        // with inner joins, as Hibernate joins the rest of that path
+        boolean afterCollection = false;
         for (int i = first; i < tokens.length - 1; i++) {
             if (associationPath != null) {
                 associationPath = associationPath.isEmpty() ? tokens[i] : associationPath + '.' + tokens[i];
             }
-            boolean foreignKey = i == tokens.length - 2 && endsWithForeignKey;
-            From<?, ?> join = sortJoin(from, tokens[i], associationPath, foreignKey, joinCollections);
-            if (join == null) {
-                // the rest of the path is a component path, a property or a foreign key, which resolves as it is
+            Path<?> attribute = getPath(from, tokens[i]);
+            if (attribute == null || !(attribute.getModel() instanceof Attribute<?, ?> model) || !model.isAssociation()) {
+                // the rest of the path is a component path or a property, which resolves as it is
                 return getPath(from, String.join(".", Arrays.copyOfRange(tokens, i, tokens.length)));
+            }
+            // the joins after such a collection are made by the sort, as the path of the list reads them
+            From<?, ?> join = afterCollection ? null : queryJoin(from, tokens[i], associationPath);
+            if (join == null) {
+                if (i == tokens.length - 2 && endsWithForeignKey ||
+                        model.isCollection() && !joinCollections) {
+                    // a foreign key, or the elements of a collection, read through the path
+                    return getPath(from, String.join(".", Arrays.copyOfRange(tokens, i, tokens.length)));
+                }
+                if (model.isCollection()) {
+                    // a sort by a collection leaves out the instances whose collection is empty, as with Hibernate 5
+                    join = from.join(tokens[i], JoinType.INNER);
+                    afterCollection = true;
+                } else {
+                    // with the setting, a left join keeps the instances whose association is null
+                    join = from.join(tokens[i], leftJoinSort && !afterCollection ? JoinType.LEFT : JoinType.INNER);
+                }
             }
             from = join;
         }
@@ -200,18 +221,11 @@ public class ExpressionResolver {
     }
 
     /**
-     * Returns the join through which an order sorts by a property of an association, or {@code null} if the
-     * rest of the path needs no join: the attribute is not an association, the path ends with the foreign key
-     * of the association, or it reads a collection through its path.
-     *
-     * @param foreignKey whether the attribute that follows this one is the foreign key of the association
+     * Returns the join that the query has or requests for an association that an order sorts through, or
+     * {@code null} if it has none: a join that the query already has for the association, or a join of the type
+     * that the query requests for its path.
      */
-    private From<?, ?> sortJoin(
-            From<?, ?> from, String attributeName, String associationPath, boolean foreignKey, boolean joinCollections) {
-        Path<?> attribute = getPath(from, attributeName);
-        if (attribute == null || !(attribute.getModel() instanceof Attribute<?, ?> model) || !model.isAssociation()) {
-            return null;
-        }
+    private From<?, ?> queryJoin(From<?, ?> from, String attributeName, String associationPath) {
         Join<?, ?> existing = existingJoin(from, attributeName);
         if (existing != null) {
             return existing;
@@ -227,15 +241,7 @@ public class ExpressionResolver {
         if (requested != null && !requested.explicit()) {
             return from.join(attributeName, requested.joinType());
         }
-        if (foreignKey) {
-            return null;
-        }
-        if (model.isCollection()) {
-            // a sort by a collection leaves out the instances whose collection is empty, as with Hibernate 5
-            return joinCollections ? from.join(attributeName, JoinType.INNER) : null;
-        }
-        // with the setting, a left join keeps the instances whose association is null
-        return from.join(attributeName, leftJoinSort ? JoinType.LEFT : JoinType.INNER);
+        return null;
     }
 
     /**

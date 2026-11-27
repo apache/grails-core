@@ -97,6 +97,32 @@ class HqlListQueryBuilderSpec extends Specification {
                 'select count(e) from Person e join e.players s0'
     }
 
+    void 'a list sorted through a collection reads the rest of the path through its elements, with leftJoinAssociationSort #setting'() {
+        given:
+        leftJoinSort = setting
+        final players = associated(entity, 'players', Mock(ToMany))
+        final contract = associated(players, 'contract')
+        property(contract, 'salary', BigDecimal)
+        final teams = associated(entity, 'teams', Mock(ToMany))
+        final members = associated(teams, 'members', Mock(ToMany))
+        property(members, 'name', String)
+
+        expect: 'Hibernate joins the path with inner joins and lists an instance once for each element'
+        new HqlListQueryBuilder(entity, [sort: 'players.contract.salary']).buildListHql() ==
+                'from Person e order by element(e.players).contract.salary asc'
+        new HqlListQueryBuilder(entity, [sort: 'teams.members.name']).buildListHql() ==
+                'from Person e order by upper(element(element(e.teams).members).name) asc'
+
+        and: 'the count joins the collection, and the association after it, with an inner join, as the path does'
+        new HqlListQueryBuilder(entity, [sort: 'players.contract.salary']).buildCountHql() ==
+                'select count(e) from Person e join e.players s0 join s0.contract s1'
+        new HqlListQueryBuilder(entity, [sort: 'teams.members.name']).buildCountHql() ==
+                'select count(e) from Person e join e.teams s0 join s0.members s1'
+
+        where:
+        setting << [true, false]
+    }
+
     void 'a count keeps sort joins without ordering and can be built after the list'() {
         given:
         leftJoinSort = false
