@@ -42,6 +42,7 @@ import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
 import org.hibernate.LockMode;
+import org.hibernate.criterion.CriteriaSpecification;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.internal.CriteriaImpl;
@@ -578,6 +579,11 @@ public class GrailsHibernateQueryUtils {
             String sortHead = sort.substring(0, firstDotPos);
             String sortTail = sort.substring(firstDotPos + 1);
             final PersistentProperty<? extends Property> property = entity.getPropertyByName(sortHead);
+            if (property == null && queryRoot instanceof Root && CriteriaSpecification.ROOT_ALIAS.equals(sortHead)) {
+                // the alias that Hibernate gives the queried class in the other queries: the rest of the path starts from the queried class
+                addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sortTail, order, ignoreCase);
+                return;
+            }
             if (property instanceof Embedded) {
                 // embedded objects cannot reference entities (at time of writing), so no more recursion needed
                 final PersistentProperty<? extends Property> associatedProperty = ((Embedded<?>) property).getAssociatedEntity().getPropertyByName(sortTail);

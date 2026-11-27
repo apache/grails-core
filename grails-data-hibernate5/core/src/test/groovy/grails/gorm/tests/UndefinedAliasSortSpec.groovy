@@ -55,15 +55,18 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         query.call()*.name == expected
 
         where:
-        api                                                     | query                                                                                       || expected
-        'a detached criteria'                                   | { new DetachedCriteria(Team, 't').list(sort: 't.name') }                                    || TEAMS_BY_NAME
-        'a detached criteria in descending order'               | { new DetachedCriteria(Team, 't').list(sort: 't.name', order: 'desc') }                     || TEAMS_BY_NAME.reverse()
-        'the sort of a detached criteria'                       | { new DetachedCriteria(Team, 't').sort('t.name').list() }                                   || TEAMS_BY_NAME
-        'a detached criteria with a criterion'                  | { new DetachedCriteria(Team, 't').build { like('name', '%First Team') }.list(sort: 't.name') } || TEAMS_BY_NAME
-        'a where query, through the alias Hibernate gives it'   | { Team.where { name ==~ '%' }.list(sort: 'this.name') }                                     || TEAMS_BY_NAME
-        'a dynamic finder, through the alias Hibernate gives it' | { Team.findAllByNameLike('%', [sort: 'this.name']) }                                       || TEAMS_BY_NAME
-        'findAll by example, through the alias Hibernate gives it' | { Team.findAll(new Team(), [sort: 'this.name']) }                                        || TEAMS_BY_NAME
-        'a criteria query, through the alias Hibernate gives it' | { Team.createCriteria().list(sort: 'this.name') { } }                                       || TEAMS_BY_NAME
+        api                                                                       | query                                                                                          || expected
+        'a detached criteria'                                                     | { new DetachedCriteria(Team, 't').list(sort: 't.name') }                                       || TEAMS_BY_NAME
+        'a detached criteria in descending order'                                 | { new DetachedCriteria(Team, 't').list(sort: 't.name', order: 'desc') }                        || TEAMS_BY_NAME.reverse()
+        'the sort of a detached criteria'                                         | { new DetachedCriteria(Team, 't').sort('t.name').list() }                                      || TEAMS_BY_NAME
+        'a detached criteria with a criterion'                                    | { new DetachedCriteria(Team, 't').build { like('name', '%First Team') }.list(sort: 't.name') } || TEAMS_BY_NAME
+        'a where query, through the alias Hibernate gives it'                     | { Team.where { name ==~ '%' }.list(sort: 'this.name') }                                        || TEAMS_BY_NAME
+        'a dynamic finder, through the alias Hibernate gives it'                  | { Team.findAllByNameLike('%', [sort: 'this.name']) }                                           || TEAMS_BY_NAME
+        'findAll by example, through the alias Hibernate gives it'                | { Team.findAll(new Team(), [sort: 'this.name']) }                                              || TEAMS_BY_NAME
+        'a criteria query, through the alias Hibernate gives it'                  | { Team.createCriteria().list(sort: 'this.name') { } }                                          || TEAMS_BY_NAME
+        'a static list, through the alias Hibernate gives it'                     | { Team.list(sort: 'this.name') }                                                               || TEAMS_BY_NAME
+        'a static list in descending order, through the alias Hibernate gives it' | { Team.list(sort: 'this.name', order: 'desc') }                                                || TEAMS_BY_NAME.reverse()
+        'a static list with a map, through the alias Hibernate gives it'          | { Team.list(sort: ['this.name': 'desc']) }                                                     || TEAMS_BY_NAME.reverse()
     }
 
     void 'a paged detached criteria sorted through the alias of the queried class counts every team'() {
@@ -115,17 +118,22 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         criteria.list(sort: 'club.name', max: 10).totalCount == (leftJoinSort ? 3 : 2)
     }
 
-    void 'a root-alias sort through an association follows the compatibility setting'() {
+    void 'a root-alias sort through an association of #api follows the compatibility setting'() {
         given:
         new Team(name: 'Unattached First Team').save(failOnError: true, flush: true)
         manager.session.clear()
 
         when:
-        final results = new DetachedCriteria(Team, 't').list(sort: 't.club.name', order: 'desc')
+        final results = query.call()
 
         then:
         ('Unattached First Team' in results*.name) == leftJoinSort
         results*.name - 'Unattached First Team' == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+
+        where:
+        api                   | query
+        'a detached criteria' | { new DetachedCriteria(Team, 't').list(sort: 't.club.name', order: 'desc') }
+        'a static list'       | { Team.list(sort: 'this.club.name', order: 'desc') }
     }
 
     void '#operation changes the teams that list returns when #description'() {
