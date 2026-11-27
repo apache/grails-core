@@ -114,6 +114,12 @@ class ColumnNameForPropertyAndPathFetcher {
         if (grailsProp.compositeUserType != null) {
             return compositeUserTypeColumns.columnNamesOf(grailsProp, path)
         }
-        return Collections.singletonList(getColumnNameForPropertyAndPath(grailsProp, path, null))
+        // every configured column of the property: a to-one association mapped to more than one column has no single column name
+        // to ask for, and a property without explicit columns keeps the one the naming strategy gives it
+        List<ColumnConfig> columns = grailsProp.hibernateMappedForm?.columns ?: []
+        if (columns.isEmpty()) {
+            return Collections.singletonList(getColumnNameForPropertyAndPath(grailsProp, path, null))
+        }
+        return columns.collect { ColumnConfig column -> getColumnNameForPropertyAndPath(grailsProp, path, column) }
     }
 }

@@ -140,6 +140,51 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
         0 * compositeUserTypeColumns._
     }
 
+    def "a property mapped to several columns has the name of each configured column, as a unique group that names it needs them"() {
+        given:
+        def compositeUserTypeColumns = Mock(CompositeUserTypeColumns)
+        def fetcher = new ColumnNameForPropertyAndPathFetcher(
+                Mock(PersistentEntityNamingStrategy),
+                Mock(DefaultColumnNameFetcher),
+                backticksRemover,
+                compositeUserTypeColumns
+        )
+        ColumnConfig first = new ColumnConfig(name: 'owner_a')
+        ColumnConfig second = new ColumnConfig(name: 'owner_b')
+        def grailsProp = Mock(HibernatePersistentProperty) {
+            getCompositeUserType() >> null
+            getHibernateMappedForm() >> new PropertyConfig(columns: [first, second])
+            getColumnName(first) >> 'owner_a'
+            getColumnName(second) >> 'owner_b'
+        }
+
+        when:
+        def result = fetcher.getColumnNamesForPropertyAndPath(grailsProp, '')
+
+        then: 'one name for each column, in the order the mapping gives them, and no composite user type is consulted'
+        result == ['owner_a', 'owner_b']
+        0 * compositeUserTypeColumns._
+    }
+
+    def "a property mapped to one column has the name of that configured column"() {
+        given:
+        def fetcher = new ColumnNameForPropertyAndPathFetcher(
+                Mock(PersistentEntityNamingStrategy),
+                Mock(DefaultColumnNameFetcher),
+                backticksRemover,
+                Mock(CompositeUserTypeColumns)
+        )
+        ColumnConfig only = new ColumnConfig(name: 'chosen')
+        def grailsProp = Mock(HibernatePersistentProperty) {
+            getCompositeUserType() >> null
+            getHibernateMappedForm() >> new PropertyConfig(columns: [only])
+            getColumnName(only) >> 'chosen'
+        }
+
+        expect:
+        fetcher.getColumnNamesForPropertyAndPath(grailsProp, '') == ['chosen']
+    }
+
     def "the column names of a property mapped with a composite user type are the names of its attribute columns"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
