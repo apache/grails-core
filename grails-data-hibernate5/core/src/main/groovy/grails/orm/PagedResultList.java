@@ -70,7 +70,7 @@ public class PagedResultList extends org.grails.orm.hibernate.query.PagedResultL
             totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<>() {
                 public Integer doInHibernate(Session session) throws HibernateException, SQLException {
                     CriteriaImpl impl = (CriteriaImpl) criteria;
-                    Criteria totalCriteria = session.createCriteria(impl.getEntityOrClassName());
+                    Criteria totalCriteria = session.createCriteria(impl.getEntityOrClassName(), impl.getAlias());
                     hibernateTemplate.applySettings(totalCriteria);
 
                     Iterator iterator = impl.iterateExpressionEntries();
@@ -83,7 +83,10 @@ public class PagedResultList extends org.grails.orm.hibernate.query.PagedResultL
                         CriteriaImpl.Subcriteria sub = (CriteriaImpl.Subcriteria) subcriteriaIterator.next();
                         totalCriteria.createAlias(sub.getPath(), sub.getAlias(), sub.getJoinType(), sub.getWithClause());
                     }
-                    totalCriteria.setProjection(impl.getProjection());
+                    if (impl.getProjection() != null && impl.getProjection().isGrouped()) {
+                        totalCriteria.setProjection(impl.getProjection());
+                        return totalCriteria.list().size();
+                    }
                     totalCriteria.setProjection(Projections.rowCount());
                     return ((Number) totalCriteria.uniqueResult()).intValue();
                 }
