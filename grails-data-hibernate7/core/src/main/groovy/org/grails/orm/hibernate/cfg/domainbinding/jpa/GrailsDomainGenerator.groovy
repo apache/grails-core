@@ -110,6 +110,7 @@ import org.hibernate.annotations.OptimisticLockType
 import org.hibernate.annotations.OptimisticLocking
 import org.hibernate.annotations.ParamDef
 import org.hibernate.annotations.Parameter
+import org.hibernate.annotations.SQLRestriction
 import org.hibernate.annotations.SortNatural
 import org.hibernate.annotations.Type
 import org.hibernate.annotations.UuidGenerator
@@ -3129,6 +3130,15 @@ class GrailsDomainGenerator {
             annotations << AnnotationDescription.Builder.ofType(Filter)
                     .define('name', GormProperties.TENANT_IDENTITY)
                     .define('condition', facets.tenantCondition())
+                    .build()
+        }
+        GrailsHibernatePersistentEntity referenced = property.hibernateAssociatedEntity
+        if (!facets.manyToMany() && referenced.isTablePerHierarchySubclass()) {
+            // HibernateToManyEntityOrderByBinder: the collection is restricted to the subclass by the discriminator column of the
+            // element's table. Hibernate's own subclass discriminator does not reach every statement on the collection: the
+            // emptiness test of a kennel that has a cat and no dog counts the cat
+            annotations << AnnotationDescription.Builder.ofType(SQLRestriction)
+                    .define('value', referenced.discriminatorColumnName + ' in (' + referenced.buildDiscriminatorSet().join(',') + ')')
                     .build()
         }
         for (Annotation constraint : carriedAnnotations(property)) {
