@@ -57,8 +57,8 @@ The client starts `grails mcp` itself, with the project as its working directory
 | Claude Code
 | `claude mcp add grails -- grails mcp` registers the installed command line for you. `claude mcp add --scope project grails -- ./grailsw mcp` registers the Grails wrapper of the project in its `.mcp.json`, for everyone who works on it.
 
-| `.mcp.json` at the root of the project (Claude Code)
-| The object below.
+| `.mcp.json` at the root of the project (Claude Code, VS Code)
+| The object below. VS Code reads this file for the servers a team shares; `.vscode/mcp.json`, with `servers` in place of `mcpServers`, is its older format, which the editor manages.
 
 | Cursor
 | The same object, in `.cursor/mcp.json`.
