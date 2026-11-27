@@ -1,0 +1,329 @@
+{
+  "sample": "outside-project",
+  "project": false,
+  "readOnly": ["feature_find","feature_show","feature_diff","plugin_list","plugin_find","plugin_show"],
+  "diagnostics": ["The commands of a project are not offered: grails mcp serves the directory it was started in, which is in no project. A project gets a grails mcp of its own, started in its directory."],
+  "tools": [
+    {
+      "name": "create-app",
+      "title": "grails create-app",
+      "lane": "generator",
+      "description": "Creates an application. Feature packs, feature catalogs and presets cannot be named, and a feature named by the coordinates of a plugin is refused. --list-features and --list-catalog-features are not offered: feature_find with type lists the features a new application of the type can be created with. Unless it is created in this directory, with inplace, the new project gets a grails mcp of its own, started in its directory or with grails mcp --directory DIRECTORY.",
+      "annotations": {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {"type":"string","enum":["hibernate5","hibernate7","mongodb","neo4j"],"description":"Which Grails Data implementation to configure (-g, --gorm are legacy aliases). Possible values: hibernate5, hibernate7, mongodb, neo4j."},
+          "exclude-features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to leave out of those the application would have by default, which --list-features marks (with this option, as they are without what is left out). A feature that is selected, that a feature of the application requires or that the application cannot be without cannot be left out."
+          },
+          "feature-option": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "An option of a feature, which the feature pack of the feature declares: the name of the feature, a dot, the name of the option and its value, as in acme-audit.store=collection. An option that is not given has the value the pack gives it. What a feature takes is said with what its pack adds, and by --list-features for a pack that is given. Can be given more than once."
+          },
+          "features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to use. Possible values: those the option --list-features lists"
+          },
+          "inplace": {"type":"boolean","description":"Create the application in the current directory, and not in a new directory named after it. Without NAME, the application is named after the current directory."},
+          "jdk": {"type":"integer","description":"The JDK version the project should target"},
+          "offline": {"type":"boolean","description":"Ask nothing of the network: a feature catalog is read from its copy on this computer or from a file, and the feature pack of a plugin is taken from a repository that is a directory, or from the copy of its jar that is kept on this computer since it was last fetched"},
+          "refresh": {"type":"boolean","description":"Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch the jar of each plugin whose feature pack is used, and not the copy of it that is kept on this computer"},
+          "reloading": {"type":"string","enum":["devtools","jrebel","none"],"description":"Which development reloading option to use. Possible values: devtools, jrebel, none."},
+          "servlet": {"type":"string","enum":["tomcat","jetty","undertow","none"],"description":"Which Servlet Implementation to configure. Possible values: tomcat, jetty, undertow, none."},
+          "subproject": {"type":"boolean","description":"Create the application as a project of the Gradle build the directory is in: only the files of the application are written, and not those of the root of a build (the Gradle wrapper, the settings, the Grails wrapper), which that build has. The settings of the build are not changed: the command says which line includes the application."},
+          "name": {"type":"string","description":"The name of the application to create."}
+        },
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","create-app"],"arguments":"declared","lane":"generator","json":"never","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256","--preset","--list-features","--list-catalog-features"]}
+    },
+    {
+      "name": "create-plugin",
+      "title": "grails create-plugin",
+      "lane": "generator",
+      "description": "Creates a Grails plugin. Feature packs, feature catalogs and presets cannot be named, and a feature named by the coordinates of a plugin is refused. --list-features and --list-catalog-features are not offered: feature_find with type lists the features a new application of the type can be created with. Unless it is created in this directory, with inplace, the new project gets a grails mcp of its own, started in its directory or with grails mcp --directory DIRECTORY.",
+      "annotations": {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {"type":"string","enum":["hibernate5","hibernate7","mongodb","neo4j"],"description":"Which Grails Data implementation to configure (-g, --gorm are legacy aliases). Possible values: hibernate5, hibernate7, mongodb, neo4j."},
+          "exclude-features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to leave out of those the application would have by default, which --list-features marks (with this option, as they are without what is left out). A feature that is selected, that a feature of the application requires or that the application cannot be without cannot be left out."
+          },
+          "feature-option": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "An option of a feature, which the feature pack of the feature declares: the name of the feature, a dot, the name of the option and its value, as in acme-audit.store=collection. An option that is not given has the value the pack gives it. What a feature takes is said with what its pack adds, and by --list-features for a pack that is given. Can be given more than once."
+          },
+          "features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to use. Possible values: those the option --list-features lists"
+          },
+          "inplace": {"type":"boolean","description":"Create the application in the current directory, and not in a new directory named after it. Without NAME, the application is named after the current directory."},
+          "jdk": {"type":"integer","description":"The JDK version the project should target"},
+          "offline": {"type":"boolean","description":"Ask nothing of the network: a feature catalog is read from its copy on this computer or from a file, and the feature pack of a plugin is taken from a repository that is a directory, or from the copy of its jar that is kept on this computer since it was last fetched"},
+          "refresh": {"type":"boolean","description":"Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch the jar of each plugin whose feature pack is used, and not the copy of it that is kept on this computer"},
+          "reloading": {"type":"string","enum":["devtools","jrebel","none"],"description":"Which development reloading option to use. Possible values: devtools, jrebel, none."},
+          "servlet": {"type":"string","enum":["tomcat","jetty","undertow","none"],"description":"Which Servlet Implementation to configure. Possible values: tomcat, jetty, undertow, none."},
+          "subproject": {"type":"boolean","description":"Create the application as a project of the Gradle build the directory is in: only the files of the application are written, and not those of the root of a build (the Gradle wrapper, the settings, the Grails wrapper), which that build has. The settings of the build are not changed: the command says which line includes the application."},
+          "name": {"type":"string","description":"The name of the application to create."}
+        },
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","create-plugin"],"arguments":"declared","lane":"generator","json":"never","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256","--preset","--list-features","--list-catalog-features"]}
+    },
+    {
+      "name": "create-web-plugin",
+      "title": "grails create-web-plugin",
+      "lane": "generator",
+      "description": "Creates a Grails plugin with a web layer. Feature packs, feature catalogs and presets cannot be named, and a feature named by the coordinates of a plugin is refused. --list-features and --list-catalog-features are not offered: feature_find with type lists the features a new application of the type can be created with. Unless it is created in this directory, with inplace, the new project gets a grails mcp of its own, started in its directory or with grails mcp --directory DIRECTORY.",
+      "annotations": {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {"type":"string","enum":["hibernate5","hibernate7","mongodb","neo4j"],"description":"Which Grails Data implementation to configure (-g, --gorm are legacy aliases). Possible values: hibernate5, hibernate7, mongodb, neo4j."},
+          "exclude-features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to leave out of those the application would have by default, which --list-features marks (with this option, as they are without what is left out). A feature that is selected, that a feature of the application requires or that the application cannot be without cannot be left out."
+          },
+          "feature-option": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "An option of a feature, which the feature pack of the feature declares: the name of the feature, a dot, the name of the option and its value, as in acme-audit.store=collection. An option that is not given has the value the pack gives it. What a feature takes is said with what its pack adds, and by --list-features for a pack that is given. Can be given more than once."
+          },
+          "features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to use. Possible values: those the option --list-features lists"
+          },
+          "inplace": {"type":"boolean","description":"Create the application in the current directory, and not in a new directory named after it. Without NAME, the application is named after the current directory."},
+          "jdk": {"type":"integer","description":"The JDK version the project should target"},
+          "offline": {"type":"boolean","description":"Ask nothing of the network: a feature catalog is read from its copy on this computer or from a file, and the feature pack of a plugin is taken from a repository that is a directory, or from the copy of its jar that is kept on this computer since it was last fetched"},
+          "refresh": {"type":"boolean","description":"Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch the jar of each plugin whose feature pack is used, and not the copy of it that is kept on this computer"},
+          "reloading": {"type":"string","enum":["devtools","jrebel","none"],"description":"Which development reloading option to use. Possible values: devtools, jrebel, none."},
+          "servlet": {"type":"string","enum":["tomcat","jetty","undertow","none"],"description":"Which Servlet Implementation to configure. Possible values: tomcat, jetty, undertow, none."},
+          "subproject": {"type":"boolean","description":"Create the application as a project of the Gradle build the directory is in: only the files of the application are written, and not those of the root of a build (the Gradle wrapper, the settings, the Grails wrapper), which that build has. The settings of the build are not changed: the command says which line includes the application."},
+          "name": {"type":"string","description":"The name of the application to create."}
+        },
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","create-web-plugin"],"arguments":"declared","lane":"generator","json":"never","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256","--preset","--list-features","--list-catalog-features"]}
+    },
+    {
+      "name": "create-rest-api-plugin",
+      "title": "grails create-rest-api-plugin",
+      "lane": "generator",
+      "description": "Creates a Grails plugin with a REST API. Feature packs, feature catalogs and presets cannot be named, and a feature named by the coordinates of a plugin is refused. --list-features and --list-catalog-features are not offered: feature_find with type lists the features a new application of the type can be created with. Unless it is created in this directory, with inplace, the new project gets a grails mcp of its own, started in its directory or with grails mcp --directory DIRECTORY.",
+      "annotations": {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {"type":"string","enum":["hibernate5","hibernate7","mongodb","neo4j"],"description":"Which Grails Data implementation to configure (-g, --gorm are legacy aliases). Possible values: hibernate5, hibernate7, mongodb, neo4j."},
+          "exclude-features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to leave out of those the application would have by default, which --list-features marks (with this option, as they are without what is left out). A feature that is selected, that a feature of the application requires or that the application cannot be without cannot be left out."
+          },
+          "feature-option": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "An option of a feature, which the feature pack of the feature declares: the name of the feature, a dot, the name of the option and its value, as in acme-audit.store=collection. An option that is not given has the value the pack gives it. What a feature takes is said with what its pack adds, and by --list-features for a pack that is given. Can be given more than once."
+          },
+          "features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to use. Possible values: those the option --list-features lists"
+          },
+          "inplace": {"type":"boolean","description":"Create the application in the current directory, and not in a new directory named after it. Without NAME, the application is named after the current directory."},
+          "jdk": {"type":"integer","description":"The JDK version the project should target"},
+          "offline": {"type":"boolean","description":"Ask nothing of the network: a feature catalog is read from its copy on this computer or from a file, and the feature pack of a plugin is taken from a repository that is a directory, or from the copy of its jar that is kept on this computer since it was last fetched"},
+          "refresh": {"type":"boolean","description":"Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch the jar of each plugin whose feature pack is used, and not the copy of it that is kept on this computer"},
+          "reloading": {"type":"string","enum":["devtools","jrebel","none"],"description":"Which development reloading option to use. Possible values: devtools, jrebel, none."},
+          "servlet": {"type":"string","enum":["tomcat","jetty","undertow","none"],"description":"Which Servlet Implementation to configure. Possible values: tomcat, jetty, undertow, none."},
+          "subproject": {"type":"boolean","description":"Create the application as a project of the Gradle build the directory is in: only the files of the application are written, and not those of the root of a build (the Gradle wrapper, the settings, the Grails wrapper), which that build has. The settings of the build are not changed: the command says which line includes the application."},
+          "name": {"type":"string","description":"The name of the application to create."}
+        },
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","create-rest-api-plugin"],"arguments":"declared","lane":"generator","json":"never","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256","--preset","--list-features","--list-catalog-features"]}
+    },
+    {
+      "name": "create-restapi",
+      "title": "grails create-restapi",
+      "lane": "generator",
+      "description": "Creates a REST API application. Feature packs, feature catalogs and presets cannot be named, and a feature named by the coordinates of a plugin is refused. --list-features and --list-catalog-features are not offered: feature_find with type lists the features a new application of the type can be created with. Unless it is created in this directory, with inplace, the new project gets a grails mcp of its own, started in its directory or with grails mcp --directory DIRECTORY.",
+      "annotations": {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {"type":"string","enum":["hibernate5","hibernate7","mongodb","neo4j"],"description":"Which Grails Data implementation to configure (-g, --gorm are legacy aliases). Possible values: hibernate5, hibernate7, mongodb, neo4j."},
+          "exclude-features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to leave out of those the application would have by default, which --list-features marks (with this option, as they are without what is left out). A feature that is selected, that a feature of the application requires or that the application cannot be without cannot be left out."
+          },
+          "feature-option": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "An option of a feature, which the feature pack of the feature declares: the name of the feature, a dot, the name of the option and its value, as in acme-audit.store=collection. An option that is not given has the value the pack gives it. What a feature takes is said with what its pack adds, and by --list-features for a pack that is given. Can be given more than once."
+          },
+          "features": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "The features to use. Possible values: those the option --list-features lists"
+          },
+          "inplace": {"type":"boolean","description":"Create the application in the current directory, and not in a new directory named after it. Without NAME, the application is named after the current directory."},
+          "jdk": {"type":"integer","description":"The JDK version the project should target"},
+          "offline": {"type":"boolean","description":"Ask nothing of the network: a feature catalog is read from its copy on this computer or from a file, and the feature pack of a plugin is taken from a repository that is a directory, or from the copy of its jar that is kept on this computer since it was last fetched"},
+          "refresh": {"type":"boolean","description":"Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch the jar of each plugin whose feature pack is used, and not the copy of it that is kept on this computer"},
+          "reloading": {"type":"string","enum":["devtools","jrebel","none"],"description":"Which development reloading option to use. Possible values: devtools, jrebel, none."},
+          "servlet": {"type":"string","enum":["tomcat","jetty","undertow","none"],"description":"Which Servlet Implementation to configure. Possible values: tomcat, jetty, undertow, none."},
+          "subproject": {"type":"boolean","description":"Create the application as a project of the Gradle build the directory is in: only the files of the application are written, and not those of the root of a build (the Gradle wrapper, the settings, the Grails wrapper), which that build has. The settings of the build are not changed: the command says which line includes the application."},
+          "name": {"type":"string","description":"The name of the application to create."}
+        },
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","create-restapi"],"arguments":"declared","lane":"generator","json":"never","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256","--preset","--list-features","--list-catalog-features"]}
+    },
+    {
+      "name": "feature_find",
+      "title": "grails feature find",
+      "lane": "generator",
+      "description": "Lists the features that have a text in their name, their title, their description or their category, in whichever case. In the directory of an application they are the features of Grails for its type, and those of the feature packs it was generated with, given as to feature list; each says whether the application has it. Outside a project, and with --type, they are the features a new application of the type is created with, and each says whether such an application has it by default. The features of a feature pack that is given with --feature-pack-dir are among them, also of a pack the application does not have, and so are the features a feature catalog offers by a name: those of --feature-catalog, else of the catalogs of the environment. feature show says more of one feature. The result is a JSON document. Feature packs and feature catalogs cannot be named.",
+      "annotations": {"readOnlyHint":true,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "feature-option": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "An option of a feature that is added, which the feature pack of the feature declares: the name of the feature, a dot, the name of the option and its value. An option that is not given has the value the pack gives it. The options of the features the application has stay what its record says. Can be given more than once."
+          },
+          "offline": {"type":"boolean","description":"Ask nothing of the network: the jar of a plugin whose feature pack the application has, or is to get, is taken from the copy of it that is kept on this computer since it was fetched, from a repository that is a directory, or from --feature-pack-jar, and a feature catalog from its copy on this computer or from a file"},
+          "refresh": {"type":"boolean","description":"Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch the jar of a plugin that is added, and not the copy of it that is kept on this computer"},
+          "type": {"type":"string","enum":["web","rest-api","web-plugin","plugin","rest-api-plugin"],"description":"Speak of a new application of this type, and not of the application of the current directory: web (what create-app creates), rest-api, plugin, web-plugin or rest-api-plugin. Outside a project the type is web when the option is not given."},
+          "text": {"type":"string","description":"The text the features are listed by: one line, which a feature has in its name, its title, its description or its category."}
+        },
+        "required": ["text"],
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","feature","find","--json"],"arguments":"declared","lane":"generator","json":"always","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256","--json"]}
+    },
+    {
+      "name": "feature_show",
+      "title": "grails feature show",
+      "lane": "generator",
+      "description": "Says what is known of one feature: its title, what it is for, its category, the types of application it is for, the features it requires, those it is exclusive with and those whose place it takes, whether an application has it by default, and where its documentation is. In the directory of an application it says whether the application has the feature, and which files and which lines of the build files feature add would add, change and remove there. Outside a project, with --type, and for a feature the application has, these are worked out for a new application of the type. The feature of a feature pack that is not part of Grails is named as feature add takes it, also of a pack the application does not have: by the coordinates of its plugin, by its name with --feature-pack-dir, or by its name in a feature catalog. Of such a feature the command says where the pack comes from, the options it takes, the commands it gives, and what its pack says to do once it is added. The command is also there as feature info. The result is a JSON document. Feature packs and feature catalogs cannot be named, and a feature named by the coordinates of a plugin is refused.",
+      "annotations": {"readOnlyHint":true,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "feature-option": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "An option of a feature that is added, which the feature pack of the feature declares: the name of the feature, a dot, the name of the option and its value. An option that is not given has the value the pack gives it. The options of the features the application has stay what its record says. Can be given more than once."
+          },
+          "offline": {"type":"boolean","description":"Ask nothing of the network: the jar of a plugin whose feature pack the application has, or is to get, is taken from the copy of it that is kept on this computer since it was fetched, from a repository that is a directory, or from --feature-pack-jar, and a feature catalog from its copy on this computer or from a file"},
+          "refresh": {"type":"boolean","description":"Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch the jar of a plugin that is added, and not the copy of it that is kept on this computer"},
+          "type": {"type":"string","enum":["web","rest-api","web-plugin","plugin","rest-api-plugin"],"description":"Speak of a new application of this type, and not of the application of the current directory: web (what create-app creates), rest-api, plugin, web-plugin or rest-api-plugin. Outside a project the type is web when the option is not given."},
+          "feature": {"type":"string","description":"The name of the feature, as feature list and feature find have it; or, as for feature add, the coordinates of a plugin with a feature pack, group:artifact:version, the name of the feature of a pack that is given with --feature-pack-dir, or a name, or a full name group:artifact#name, of a feature catalog."}
+        },
+        "required": ["feature"],
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","feature","show","--json"],"arguments":"declared","lane":"generator","json":"always","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256","--json"]}
+    },
+    {
+      "name": "feature_diff",
+      "title": "grails feature diff",
+      "lane": "generator",
+      "description": "Shows what feature add would change in the files of the application in the current directory, as a unified diff, and changes nothing. It is the diff feature add --diff shows, and is all that is written on the standard output. Outside a project, and with --type, the diff is what the features change in a new application of the type. The command ends with exit code 0 when the features can be added, also when that changes nothing; with 1 when they cannot, as when a file of yours is in the way, and the diff is then what they would change; and with 2 for features the application cannot have as they were asked for. Feature packs and feature catalogs cannot be named, and a feature named by the coordinates of a plugin is refused.",
+      "annotations": {"readOnlyHint":true,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "feature-option": {
+            "type": "array",
+            "items": {"type":"string"},
+            "description": "An option of a feature that is added, which the feature pack of the feature declares: the name of the feature, a dot, the name of the option and its value. An option that is not given has the value the pack gives it. The options of the features the application has stay what its record says. Can be given more than once."
+          },
+          "offline": {"type":"boolean","description":"Ask nothing of the network: the jar of a plugin whose feature pack the application has, or is to get, is taken from the copy of it that is kept on this computer since it was fetched, from a repository that is a directory, or from --feature-pack-jar, and a feature catalog from its copy on this computer or from a file"},
+          "refresh": {"type":"boolean","description":"Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch the jar of a plugin that is added, and not the copy of it that is kept on this computer"},
+          "replace": {"type":"boolean","description":"As for feature add: a feature that was asked for by name makes way for the feature that takes its place."},
+          "type": {"type":"string","enum":["web","rest-api","web-plugin","plugin","rest-api-plugin"],"description":"Speak of a new application of this type, and not of the application of the current directory: web (what create-app creates), rest-api, plugin, web-plugin or rest-api-plugin. Outside a project the type is web when the option is not given."},
+          "feature": {
+            "type": "array",
+            "items": {"type":"string"},
+            "minItems": 1,
+            "description": "The names of the features, as they are given to feature add."
+          }
+        },
+        "required": ["feature"],
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","feature","diff"],"arguments":"declared","lane":"generator","json":"never","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256"]}
+    },
+    {
+      "name": "plugin_list",
+      "title": "grails plugin list",
+      "lane": "direct",
+      "description": "Lists the Grails plugins: those of this release of Grails, and those of the plugin index of Grails, which is read from the network. Each has its name, its coordinates, the latest version for this Grails and what it is for; plugin show says more of one. The command is also there as list-plugins. The result is a JSON document. The plugin index is the one the environment configures.",
+      "annotations": {"readOnlyHint":true,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "deprecated": {"type":"boolean","description":"Lists the plugins the plugin index says are deprecated as well."},
+          "offline": {"type":"boolean","description":"Ask nothing of the network: only the plugins of this release of Grails are known, and a plugin index or a repository that is a file or a directory."},
+          "text": {"type":"string","description":"Lists only the plugins that have this text in their name, their coordinates or their description, in whichever case."}
+        },
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","plugin","list","--json"],"arguments":"declared","lane":"direct","json":"always","leftOut":["--plugin-index","--json"]}
+    },
+    {
+      "name": "plugin_find",
+      "title": "grails plugin find",
+      "lane": "direct",
+      "description": "Lists the Grails plugins that have a text in their name, their coordinates or their description, in whichever case: those of this release of Grails, and those of the plugin index of Grails, which is read from the network. It is plugin list with the text to list by; plugin show says more of one plugin. The result is a JSON document. The plugin index is the one the environment configures.",
+      "annotations": {"readOnlyHint":true,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "deprecated": {"type":"boolean","description":"Lists the plugins the plugin index says are deprecated as well."},
+          "offline": {"type":"boolean","description":"Ask nothing of the network: only the plugins of this release of Grails are known, and a plugin index or a repository that is a file or a directory."},
+          "text": {"type":"string","description":"The text the plugins are listed by: one line, which a plugin has in its name, its coordinates or its description, in whichever case."}
+        },
+        "required": ["text"],
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","plugin","find","--json"],"arguments":"declared","lane":"direct","json":"always","leftOut":["--plugin-index","--json"]}
+    },
+    {
+      "name": "plugin_show",
+      "title": "grails plugin show",
+      "lane": "direct",
+      "description": "Says what is known of one Grails plugin: its versions, what it is for, its license, where its documentation, issues and sources are, and the line that adds it to the build of an application. plugin list lists the plugins. The command is also there as plugin info and as plugin-info. The result is a JSON document. The plugin index is the one the environment configures.",
+      "annotations": {"readOnlyHint":true,"openWorldHint":true},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "offline": {"type":"boolean","description":"Ask nothing of the network: only the plugins of this release of Grails are known, and a plugin index or a repository that is a file or a directory."},
+          "snapshots": {"type":"boolean","description":"Lists the snapshot versions among the versions as well."},
+          "plugin": {"type":"string","description":"The plugin: its name or its artifact, as list-plugins has them, or its coordinates as group:artifact."}
+        },
+        "required": ["plugin"],
+        "additionalProperties": false
+      },
+      "run": {"commandLine":["--plain-output","--non-interactive","plugin","show","--json"],"arguments":"declared","lane":"direct","json":"always","leftOut":["--plugin-index","--json"]}
+    }
+  ]
+}
