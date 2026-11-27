@@ -511,22 +511,13 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         }
 
         // the associations before a collection that the subquery joins are joined and fetched
-        JoinType lastJoinType = joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN :
-                joinType == jakarta.persistence.criteria.JoinType.LEFT ? JoinType.LEFT_OUTER_JOIN : JoinType.RIGHT_OUTER_JOIN;
+        JoinType lastJoinType = toHibernateJoinType(joinType);
         int joinedCount = unjoinedCollection < 0 ? tokens.length : unjoinedCollection;
         String parentAlias = null;
         for (int i = 0; i < joinedCount; i++) {
             if (joined[i] != null) {
-                if (i == last && joined[i].getJoinType() != lastJoinType) {
-                    CriteriaImpl.Subcriteria existing = joined[i];
-                    Iterator<CriteriaImpl.Subcriteria> subcriteria = rootCriteria.iterateSubcriteria();
-                    while (subcriteria.hasNext()) {
-                        if (subcriteria.next() == existing) {
-                            subcriteria.remove();
-                            break;
-                        }
-                    }
-                    existing.getParent().createAlias(existing.getPath(), existing.getAlias(), lastJoinType, existing.getWithClause());
+                if (i == last) {
+                    rejoin(joined[i], lastJoinType);
                 }
                 parentAlias = joined[i].getAlias();
                 continue;
@@ -537,6 +528,47 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             root.createAlias(parentAlias != null ? parentAlias + '.' + tokens[i] : paths[i], alias, i == last ? lastJoinType : JoinType.LEFT_OUTER_JOIN);
             parentAlias = alias;
         }
+    }
+
+    /**
+     * Applies a join type to the join that the criteria already make for an association, with an
+     * association block or an alias. The join is made again with the join type, under the same alias,
+     * so that the criteria that use the alias use the join type. Nothing is joined when the criteria
+     * make no join for the association.
+     *
+     * @param root The root criteria
+     * @param associationPath The path of the association from the root entity
+     * @param joinType The join type
+     */
+    @Internal
+    public static void applyJoinTypeToExistingJoin(Criteria root, String associationPath, jakarta.persistence.criteria.JoinType joinType) {
+        CriteriaImpl.Subcriteria existing = findCriteria(root, associationPath);
+        if (existing != null) {
+            rejoin(existing, toHibernateJoinType(joinType));
+        }
+    }
+
+    private static JoinType toHibernateJoinType(jakarta.persistence.criteria.JoinType joinType) {
+        return joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN :
+                joinType == jakarta.persistence.criteria.JoinType.LEFT ? JoinType.LEFT_OUTER_JOIN : JoinType.RIGHT_OUTER_JOIN;
+    }
+
+    /**
+     * Makes a join of the criteria again with another join type, under the same alias. Hibernate
+     * does not change the join type of a join that the criteria have made.
+     */
+    private static void rejoin(CriteriaImpl.Subcriteria existing, JoinType joinType) {
+        if (existing.getJoinType() == joinType) {
+            return;
+        }
+        Iterator<CriteriaImpl.Subcriteria> subcriteria = getRootCriteria(existing).iterateSubcriteria();
+        while (subcriteria.hasNext()) {
+            if (subcriteria.next() == existing) {
+                subcriteria.remove();
+                break;
+            }
+        }
+        existing.getParent().createAlias(existing.getPath(), existing.getAlias(), joinType, existing.getWithClause());
     }
 
     /**
