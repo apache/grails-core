@@ -107,6 +107,8 @@ dependencies {
         // the logging API is the one the BOM manages
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    // the protocol of 'grails mcp'; grails-bom manages its version in step with Spring AI's
+    implementation 'io.modelcontextprotocol.sdk:mcp'
     implementation 'org.slf4j:slf4j-api'
     implementation 'org.yaml:snakeyaml'
     runtimeOnly 'org.slf4j:slf4j-nop'
