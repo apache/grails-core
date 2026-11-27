@@ -81,6 +81,40 @@ class DatabaseMigrationToolArgumentsForkSpec extends Specification {
     }
 
     @Unroll
+    def "dbm-changelog-to-groovy #arguments writes #written"() {
+        given:
+        File changeLogs = new File(dir, 'migrations')
+        changeLogs.mkdirs()
+        new File(changeLogs, 'changelog.yml').text = '''\
+databaseChangeLog:
+- changeSet:
+    id: 1
+    author: John Smith
+    changes:
+    - createTable:
+        tableName: book
+        columns:
+        - column:
+            name: id
+            type: INT
+'''
+
+        when:
+        Map result = run(["-Dgrails.plugin.databasemigration.changelogLocation=${changeLogs.path}".toString(),
+                          "-Dgrails.plugin.databasemigration.reports.changelogLocation=${changeLogs.path}".toString()],
+                'dbm-changelog-to-groovy', *arguments, DatabaseMigrationForkApplication.name)
+
+        then:
+        result.exit == 0
+        changeLogs.list().toList().sort() == ['changelog.yml', written].sort()
+
+        where:
+        arguments                                              || written
+        ['changelog.yml', 'converted']                         || 'converted.groovy'
+        ['--dataSource=reports', 'changelog.yml', 'converted'] || 'converted-reports.groovy'
+    }
+
+    @Unroll
     def "#tool #arguments is refused before the application is started for it, and the JVM ends with 2"() {
         when:
         Map result = run([], tool, *arguments, DatabaseMigrationForkFailingApplication.name)

@@ -101,6 +101,25 @@ databaseChangeLog:
             !there.text.contains('to be replaced')
     }
 
+    def "names a Groovy file given without an extension as the change logs of its data source are named"() {
+        given:
+            configure(['grails.plugin.databasemigration.reports.changelogLocation': changeLogLocation.canonicalPath])
+
+        when:
+            command.handle(getExecutionContext(*arguments))
+
+        then:
+            new File(changeLogLocation, written).text.replaceAll(/\s/, '').contains('createTable(tableName:"book")')
+            changeLogLocation.list().toList().sort() == ['changelog.yml', written].sort()
+
+        where:
+            arguments                                                     || written
+            ['changelog.yml', 'converted']                                || 'converted.groovy'
+            ['changelog.yml', 'converted', '--dataSource=reports']        || 'converted-reports.groovy'
+            ['changelog.yml', 'converted.groovy']                         || 'converted.groovy'
+            ['changelog.yml', 'converted.groovy', '--dataSource=reports'] || 'converted.groovy'
+    }
+
     def "writes into a directory that is not there yet"() {
         when:
             command.handle(getExecutionContext('changelog.yml', 'converted/2026/books.groovy'))

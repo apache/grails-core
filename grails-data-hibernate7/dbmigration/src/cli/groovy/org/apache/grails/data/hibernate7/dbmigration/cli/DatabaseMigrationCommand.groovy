@@ -137,7 +137,8 @@ trait DatabaseMigrationCommand {
         if (getExtension(filename)) {
             return new File(changeLogLocation, filename)
         }
-        if (dataSource) {
+        // a change log of a data source other than the default is named for it, as getChangeLogFileName names the root one
+        if (!isDefaultDataSource(dataSource)) {
             return new File(changeLogLocation, "${filename}-${dataSource}.groovy")
         }
         return new File(changeLogLocation, "${filename}.groovy")

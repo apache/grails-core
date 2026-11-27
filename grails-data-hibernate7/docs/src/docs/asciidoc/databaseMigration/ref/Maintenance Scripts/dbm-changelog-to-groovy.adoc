@@ -25,7 +25,7 @@ Converts a Liquibase change log, as an XML file, to a Groovy DSL file.
 
 ====== Description
 
-Both names are relative to the folder of the change logs, `grails-app/migrations` unless `grails.plugin.databasemigration.changelogLocation` names another. Without the Groovy file name, the Groovy DSL is written to the standard output. A Groovy file name without an extension gets a hyphen, the name of the data source and `.groovy` after it; with another extension than `.groovy` the tool fails.
+Both names are relative to the folder of the change logs, `grails-app/migrations` unless `grails.plugin.databasemigration.changelogLocation` names another. Without the Groovy file name, the Groovy DSL is written to the standard output. A Groovy file name without an extension gets `.groovy`, after a hyphen and the name of the data source when it is not the default one, as `converted.groovy` or `converted-reports.groovy` with `--dataSource=reports`; with another extension than `.groovy` the tool fails.
 
 Usage:
 [source,console]

@@ -27,7 +27,7 @@ Compares two databases and creates a change log that brings the second in line w
 
 Compares the database of the data source in the environment the tool runs in with the database of the same data source in the environment `ENVIRONMENT` names, both as `application.[yml|groovy]` configures them, and writes the change sets that make the second like the first. `ENVIRONMENT` is another environment than the one the tool runs in.
 
-The folder of the change logs is `grails-app/migrations`, or the one `grails.plugin.databasemigration.changelogLocation` names. The extension of the file decides its format: `.groovy` for the Groovy DSL, `.xml` for Liquibase XML, and the other formats Liquibase writes, as `.yaml`. A name without an extension gets a hyphen, the name of the data source and `.groovy` after it: `changes` is `changes-dataSource.groovy` for the default data source.
+The folder of the change logs is `grails-app/migrations`, or the one `grails.plugin.databasemigration.changelogLocation` names. The extension of the file decides its format: `.groovy` for the Groovy DSL, `.xml` for Liquibase XML, and the other formats Liquibase writes, as `.yaml`. A name without an extension gets `.groovy`, after a hyphen and the name of the data source when it is not the default one: `changes` is `changes.groovy`, and `changes-reports.groovy` with `--dataSource=reports`.
 
 The objects `grails.plugin.databasemigration.excludeObjects` names are left out of the comparison, or only those `includeObjects` names are compared.
 

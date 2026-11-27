@@ -27,7 +27,7 @@ Generates an initial change log XML or Groovy DSL file from the current GORM cla
 
 Writes the change sets that create the database the domain classes of the application describe, for the data source.
 
-The folder of the change logs is `grails-app/migrations`, or the one `grails.plugin.databasemigration.changelogLocation` names. The extension of the file decides its format: `.groovy` for the Groovy DSL, `.xml` for Liquibase XML, and the other formats Liquibase writes, as `.yaml`. A name without an extension gets a hyphen, the name of the data source and `.groovy` after it: `changes` is `changes-dataSource.groovy` for the default data source.
+The folder of the change logs is `grails-app/migrations`, or the one `grails.plugin.databasemigration.changelogLocation` names. The extension of the file decides its format: `.groovy` for the Groovy DSL, `.xml` for Liquibase XML, and the other formats Liquibase writes, as `.yaml`. A name without an extension gets `.groovy`, after a hyphen and the name of the data source when it is not the default one: `changes` is `changes.groovy`, and `changes-reports.groovy` with `--dataSource=reports`.
 
 The objects `grails.plugin.databasemigration.excludeObjects` names are left out of the change log, or only those `includeObjects` names are written; the two cannot be set together.
 
