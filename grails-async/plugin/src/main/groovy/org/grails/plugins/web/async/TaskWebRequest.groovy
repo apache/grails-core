@@ -1,0 +1,49 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.plugins.web.async
+
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+
+import jakarta.servlet.http.HttpServletResponse
+
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
+
+/**
+ * The web request of a task, which is detached once the request the task was started during has completed, so
+ * {@link GrailsWebRequest#lookup()} no longer finds it and code the task runs from then on, such as data binding,
+ * behaves as it does outside a request.
+ */
+@PackageScope
+@CompileStatic
+class TaskWebRequest extends GrailsWebRequest {
+
+    private final TaskRequestLifecycle lifecycle
+
+    TaskWebRequest(TaskRequest request, HttpServletResponse response, GrailsApplicationAttributes attributes) {
+        super(request, response, attributes)
+        this.lifecycle = request.lifecycle
+    }
+
+    @Override
+    protected boolean isDetached() {
+        return lifecycle.completed
+    }
+}
