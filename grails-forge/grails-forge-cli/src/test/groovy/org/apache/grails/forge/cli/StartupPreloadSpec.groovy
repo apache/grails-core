@@ -103,6 +103,22 @@ class StartupPreloadSpec extends Specification {
         [null, 'feature', null, 'list']             | true
     }
 
+    void "no class of grails mcp, of the MCP Java SDK or of a library only the SDK brings is loaded ahead, whatever a list names"() {
+        given:
+        List<String> ofTheServer = ['org.apache.grails.forge.cli.mcp.McpCommand', 'org.apache.grails.forge.cli.mcp.run.GrailsMcpServer',
+                                    'io.modelcontextprotocol.modern.server.McpServer', 'reactor.core.publisher.Mono', 'org.reactivestreams.Publisher',
+                                    'tools.jackson.databind.ObjectMapper', 'com.networknt.schema.JsonSchema', 'com.ethlo.time.ITU', 'org.snakeyaml.engine.v2.api.Load']
+        Recording loader = new Recording((StartupPreload.CLASSES): ([MARKED] + ofTheServer).join('\n') + '\n')
+
+        when:
+        StartupPreload.start(loader, 2, 'mcp')*.join(30_000)
+
+        then:
+        loader.asked.contains(MARKED)
+        loader.asked.intersect(ofTheServer).isEmpty()
+        !loader.asked.any { String name -> name.startsWith(StartupPreload.NOT_AHEAD + '.') }
+    }
+
     void "nothing is started where the JVM has one processor, or where the system property says so"() {
         given:
         Recording loader = new Recording((StartupPreload.CLASSES): "${MARKED}\n")

@@ -19,6 +19,7 @@
 package org.grails.forge.cli
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.mcp.McpCommand
 import org.grails.forge.cli.command.BaseCommand
 import org.grails.forge.cli.command.CreateAppCommand
 import org.grails.forge.cli.command.CreatePluginCommand
@@ -82,7 +83,8 @@ import java.util.concurrent.Callable
                 FeatureCommand,
                 ProjectGroupCommand,
                 GradleCommand,
-                HelpCommand
+                HelpCommand,
+                McpCommand
         ])
 @Component
 @Scope('prototype')

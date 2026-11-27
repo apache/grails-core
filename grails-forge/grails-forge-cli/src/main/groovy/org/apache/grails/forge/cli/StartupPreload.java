@@ -42,6 +42,10 @@ import java.util.Map;
  * {@value #GENERATOR_CLASSES} are loaded after them. Loading a class runs none of its code, so no
  * static initializer runs earlier, on another thread or in another order than it does without this:
  * a class is initialized when the command first uses it, by the thread that uses it, as always.</li>
+ * <li>No class of {@code grails mcp} is loaded ahead, whatever a list names: the classes of the package
+ * {@value #NOT_AHEAD}, and those of the MCP Java SDK and of the libraries only it brings. {@code grails mcp}
+ * is a server that runs for long and loads them itself, and a program that runs the command line in its
+ * own JVM, and never {@code mcp}, may leave the SDK and those libraries off its class path.</li>
  * <li>One class is initialized: {@code org.codehaus.groovy.runtime.FormatHelper} of Groovy, which
  * every command initializes the first time it formats a value. Its initializer reads the default
  * imports of the Groovy compiler, which scans the image of the JDK and the Groovy jar and takes some
@@ -75,6 +79,13 @@ public final class StartupPreload {
 
     /** The resource that lists the classes a command that starts the project generator loads besides. */
     public static final String GENERATOR_CLASSES = "META-INF/grails-forge-cli/preload-classes-generator";
+
+    /** The package of {@code grails mcp}, none of whose classes is loaded ahead. */
+    public static final String NOT_AHEAD = "org.apache.grails.forge.cli.mcp";
+
+    // the packages of the MCP Java SDK and of the libraries only it brings to the command line, none of whose classes is loaded ahead
+    private static final List<String> NOT_AHEAD_PACKAGES = List.of(NOT_AHEAD + ".", "io.modelcontextprotocol.", "reactor.", "org.reactivestreams.",
+            "tools.jackson.", "com.networknt.", "com.ethlo.", "org.snakeyaml.engine.");
 
     /** The commands that start the project generator whatever their arguments are. */
     public static final List<String> GENERATOR_COMMANDS = List.of("create-app", "create-webapp", "create-plugin", "create-web-plugin",
@@ -195,7 +206,7 @@ public final class StartupPreload {
             String line;
             while ((line = reader.readLine()) != null) {
                 String name = line.trim();
-                if (name.isEmpty() || name.charAt(0) == '#') {
+                if (name.isEmpty() || name.charAt(0) == '#' || notAhead(name)) {
                     continue;
                 }
                 try {
@@ -205,6 +216,11 @@ public final class StartupPreload {
                 }
             }
         }
+    }
+
+    // a class of grails mcp, or of the SDK and the libraries only it brings
+    private static boolean notAhead(String name) {
+        return NOT_AHEAD_PACKAGES.stream().anyMatch(name::startsWith);
     }
 
     private static Thread daemon(String name, Work work) {
