@@ -71,6 +71,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
@@ -167,7 +168,22 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         return parameterMapVar
     }
 
+    /**
+     * Reads the cache manager as {@code this.grailsCacheManager}. This resolves to a field the class declares
+     * or to its getter, which {@link org.grails.plugin.cache.GrailsCacheManagerAware} provides unless the class
+     * defines its own. Qualifying the read with {@code this} prevents a method parameter from hiding the property.
+     *
+     * @return the read of the property on {@code this}
+     */
+    protected static Expression grailsCacheManagerExpression() {
+        propX(varX('this'), GRAILS_CACHE_MANAGER_PROPERTY_NAME)
+    }
+
     protected VariableExpression declareCache(AnnotationNode annotationNode, VariableExpression cacheManagerVariableExpression, BlockStatement cacheBlock) {
+        declareCache(annotationNode, (Expression) cacheManagerVariableExpression, cacheBlock)
+    }
+
+    protected VariableExpression declareCache(AnnotationNode annotationNode, Expression cacheManagerVariableExpression, BlockStatement cacheBlock) {
         VariableExpression cacheVariableExpression = varX(CACHE_VARIABLE_LOCAL_VARIABLE_NAME, make(Cache))
         Expression cacheNameExpression = (ConstantExpression) annotationNode.getMember('value')
 
@@ -197,7 +213,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         BlockStatement whereCacheExists = block()
         Object cacheName = ((ConstantExpression) annotationNode.getMember('value')).value
         MethodCallExpression report = callX(classX(MISSING_CACHE_REPORTER_CLASS_NODE), 'report',
-                args(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME), constX(cacheName), classX(classNode.plainNodeReference)))
+                args(grailsCacheManagerExpression(), constX(cacheName), classX(classNode.plainNodeReference)))
         report.methodTarget = REPORT_MISSING_CACHE_METHOD_NODE
         cacheBlock.addStatement(ifElseS(notNullX(cacheVariableExpression), whereCacheExists, stmt(report)))
         return whereCacheExists
@@ -226,7 +242,8 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         }
 
         // customCacheKeyGenerator.generate(className, methodName, hashCode, map)
-        MethodCallExpression cacheKeyExpression = callX(varX(GRAILS_CACHE_KEY_GENERATOR_PROPERTY_NAME), generateMethod.name, createKeyArgs)
+        // the key generator read as a property of this, which a parameter named like it cannot hide
+        MethodCallExpression cacheKeyExpression = callX(propX(varX('this'), GRAILS_CACHE_KEY_GENERATOR_PROPERTY_NAME), generateMethod.name, createKeyArgs)
         cacheKeyExpression.methodTarget = generateMethod
 
         // def $_cache_cacheKey = .. // generated key
