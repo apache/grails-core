@@ -161,7 +161,7 @@ class SpringSecurityService {
         roleHierarchyEntryClass.withTransaction {
             String hierarchy = roleHierarchyEntryClass.list()*.entry.join('\n')
             log.trace 'Loaded persistent role hierarchy {}', hierarchy
-            grailsApplication.mainContext.roleHierarchy.hierarchy = hierarchy
+            grailsApplication.mainContext.roleHierarchy.hierarchy = RoleHierarchyNormalizer.normalize(hierarchy)
         }
     }
 

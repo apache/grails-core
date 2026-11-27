@@ -132,3 +132,12 @@ This release carries the changes of <<grails-7-1-7,Grails 7.1.7>>. It has no upg
 === Grails 7.2.5
 
 This release carries the changes of <<grails-7-1-8,Grails 7.1.8>>. It has no upgrade notes of its own.
+
+[[grails-7-2-6]]
+=== Grails 7.2.6
+
+==== A role hierarchy line written without spaces around `>` now grants its roles
+
+As of Grails 7.2.6, the Spring Security plugin reads a role hierarchy line written without spaces around the `>` operator, such as `ROLE_ADMIN>ROLE_USER`, the same as `ROLE_ADMIN > ROLE_USER`, both in `grails.plugin.springsecurity.roleHierarchy` and in the entries of the class named by `grails.plugin.springsecurity.roleHierarchyEntryClassName` (issue https://github.com/apache/grails-core/issues/15892[#15892]). Before, Spring Security ignored such a line without a message, so the role on the left did not get the role on the right.
+
+This widens what users can do: a user with the role on the left now also has the roles on the right of each such line, at startup and when the hierarchy is reloaded. Before upgrading, check every line and entry of your role hierarchy that has no space around `>`, and remove any assignment you do not want granted.

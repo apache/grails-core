@@ -63,6 +63,8 @@ grails.plugin.springsecurity.roleHierarchy = '''
 '''
 ----
 
+Write one assignment on each line. The spaces around the `>` operator are optional: the plugin writes each line with one space on each side before it hands the hierarchy to Spring Security, which would otherwise ignore a line such as `ROLE_ADMIN>ROLE_USER` without a message, so `ROLE_ADMIN>ROLE_USER` and `ROLE_ADMIN > ROLE_USER` are the same assignment.
+
 Then you can simplify your mappings by specifying only the roles that are required:
 
 [source,groovy]
