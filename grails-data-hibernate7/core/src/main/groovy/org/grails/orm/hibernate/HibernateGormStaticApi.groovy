@@ -451,7 +451,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
         if (!queryMap) return null
         if (requestsSort(args)) {
-            return whereCriteria(queryMap).list(buildQuerySettings(args))
+            // a plain list, as an unsorted call returns: with max, the criteria would return a paged list
+            return new ArrayList<D>(whereCriteria(queryMap).list(buildQuerySettings(args)))
         }
         executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
     }

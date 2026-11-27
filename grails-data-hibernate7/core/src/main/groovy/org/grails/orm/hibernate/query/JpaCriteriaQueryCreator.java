@@ -162,7 +162,7 @@ public class JpaCriteriaQueryCreator<T> {
 
         // the criteria come first, so that an order reuses the join the criteria have for an association
         assignCriteria(cq, root, context, entity);
-        assignOrderBy(cq, context);
+        assignOrderBy(cq, context, isCountOnly());
         return cq;
     }
 
@@ -381,8 +381,23 @@ public class JpaCriteriaQueryCreator<T> {
         return criteriaBuilder.exists(subquery);
     }
 
-    @SuppressWarnings("unchecked")
     public <T> void populateSubquery(JpaSubQuery<T> subquery) {
+        populateSubquery(subquery, false);
+    }
+
+    /**
+     * Populates the subquery that the rows of a query with projections are counted from. Unlike a subquery of
+     * the criteria, it has the inner joins that the query requests and the joins of its sort, which decide the
+     * rows that the query lists, so that the count is the number of those rows.
+     *
+     * @param subquery the subquery to count the rows of
+     */
+    public <T> void populateCountSubquery(JpaSubQuery<T> subquery) {
+        populateSubquery(subquery, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void populateSubquery(JpaSubQuery<T> subquery, boolean counted) {
         var projectionList = collectProjections();
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = subquery.from(javaClass);
@@ -399,6 +414,9 @@ public class JpaCriteriaQueryCreator<T> {
         assignGroupBy(subquery, context);
 
         assignCriteria(subquery, root, context, entity);
+        if (counted) {
+            assignOrderBy(null, context, true);
+        }
     }
 
     private List<Query.Projection> collectProjections() {
@@ -487,12 +505,17 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
-        boolean countOnly = isCountOnly();
+    private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context, boolean countOnly) {
         // A count joins a collection that only the sort uses, to count the rows that the list pages through. A
         // list that fetches a collection returns each instance once, so its count has no such rows
         boolean joinCollections = countOnly && !fetchesCollection();
         boolean fetchedCollectionSort = false;
+        if (countOnly && !joinCollections && entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
+                mappingContext.isLeftJoinAssociationSort()) {
+            // With the leftJoinAssociationSort setting a sort joins with left joins, which leave out no instance, and
+            // a list that fetches a collection returns each instance once, so its count needs none of those joins
+            return;
+        }
         // the orders that are still in an association block come after the orders of the criteria
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
         orders.addAll(AssociationOrders.inBlocks(detachedCriteria.getCriteria()));
@@ -561,11 +584,15 @@ public class JpaCriteriaQueryCreator<T> {
                 jpaOrders.add(ascending ? criteriaBuilder.asc(expression) : criteriaBuilder.desc(expression));
             }
         }
-        if (fetchedCollectionSort && projections.getProjectionList().size() == 1 &&
-                projections.getProjectionList().get(0).getClass() == Query.CountProjection.class) {
-            // The sort reads the join of a collection that the query fetches or requests a join type for. The
-            // list returns each instance once, so its total counts instances and not the rows of that join
-            ((CriteriaQuery<Long>) cq).select(criteriaBuilder.countDistinct(context.getRoot()));
+        if (countOnly) {
+            if (fetchedCollectionSort && cq != null && projections.getProjectionList().size() == 1 &&
+                    projections.getProjectionList().get(0).getClass() == Query.CountProjection.class) {
+                // The sort reads the join of a collection that the query fetches or requests a join type for. The
+                // list returns each instance once, so its total counts instances and not the rows of that join
+                ((CriteriaQuery<Long>) cq).select(criteriaBuilder.countDistinct(context.getRoot()));
+            }
+            // a count has the joins of its orders and no order
+            return;
         }
         if (distinctInMemory) {
             // SQL only orders a distinct query by what it selects, and an order through a join is not among
