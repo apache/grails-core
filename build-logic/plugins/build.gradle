@@ -42,6 +42,7 @@ dependencies {
     implementation "gradle.plugin.org.gradle.crypto:checksum:${gradleProperties.gradleChecksumPluginVersion}"
     implementation "org.cyclonedx:cyclonedx-gradle-plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
     implementation "com.github.spotbugs.snom:spotbugs-gradle-plugin:${gradleProperties.spotbugsPluginVersion}"
+    implementation "info.solidsoft.gradle.pitest:gradle-pitest-plugin:${gradleProperties.pitestPluginVersion}"
     implementation "org.yaml:snakeyaml:${gradleProperties.snakeyamlVersion}"
     // GenerateAutoConfigurationImportsTask reads @AutoConfiguration out of class files rather than
     // loading them, so a class it cannot resolve can never be silently dropped from the imports file

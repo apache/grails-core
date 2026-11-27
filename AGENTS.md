@@ -77,6 +77,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - **Java sources and interop** (`**/*.java`, Java 21 baseline, records, sealed types) → Read `.agents/skills/java-developer/SKILL.md`
 > - **Style, CodeNarc, Checkstyle, PMD, SpotBugs violations** (`codeStyle`, `aggregateViolations`, linting) → Read `.agents/skills/violation-fixer/SKILL.md`
 > - **Fixing test failures or flaky tests** (test debugging, parallel test isolation, thread-local resets) → Read `.agents/skills/test-fixer/SKILL.md`
+> - **Mutation testing and verifying that tests assert behavior** (PITest, mutation score, semantic mutants of Java and Groovy code) → Read `.agents/skills/mutation-testing/SKILL.md`
 > - **Merging standalone plugin repositories into monorepo** → Read `.agents/skills/mono-repo-integration/SKILL.md`
 > - **Grails application upgrade guidance** (7.x to 8.x breaking changes, changes between 8.x releases, Jakarta EE 10, Spring Boot 4) → Read `.agents/skills/grails-upgrade/SKILL.md`
 > - **Grails web application development** (controllers, views, GORM models, taglibs, services, web MVC) → Read `.agents/skills/grails-developer/SKILL.md`
@@ -91,6 +92,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **java-developer** | `**/*.java`, Java interop | `.agents/skills/java-developer/SKILL.md` | Java 21 baseline features, Groovy interop, records, sealed types |
 | **violation-fixer** | CodeNarc, Checkstyle, PMD, SpotBugs violations, `codeStyle`, conventions | `.agents/skills/violation-fixer/SKILL.md` | Code quality, static analysis tools, repo conventions |
 | **test-fixer** | Broken or flaky tests, test isolation, fork pollution | `.agents/skills/test-fixer/SKILL.md` | Test failure debugging, report analysis, thread-safe request context |
+| **mutation-testing** | PITest, mutation testing, checking that tests assert behavior | `.agents/skills/mutation-testing/SKILL.md` | Targeted PITest bytecode mutation testing and Java/Groovy semantic mutant checks |
 | **mono-repo-integration** | Merging standalone Grails plugin repos | `.agents/skills/mono-repo-integration/SKILL.md` | Monorepo integration, subproject wiring, BOM registration |
 | **grails-upgrade** | Upgrading applications from Grails 7.x to 8, and between 8.x releases | `.agents/skills/grails-upgrade/SKILL.md` | Application upgrade guide, changes of each release, Jakarta EE 10, Spring Boot 4.1, validation changes |
 | **grails-developer** | Controllers, views, GORM models, taglibs, services, web MVC | `.agents/skills/grails-developer/SKILL.md` | Web applications, REST APIs, GORM, controllers, views, plugins |
