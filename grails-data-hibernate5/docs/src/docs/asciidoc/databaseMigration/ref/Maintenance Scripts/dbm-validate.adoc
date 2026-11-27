@@ -25,7 +25,7 @@ Checks the change log for errors.
 
 ====== Description
 
-Writes any validation messages to the standard output. It is the one tool of the plugin that changes nothing.
+Writes any validation messages to the standard output, and changes nothing. It is one of the three tools of the plugin that say that they change nothing, with <<ref-maintenance-scripts-dbm-status,dbm-status>> and <<ref-maintenance-scripts-dbm-list-locks,dbm-list-locks>>, which change nothing in the database and write a file only when they are given its name: `grails mcp --read-only` offers these three to an AI agent.
 
 Usage:
 [source,console]
