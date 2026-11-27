@@ -125,6 +125,45 @@ class StandaloneToolRunnerSpec extends Specification {
         'one of its arguments'                  | ['report', '-Dgrails.env=production', 'more'] || ['report', 'more']
     }
 
+    def "a tool the compiler did not see, as a Java tool, is held to the declarations of its class: its fields are given what it was given"() {
+        when:
+        Map result = run('runner-spec-declaring', '--count', '3', '-v', 'report.txt')
+
+        then:
+        result.exit == 0
+        result.err.isEmpty()
+        result.out.readLines() == ['DECLARED count=3 verbose=true output=report.txt remaining=[report.txt] v=true verbose-option=true']
+    }
+
+    @Unroll
+    def "a tool that declares its arguments and is given #what is refused before it runs, and the JVM ends with 2"() {
+        when:
+        Map result = run((['runner-spec-declaring'] + given) as String[])
+
+        then:
+        result.exit == 2
+        result.out.isEmpty()
+        result.err.readLines() == ["| Error runner-spec-declaring: ${refused}. grails help runner-spec-declaring shows its options".toString()]
+
+        where:
+        what                     | given                          || refused
+        'an option it lacks'     | ['--nope', 'report.txt']       || '--nope is not one of its options'
+        'no parameter'           | ['--count', '3']               || 'OUTPUT is required'
+        'a count that is none'   | ['--count', 'three', 'a.txt']  || '--count takes a whole number'
+    }
+
+    def "a tool whose declarations break a rule is not run, and the JVM ends with 1 and the rule"() {
+        when:
+        Map result = run('runner-spec-broken', 'anything')
+
+        then:
+        result.exit == 1
+        result.out.isEmpty()
+        result.err.readLines() == ['| Error runner-spec-broken: @ToolOption on RunnerSpecBrokenTool.since has a name that is neither a long name ' +
+                                           '(two hyphens, a lower-case letter, then letters, digits and single hyphens, at most 32 characters, as --since) ' +
+                                           'nor a short name (a hyphen and one letter, as -s).']
+    }
+
     def "a name that no command has, and no name at all, end the JVM with 1"() {
         when:
         Map unknown = run('runner-spec-no-such-command')
@@ -146,7 +185,7 @@ class StandaloneToolRunnerSpec extends Specification {
         new File(registrations, 'META-INF').mkdirs()
         new File(registrations, 'META-INF/grails-cli.factories').text = "${GrailsTool.name}=" +
                 [RunnerSpecSucceedsCommand, RunnerSpecReturnsFalseCommand, RunnerSpecThrowsCommand, RunnerSpecGradleCommand, RunnerSpecApplicationCommand,
-                 RunnerSpecOldCommand, RunnerSpecEnvironmentCommand]*.name.join(',') + '\n'
+                 RunnerSpecOldCommand, RunnerSpecEnvironmentCommand, RunnerSpecDeclaringTool, RunnerSpecBrokenTool]*.name.join(',') + '\n'
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', registrations.path + File.pathSeparator + System.getProperty('java.class.path'),
                                 "-Dbase.dir=${dir.path}".toString()]
@@ -218,6 +257,37 @@ class RunnerSpecEnvironmentCommand implements StandaloneTool {
     boolean handle(ExecutionContext executionContext) {
         println "ENVIRONMENT=${Environment.current.name} given=${executionContext.commandLine.systemProperties.getProperty(Environment.KEY)} " +
                 "remaining=${executionContext.commandLine.remainingArgs}"
+        true
+    }
+}
+
+class RunnerSpecDeclaringTool implements StandaloneTool {
+
+    @ToolOption(names = ['--count'], description = 'How many')
+    int count
+
+    @ToolOption(names = ['--verbose', '-v'])
+    boolean verbose
+
+    @ToolParameter(index = 0, label = 'OUTPUT')
+    String output
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println "DECLARED count=${count} verbose=${verbose} output=${output} remaining=${executionContext.commandLine.remainingArgs} " +
+                "v=${executionContext.commandLine.optionValue('v')} verbose-option=${executionContext.commandLine.optionValue('verbose')}"
+        true
+    }
+}
+
+class RunnerSpecBrokenTool implements StandaloneTool {
+
+    @ToolOption(names = ['since'])
+    String since
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println 'BROKEN RAN'
         true
     }
 }

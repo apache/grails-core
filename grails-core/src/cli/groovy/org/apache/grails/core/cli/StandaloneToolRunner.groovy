@@ -40,6 +40,13 @@ import org.grails.build.parsing.CommandLineParser
  * build, and the application unless it says otherwise, and is refused with a line that says how it is
  * run.</p>
  *
+ * <p>A tool that declares its options or parameters ({@link ToolOption}, {@link ToolParameter}) is given
+ * them on its fields before it runs, and arguments that are not what it declares are refused with one
+ * line, {@code | Error NAME: <what>. grails help NAME shows its options}, and the exit code 2. A tool
+ * that declares none is given its arguments as it always was. When the arguments were given in a file
+ * {@code command-args-<n>.json}, what the tool sets as {@link ExecutionContext#getResult() its result}
+ * is written beside it, to {@code tool-result-<n>.json}, once the tool has returned.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -52,8 +59,9 @@ final class StandaloneToolRunner {
      * Runs a command and says how it ended.
      *
      * @param args the name of the command and its arguments, or the one argument that names the file they are in
-     * @return 0 when the command returned {@code true}, and 1 when it returned {@code false}, threw,
-     * is no command of the class path, or is not a {@link StandaloneTool}
+     * @return 0 when the command returned {@code true}; 1 when it returned {@code false}, threw,
+     * is no command of the class path, or is not a {@link StandaloneTool}; and 2 when it declares its
+     * arguments and was given others
      */
     static int run(String... args) {
         List<String> given
@@ -81,9 +89,28 @@ final class StandaloneToolRunner {
                     "The build of the project runs it: grails run-tool ${name}")
             return 1
         }
+        // a tool that declares its arguments is held to them before it runs; one that declares none is given them as it always was
+        ToolArguments declared = ToolArguments.of(target.getClass())
+        if (declared.broken != null) {
+            System.err.println("| Error ${name}: ${declared.broken}.")
+            return 1
+        }
+        ToolArguments.Bound bound = null
+        if (declared.declaring) {
+            try {
+                bound = declared.bind(given as String[])
+            } catch (ToolArguments.Refused refused) {
+                System.err.println(ToolArguments.refusal(name, refused.message))
+                return ToolArguments.REFUSED
+            }
+        }
+        File resultFile = ToolResults.prepare(argumentsFile(args))
         try {
-            boolean succeeded = command.handle(new ExecutionContext(parse(given as String[])))
+            ExecutionContext context = new ExecutionContext(bound != null ? bound.commandLine : parse(given as String[]))
+            bound?.applyTo(target)
+            boolean succeeded = command.handle(context)
             System.out.flush()
+            ToolResults.give(name, resultFile, context.result)
             return succeeded ? 0 : 1
         } catch (Throwable e) {
             System.out.flush()
@@ -112,10 +139,13 @@ final class StandaloneToolRunner {
     }
 
     private static List<String> arguments(String[] args) throws CommandArgumentsFile.Refused {
-        if (args.length == 1 && args[0].startsWith(CommandArgumentsFile.ARGUMENT)) {
-            return CommandArgumentsFile.read(new File(args[0].substring(CommandArgumentsFile.ARGUMENT.length())))
-        }
-        args.toList()
+        File file = argumentsFile(args)
+        file != null ? CommandArgumentsFile.read(file) : args.toList()
+    }
+
+    // the file the arguments are in, or null when they are given themselves
+    private static File argumentsFile(String[] args) {
+        args.length == 1 && args[0].startsWith(CommandArgumentsFile.ARGUMENT) ? new File(args[0].substring(CommandArgumentsFile.ARGUMENT.length())) : null
     }
 
     /**

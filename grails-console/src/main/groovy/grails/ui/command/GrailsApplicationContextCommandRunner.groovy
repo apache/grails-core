@@ -28,6 +28,8 @@ import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.core.cli.GrailsTool
 import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolArguments
+import org.apache.grails.core.cli.ToolResults
 import org.apache.grails.core.cli.ApplicationCommandTargetAware
 import grails.ui.support.DevelopmentGrailsApplication
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
@@ -45,12 +47,26 @@ import org.grails.build.parsing.CommandLineParser
  * runs it here. What the tool says is read from the instance the registry makes; for an adapter
  * ({@link ApplicationCommandTargetAware}), from the tool it adapts.
  *
+ * <p>A tool that declares its options or parameters ({@code @ToolOption}, {@code @ToolParameter}) is held
+ * to them before the application is started for it: arguments that are not what it declares end the JVM
+ * with one line, {@code | Error NAME: <what>. grails help NAME shows its options}, and the exit code 2.
+ * Otherwise its declared fields are set to what it was given, after the application has injected what it
+ * injects, and before it runs. A tool that declares none is given its arguments as it always was. When
+ * the arguments were given in a file {@code command-args-<n>.json}, what the tool sets as its result is
+ * written beside it, to {@code tool-result-<n>.json}, once the tool has returned.</p>
+ *
  * @since 3.0
  */
 @CompileStatic
 class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication {
 
     String commandName
+
+    /**
+     * The file the arguments of the tool were given in, beside which its result is written; {@code null}
+     * when they were given themselves.
+     */
+    File argumentsFile
 
     protected GrailsApplicationContextCommandRunner(String commandName, Class<?>... sources) {
         super(sources)
@@ -64,10 +80,33 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
         if (command) {
             Object autowireTarget = resolveAutowireTarget(command)
 
+            // a tool that declares its arguments is held to them before anything is started for it
+            ToolArguments declared = ToolArguments.of(autowireTarget.getClass())
+            if (declared.broken != null) {
+                System.err.println("| Error ${commandName}: ${declared.broken}.")
+                System.exit(1)
+                return null
+            }
+            ToolArguments.Bound bound = null
+            if (declared.declaring) {
+                try {
+                    bound = declared.bind(args)
+                } catch (ToolArguments.Refused refused) {
+                    System.err.println(ToolArguments.refusal(commandName, refused.message))
+                    System.exit(ToolArguments.REFUSED)
+                    return null
+                }
+            }
+            File resultFile = ToolResults.prepare(argumentsFile)
+
             // a tool that says it needs no application is run as it is: nothing is started for it
             if (!startsApplication(command)) {
                 try {
-                    def result = command.handle(new ExecutionContext(parseToolArguments(args)))
+                    ExecutionContext context = new ExecutionContext(bound != null ? bound.commandLine : parseToolArguments(args))
+                    bound?.applyTo(autowireTarget)
+                    def result = command.handle(context)
+                    System.out.flush()
+                    ToolResults.give(commandName, resultFile, context.result)
                     result ? System.exit(0) : System.exit(1)
                 } catch (Throwable e) {
                     System.err.println("Command execution error: $e.message")
@@ -102,10 +141,15 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
 
             try {
                 // Parse the FULL args (including --options) for the command
-                CommandLine commandLine = parseToolArguments(args)
+                CommandLine commandLine = bound != null ? bound.commandLine : parseToolArguments(args)
                 ctx.autowireCapableBeanFactory.autowireBeanProperties(autowireTarget, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false)
                 ((ApplicationTool) command).applicationContext = ctx
-                def result = command.handle(new ExecutionContext(commandLine))
+                // what the tool declares is set after what the application injects, and is what the tool was given
+                bound?.applyTo(autowireTarget)
+                ExecutionContext context = new ExecutionContext(commandLine)
+                def result = command.handle(context)
+                System.out.flush()
+                ToolResults.give(commandName, resultFile, context.result)
                 result ? System.exit(0) : System.exit(1)
             } catch (Throwable e) {
                 System.err.println("Command execution error: $e.message")
@@ -227,6 +271,8 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
      * (see {@link CommandArgumentsFile}), which then come before the Application class name
      */
     static void main(String[] args) {
+        File argumentsFile = args.length > 1 && args.last().startsWith(CommandArgumentsFile.ARGUMENT) ?
+                new File(args.last().substring(CommandArgumentsFile.ARGUMENT.length())) : null
         try {
             // a build gives the arguments of the command in a file when they are not for a command line
             args = CommandArgumentsFile.expand(args)
@@ -245,6 +291,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             }
 
             def runner = new GrailsApplicationContextCommandRunner(args[0], applicationClass)
+            runner.argumentsFile = argumentsFile
             runner.run(args.init() as String[])
         }
         else {
