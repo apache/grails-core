@@ -332,53 +332,28 @@ public class JpaCriteriaQueryCreator<T> {
         boolean joinCollections = countOnly && !fetchesCollection();
         if (countOnly && !joinCollections && entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
                 mappingContext.isLeftJoinAssociationSort()) {
-            // With the leftJoinAssociationSort setting a sort joins with left joins, which leave out no instance, and
-            // a list that fetches a collection returns each instance once, so its count needs none of those joins
+            // With the leftJoinAssociationSort setting a sort joins an association to a single instance with a left
+            // join, which leaves out no instance, and a list that fetches a collection returns each instance once, so
+            // its count needs none of those joins
             return;
         }
-        // the orders that are still in an association block come after the orders of the criteria
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
-        orders.addAll(AssociationOrders.inBlocks(detachedCriteria.getCriteria()));
+        if (countOnly && hibernateQuery != null) {
+            // the orders that the count cleared still join what they sort by
+            orders.addAll(hibernateQuery.getClearedOrders());
+        }
         boolean distinctEntities = isDistinctEntities();
-        boolean orderedBySelection = !countOnly && !distinctEntities && isOrderedBySelection();
         List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
         for (Query.Order order : orders) {
             var propertyName = order.getProperty();
-            // an order of an association block, and the context that the criteria of its block were built against
-            AssociationOrder blockOrder = order instanceof AssociationOrder associationOrder ? associationOrder : null;
-            JpaQueryContext blockContext =
-                    blockOrder != null ? context.getAssociationContext(blockOrder.getAssociation()) : null;
-            if (blockContext != null) {
-                String blockProperty = blockOrder.getAssociationProperty();
-                int dot = blockProperty.indexOf('.');
-                if (dot > 0) {
-                    String alias = blockProperty.substring(0, dot);
-                    Expression<?> aliased = context.getAliasedExpression(alias);
-                    if (aliased != null && aliased == blockContext.getAliasedExpression(alias)) {
-                        // An enclosing alias names the same expression from either scope, without the block prefix.
-                        propertyName = blockProperty;
-                    }
-                }
-            }
             SqlProjection sqlProjection = findSqlProjection(propertyName, false);
-            boolean selected = isSelected(propertyName);
             Expression<?> expression;
             if (sqlProjection != null) {
                 expression = context.getSelectionAlias(sqlProjection.getColumnAlias());
-            } else if (blockOrder != null && orderedBySelection && !selected) {
-                // the database would reject this order, and leaving it out would hide that the query is not sorted
-                throw new IllegalArgumentException("Cannot sort by [" + propertyName +
-                        "]: a distinct or grouped query can only be ordered by what it selects");
-            } else if (selected && (orderedBySelection || blockOrder == null)) {
-                // a distinct or grouped query can only be ordered by what it selects, so the order
-                // sorts by the expression of the projection and not through a join of its own
+            } else if (isSelected(propertyName)) {
+                // a distinct or grouped query can only be ordered by what it selects, so an order by what a
+                // projection selects sorts by the expression of the projection and not through a join of its own
                 expression = context.getFullyQualifiedExpression(propertyName);
-            } else if (blockContext != null) {
-                // the order sorts by the joins that its own block made, which its path from the root does not
-                // tell apart from the joins of another block of the same association
-                String property = blockOrder.getAssociationProperty();
-                PersistentEntity associated = blockOrder.getAssociation().getAssociation().getAssociatedEntity();
-                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property, blockContext), joinCollections);
             } else {
                 expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context), joinCollections);
             }
@@ -388,7 +363,7 @@ public class JpaCriteriaQueryCreator<T> {
                 continue;
             }
             if (expression == null) {
-                // an order that names nothing, in a block as anywhere else, is a mistake that ignoring would hide
+                // an order that names nothing is a mistake that ignoring would hide
                 throw new IllegalArgumentException("Invalid " + HibernateQueryArgument.SORT.value() + " property");
             }
             if (distinctEntities && !context.isColumnOfRoot(expression)) {
@@ -461,19 +436,6 @@ public class JpaCriteriaQueryCreator<T> {
     private boolean isDistinctEntities() {
         List<Query.Projection> projectionList = projections.getProjectionList();
         return !projectionList.isEmpty() && projectionList.stream().allMatch(Query.DistinctProjection.class::isInstance);
-    }
-
-    /**
-     * Whether the query selects distinct or grouped values, or aggregates, and not only plain properties. Most
-     * databases reject an order of such a query by a value that it does not select.
-     */
-    private boolean isOrderedBySelection() {
-        for (Query.Projection projection : projections.getProjectionList()) {
-            if (!(projection instanceof Query.IdProjection) && projection.getClass() != Query.PropertyProjection.class) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

@@ -54,7 +54,7 @@ public class ExpressionResolver {
      * @param leftJoinSort whether an association that is joined only for a sort is joined with a left join, which
      *     keeps the rows where the association is {@code null}, and not with an inner join
      */
-    public void setLeftJoinSort(boolean leftJoinSort) {
+    void setLeftJoinSort(boolean leftJoinSort) {
         this.leftJoinSort = leftJoinSort;
     }
 
@@ -144,43 +144,24 @@ public class ExpressionResolver {
      * query already has for the association is reused, and any other is joined for the sort, unless a join type
      * was requested for the association: with a left join when the {@code grails.gorm.leftJoinAssociationSort}
      * setting is enabled, and with an inner join otherwise.
-     *
-     * @param path the property path of the order
-     * @return the expression to sort by, or {@code null} if the path cannot be resolved
-     */
-    public Expression<?> resolveSort(String path) {
-        return resolveSort(path, false);
-    }
-
-    /**
-     * Resolves the property that an order sorts by, as {@link #resolveSort(String)} does. A path that ends with
-     * a foreign key, the identifier of an association whose key is a column of the table before it, needs no
-     * join for that association: Hibernate reads the column, which keeps the rows where the association is
-     * {@code null} as it is. The JPA metamodel does not tell which side of an association has the key, so the
-     * caller says whether the path ends with one.
+     * <p>
+     * A path that ends with a foreign key, the identifier of an association whose key is a column of the table
+     * before it, needs no join for that association: Hibernate reads the column, which keeps the rows where the
+     * association is {@code null} as it is. The JPA metamodel does not tell which side of an association has the
+     * key, so the caller says whether the path ends with one.
+     * <p>
+     * A collection that only the sort uses is read through its path, as with Hibernate 5, also with the setting:
+     * Hibernate joins the path with an inner join and returns a row for each element. A count selects no instance
+     * and orders nothing, so the path would not join the collection at all; it asks for the join, to count those
+     * rows. A path through an embedded component is read as it is.
      *
      * @param path the property path of the order
      * @param endsWithForeignKey whether the last two attributes of the path are an association and its
      *     identifier, with the foreign key on the side of the path
-     * @return the expression to sort by, or {@code null} if the path cannot be resolved
-     */
-    public Expression<?> resolveSort(String path, boolean endsWithForeignKey) {
-        return resolveSort(path, endsWithForeignKey, false);
-    }
-
-    /**
-     * Resolves the property that an order sorts by, as {@link #resolveSort(String, boolean)} does. A collection
-     * that only the sort uses is read through its path, as it was before a sort joined its associations:
-     * Hibernate joins the path with an inner join and returns a row for each element, where it returns an
-     * instance once when the query has a join of the collection. A count selects no instance and orders
-     * nothing, so the path would not join the collection at all; it asks for the join, to count those rows.
-     *
-     * @param path the property path of the order
-     * @param endsWithForeignKey whether the path ends with a foreign key
      * @param joinCollections whether a collection that only the sort uses is joined, with an inner join
      * @return the expression to sort by, or {@code null} if the path cannot be resolved
      */
-    public Expression<?> resolveSort(String path, boolean endsWithForeignKey, boolean joinCollections) {
+    Expression<?> resolveSort(String path, boolean endsWithForeignKey, boolean joinCollections) {
         String cleanPath = path != null && path.startsWith("root.") ? path.substring(5) : path;
         if (cleanPath == null || cleanPath.indexOf('.') < 0 || cleanPath.startsWith("{alias}") ||
                 cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR) ||
@@ -207,8 +188,8 @@ public class ExpressionResolver {
             if (associationPath != null) {
                 associationPath = associationPath.isEmpty() ? tokens[i] : associationPath + '.' + tokens[i];
             }
-            boolean last = i == tokens.length - 2;
-            From<?, ?> join = sortJoin(from, tokens[i], associationPath, last, last && endsWithForeignKey, joinCollections);
+            boolean foreignKey = i == tokens.length - 2 && endsWithForeignKey;
+            From<?, ?> join = sortJoin(from, tokens[i], associationPath, foreignKey, joinCollections);
             if (join == null) {
                 // the rest of the path is a component path, a property or a foreign key, which resolves as it is
                 return getPath(from, String.join(".", Arrays.copyOfRange(tokens, i, tokens.length)));
@@ -220,37 +201,20 @@ public class ExpressionResolver {
 
     /**
      * Returns the join through which an order sorts by a property of an association, or {@code null} if the
-     * rest of the path needs no join: the attribute is neither an association nor a component that is to be
-     * joined, or the path ends with the foreign key of the association.
-     * <p>
-     * A component has no table of its own, so its join adds nothing to the query. It is the source that an
-     * association inside the component is joined from: read as a plain path, such an association would be joined
-     * with an implicit inner join like any other. A component is therefore only joined when the path goes on
-     * beyond the attribute that follows it.
+     * rest of the path needs no join: the attribute is not an association, the path ends with the foreign key
+     * of the association, or it reads a collection through its path.
      *
-     * @param last whether the attribute that follows this one ends the path
      * @param foreignKey whether the attribute that follows this one is the foreign key of the association
      */
     private From<?, ?> sortJoin(
-            From<?, ?> from, String attributeName, String associationPath, boolean last, boolean foreignKey,
-            boolean joinCollections) {
+            From<?, ?> from, String attributeName, String associationPath, boolean foreignKey, boolean joinCollections) {
         Path<?> attribute = getPath(from, attributeName);
-        if (attribute == null || !(attribute.getModel() instanceof Attribute<?, ?> model)) {
+        if (attribute == null || !(attribute.getModel() instanceof Attribute<?, ?> model) || !model.isAssociation()) {
             return null;
         }
-        boolean component = model.getPersistentAttributeType() == PersistentAttributeType.EMBEDDED;
-        if (component ? last : !model.isAssociation()) {
-            return null;
-        }
-        Join<?, ?> existing = ownJoin(from, associationPath);
-        if (existing == null) {
-            existing = existingJoin(from, attributeName);
-        }
+        Join<?, ?> existing = existingJoin(from, attributeName);
         if (existing != null) {
             return existing;
-        }
-        if (component) {
-            return from.join(attributeName);
         }
         // The tracker qualifies a block-relative path against the plan of the whole query. A request for
         // team.club belongs to club inside the team block, not to an inherited alias merely named club.
@@ -266,31 +230,18 @@ public class ExpressionResolver {
         if (foreignKey) {
             return null;
         }
-        if (model.isCollection() && !leftJoinSort) {
-            // without the leftJoinAssociationSort setting, a sort by a collection leaves out the instances whose
-            // collection is empty, as with Hibernate 5
+        if (model.isCollection()) {
+            // a sort by a collection leaves out the instances whose collection is empty, as with Hibernate 5
             return joinCollections ? from.join(attributeName, JoinType.INNER) : null;
         }
-        // with the setting, a left join keeps the instances whose association is null or whose collection is empty
+        // with the setting, a left join keeps the instances whose association is null
         return from.join(attributeName, leftJoinSort ? JoinType.LEFT : JoinType.INNER);
     }
 
     /**
-     * Returns the join that the criteria of this query made from a source for an association, or {@code null}
-     * if they made none. Two blocks of the same association share the join of that association, and each joins
-     * what its criteria name inside it, so the source has a join of the inner association for each block. An
-     * order of a block sorts by the join of its own block, which is the one this query tracks for the path.
-     */
-    private Join<?, ?> ownJoin(From<?, ?> from, String associationPath) {
-        From<?, ?> own = associationPath != null ? joinTracker.getOwnJoin(associationPath) : null;
-        return own instanceof Join<?, ?> join && join.getParent() == from ? join : null;
-    }
-
-    /**
-     * Returns the join that a source already has for an attribute, or {@code null} if it has none. An association
-     * has a join for each of its aliases, and the first of them is the join that the path of the association
-     * shares, so that is the one a sort by the path uses. Hibernate keeps the joins of a source in the order in
-     * which they were made, while {@link From#getJoins()} returns them as a set, which has no order.
+     * Returns the join that a source already has for an attribute, or {@code null} if it has none. Hibernate keeps
+     * the joins of a source in the order in which they were made, while {@link From#getJoins()} returns them as a
+     * set, which has no order, so the first join of the attribute is read from the SQM joins.
      * <p>
      * A fetch of the association is a join as well. It is only used when the query has no other join of the
      * association, since the criteria of the query apply to the other join.

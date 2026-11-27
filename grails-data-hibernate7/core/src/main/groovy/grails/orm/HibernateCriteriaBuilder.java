@@ -45,11 +45,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.gorm.DetachedCriteria;
 import grails.gorm.MultiTenant;
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -245,25 +243,18 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     public Criteria createAlias(
             String associationPath, String alias, int joinType) {
         var criteria = hibernateQuery.getDetachedCriteria();
-        // the block of an embedded component has the entity of the component, while its criteria have none:
-        // the class of a component is not a domain class
-        boolean embeddedBlock = criteria instanceof DetachedAssociationCriteria<?> block && block.getAssociation() instanceof Embedded;
-        var entity = criteria instanceof DetachedAssociationCriteria<?> block ?
-                block.getAssociation().getAssociatedEntity() : criteria.getPersistentEntity();
         JoinType convertedJoinType = convertFromInt(joinType);
-        String path = pathFromDeclaredAlias(criteria, entity, associationPath, alias);
+        String path = pathFromDeclaredAlias(criteria, associationPath, alias);
         if (path.contains(ALIAS_SEPARATOR)) {
             criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
             return this;
         }
-        var prop = entity.getPropertyByName(path);
+        var prop = criteria.getPersistentEntity().getPropertyByName(path);
         criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
         if (prop instanceof Basic) {
             return this;
         }
-        if (!embeddedBlock) {
-            criteria.createAlias(path, alias);
-        }
+        criteria.createAlias(path, alias);
         criteria.join(path, convertedJoinType);
         return this;
     }
@@ -277,7 +268,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      *
      * @return the path the alias is registered with, which is the given path when it starts with an association
      */
-    private static String pathFromDeclaredAlias(DetachedCriteria<?> criteria, PersistentEntity queried, String associationPath, String alias) {
+    private static String pathFromDeclaredAlias(DetachedCriteria<?> criteria, String associationPath, String alias) {
         int dot = associationPath.indexOf('.');
         if (dot < 0 || associationPath.substring(0, dot).equals(alias)) {
             return associationPath;
@@ -293,7 +284,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
             return associationPath;
         }
         String rest = associationPath.substring(dot + 1);
-        PersistentEntity entity = aliasedEntity(queried, declared, rootIndex);
+        PersistentEntity entity = aliasedEntity(criteria.getPersistentEntity(), declared, rootIndex);
         for (String segment : rest.split("\\.")) {
             if (entity == null || !(entity.getPropertyByName(segment) instanceof Association<?> association)) {
                 throw new IllegalArgumentException("Argument [" + associationPath + "] is not an association");

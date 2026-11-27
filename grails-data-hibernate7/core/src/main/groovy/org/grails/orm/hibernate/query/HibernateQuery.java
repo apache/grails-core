@@ -80,6 +80,8 @@ public class HibernateQuery extends Query {
     private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
     private final Set<String> fetchJoinPaths = new LinkedHashSet<>();
     private boolean rowForEachElement;
+    // the orders that clearOrders removed: a count keeps their joins, which decide the rows that a list pages through
+    private final List<Order> clearedOrders = new ArrayList<>();
     protected String alias;
     protected int aliasCount;
     protected Deque<GrailsHibernatePersistentEntity> entityStack = new LinkedList<>();
@@ -434,9 +436,19 @@ public class HibernateQuery extends Query {
 
     @Override
     public Query clearOrders() {
+        clearedOrders.addAll(detachedCriteria.getOrders());
         detachedCriteria.getOrders().clear();
         super.clearOrders();
         return this;
+    }
+
+    /**
+     * The orders that {@link #clearOrders()} removed. A count of the query keeps their joins without ordering, as
+     * with Hibernate 5, where the alias that an order joins stays when the order is cleared: the joins of a sort
+     * decide which rows a list pages through, so the total of a page counts the rows that the list returns.
+     */
+    List<Order> getClearedOrders() {
+        return clearedOrders;
     }
 
     @Override
@@ -908,6 +920,7 @@ public class HibernateQuery extends Query {
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
                     hibernateQuery.aliases.addAll(this.aliases);
                     hibernateQuery.rowForEachElement = this.rowForEachElement;
+                    hibernateQuery.clearedOrders.addAll(this.clearedOrders);
 
                     return hibernateQuery;
                 });

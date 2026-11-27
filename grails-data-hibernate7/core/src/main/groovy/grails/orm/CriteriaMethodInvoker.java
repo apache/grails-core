@@ -27,7 +27,7 @@ import groovy.lang.MetaMethod;
 
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.metamodel.Attribute;
-import jakarta.persistence.metamodel.ManagedType;
+import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
 
 import org.springframework.beans.BeanUtils;
@@ -35,11 +35,10 @@ import org.springframework.beans.BeanUtils;
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.query.AssociationOrders;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.query.HibernatePagedResultList;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
@@ -203,10 +202,8 @@ public class CriteriaMethodInvoker {
         final PropertyDescriptor pd = BeanUtils.getPropertyDescriptor(builder.getTargetClass(), name);
         if (pd != null && pd.getReadMethod() != null) {
             final Metamodel metamodel = builder.getSessionFactory().getMetamodel();
-            // the target is the class of an embedded component inside the block of that component, which is a
-            // managed type but not an entity
-            final ManagedType<?> managedType = metamodel.managedType(builder.getTargetClass());
-            final Attribute<?, ?> attribute = managedType.getAttribute(name);
+            final EntityType<?> entityType = metamodel.entity(builder.getTargetClass());
+            final Attribute<?, ?> attribute = entityType.getAttribute(name);
             // The JPA metamodel does not consider an embedded component an association, but the
             // GORM model does - an embedded block must build a DetachedAssociationCriteria so its
             // properties resolve against the component. It needs no join: its columns live in the
@@ -233,23 +230,23 @@ public class CriteriaMethodInvoker {
                         hibernateQuery.join(name, joinType);
                     }
 
-                    DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
-                    // inside an embedded block the component's entity is not registered by its class
-                    PersistentEntity parentEntity = oldDetachedCriteria instanceof DetachedAssociationCriteria<?> enclosing ?
-                            enclosing.getAssociation().getAssociatedEntity() :
+                    GrailsHibernatePersistentEntity parentEntity = (GrailsHibernatePersistentEntity)
                             hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());
                     PersistentProperty<?> property = parentEntity.getPropertyByName(name);
                     if (property instanceof Association<?> association) {
                         DetachedAssociationCriteria<?> associationCriteria =
                                 new DetachedAssociationCriteria<>(associationClass, association);
+                        DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
                         hibernateQuery.setDetachedCriteria(associationCriteria);
                         try {
                             invokeClosureNode(callable);
                         } finally {
                             hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
                         }
-                        // keep block orders in their declaration position before adding the block
-                        AssociationOrders.moveOutOf(associationCriteria, hibernateQuery::order);
+                        if (!embedded) {
+                            // the orders of the block sort the query, in the place they were declared in
+                            moveOrdersOutOf(associationCriteria, hibernateQuery);
+                        }
                         hibernateQuery.add((Query.Criterion) associationCriteria);
                     } else {
                         // Fallback for non-GORM associations if any
@@ -267,16 +264,29 @@ public class CriteriaMethodInvoker {
     }
 
     /**
-     * Returns a closure that has the builder evaluate the closure of {@code and}, {@code or} or {@code not}.
-     * The criteria that open the junction evaluate the closure that they are given themselves. An association
-     * block inside the junction would then not be a block of the builder: a join type given to it would be
-     * ignored, and its orders would stay in the block and reach the query after every other order, and not in
-     * the place they were declared in.
-     *
-     * @param callable the closure of the junction
-     * @return the closure to open the junction with
+     * Moves the orders of an association block to the criteria that enclose the block. Only the orders of the root
+     * criteria reach the query, so an order that stayed in its block had no effect. The order sorts by the property
+     * through the association, as with Hibernate 5, and reuses the join of the block.
      */
-    protected Closure<?> evaluatedByBuilder(Closure<?> callable) {
+    private static void moveOrdersOutOf(DetachedAssociationCriteria<?> block, HibernateQuery hibernateQuery) {
+        String associationPath = block.getAssociationPath();
+        for (Query.Order order : block.getOrders()) {
+            Query.Order enclosing = new Query.Order(associationPath + '.' + order.getProperty(), order.getDirection());
+            if (order.isIgnoreCase()) {
+                enclosing.ignoreCase();
+            }
+            hibernateQuery.order(enclosing);
+        }
+        block.getOrders().clear();
+    }
+
+    /**
+     * Returns a closure that has the builder evaluate the closure of {@code and}, {@code or} or {@code not}, as it
+     * evaluates every other closure of a criteria query. The criteria that open the junction would evaluate it
+     * themselves, so an association block inside the junction would not be a block of the builder: a join type
+     * given to it would be ignored, and its orders would stay in the block.
+     */
+    Closure<?> evaluatedByBuilder(Closure<?> callable) {
         return new Closure<Object>(builder) {
 
             private static final long serialVersionUID = 1L;

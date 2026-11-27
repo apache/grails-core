@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -99,10 +100,11 @@ public class HqlListQueryBuilder {
                 hql.append(' ').append(alias);
             }
         });
-        // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null
-        // or the collection is empty, as with Hibernate 5
+        // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null,
+        // as with Hibernate 5. A collection that only the count joins is joined with an inner join in both modes
         String sortJoin = ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort() ? " left join " : " join ";
-        sortJoins.forEach((path, alias) -> hql.append(sortJoin).append(path).append(' ').append(alias));
+        sortJoins.forEach((path, alias) ->
+                hql.append(collectionSortJoins.contains(path) ? " join " : sortJoin).append(path).append(' ').append(alias));
         if (count) {
             // The list has a row for each element of a collection that it sorts by, and max and offset page
             // through those rows, so the total counts them. A list that fetches a collection has each instance
@@ -201,8 +203,18 @@ public class HqlListQueryBuilder {
             }
             String joined = alias + '.' + tokens[i];
             if (association instanceof Embedded<?>) {
-                // a component has no join of its own: an association inside it is joined through its path
-                alias = joined;
+                // a path through a component is read as it is
+                PersistentEntity component = association.getAssociatedEntity();
+                PersistentProperty<?> componentProperty = null;
+                for (int j = i + 1; j < tokens.length; j++) {
+                    componentProperty = component == null ? null : component.getPropertyByName(tokens[j]);
+                    if (componentProperty == null) {
+                        throw new IllegalArgumentException("Invalid " + argument + " property");
+                    }
+                    component = componentProperty instanceof Association<?> inner ? inner.getAssociatedEntity() : null;
+                }
+                String componentPath = joined + '.' + String.join(".", Arrays.copyOfRange(tokens, i + 1, tokens.length));
+                return orderPart(componentPath, componentProperty.getType(), direction, ignoreCase);
             } else if (i == tokens.length - 2 && isForeignKey(association, tokens[i + 1])) {
                 // Hibernate reads the foreign key without a join, which keeps the rows where it is null
                 alias = joined;
@@ -213,12 +225,11 @@ public class HqlListQueryBuilder {
                     alias = "f" + fetchJoins.values().stream().filter(fetchAlias -> !fetchAlias.isEmpty()).count();
                     fetchJoins.put(joined, alias);
                 }
-            } else if (association instanceof ToMany<?> && !counting &&
-                    !((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort()) {
-                // Without the leftJoinAssociationSort setting, the elements of a collection are read without a
-                // join of the query: Hibernate joins them with an inner join and lists an instance once for each
-                // element, as list does with Hibernate 5, where a join of the query would make it list the
-                // instance once. With the setting, the left join keeps the instances whose collection is empty
+            } else if (association instanceof ToMany<?> && !counting) {
+                // The elements of a collection are read without a join of the query, also with the
+                // leftJoinAssociationSort setting: Hibernate joins them with an inner join and lists an instance once
+                // for each element, as list does with Hibernate 5, where a join of the query would make it list the
+                // instance once
                 collectionSortJoins.add(joined);
                 alias = "element(" + joined + ")";
             } else {
@@ -233,9 +244,12 @@ public class HqlListQueryBuilder {
         if (property == null) {
             throw new IllegalArgumentException("Invalid " + argument + " property");
         }
+        return orderPart(alias + '.' + tokens[tokens.length - 1], property.getType(), direction, ignoreCase);
+    }
+
+    private static String orderPart(String path, Class<?> type, String direction, boolean ignoreCase) {
         String normalizedDirection = DynamicFinder.normalizeDirection(direction);
-        String path = alias + '.' + tokens[tokens.length - 1];
-        if (property.getType() == String.class && ignoreCase) {
+        if (type == String.class && ignoreCase) {
             return "upper(" + path + ") " + normalizedDirection;
         }
         return path + " " + normalizedDirection;

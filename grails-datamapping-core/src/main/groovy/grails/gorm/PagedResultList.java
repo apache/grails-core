@@ -124,8 +124,9 @@ public class PagedResultList<E> implements PagedList<E> {
                 Query newQuery = (Query) query.clone();
                 newQuery.offset(0);
                 newQuery.max(-1);
-                // Let the datastore count the query: an order can introduce joins that restrict its rows.
-                Number result = newQuery.countResults();
+                newQuery.clearOrders();
+                newQuery.projections().count();
+                Number result = (Number) newQuery.singleResult();
                 totalCount = result == null ? 0 : result.intValue();
             }
         }
