@@ -114,15 +114,6 @@ databaseChangeLog:
         ['--dataSource=reports', 'changelog.yml', 'converted'] || 'converted-reports.groovy'
     }
 
-    def "dbm-previous-changeset-sql says which value of --skip is not a number"() {
-        when:
-        Map result = run([], 'dbm-previous-changeset-sql', '--skip=two', '1', DatabaseMigrationForkApplication.name)
-
-        then:
-        result.exit == 1
-        result.err.contains("The change set skip argument 'two' isn't a number")
-    }
-
     @Unroll
     def "dbm-create-changelog #arguments creates the Groovy change log #written"() {
         given:
@@ -144,6 +135,24 @@ databaseChangeLog:
     }
 
     @Unroll
+    def "#tool #arguments is taken, as it was before it was declared: the application is started for it"() {
+        when:
+        Map result = run([], tool, *arguments, DatabaseMigrationForkFailingApplication.name)
+
+        then:
+        result.exit == 1
+        result.err.contains('Context failed to load')
+        !result.err.contains("| Error ${tool}".toString())
+
+        where:
+        tool                         | arguments
+        'dbm-status'                 | ['--verbose=FALSE']
+        'dbm-status'                 | ['--verbose', 'True']
+        'dbm-previous-changeset-sql' | ['--skip=+1', '2']
+        'dbm-rollback-count'         | ['-1']
+    }
+
+    @Unroll
     def "#tool #arguments is refused before the application is started for it, and the JVM ends with 2"() {
         when:
         Map result = run([], tool, *arguments, DatabaseMigrationForkFailingApplication.name)
@@ -158,6 +167,11 @@ databaseChangeLog:
         'dbm-create-changelog' | ['--forse', 'there.groovy']  || '--forse is not one of its options'
         'dbm-update'           | ['--datasource=reports']     || '--datasource is not one of its options'
         'dbm-status'           | ['--verbose']                || '--verbose needs a value'
+        'dbm-status'           | ['--verbose=maybe']          || '--verbose takes one of true, false'
+        'dbm-previous-changeset-sql' | ['--skip=two', '1']    || '--skip takes a whole number'
+        'dbm-previous-changeset-sql' | ['one']                || 'NUMBER takes a whole number'
+        'dbm-update-count'     | ['1.5']                      || 'NUMBER takes a whole number'
+        'dbm-rollback-count'   | ['two']                      || 'NUMBER takes a whole number'
         'dbm-tag'              | ['--dataSource=reports']     || 'TAG is required'
         'dbm-update'           | ['--contexts=test', 'extra'] || 'it takes no parameters, and was given 1'
     }

@@ -50,7 +50,7 @@ import org.grails.openapi.springdoc.GroupedOpenApiContributor
  */
 @Slf4j
 @CompileStatic
-@ToolOption(names = ['--format'], arity = '1', label = 'FORMAT',
+@ToolOption(names = ['--format'], arity = '1', label = 'FORMAT', choices = ['yaml', 'json'], caseInsensitive = true,
         description = 'yaml or json, in place of grails.openapi.output-format, which is yaml unless it is set')
 @ToolOption(names = ['--output-directory'], arity = '1', label = 'DIRECTORY',
         description = 'The directory to write to, a relative one read against the project, in place of grails.openapi.output-directory, which is build/openapi unless it is set')

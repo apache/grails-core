@@ -49,7 +49,7 @@ import org.apache.grails.core.cli.ToolSupport
         description = 'The name of the domain class that stores the questions and the answers, without a package')
 @ToolParameter(index = 2, label = 'USER-DOMAIN-CLASS-NAME', arity = '1',
         description = 'The user class: its name, in the package of the domain class, or its full name')
-@ToolParameter(index = 3, label = 'NUMBER-OF-QUESTIONS', arity = '0..1', required = false,
+@ToolParameter(index = 3, label = 'NUMBER-OF-QUESTIONS', arity = '0..1', required = false, type = 'integer',
         description = 'How many questions a user answers, a whole number from 1; 2 when it is left out')
 @ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false)
 class S2uiCreateChallengeQuestionsTool implements StandaloneTool, ToolSupport, CommandLineHelper {

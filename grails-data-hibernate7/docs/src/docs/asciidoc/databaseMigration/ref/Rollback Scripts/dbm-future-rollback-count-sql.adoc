@@ -35,7 +35,7 @@ grails dbm-future-rollback-count-sql [--contexts=CONTEXTS] [--dataSource=DATASOU
 
 Required arguments:
 
-* `NUMBER` - The number of the change sets that have not run whose rollback is written.
+* `NUMBER` - The number of the change sets that have not run whose rollback is written. A whole number: anything else is refused before the application is started, with exit code 2.
 
 Optional arguments:
 

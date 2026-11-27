@@ -43,7 +43,7 @@ For example:
 ./gradlew runTool -Pargs="s2ui-create-challenge-questions com.mycompany Profile com.mycompany.User 4"
 ----
 
-The command fails, and writes nothing, when it is given fewer than three or more than four arguments, a number of questions that is not a number of 1 or more, or names that are not the names of a package and of classes. Fewer than three or more than four arguments, and an option, of which it has none, are refused before the command runs, with exit code 2 and a line that names what is wrong.
+The command fails, and writes nothing, when it is given fewer than three or more than four arguments, a number of questions that is not a number of 1 or more, or names that are not the names of a package and of classes. Fewer than three or more than four arguments, a number of questions that is not a whole number, and an option, of which it has none, are refused before the command runs, with exit code 2 and a line that names what is wrong; a whole number below 1 is refused by the command.
 
 The command will create one Domain Class.  This will contain a link to the user and also contain one entry for each questions and answer.  If you pass in either no package or the same package as the what is used for the Challenge Question domain it will not put a package in front of the User class. However, if you pass in a different package then it will add the package in front of the user class.
 

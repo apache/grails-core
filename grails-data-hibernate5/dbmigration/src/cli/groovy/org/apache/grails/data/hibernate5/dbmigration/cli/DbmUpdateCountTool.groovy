@@ -29,7 +29,7 @@ import org.grails.plugins.databasemigration.DatabaseMigrationException
 
 @ToolHints(readOnlyHint = false, destructiveHint = true)
 @DatabaseMigrationOptions
-@ToolParameter(index = 0, label = 'NUMBER', arity = '1', description = 'The number of the change sets that have not run to apply')
+@ToolParameter(index = 0, label = 'NUMBER', arity = '1', type = 'integer', description = 'The number of the change sets that have not run to apply')
 @CompileStatic
 class DbmUpdateCountTool implements ApplicationTool, ApplicationContextDatabaseMigrationCommand {
 

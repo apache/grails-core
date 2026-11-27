@@ -76,6 +76,7 @@ class GenerateOpenApiDeclaredArgumentsSpec extends Specification {
         ['--formt=json']                     || '--formt is not one of its options'
         ['--output-dir', 'build/api']        || '--output-dir is not one of its options'
         ['--format']                         || '--format needs a value'
+        ['--format=xml']                     || '--format takes one of yaml, json'
         ['build/api']                        || 'it takes no parameters, and was given 1'
     }
 

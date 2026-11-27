@@ -41,7 +41,7 @@ import org.grails.io.support.Resource
 @ToolParameter(index = 0, label = 'DOMAIN-CLASS', arity = '1..*',
         description = 'Domain classes of the project, each by its simple or its full name, or * for every domain class under grails-app/domain')
 @ToolOption(names = ['--force'], arity = '0', description = 'Replaces files that are there already')
-@ToolOption(names = ['--views'], arity = '1', label = 'VIEWS',
+@ToolOption(names = ['--views'], arity = '1', label = 'VIEWS', choices = ['gsp', 'json'], caseInsensitive = true,
         description = 'gsp or json: the kind of views the controller is for, in place of the kind the project is given by itself')
 @ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false)
 class GenerateControllerTool implements StandaloneTool, ToolSupport, CommandLineHelper, SkipBootstrap {

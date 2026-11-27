@@ -52,6 +52,15 @@ class S2uiDeclaredArgumentsSpec extends Specification {
         new File(project, 'grails-app/views/login/auth.gsp').isFile()
     }
 
+    def "s2ui-override takes its type in any case, as it did before the types were declared"() {
+        when:
+        Map run = start('s2ui-override', 'Auth')
+
+        then:
+        run.exit == 0
+        new File(project, 'grails-app/views/login/auth.gsp').isFile()
+    }
+
     @Unroll
     def "#arguments is refused with exit code 2, says #what, and writes nothing"() {
         when:
@@ -71,6 +80,8 @@ class S2uiDeclaredArgumentsSpec extends Specification {
         ['s2ui-override', 'auth', '--force']                                                        || '--force is not one of its options'
         ['s2ui-create-challenge-questions', 'com.example', 'Profile', 'com.example.User', '--questions=4'] || '--questions is not one of its options'
         ['s2ui-create-challenge-questions', 'com.example', 'Profile']                               || 'USER-DOMAIN-CLASS-NAME is required'
+        ['s2ui-override', 'nothing', 'com.example']                                                 || 'TYPE takes one of aclclass, aclentry, aclobjectidentity, aclsid, persistentlogin, register, registrationcode, requestmap, role, securityinfo, user, auth, layout'
+        ['s2ui-create-challenge-questions', 'com.example', 'Profile', 'com.example.User', 'two']    || 'NUMBER-OF-QUESTIONS takes a whole number'
     }
 
     /**

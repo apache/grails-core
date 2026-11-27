@@ -45,7 +45,7 @@ import org.grails.config.CodeGenConfig
 @ToolOption(names = ['--stream'], arity = '0', description = 'Prints every statement as it runs, grouped by request, instead of a summary')
 @ToolOption(names = ['--page'], arity = '1', label = 'PAGE',
         description = 'Only the statements of one page, as controller/action or a controller name')
-@ToolOption(names = ['--top'], arity = '1', label = 'ROWS', defaultValue = '30',
+@ToolOption(names = ['--top'], arity = '1', type = 'integer', label = 'ROWS', defaultValue = '30',
         description = 'How many rows to show, a whole number from 0, where 0 shows all of them')
 @ToolOption(names = ['--all'], arity = '0', description = 'Reads what the application has run so far, not only what it runs from now on')
 @ToolOption(names = ['--once'], arity = '0', description = 'Prints the summary of what has been captured and ends')

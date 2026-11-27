@@ -53,6 +53,15 @@ class ScaffoldingDeclaredArgumentsSpec extends Specification {
         generatedViews() == ['_book.gson', 'index.gson', 'show.gson']
     }
 
+    def "the kind of views is one of gsp and json in any case, as it was before it was declared"() {
+        when:
+        Started started = start('generate-views', '--views=JSON', 'com.example.Book')
+
+        then:
+        started.exit == 0
+        generatedViews() == ['_book.gson', 'index.gson', 'show.gson']
+    }
+
     @Unroll
     def "#arguments is refused with exit code 2, says #what, and writes nothing"() {
         when:
@@ -72,6 +81,8 @@ class ScaffoldingDeclaredArgumentsSpec extends Specification {
         ['generate-all', 'com.example.Book', '--forse']                     || '--forse is not one of its options'
         ['generate-views', 'com.example.Book', '--force=true']              || '--force takes no value'
         ['generate-views', 'com.example.Book', '--views']                   || '--views needs a value'
+        ['generate-views', 'com.example.Book', '--views=xml']               || '--views takes one of gsp, json'
+        ['generate-all', 'com.example.Book', '--views', 'html']             || '--views takes one of gsp, json'
         ['generate-controller']                                             || 'DOMAIN-CLASS is required'
         ['create-scaffold-controller', 'com.example.Book', 'com.example.Other'] || 'it takes at most 1 parameter, and was given 2'
     }

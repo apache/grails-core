@@ -69,7 +69,7 @@ Arguments:
 * `statements` - Rank the statements themselves instead of the pages that run them, with how often each ran and on how many pages.
 * `stream` - Print every statement as it runs, with a header for each request, instead of a summary. A request that comes back after another interrupted it is headed as continued.
 * `page` - Only the statements of one page, given as `controller/action` or as a controller name; implies `--statements`, or filters the stream when `--stream` is given. A namespaced controller's pages match without the namespace as well as with it, and the page of a GraphQL operation, such as `graphql/index (query BookList)`, matches the page it ran on as well as its own name.
-* `top` - How many rows to show, or `0` for all of them. Defaults to 30.
+* `top` - How many rows to show, or `0` for all of them. Defaults to 30. A value that is not a whole number is refused before the command runs, with exit code 2; a negative one is refused by the command.
 * `all` - Read what the application has run so far, not only what it runs from now on.
 * `once` - Print the summary of what has been captured and exit, which with `--all` is a report of the whole run so far.
 * `file` - The capture file, a relative one read against the application directory, as the application reads `grails.gorm.queryTail.file`. Defaults to the one the application writes, `build/query-tail/capture.log` or the file `grails.gorm.queryTail.file` names. A build directory moved in `build.gradle` is followed by the application and by this command: the Grails Gradle plugin hands `grails.project.target.dir` to both, since the build runs both.

@@ -74,6 +74,8 @@ class QueryTailDeclaredArgumentsSpec extends Specification {
         ['--once=true']           || '--once takes no value'
         ['--once', 'book/show']   || 'it takes no parameters, and was given 1'
         ['--once', '--page']      || '--page needs a value'
+        ['--once', '--top=ten']   || '--top takes a whole number'
+        ['--once', '--top', '1.5'] || '--top takes a whole number'
     }
 
     /**

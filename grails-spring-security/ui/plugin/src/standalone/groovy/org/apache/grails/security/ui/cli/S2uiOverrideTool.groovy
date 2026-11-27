@@ -44,8 +44,10 @@ import org.grails.io.support.Resource
  * @since 9.0
  */
 @CompileStatic
-@ToolParameter(index = 0, label = 'TYPE', arity = '1',
-        description = 'What to copy, not case-sensitive: aclclass, aclentry, aclobjectidentity, aclsid, persistentlogin, register, registrationcode, requestmap, role, securityinfo, user, auth or layout')
+@ToolParameter(index = 0, label = 'TYPE', arity = '1', caseInsensitive = true,
+        choices = ['aclclass', 'aclentry', 'aclobjectidentity', 'aclsid', 'persistentlogin', 'register', 'registrationcode', 'requestmap', 'role',
+                'securityinfo', 'user', 'auth', 'layout'],
+        description = 'What to copy: the controller and the views of a type, or the views alone of auth and layout')
 @ToolParameter(index = 1, label = 'CONTROLLER-PACKAGE', arity = '0..1', required = false,
         description = 'The package of the controller that is written; required for every type but auth and layout, which take none')
 @ToolHints(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false)

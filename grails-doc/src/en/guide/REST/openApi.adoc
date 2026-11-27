@@ -93,7 +93,9 @@ A character of the group's name a file name cannot hold, such as the `/` of `adm
 as `-`, so that group is written to `openapi-admin-v1.yaml`; where two groups would then be written
 to one file, the command writes nothing and names them.
 The `--output-directory` and `--format` options, or the `grails.openapi.output-directory` and
-`grails.openapi.output-format` settings, choose where and whether YAML or JSON is written:
+`grails.openapi.output-format` settings, choose where and whether YAML or JSON is written. The
+option takes `yaml` or `json`, in upper or lower case, and refuses any other value before the
+application is started, with exit code 2:
 
 [source,shell]
 ----

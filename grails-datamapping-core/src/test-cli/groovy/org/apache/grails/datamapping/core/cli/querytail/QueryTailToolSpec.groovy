@@ -164,14 +164,22 @@ class QueryTailToolSpec extends Specification {
         given:
         File capture = capture(new File(tempDir, 'capture.log'))
 
-        when:
-        Map refused = run(tempDir, 'query-tail', '--once', '--top=ten', "--file=${capture.path}".toString())
+        when: 'a whole number below 0, which the declaration of --top takes'
+        Map refused = run(tempDir, 'query-tail', '--once', '--top=-1', "--file=${capture.path}".toString())
 
         then: 'the command says so and returns false: nothing it threw reached what runs it'
         refused.exit == 1
-        refused.err.readLines().last() == "| Error --top takes a number of rows, such as --top=10, not 'ten'"
+        refused.err.readLines().last() == "| Error --top takes a number of rows, such as --top=10, not '-1'"
         !refused.err.contains('Command execution error')
         !refused.out.contains('book/show')
+
+        when: 'what is no whole number at all'
+        Map notWhole = run(tempDir, 'query-tail', '--once', '--top=ten', "--file=${capture.path}".toString())
+
+        then: 'the declaration refuses it before the command runs'
+        notWhole.exit == 2
+        notWhole.err.readLines().last() == '| Error query-tail: --top takes a whole number. grails help query-tail shows its options'
+        !notWhole.out.contains('book/show')
     }
 
     void "a JVM that runs the command again and again keeps no shutdown hook of a run that has ended"() {

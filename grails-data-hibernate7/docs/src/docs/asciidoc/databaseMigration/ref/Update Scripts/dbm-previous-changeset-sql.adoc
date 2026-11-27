@@ -35,7 +35,7 @@ grails dbm-previous-changeset-sql [--contexts=CONTEXTS] [--dataSource=DATASOURCE
 
 Required arguments:
 
-* `NUMBER` - The number of change sets, from the last of the change log, whose SQL is written.
+* `NUMBER` - The number of change sets, from the last of the change log, whose SQL is written. A whole number: anything else is refused before the application is started, with exit code 2.
 
 Optional arguments:
 
@@ -43,7 +43,7 @@ Optional arguments:
 * `--contexts` - The contexts of the change sets to take, separated by commas: only the change sets of one of them are taken. Without it, the contexts `grails.plugin.databasemigration.contexts` configures, or every change set.
 * `--dataSource` - The data source to work with, by its name under `dataSources` in `application.[yml|groovy]`, as `--dataSource=reports`. Without it, the default data source.
 * `--defaultSchema` - The schema of the database to work in where the change log names none.
-* `--skip` - The number of the last change sets of the change log to leave out; `0` when not given.
+* `--skip` - The number of the last change sets of the change log to leave out; `0` when not given. A whole number: anything else is refused before the application is started, with exit code 2.
 
 The tool runs in the application, which the build of the project starts around it, for the `development` environment. For another environment, name it in front of the name of the tool with `run-tool`, as `grails run-tool -Dgrails.env=production dbm-previous-changeset-sql`, or give it to the build, as `./gradlew -Dgrails.env=production runTool --arg=dbm-previous-changeset-sql` or `./gradlew -Dgrails.env=production dbmPreviousChangesetSql`; after the name of the tool, `-Dgrails.env` is an argument of the tool and selects no environment.
 

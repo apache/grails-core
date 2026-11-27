@@ -33,7 +33,7 @@ grails dbm-rollback-count [--contexts=CONTEXTS] [--dataSource=DATASOURCE] [--def
 
 Required arguments:
 
-* `NUMBER` - The number of change sets to roll back.
+* `NUMBER` - The number of change sets to roll back. A whole number: anything else is refused before the application is started, with exit code 2.
 
 Optional arguments:
 
