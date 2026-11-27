@@ -76,6 +76,8 @@ grails.gorm.default.mapping = {
 }
 ----
 
+`runtime.groovy` is only read when the application also has a `grails-app/conf/application.groovy`, which can be empty (see <<config,Configuration Types>>).
+
 ### Spring 5 and Spring Boot 2.1
 
 Grails 4.0 is built on Spring 5 and Spring Boot 2.1. See the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.0-Migration-Guide[migration guide] and https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.1-Release-Notes[release notes] if you are using Spring specific features.

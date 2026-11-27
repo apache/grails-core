@@ -50,6 +50,8 @@ Note the use of the `shared` argument, whose value is the name of one of the con
 
 The '*' constraint is a special case: it means that the associated constraints ('nullable' and 'size' in the above example) will be applied to all properties in all validateable classes. These defaults can be overridden by the constraints declared in a validateable class.
 
+`runtime.groovy` is only read when the application also has a `grails-app/conf/application.groovy`, which can be empty (see <<config,Configuration Types>>).
+
 
 === Importing Constraints
 

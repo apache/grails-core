@@ -54,7 +54,7 @@ One limitation of the default table naming scheme is that it is problematic to h
 grails.gorm.table.prefix.enabled = true
 ----
 
-Refer to the link:{guidePath}conf.html[configuration] section of more details on defining configuration options.
+`runtime.groovy` is only read when the application also has a `grails-app/conf/application.groovy`, which can be empty (see link:{guidePath}conf.html#config[Configuration Types]). Refer to the link:{guidePath}conf.html[configuration] section for more details on defining configuration options.
 
 Refer to the user guide section on link:{guidePath}GORM.html[GORM] for more information.
 
@@ -91,6 +91,8 @@ grails.gorm.default.mapping = {
         autowire true
 }
 ----
+
+`runtime.groovy` is only read when the application also has a `grails-app/conf/application.groovy`, which can be empty (see link:{guidePath}conf.html#config[Configuration Types]).
 
 For versions below Grails 3.3.0, you can re-enable it changing the `grails.gorm.autowire` configuration parameter.
 
