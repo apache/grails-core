@@ -31,7 +31,7 @@ import org.springframework.core.env.MapPropertySource
 /**
  * Turns the provider auto-configurations off while the stubs are enabled, so a test environment needs
  * neither credentials nor a database: every {@code spring.ai.model.*} selection property, the chat,
- * embedding, image, audio and moderation models', and {@code spring.ai.vectorstore.type} default to
+ * embedding, image, audio, moderation and decision models', and {@code spring.ai.vectorstore.type} default to
  * {@code none}. The defaults sit below every other property source, so an application that names a
  * provider in its configuration keeps it, and the stub for that kind of model then backs off.
  *
@@ -58,6 +58,7 @@ class AiStubEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordere
     public static final String AUDIO_TRANSCRIPTION_MODEL = SpringAIModelProperties.AUDIO_TRANSCRIPTION_MODEL
     public static final String AUDIO_SPEECH_MODEL = SpringAIModelProperties.AUDIO_SPEECH_MODEL
     public static final String MODERATION_MODEL = SpringAIModelProperties.MODERATION_MODEL
+    public static final String DECISION_MODEL = SpringAIModelProperties.DECISION_MODEL
     public static final String VECTOR_STORE = 'spring.ai.vectorstore.type'
     public static final String NONE = 'none'
 
@@ -67,7 +68,7 @@ class AiStubEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordere
      */
     public static final List<String> SELECTION_PROPERTIES = List.of(
             CHAT_MODEL, EMBEDDING_MODEL, TEXT_EMBEDDING_MODEL, MULTIMODAL_EMBEDDING_MODEL, IMAGE_MODEL,
-            AUDIO_TRANSCRIPTION_MODEL, AUDIO_SPEECH_MODEL, MODERATION_MODEL, VECTOR_STORE)
+            AUDIO_TRANSCRIPTION_MODEL, AUDIO_SPEECH_MODEL, MODERATION_MODEL, DECISION_MODEL, VECTOR_STORE)
 
     @Override
     void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {

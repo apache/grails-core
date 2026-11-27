@@ -1646,7 +1646,20 @@ API that Hibernate Validator 9 uses. This fixes message interpolation in standal
 If the application replaces GORM's default EL implementation, supply an EL 6-compatible implementation and remove
 explicit EL 5 version overrides. Applications using the default dependencies need no code changes.
 
-==== 35. Pages Are Compiled Again Only for Changes They Can See
+==== 35. Spring AI 2.1 for Applications Using Spring AI
+
+Spring AI 2.1 is the Spring AI line for Spring Boot 4.2, so the Grails BOM moves applications that use the `grails-spring-ai` plugin, or Spring AI directly, from Spring AI 2.0.1 to 2.1.0.
+The {springAiReference}upgrade-notes.html[Spring AI upgrade notes] list the changes of 2.0.2, 2.0.3 and 2.1.0, provider by provider and for the `ChatClient`, chat memory and advisors.
+
+Spring AI 2.1 adds decision models, which pick among known outcomes and report how likely each is; the OpenAI and Ollama starters auto-configure one.
+The provider of the decision model is selected with `spring.ai.model.decision`, and in the test environment `grails-testing-support-ai` defaults it to `none`, like the other selection properties, so a test needs no credentials for it.
+
+===== Required Actions
+
+* An application that takes the Spring AI version from the Grails BOM changes nothing in its build; follow the Spring AI upgrade notes for the provider APIs it calls.
+* An application that pins `spring-ai-bom` itself moves the pin to 2.1, the line for Spring Boot 4.2.
+
+==== 36. Pages Are Compiled Again Only for Changes They Can See
 
 `compileGroovyPages` and `compileWebappGroovyPages` compare the project's own classes by their ABI, as Gradle compares the classpath of a Java compilation: the classes, their members and signatures, and their annotations. A change to a method body or a private member of an application class leaves the compiled pages up to date, where every change to any class of the project compiled every page again. The libraries the pages are compiled against, the Groovy and the page compiler among them, are still compared by content, and so are the classes of the project's `ast` source set, whose transformations run while the pages are compiled. An application with a `grails-app/conf/application.groovy` keeps all of its classes compared by content, since that configuration runs with them and sets the codecs and other settings of the pages; one configured by `application.yml` alone has the whole gain. `generateScaffoldedViews` reads only the annotations and declarations of the controllers, compares the classes the same way, and has what it reads of them, each controller's domain class and whether it has a namespace, as an input of its own, so a change to a scaffolded controller's code no longer expands its pages again.
 
