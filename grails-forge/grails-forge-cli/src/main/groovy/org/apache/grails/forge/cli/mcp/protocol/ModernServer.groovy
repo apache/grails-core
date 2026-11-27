@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.cli.mcp.protocol
 
+import java.security.SecureRandom
 import java.time.Duration
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
@@ -37,6 +38,7 @@ import io.modelcontextprotocol.modern.McpSchema.ReadResourceResult
 import io.modelcontextprotocol.modern.McpSchema.Resource
 import io.modelcontextprotocol.modern.McpSchema.ResourceTemplate
 import io.modelcontextprotocol.modern.McpSchema.Tool
+import io.modelcontextprotocol.modern.server.HmacRequestStateCodec
 import io.modelcontextprotocol.modern.server.McpAsyncNotifier
 import io.modelcontextprotocol.modern.server.McpAsyncResponse
 import io.modelcontextprotocol.modern.server.McpRequestContext
@@ -124,6 +126,8 @@ final class ModernServer {
                 .feature(ToolsFeature.ofAsync(new Tools(this), json, McpJsonDefaults.getSchemaValidator(), 0L, CacheScope.PRIVATE))
                 .feature(ResourcesFeature.ofSync(new Resources(this), json, 0L, CacheScope.PRIVATE))
                 .subscriptions(changes)
+                // one process serves one client: a key of its own, which no other instance has to open what it seals
+                .requestStateCodec(HmacRequestStateCodec.builder().key(randomKey()).jsonMapper(json).build())
                 .build()
         this.transport = new StdioMcpTransport(server, json, input, output)
         handler.onListChanged { String list ->
@@ -392,5 +396,11 @@ final class ModernServer {
                 throw io.modelcontextprotocol.modern.McpException.invalidParams("Unknown cursor: ${cursor}".toString())
             }
         }
+    }
+
+    private static byte[] randomKey() {
+        byte[] key = new byte[32]
+        new SecureRandom().nextBytes(key)
+        return key
     }
 }
