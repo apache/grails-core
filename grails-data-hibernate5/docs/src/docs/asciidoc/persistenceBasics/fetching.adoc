@@ -137,7 +137,7 @@ The `fetch` argument of `list`, `findWhere`, `findAllWhere`, and of `find` and `
 
 MySQL does not allow an update or a delete to select from the table that it modifies, and neither does MariaDB before version 10.3. With a MySQL dialect, or a MariaDB dialect older than `MariaDB103Dialect`, `updateAll` and `deleteAll` select the identifiers of the instances first, and then update or delete the instances with those identifiers, when the join type is requested for a path that leads back to the queried class, such as the `parent` of a category, or that starts with a collection of a basic type.
 
-An association that the query has criteria on is joined for those criteria: in a where query or a detached criteria the requested join type is used for that join, also when a fetch mode is requested for the association afterwards, and in a criteria query the association keeps the join of its criteria. A join type is requested for a nested association by its path, as in `join('flights.destination', JoinType.LEFT)`.
+An association that the query has criteria on is joined for those criteria with the requested join type. A fetch mode that is requested for the association afterwards, as `join('location')` or `select('location')` after `join('location', JoinType.LEFT)`, replaces the join type for the fetch of the association, so the join type no longer leaves out any instance by itself, but the join of the criteria keeps it. This holds for a where query, a detached criteria and a criteria query. A join type is requested for a nested association by its path, as in `join('flights.destination', JoinType.LEFT)`.
 
 
 === Using Batch Fetching
