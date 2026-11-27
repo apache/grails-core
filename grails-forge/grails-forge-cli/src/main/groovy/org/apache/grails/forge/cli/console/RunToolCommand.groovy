@@ -18,6 +18,8 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import org.grails.forge.feature.FeatureSelectionException
 import picocli.CommandLine
@@ -95,6 +97,7 @@ class RunToolCommand extends GradleEnvironmentCommand {
             err("The arguments of the tool could not be written for Gradle: ${GradleRunner.line(e.getMessage())}. Gradle was not run")
             return 1
         }
+        Path result = ToolResult.prepare(project, file)
         try {
             argumentsOption = file.option
             // as when the tool is run by its name: what runs and where it comes from, before Gradle is started
@@ -110,6 +113,7 @@ class RunToolCommand extends GradleEnvironmentCommand {
             said.flush()
             return super.run(project)
         } finally {
+            ToolResult.collect(project, result, FeatureSelectionException.shown(name), spec.commandLine().getErr())
             file.close()
         }
     }

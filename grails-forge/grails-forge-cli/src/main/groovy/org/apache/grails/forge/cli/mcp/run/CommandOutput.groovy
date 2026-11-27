@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 import groovy.json.JsonException
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.ToolResult
 import org.apache.grails.forge.cli.mcp.McpNames
 
 /**
@@ -122,8 +123,15 @@ final class CommandOutput {
             truncated = cut.truncated
             content.add(text(cut.text))
         }
-        // D8 seam (M5b): the result a tool of the project sets with executionContext.result, read once the tool has ended, becomes
-        // the structured content of the result here, and a text block of its JSON, beside what the tool wrote (design 7.5)
+        // the result a tool of the project sets with executionContext.result, read once the tool has ended, is the structured
+        // content of the result, and a text block of its JSON, beside what the tool wrote
+        Map<String, Object> given = null
+        if (document == null && ran.toolResult != null) {
+            // the structured content of a result is an object: any other value is the member result of one
+            boolean object = ran.toolResult.value instanceof Map
+            given = object ? (Map<String, Object>) ran.toolResult.value : [result: ran.toolResult.value] as Map<String, Object>
+            content.add(text(object ? ran.toolResult.json : '{"result":' + ran.toolResult.json + '}'))
+        }
         if (ran.note != null) {
             Map<String, Object> first = content.first()
             String said = (String) first.get('text')
@@ -134,8 +142,8 @@ final class CommandOutput {
         }
         Map<String, Object> result = new LinkedHashMap<>()
         result.put('content', content)
-        if (document != null) {
-            result.put('structuredContent', document)
+        if (document != null || given != null) {
+            result.put('structuredContent', document != null ? document : given)
         }
         result.put('isError', failed)
         Map<String, Object> meta = new LinkedHashMap<>()
@@ -254,6 +262,9 @@ final class CommandOutput {
 
         /** The title of the tool, as {@code grails compile}. */
         String title
+
+        /** What the tool the command line ran gave as its result, {@code executionContext.result}; {@code null} for none. */
+        ToolResult toolResult
 
         /** The command line that was run, with the options the server gives in front of it. */
         List<String> commandLine = []

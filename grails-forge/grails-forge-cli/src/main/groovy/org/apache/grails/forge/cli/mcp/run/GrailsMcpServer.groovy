@@ -43,6 +43,7 @@ import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.ToolCommand
+import org.apache.grails.forge.cli.console.ToolResult
 import org.apache.grails.forge.cli.mcp.Lane
 import org.apache.grails.forge.cli.mcp.McpCallContext
 import org.apache.grails.forge.cli.mcp.McpException
@@ -209,6 +210,7 @@ final class GrailsMcpServer implements McpHandler, Closeable {
         output.merged = ran.streams.merged()
         output.output = ran.streams.standardOutput()
         output.errors = ran.streams.standardError()
+        output.toolResult = ToolResult.take(ran.streams)
         output.json = tool.jsonResult(arguments)
         output.log = logs.keep(tool.name, CommandOutput.cleaned(output.merged))
         output.note = tool.name == 'create-tool' && ran.exitCode == 0 ? CommandOutput.LISTED_AFTER_COMPILE : null
