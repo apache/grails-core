@@ -1,0 +1,140 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+
+# web
+title: Grails MCP Server
+description: Writes .mcp.json, which registers ./grailsw mcp as the MCP server of the project for AI agents.
+category: Development Tools
+documentation: https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .mcp.json
++ {
++   "mcpServers": {
++     "grails": {
++       "command": "./grailsw",
++       "args": ["mcp"]
++     }
++   }
++ }
+== README.md
++ ## Using Grails from an AI agent
++ `.mcp.json` registers `./grailsw mcp`, the command line of this project as a Model Context Protocol (MCP) server, for the agents that read the file, such as Claude Code: they can then run the commands of `grails` and the tools of the application. On Windows the entry is `"command": "cmd", "args": ["/c", "grailsw.bat", "mcp"]`. Cursor reads the same entry from `.cursor/mcp.json`. The file is committed with the project, so it registers the server for everyone who works on it.
++ ## Feature grails-mcp documentation
++ - [Grails MCP Server documentation](https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp)
++ 
++ 
++ 
++ 
+
+# rest_api
+title: Grails MCP Server
+description: Writes .mcp.json, which registers ./grailsw mcp as the MCP server of the project for AI agents.
+category: Development Tools
+documentation: https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .mcp.json
++ {
++   "mcpServers": {
++     "grails": {
++       "command": "./grailsw",
++       "args": ["mcp"]
++     }
++   }
++ }
+== README.md
++ ## Using Grails from an AI agent
++ `.mcp.json` registers `./grailsw mcp`, the command line of this project as a Model Context Protocol (MCP) server, for the agents that read the file, such as Claude Code: they can then run the commands of `grails` and the tools of the application. On Windows the entry is `"command": "cmd", "args": ["/c", "grailsw.bat", "mcp"]`. Cursor reads the same entry from `.cursor/mcp.json`. The file is committed with the project, so it registers the server for everyone who works on it.
++ ## Feature grails-mcp documentation
++ - [Grails MCP Server documentation](https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp)
++ 
++ 
++ 
++ 
+
+# web_plugin
+title: Grails MCP Server
+description: Writes .mcp.json, which registers ./grailsw mcp as the MCP server of the project for AI agents.
+category: Development Tools
+documentation: https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .mcp.json
++ {
++   "mcpServers": {
++     "grails": {
++       "command": "./grailsw",
++       "args": ["mcp"]
++     }
++   }
++ }
+== README.md
++ ## Using Grails from an AI agent
++ `.mcp.json` registers `./grailsw mcp`, the command line of this project as a Model Context Protocol (MCP) server, for the agents that read the file, such as Claude Code: they can then run the commands of `grails` and the tools of the application. On Windows the entry is `"command": "cmd", "args": ["/c", "grailsw.bat", "mcp"]`. Cursor reads the same entry from `.cursor/mcp.json`. The file is committed with the project, so it registers the server for everyone who works on it.
++ ## Feature grails-mcp documentation
++ - [Grails MCP Server documentation](https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp)
++ 
++ 
++ 
++ 
+
+# plugin
+title: Grails MCP Server
+description: Writes .mcp.json, which registers ./grailsw mcp as the MCP server of the project for AI agents.
+category: Development Tools
+documentation: https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .mcp.json
++ {
++   "mcpServers": {
++     "grails": {
++       "command": "./grailsw",
++       "args": ["mcp"]
++     }
++   }
++ }
+== README.md
++ ## Using Grails from an AI agent
++ `.mcp.json` registers `./grailsw mcp`, the command line of this project as a Model Context Protocol (MCP) server, for the agents that read the file, such as Claude Code: they can then run the commands of `grails` and the tools of the application. On Windows the entry is `"command": "cmd", "args": ["/c", "grailsw.bat", "mcp"]`. Cursor reads the same entry from `.cursor/mcp.json`. The file is committed with the project, so it registers the server for everyone who works on it.
++ ## Feature grails-mcp documentation
++ - [Grails MCP Server documentation](https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp)
++ 
++ 
++ 
++ 
+
+# rest_api_plugin
+title: Grails MCP Server
+description: Writes .mcp.json, which registers ./grailsw mcp as the MCP server of the project for AI agents.
+category: Development Tools
+documentation: https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .mcp.json
++ {
++   "mcpServers": {
++     "grails": {
++       "command": "./grailsw",
++       "args": ["mcp"]
++     }
++   }
++ }
+== README.md
++ ## Using Grails from an AI agent
++ `.mcp.json` registers `./grailsw mcp`, the command line of this project as a Model Context Protocol (MCP) server, for the agents that read the file, such as Claude Code: they can then run the commands of `grails` and the tools of the application. On Windows the entry is `"command": "cmd", "args": ["/c", "grailsw.bat", "mcp"]`. Cursor reads the same entry from `.cursor/mcp.json`. The file is committed with the project, so it registers the server for everyone who works on it.
++ ## Feature grails-mcp documentation
++ - [Grails MCP Server documentation](https://grails.apache.org/docs/VERSION/guide/commandLine.html#mcp)
++ 
++ 
++ 
++ 
+

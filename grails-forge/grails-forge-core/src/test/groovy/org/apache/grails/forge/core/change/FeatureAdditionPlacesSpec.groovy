@@ -129,11 +129,12 @@ class FeatureAdditionPlacesSpec extends ApplicationContextSpec {
         // which made a change next to them one more feature's conflict; the merge was not changed. 129, 183, 189 and 131 until
         // cache-ehcache, which declared one line, the plugin, declared two at two places, grails-cache and Ehcache; the merge was not changed.
         // 130, 185, 191 and 132 until cache-ehcache declared jaxb-runtime among the runtimeOnly lines, a third place; the merge was not changed
+        // README.md: 70, 101, 101 and 71 until grails-mcp, a 30th feature that changes it, added a section of the README; the merge was not changed
         where:
         file                              || mostInserted | mostRemoved | mostChanged | mostEmptyLines
         'build.gradle'                    || 131          | 187         | 193         | 133
         'grails-app/conf/application.yml' || 43           | 69          | 69          | 40
-        'README.md'                       || 70           | 101         | 101         | 71
+        'README.md'                       || 74           | 107         | 107         | 75
     }
 
     @Unroll

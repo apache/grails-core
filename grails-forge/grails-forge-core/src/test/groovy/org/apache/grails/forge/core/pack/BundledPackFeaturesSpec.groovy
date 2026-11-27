@@ -115,6 +115,7 @@ class BundledPackFeaturesSpec extends ApplicationContextSpec {
                 'grails-gorm-testing-support',
                 'grails-gradle-plugin',
                 'grails-layout',
+                'grails-mcp',
                 'grails-publish',
                 'grails-quartz',
                 'grails-spring-ai',
