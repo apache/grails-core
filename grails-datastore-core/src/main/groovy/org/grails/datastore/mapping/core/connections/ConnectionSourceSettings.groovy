@@ -86,6 +86,15 @@ class ConnectionSourceSettings implements Settings {
     String defaultIdType = 'long'
 
     /**
+     * Whether a sort by a property of an association joins the association with a left join, so that the
+     * sort keeps the instances whose association is null. When false, the association is joined with an
+     * inner join, which leaves those instances out.
+     *
+     * @since 7.0.18
+     */
+    boolean leftJoinAssociationSort = false
+
+    /**
      * Package names that should fail on error
      */
     List<String> failOnErrorPackages = Collections.emptyList()
