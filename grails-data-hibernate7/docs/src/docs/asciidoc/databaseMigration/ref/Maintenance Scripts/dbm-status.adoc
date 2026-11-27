@@ -21,35 +21,26 @@ under the License.
 
 ====== Purpose
 
-Outputs count or list of unrun change sets to STDOUT or a file.
+Writes the number or the list of the change sets that have not run, to the standard output or a file.
 
 ====== Description
 
 Usage:
-[source,java]
+[source,console]
 ----
-grails <<environment>> dbm-status <<filename>> --verbose=<<verbose>> --contexts=<<contexts>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
+grails dbm-status [--contexts=CONTEXTS] [--dataSource=DATASOURCE] [--defaultSchema=SCHEMA] [--verbose=TRUE-OR-FALSE] [FILE]
 ----
 
-Required arguments: __none__.
+Required arguments: _none_.
 
 Optional arguments:
 
-* `filename` - The path to the output file to write to. If not specified output is written to the console
-* `verbose` - If `true` (the default) the changesets are listed; if `false` only the count is displayed. The option takes the value, as `--verbose=false`
-* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be included
-* `defaultSchema` - The default schema name to use
-* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+* `FILE` - The file to write the status to, relative to the directory of the project. Without it, the status is written to the standard output.
+* `--contexts` - The contexts of the change sets to take, separated by commas: only the change sets of one of them are taken. Without it, the contexts `grails.plugin.databasemigration.contexts` configures, or every change set.
+* `--dataSource` - The data source to work with, by its name under `dataSources` in `application.[yml|groovy]`, as `--dataSource=reports`. Without it, the default data source.
+* `--defaultSchema` - The schema of the database to work in where the change log names none.
+* `--verbose` - With `true`, the default, the change sets are listed; with `false` only their number is written. The option takes its value, written as `--verbose=false`: `--verbose` alone is refused, and the argument after `--verbose` is taken as its value.
 
-NOTE: Note that the `verbose`, `contexts`, `defaultSchema` and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
-[source,groovy]
-----
-grails dbm-status "--verbose=<<verbose>>" "--contexts=<<contexts>>" "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
-----
+The tool runs in the application, which the build of the project starts around it, for the `development` environment. For another environment, name it in front of the name of the tool with `run-tool`, as `grails run-tool -Dgrails.env=production dbm-status`, or give it to the build, as `./gradlew -Dgrails.env=production runTool --arg=dbm-status` or `./gradlew -Dgrails.env=production dbmStatus`; after the name of the tool, `-Dgrails.env` is an argument of the tool and selects no environment.
 
-NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
-
-[source,groovy]
-----
---dataSource=reports
-----
+The value of an option follows `=` or is the next argument: `--dataSource=reports` and `--dataSource reports` are the same. `grails help dbm-status` lists the options and parameters the tool takes. An option it does not take, an argument more than it takes and a required argument that is missing are refused before the application is started, with exit code 2 and one line, as `| Error dbm-status: --datasource is not one of its options. grails help dbm-status shows its options`.

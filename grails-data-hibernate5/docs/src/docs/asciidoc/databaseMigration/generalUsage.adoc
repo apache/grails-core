@@ -24,21 +24,21 @@ After creating the initial changelog, the typical workflow will be along the lin
 * make domain class changes that affect the schema
 * add changes to the changelog for them
 * backup your database in case something goes wrong
-* run `grails dbm-update` to update your development environment (or wherever you're applying the changes)
+* run `grails dbm-update` to update your development environment, or `grails run-tool -Dgrails.env=NAME dbm-update` for the environment you're applying the changes to
 * check the updated domain class(es) and changelog(s) into source control
 
 [WARNING]
 =====
 1. When running migration scripts on non-development databases, it's important that you backup the database before running the migration in case anything goes wrong. You could also make a copy of the database and run the script against that, and if there's a problem the real database will be unaffected.
-2. Setting the dbCreate setting to "none" is recommended when executing the dbm migration commands. Otherwise you might run into troubles and the commands could not be executed.
+2. Setting the dbCreate setting to "none" is recommended when running the `dbm-*` tools. Otherwise you might run into troubles and the tools could not be run.
 =====
 
-To create the changelog additions, you can either manually create the changes or with the <<ref-diff-scripts-dbm-gorm-diff,dbm-gorm-diff>> script (you can also use the <<ref-diff-scripts-dbm-diff,dbm-diff>> script but it's far less convenient and requires a 2nd temporary database).
+To create the changelog additions, you can either manually create the changes or with the <<ref-diff-scripts-dbm-gorm-diff,dbm-gorm-diff>> tool (you can also use the <<ref-diff-scripts-dbm-diff,dbm-diff>> tool but it's far less convenient and requires a 2nd temporary database).
 
 You have a few options with `dbm-gorm-diff`:
 
 * `dbm-gorm-diff` will dump to the console if no filename is specified, so you can copy/paste from there
-* if you include the `--add` parameter when running the script with a filename it will register an include for the filename in the main changelog for you
+* if you include the `--add` option when running the tool with a filename it will register an include for the filename in the main changelog for you
 
 Regardless of which approach you use, be sure to inspect generated changes and adjust as necessary.
 

@@ -29,8 +29,8 @@ Individual changes have an ID that should be globally unique, although they also
 
 As you make changes in your code (typically domain classes) that require changes in the database, you add a new change set to the changelog. Commit the code changes along with the changelog additions, and the other developers on your team will get both when they update from source control. Once they apply the new changes their code and development database will be in sync with your changes. Likewise when you deploy to a QA, a staging server, or production, you'll run the un-run changes that correspond to the code updates to being that environment's database in sync. Liquibase keeps track of previously executed changes so there's no need to think about what has and hasn't been run yet.
 
-*Scripts*
+*Tools*
 
-Your primary interaction with the plugin will be using the provided scripts. For the most part these correspond to the many Liquibase commands that are typically executed directly from the commandline or with its Ant targets, but there are also a few Grails-specific scripts that take advantage of the information available from the GORM mappings.
+Your primary interaction with the plugin will be using the tools it adds to the `grails` command, which are run by their names, as `grails dbm-update`. For the most part these correspond to the many Liquibase commands that are typically executed directly from the commandline or with its Ant targets, but there are also a few Grails-specific tools that take advantage of the information available from the GORM mappings.
 
-All the scripts start with `dbm-` to ensure that they're unique and don't clash with scripts from Grails or other plugins.
+All the tools start with `dbm-` to ensure that they're unique and don't clash with the commands of Grails or the tools of other plugins. `grails help` lists them, and `grails help dbm-update` shows the options and parameters of one. Each runs in the application, which the build of the project starts around it, for the `development` environment; `grails run-tool -Dgrails.env=production dbm-update` runs one for another environment. See the Reference below, and "Creating Tools" in the Grails user guide for how tools are run.

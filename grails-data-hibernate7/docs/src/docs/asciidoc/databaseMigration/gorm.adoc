@@ -27,18 +27,18 @@ On the other end of the spectrum, Hibernate's `create-drop` mode (or `create`) w
 
 *dbm-gorm-diff*
 
-The plugin provides a script that will compare your GORM current domain model with a database that you specify, and the result is a Liquibase changeset - `dbm-gorm-diff`. This is the same changeset you would get if you exported your domain model to a scratch database and diffed it with the other database, but it's more convenient.
+The plugin provides a tool that will compare your GORM current domain model with a database that you specify, and the result is a Liquibase changeset - `dbm-gorm-diff`. This is the same changeset you would get if you exported your domain model to a scratch database and diffed it with the other database, but it's more convenient.
 
 So a good workflow would be:
 
 * make whatever domain class changes you need (add new ones, delete unneeded ones, add/change/remove properties, etc.)
-* once your tests pass, and you're ready to commit your changes to source control, run the script to generate the changeset that will bring your database back in line with your code
+* once your tests pass, and you're ready to commit your changes to source control, run the tool to generate the changeset that will bring your database back in line with your code
 * add the changeset to an existing changelog file, or use the `include` tag to include the whole file
 * run the changeset on your functional test database
 * assuming your functional tests pass, check everything in as one commit
-* the other members of your team will get both the code and database changes when they next update, and will know to run the update script to sync their database with the latest code
+* the other members of your team will get both the code and database changes when they next update, and will know to run the update tool, `dbm-update`, to sync their database with the latest code
 * once you're ready to deploy to QA for testing (or staging or production), you can run all the un-run changes since the last deployment
 
 *dbm-generate-gorm-changelog*
 
-The <<ref-rollback-scripts-dbm-generate-gorm-changelog,dbm-generate-gorm-changelog>> script is useful for when you want to switch from `create-drop` mode to doing proper migrations. It's not very useful if you already have a database that's in sync with your code, since you can just use the <<ref-rollback-scripts-dbm-generate-changelog,dbm-generate-changelog>> script that creates a changelog from your database.
+The <<ref-rollback-scripts-dbm-generate-gorm-changelog,dbm-generate-gorm-changelog>> tool is useful for when you want to switch from `create-drop` mode to doing proper migrations. It's not very useful if you already have a database that's in sync with your code, since you can just use the <<ref-rollback-scripts-dbm-generate-changelog,dbm-generate-changelog>> script that creates a changelog from your database.

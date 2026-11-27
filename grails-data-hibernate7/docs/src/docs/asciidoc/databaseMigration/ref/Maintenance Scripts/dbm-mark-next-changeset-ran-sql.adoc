@@ -1,0 +1,47 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+===== dbm-mark-next-changeset-ran-sql
+
+====== Purpose
+
+Writes the SQL that marks the next change set as executed in the database, to the standard output or a file.
+
+====== Description
+
+Generates the SQL statements for the Liquibase `DATABASECHANGELOG` control table that <<ref-maintenance-scripts-dbm-mark-next-changeset-ran,dbm-mark-next-changeset-ran>> would run, and changes nothing in the database.
+
+Usage:
+[source,console]
+----
+grails dbm-mark-next-changeset-ran-sql [--contexts=CONTEXTS] [--dataSource=DATASOURCE] [--defaultSchema=SCHEMA] [FILE]
+----
+
+Required arguments: _none_.
+
+Optional arguments:
+
+* `FILE` - The file to write the SQL to, relative to the directory of the project. Without it, the SQL is written to the standard output.
+* `--contexts` - The contexts of the change sets to take, separated by commas: only the change sets of one of them are taken. Without it, the contexts `grails.plugin.databasemigration.contexts` configures, or every change set.
+* `--dataSource` - The data source to work with, by its name under `dataSources` in `application.[yml|groovy]`, as `--dataSource=reports`. Without it, the default data source.
+* `--defaultSchema` - The schema of the database to work in where the change log names none.
+
+The tool runs in the application, which the build of the project starts around it, for the `development` environment. For another environment, name it in front of the name of the tool with `run-tool`, as `grails run-tool -Dgrails.env=production dbm-mark-next-changeset-ran-sql`, or give it to the build, as `./gradlew -Dgrails.env=production runTool --arg=dbm-mark-next-changeset-ran-sql` or `./gradlew -Dgrails.env=production dbmMarkNextChangesetRanSql`; after the name of the tool, `-Dgrails.env` is an argument of the tool and selects no environment.
+
+The value of an option follows `=` or is the next argument: `--dataSource=reports` and `--dataSource reports` are the same. `grails help dbm-mark-next-changeset-ran-sql` lists the options and parameters the tool takes. An option it does not take, an argument more than it takes and a required argument that is missing are refused before the application is started, with exit code 2 and one line, as `| Error dbm-mark-next-changeset-ran-sql: --datasource is not one of its options. grails help dbm-mark-next-changeset-ran-sql shows its options`.
