@@ -402,7 +402,13 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                     usedParams.add(propName);
 
                     if (value != null) {
-                        token = token.replaceFirst(DOUBLE_WILDCARD_PATTERN.pattern(), Matcher.quoteReplacement(value.toString()));
+                        try {
+                            token = token.replaceFirst(DOUBLE_WILDCARD_PATTERN.pattern(), Matcher.quoteReplacement(encode(value.toString(), encoding)));
+                        }
+                        catch (UnsupportedEncodingException e) {
+                            throw new ControllerExecutionException("Error creating URL for parameters [" +
+                                    paramValues + "], problem encoding URL part [" + value + "]: " + e.getMessage(), e);
+                        }
                         tokenSet = true;
                     }
                     else {
@@ -421,8 +427,14 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                 Object value = paramValues.get(propName);
                 usedParams.add(propName);
                 if (value != null) {
-                    String ext = "." + value;
-                    uri.append(token.replace(OPTIONAL_EXTENSION_WILDCARD + '?', ext).replace(OPTIONAL_EXTENSION_WILDCARD, ext));
+                    try {
+                        String ext = "." + encode(value.toString(), encoding);
+                        uri.append(token.replace(OPTIONAL_EXTENSION_WILDCARD + '?', ext).replace(OPTIONAL_EXTENSION_WILDCARD, ext));
+                    }
+                    catch (UnsupportedEncodingException e) {
+                        throw new ControllerExecutionException("Error creating URL for parameters [" +
+                                paramValues + "], problem encoding URL part [" + value + "]: " + e.getMessage(), e);
+                    }
                 }
                 else {
                     uri.append(token.replace(OPTIONAL_EXTENSION_WILDCARD + '?', "").replace(OPTIONAL_EXTENSION_WILDCARD, ""));

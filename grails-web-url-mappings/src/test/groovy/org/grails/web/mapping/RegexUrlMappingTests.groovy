@@ -183,6 +183,6 @@ class RegexUrlMappingTests {
         def defaultRegistry = new DefaultConstraintRegistry()
         def constraints = [new DefaultConstrainedProperty(UrlMapping.class, "controller", String.class, defaultRegistry), new DefaultConstrainedProperty(UrlMapping.class, "action", String.class, defaultRegistry), new DefaultConstrainedProperty(UrlMapping.class, "id", String.class, defaultRegistry), new DefaultConstrainedProperty(UrlMapping.class, "format", String.class, defaultRegistry)]
         def m1 = new RegexUrlMapping(parser.parse('/(*)/(*)?/(*)?(.(*))?'), null, null, null, null, null, null, UrlMapping.ANY_VERSION, constraints as ConstrainedProperty[], application)
-        assert m1.createURL([id: 'AST$RING', action: "save", controller: "someController"], null) == '/someController/save/AST$RING'
+        assert m1.createURL([id: 'AST$RING', action: "save", controller: "someController"], null) == '/someController/save/AST%24RING'
     }
 }
