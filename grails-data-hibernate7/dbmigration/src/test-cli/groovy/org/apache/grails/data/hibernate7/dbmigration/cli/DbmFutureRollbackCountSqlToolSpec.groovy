@@ -30,7 +30,7 @@ class DbmFutureRollbackCountSqlToolSpec extends ApplicationContextDatabaseMigrat
     }
 
     @AutoCleanup('delete')
-    File outputFile = File.createTempFile('rollback', 'sql')
+    File outputFile = newOutputFile('rollback.sql')
 
     def "writes SQL to roll back the database to STDOUT"() {
         given:

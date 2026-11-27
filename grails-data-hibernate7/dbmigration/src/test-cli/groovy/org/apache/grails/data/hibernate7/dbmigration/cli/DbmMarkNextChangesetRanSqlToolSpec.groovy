@@ -29,7 +29,7 @@ class DbmMarkNextChangesetRanSqlToolSpec extends ApplicationContextDatabaseMigra
     }
 
     @AutoCleanup('delete')
-    File outputFile = File.createTempFile('update', 'sql')
+    File outputFile = newOutputFile('update.sql')
 
     def "writes SQL to mark the next change as executed in the database to STDOUT"() {
         given:

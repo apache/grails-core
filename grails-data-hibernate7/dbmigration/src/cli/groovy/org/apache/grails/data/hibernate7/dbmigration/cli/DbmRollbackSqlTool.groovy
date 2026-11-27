@@ -27,7 +27,7 @@ import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
-@ToolHints(readOnlyHint = false, destructiveHint = true)
+@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true)
 @DatabaseMigrationOptions
 @ToolParameter(index = 0, label = 'TAG', arity = '1', description = 'The tag to roll back to')
 @ToolParameter(index = 1, label = 'FILE', arity = '1', required = false,
@@ -46,8 +46,11 @@ class DbmRollbackSqlTool implements ApplicationTool, ApplicationContextDatabaseM
 
         def filename = args[1]
 
+        // the file the output goes to is checked before the database is opened
+        File output = outputFile(filename)
+
         withLiquibase { Liquibase liquibase ->
-            withFileOrSystemOutWriter(filename) { Writer writer ->
+            withOutputWriter(output) { Writer writer ->
                 liquibase.rollback(tagName, contexts, writer)
             }
         }

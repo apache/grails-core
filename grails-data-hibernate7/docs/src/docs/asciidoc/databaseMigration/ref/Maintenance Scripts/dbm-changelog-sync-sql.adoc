@@ -25,7 +25,7 @@ Writes the SQL that marks all changes as executed in the database, to the standa
 
 ====== Description
 
-Generates the SQL statements for the Liquibase `DATABASECHANGELOG` control table, and changes nothing in the database.
+Generates the SQL statements for the Liquibase `DATABASECHANGELOG` control table. It changes nothing in the database, also not the tables `DATABASECHANGELOG` and `DATABASECHANGELOGLOCK` Liquibase keeps, and writes no file but a new one inside the project, so `grails mcp --read-only` offers it to an AI agent.
 
 Usage:
 [source,console]
@@ -37,7 +37,7 @@ Required arguments: _none_.
 
 Optional arguments:
 
-* `FILE` - The file to write the SQL to, relative to the directory of the project. Without it, the SQL is written to the standard output.
+* `FILE` - The file to write the SQL to, relative to the directory of the project. It has to be inside the project and not there yet: the tool replaces no file, and when the file is outside the project or there already it stops before it opens the database. Directories of its path that are not there are made. Without it, the SQL is written to the standard output.
 * `--contexts` - The contexts of the change sets to take, separated by commas: only the change sets of one of them are taken. Without it, the contexts `grails.plugin.databasemigration.contexts` configures, or every change set.
 * `--dataSource` - The data source to work with, by its name under `dataSources` in `application.[yml|groovy]`, as `--dataSource=reports`. Without it, the default data source.
 * `--defaultSchema` - The schema of the database to work in where the change log names none.

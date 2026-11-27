@@ -56,17 +56,23 @@ class DatabaseMigrationToolsCompleteSpec extends Specification {
         className << toolClasses()
     }
 
-    def "the tools that never change the database are read-only, though two of them write a file the caller names"() {
+    def "the tools that change nothing in the database and write only a new file inside the project are read-only"() {
         when:
         Map<String, Map> hints = toolClasses().collectEntries { String className ->
             Map descriptor = descriptorOf(className)
             [(descriptor.name): descriptor.hints]
         }
+        Map<String, Map> readOnly = hints.findAll { String name, Map toolHints -> toolHints.readOnlyHint }
 
-        then:
-        hints.findAll { String name, Map toolHints -> toolHints.readOnlyHint }.keySet() == ['dbm-validate', 'dbm-status', 'dbm-list-locks'] as Set
-        hints['dbm-status'] == [readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true]
-        hints['dbm-list-locks'] == [readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true]
+        then: 'the tools that write SQL Liquibase only prints, which DatabaseMigrationReadOnlyToolsSpec holds to changing nothing'
+        readOnly.keySet() == ['dbm-changelog-sync-sql', 'dbm-future-rollback-count-sql', 'dbm-future-rollback-sql', 'dbm-mark-next-changeset-ran-sql',
+                              'dbm-rollback-count-sql', 'dbm-rollback-sql', 'dbm-rollback-to-date-sql'] as Set
+        readOnly.values().every { Map toolHints -> toolHints == [readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true] }
+
+        and: 'those that make the tables of Liquibase where they are not there only add to the database'
+        ['dbm-status', 'dbm-list-locks', 'dbm-validate', 'dbm-previous-changeset-sql'].every { String name ->
+            hints[name] == [readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true]
+        }
     }
 
     // the tools of the plugin the registry of the tools finds, by the name of their class

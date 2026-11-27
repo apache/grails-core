@@ -29,7 +29,7 @@ class DbmListLocksToolSpec extends ApplicationContextDatabaseMigrationCommandSpe
     }
 
     @AutoCleanup('delete')
-    File outputFile = File.createTempFile('locks', 'txt')
+    File outputFile = newOutputFile('locks.txt')
 
     def "lists locks on the database changelog when the lock does not exist"() {
         when:

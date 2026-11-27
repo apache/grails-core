@@ -39,8 +39,11 @@ class DbmUpdateSqlTool implements ApplicationTool, ApplicationContextDatabaseMig
     void handle() {
         def filename = args[0]
 
+        // the file the output goes to is checked before the database is opened
+        File output = outputFile(filename)
+
         withLiquibase { Liquibase liquibase ->
-            withFileOrSystemOutWriter(filename) { Writer writer ->
+            withOutputWriter(output) { Writer writer ->
                 liquibase.update(contexts, writer)
             }
         }

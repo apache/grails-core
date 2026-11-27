@@ -29,7 +29,7 @@ import org.apache.grails.core.cli.ToolOption
 import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
-@ToolHints(readOnlyHint = false, destructiveHint = true)
+@ToolHints(readOnlyHint = false, destructiveHint = false, idempotentHint = true)
 @DatabaseMigrationOptions
 @ToolOption(names = ['--skip'], arity = '1', type = 'integer', label = 'NUMBER', defaultValue = '0',
         description = 'The number of the last change sets of the change log to leave out')
@@ -60,12 +60,15 @@ class DbmPreviousChangesetSqlTool implements ApplicationTool, ApplicationContext
             throw new DatabaseMigrationException("The change set skip argument '$skip' isn't a number")
         }
 
+        // the file the output goes to is checked before the database is opened
+        File output = outputFile(filename)
+
         configureLiquibase()
 
         withLiquibase { Liquibase liquibase ->
             withDatabase { Database database ->
-                withFileOrSystemOutWriter(filename) { Writer output ->
-                    doGeneratePreviousChangesetSql(output, database, liquibase, count, skip)
+                withOutputWriter(output) { Writer writer ->
+                    doGeneratePreviousChangesetSql(writer, database, liquibase, count, skip)
                 }
             }
         }

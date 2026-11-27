@@ -19,8 +19,6 @@
 package org.apache.grails.data.hibernate7.dbmigration.cli
 
 import groovy.transform.CompileStatic
-import groovy.transform.stc.ClosureParams
-import groovy.transform.stc.SimpleType
 
 import liquibase.Liquibase
 
@@ -29,7 +27,7 @@ import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolParameter
 
 // It never changes the database, and writes a file only when the caller names one: read-only, as dbm-validate is
-@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true)
+@ToolHints(readOnlyHint = false, destructiveHint = false, idempotentHint = true)
 @DatabaseMigrationOptions
 @ToolParameter(index = 0, label = 'FILE', arity = '1', required = false,
         description = 'The file to write the list to; the standard output when not given')
@@ -40,26 +38,15 @@ class DbmListLocksTool implements ApplicationTool, ApplicationContextDatabaseMig
 
     void handle() {
         def filename = args[0]
+        // the file the list goes to is checked before the database is opened
+        File output = outputFile(filename)
 
         withLiquibase { Liquibase liquibase ->
-            withFilePrintStreamOrSystemOut(filename) { PrintStream printStream ->
+            withOutputStream(output) { OutputStream out ->
+                PrintStream printStream = out instanceof PrintStream ? (PrintStream) out : new PrintStream(out, false, 'UTF-8')
                 liquibase.reportLocks(printStream)
+                printStream.flush()
             }
-        }
-    }
-
-    private static void withFilePrintStreamOrSystemOut(String filename, @ClosureParams(value = SimpleType, options = 'java.io.PrintStream') Closure closure) {
-        if (!filename) {
-            closure.call(System.out)
-            return
-        }
-
-        def outputFile = new File(filename)
-        if (!outputFile.parentFile.exists()) {
-            outputFile.parentFile.mkdirs()
-        }
-        outputFile.withOutputStream { OutputStream out ->
-            closure.call(new PrintStream(out, false, 'UTF-8'))
         }
     }
 }

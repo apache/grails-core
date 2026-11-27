@@ -25,7 +25,7 @@ Writes the SQL that updates the database to the current version, to the standard
 
 ====== Description
 
-Generates the SQL of every change set of the change log that has not run, and changes nothing in the database. This is useful for inspecting the generated SQL before running an update, or to generate SQL which can be tuned before running it by hand.
+Generates the SQL of every change set of the change log that has not run. It changes no table of the application, but releases the lock Liquibase keeps in the table `DATABASECHANGELOGLOCK` when it ends, as `dbm-update` does, so `grails mcp --read-only` does not offer it. This is useful for inspecting the generated SQL before running an update, or to generate SQL which can be tuned before running it by hand.
 
 Usage:
 [source,console]
@@ -37,7 +37,7 @@ Required arguments: _none_.
 
 Optional arguments:
 
-* `FILE` - The file to write the SQL to, relative to the directory of the project. Without it, the SQL is written to the standard output.
+* `FILE` - The file to write the SQL to, relative to the directory of the project. It has to be inside the project and not there yet: the tool replaces no file, and when the file is outside the project or there already it stops before it opens the database. Directories of its path that are not there are made. Without it, the SQL is written to the standard output.
 * `--contexts` - The contexts of the change sets to take, separated by commas: only the change sets of one of them are taken. Without it, the contexts `grails.plugin.databasemigration.contexts` configures, or every change set.
 * `--dataSource` - The data source to work with, by its name under `dataSources` in `application.[yml|groovy]`, as `--dataSource=reports`. Without it, the default data source.
 * `--defaultSchema` - The schema of the database to work in where the change log names none.

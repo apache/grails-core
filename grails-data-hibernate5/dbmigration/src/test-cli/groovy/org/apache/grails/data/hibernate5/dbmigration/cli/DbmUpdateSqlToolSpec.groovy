@@ -29,7 +29,7 @@ class DbmUpdateSqlToolSpec extends ApplicationContextDatabaseMigrationCommandSpe
     }
 
     @AutoCleanup('delete')
-    File outputFile = File.createTempFile('update', 'sql')
+    File outputFile = newOutputFile('update.sql')
 
     def "writes SQL to update database to STDOUT"() {
         given:

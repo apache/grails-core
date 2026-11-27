@@ -30,7 +30,7 @@ class DbmUpdateCountSqlToolSpec extends ApplicationContextDatabaseMigrationComma
     }
 
     @AutoCleanup('delete')
-    File outputFile = File.createTempFile('update', 'sql')
+    File outputFile = newOutputFile('update.sql')
 
     def "writes SQL to apply next NUM changes to the database to STDOUT"() {
         given:

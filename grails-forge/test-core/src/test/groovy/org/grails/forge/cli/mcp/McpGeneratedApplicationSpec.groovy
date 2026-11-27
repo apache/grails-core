@@ -255,21 +255,24 @@ class McpGeneratedApplicationSpec extends Specification {
         Tool update = tools['dbm-update']
         Tool validate = tools['dbm-validate']
         Tool status = tools['dbm-status']
-        Tool listLocks = tools['dbm-list-locks']
+        Tool rollbackSql = tools['dbm-rollback-sql']
 
         then:
-        update != null && validate != null && status != null && listLocks != null
+        update != null && validate != null && status != null && rollbackSql != null
         ((Map) update.inputSchema().get('properties')).keySet().containsAll(['dataSource', 'defaultSchema', 'contexts'])
         update.annotations().readOnlyHint() == false
-        validate.annotations().readOnlyHint() == true
 
-        and: 'the tools that only read the database are read-only, though they write a file the caller names'
-        status.annotations().readOnlyHint() == true
-        status.annotations().destructiveHint() == false
-        listLocks.annotations().readOnlyHint() == true
-        listLocks.annotations().destructiveHint() == false
+        and: 'the tools whose SQL Liquibase only prints are read-only: they change nothing in the database, and write only a new file inside the project'
+        rollbackSql.annotations().readOnlyHint() == true
+        rollbackSql.annotations().destructiveHint() == false
         tools.findAll { String name, Tool tool -> name.startsWith('dbm-') && tool.annotations()?.readOnlyHint() }.keySet() ==
-                ['dbm-validate', 'dbm-status', 'dbm-list-locks'] as Set
+                ['dbm-changelog-sync-sql', 'dbm-future-rollback-count-sql', 'dbm-future-rollback-sql', 'dbm-mark-next-changeset-ran-sql',
+                 'dbm-rollback-count-sql', 'dbm-rollback-sql', 'dbm-rollback-to-date-sql'] as Set
+
+        and: 'those that make the tables of Liquibase in a database without them are not, though they only add to it'
+        status.annotations().readOnlyHint() == false
+        status.annotations().destructiveHint() == false
+        validate.annotations().readOnlyHint() == false
         ((Map) update.meta()['org.apache.grails/command']).origin != 'application'
         tools.keySet().count { it.startsWith('dbm-') } > 20
     }

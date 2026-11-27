@@ -30,7 +30,7 @@ class DbmRollbackSqlToolSpec extends ApplicationContextDatabaseMigrationCommandS
     }
 
     @AutoCleanup('delete')
-    File outputFile = File.createTempFile('rollback', 'sql')
+    File outputFile = newOutputFile('rollback.sql')
 
     def setup() {
         command.changeLogFile << CHANGE_LOG_CONTENT

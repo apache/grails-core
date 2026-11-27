@@ -48,8 +48,11 @@ class DbmUpdateCountSqlTool implements ApplicationTool, ApplicationContextDataba
         }
 
         def filename = args[1]
+        // the file the output goes to is checked before the database is opened
+        File output = outputFile(filename)
+
         withLiquibase { Liquibase liquibase ->
-            withFileOrSystemOutWriter(filename) { Writer writer ->
+            withOutputWriter(output) { Writer writer ->
                 liquibase.update(number.toInteger(), contexts, writer)
             }
         }

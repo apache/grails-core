@@ -27,7 +27,7 @@ import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
-@ToolHints(readOnlyHint = false, destructiveHint = true)
+@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true)
 @DatabaseMigrationOptions
 @ToolParameter(index = 0, label = 'NUMBER', arity = '1', type = 'integer', description = 'The number of the change sets that have not run whose rollback is written')
 @ToolParameter(index = 1, label = 'FILE', arity = '1', required = false,
@@ -49,8 +49,11 @@ class DbmFutureRollbackCountSqlTool implements ApplicationTool, ApplicationConte
 
         def filename = args[1]
 
+        // the file the output goes to is checked before the database is opened
+        File output = outputFile(filename)
+
         withLiquibase { Liquibase liquibase ->
-            withFileOrSystemOutWriter(filename) { Writer writer ->
+            withOutputWriter(output) { Writer writer ->
                 liquibase.futureRollbackSQL(number.toInteger(), contexts, writer)
             }
         }

@@ -29,7 +29,7 @@ class DbmChangelogSyncSqlToolSpec extends ApplicationContextDatabaseMigrationCom
     }
 
     @AutoCleanup('delete')
-    File outputFile = File.createTempFile('sync', 'sql')
+    File outputFile = newOutputFile('sync.sql')
 
     def "writes SQL to mark all changes as executed in the database to STDOUT"() {
         given:

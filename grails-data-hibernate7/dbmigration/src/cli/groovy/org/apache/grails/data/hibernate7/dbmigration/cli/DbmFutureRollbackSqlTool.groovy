@@ -26,7 +26,7 @@ import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolParameter
 
-@ToolHints(readOnlyHint = false, destructiveHint = true)
+@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true)
 @DatabaseMigrationOptions
 @ToolParameter(index = 0, label = 'FILE', arity = '1', required = false,
         description = 'The file to write the SQL to; the standard output when not given')
@@ -39,8 +39,11 @@ class DbmFutureRollbackSqlTool implements ApplicationTool, ApplicationContextDat
     void handle() {
         def filename = args[0]
 
+        // the file the output goes to is checked before the database is opened
+        File output = outputFile(filename)
+
         withLiquibase { Liquibase liquibase ->
-            withFileOrSystemOutWriter(filename) { Writer writer ->
+            withOutputWriter(output) { Writer writer ->
                 liquibase.futureRollbackSQL(contexts, writer)
             }
         }

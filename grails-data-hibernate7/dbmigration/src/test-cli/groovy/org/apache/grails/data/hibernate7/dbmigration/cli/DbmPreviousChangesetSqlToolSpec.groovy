@@ -30,7 +30,7 @@ class DbmPreviousChangesetSqlToolSpec extends ApplicationContextDatabaseMigratio
     }
 
     @AutoCleanup('delete')
-    File outputFile = File.createTempFile('previous', 'sql')
+    File outputFile = newOutputFile('previous.sql')
 
 
     def setup() {

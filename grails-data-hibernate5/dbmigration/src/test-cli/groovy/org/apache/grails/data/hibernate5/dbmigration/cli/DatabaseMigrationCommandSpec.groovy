@@ -19,6 +19,7 @@
 package org.apache.grails.data.hibernate5.dbmigration.cli
 
 import groovy.sql.Sql
+import grails.util.BuildSettings
 import org.grails.plugins.databasemigration.testing.annotation.OutputCapture
 import org.h2.Driver
 import org.springframework.jdbc.datasource.DriverManagerDataSource
@@ -42,6 +43,21 @@ abstract class DatabaseMigrationCommandSpec extends Specification {
 
     @AutoCleanup('deleteDir')
     File changeLogLocation
+
+    /**
+     * A directory of this feature inside the directory of the project, which a tool writes its output in: a
+     * tool writes no file outside the project.
+     */
+    @AutoCleanup('deleteDir')
+    File projectOutputDirectory = new File(BuildSettings.BASE_DIR, "build/dbm-output/${UUID.randomUUID()}").absoluteFile
+
+    /**
+     * @param name the name of a file
+     * @return a file of the name inside the project, which is not there yet
+     */
+    protected File newOutputFile(String name) {
+        new File(projectOutputDirectory, name)
+    }
 
     def setup() {
         dataSource = new DriverManagerDataSource('jdbc:h2:mem:testDb', 'sa', '')

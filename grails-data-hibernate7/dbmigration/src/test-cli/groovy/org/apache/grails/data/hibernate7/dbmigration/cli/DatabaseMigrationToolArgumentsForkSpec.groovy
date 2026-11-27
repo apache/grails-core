@@ -18,12 +18,14 @@
  */
 package org.apache.grails.data.hibernate7.dbmigration.cli
 
+import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 
 import groovy.sql.Sql
 
 import org.springframework.context.annotation.Bean
 
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -132,6 +134,120 @@ databaseChangeLog:
         arguments                         || written
         ['empty']                         || 'empty.groovy'
         ['--dataSource=reports', 'empty'] || 'empty-reports.groovy'
+    }
+
+    @Unroll
+    def "dbm-status writes no file outside the project, given #how, and opens no database"() {
+        given:
+        File outside = File.createTempDir('dbm-outside', '')
+        String name = "status-${UUID.randomUUID()}.txt"
+        File target = how == 'an absolute path' ? new File(outside, name) : new File(dir.parentFile, name)
+
+        when:
+        Map result = run(statusArguments(), 'dbm-status', how == 'an absolute path' ? target.path : "../${name}".toString(),
+                DatabaseMigrationForkApplication.name)
+
+        then:
+        result.exit == 1
+        result.err.contains("The output file ${target.parentFile.toPath().toRealPath().resolve(name)} is outside the project ${dir.toPath().toRealPath()}: name a file inside the project")
+        !target.exists()
+        liquibaseTables() == []
+
+        cleanup:
+        outside.deleteDir()
+
+        where:
+        how << ['an absolute path', 'a path that leaves it with ..']
+    }
+
+    @IgnoreIf({ os.windows })
+    def "dbm-status writes no file outside the project through a link that leads out of it"() {
+        given:
+        File outside = File.createTempDir('dbm-outside', '')
+        Files.createSymbolicLink(new File(dir, 'linked').toPath(), outside.toPath())
+
+        when:
+        Map result = run(statusArguments(), 'dbm-status', 'linked/status.txt', DatabaseMigrationForkApplication.name)
+
+        then:
+        result.exit == 1
+        result.err.contains("The output file ${outside.toPath().toRealPath().resolve('status.txt')} is outside the project")
+        outside.list().length == 0
+        liquibaseTables() == []
+
+        cleanup:
+        outside.deleteDir()
+    }
+
+    def "dbm-status does not replace a file that is there, and opens no database"() {
+        given:
+        File there = new File(dir, 'status.txt')
+        byte[] content = 'written by hand\n'.bytes
+        there.bytes = content
+
+        when:
+        Map result = run(statusArguments(), 'dbm-status', 'status.txt', DatabaseMigrationForkApplication.name)
+
+        then:
+        result.exit == 1
+        result.err.contains("The output file ${there.toPath().toRealPath()} is there already: remove it or name another file")
+        there.bytes == content
+        liquibaseTables() == []
+    }
+
+    def "dbm-status writes its report to a new file inside the project, in the directories it makes"() {
+        when:
+        Map result = run(statusArguments(), 'dbm-status', 'reports/2026/status.txt', DatabaseMigrationForkApplication.name)
+
+        then:
+        result.exit == 0
+        new File(dir, 'reports/2026/status.txt').text.contains('1 changeset has not been applied')
+    }
+
+    def "dbm-status writes its report to the standard output when it is given no file"() {
+        when:
+        Map result = run(statusArguments(), 'dbm-status', DatabaseMigrationForkApplication.name)
+
+        then:
+        result.exit == 0
+        result.out.contains('1 changeset has not been applied')
+    }
+
+    // a database of a file, which the tests read after the tool has ended, and a change log of one change set
+    private List<String> statusArguments() {
+        File changeLogs = new File(dir, 'migrations')
+        changeLogs.mkdirs()
+        new File(changeLogs, 'changelog.yml').text = '''\
+databaseChangeLog:
+- changeSet:
+    id: 1
+    author: John Smith
+    changes:
+    - createTable:
+        tableName: book
+        columns:
+        - column:
+            name: id
+            type: INT
+'''
+        ["-DdataSource.url=${databaseUrl()}".toString(), '-DdataSource.username=sa', '-DdataSource.password=',
+         '-DdataSource.driverClassName=org.h2.Driver',
+         "-Dgrails.plugin.databasemigration.changelogLocation=${changeLogs.path}".toString(),
+         '-Dgrails.plugin.databasemigration.changelogFileName=changelog.yml']
+    }
+
+    private String databaseUrl() {
+        "jdbc:h2:file:${new File(dir, 'status-db').path};DB_CLOSE_ON_EXIT=FALSE".toString()
+    }
+
+    // the tables Liquibase keeps, which dbm-status makes in a database that does not have them
+    private List<String> liquibaseTables() {
+        List<String> tables = []
+        Sql.withInstance(databaseUrl(), 'sa', '', 'org.h2.Driver') { Sql sql ->
+            tables = sql.rows("SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'DATABASECHANGELOG%'")
+                    .collect { it.table_name.toString() }
+        }
+        tables
     }
 
     @Unroll

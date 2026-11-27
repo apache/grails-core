@@ -29,7 +29,7 @@ class DbmStatusToolSpec extends ApplicationContextDatabaseMigrationCommandSpec {
     }
 
     @AutoCleanup('delete')
-    File outputFile = File.createTempFile('update', 'sql')
+    File outputFile = newOutputFile('update.sql')
 
     def "outputs count or list of unrun change sets to STDOUT"() {
         given:

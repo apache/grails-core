@@ -29,7 +29,7 @@ import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolParameter
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
-@ToolHints(readOnlyHint = false, destructiveHint = true)
+@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true)
 @DatabaseMigrationOptions
 @ToolParameter(index = 0, label = 'DATE', arity = '1', description = 'The date to roll back to, as yyyy-MM-dd')
 @ToolParameter(index = 1, label = 'TIME', arity = '1', required = false,
@@ -67,8 +67,11 @@ class DbmRollbackToDateSqlTool implements ApplicationTool, ApplicationContextDat
 
         filename = filename ?: args[2]
 
+        // the file the output goes to is checked before the database is opened
+        File output = outputFile(filename)
+
         withLiquibase { Liquibase liquibase ->
-            withFileOrSystemOutWriter(filename) { Writer writer ->
+            withOutputWriter(output) { Writer writer ->
                 liquibase.rollback(date, contexts, writer)
             }
         }
