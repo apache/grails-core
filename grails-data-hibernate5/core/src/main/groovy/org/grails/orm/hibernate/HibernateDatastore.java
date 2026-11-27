@@ -26,8 +26,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -81,6 +83,7 @@ import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
@@ -88,6 +91,10 @@ import org.grails.datastore.mapping.engine.event.DatastoreInitializedEvent;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.validation.ValidatorRegistry;
@@ -187,19 +194,22 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
             });
 
             if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                Collection<String> tenantSchemaNames = new ArrayList<>();
                 if (this.tenantResolver instanceof AllTenantsResolver) {
-                    AllTenantsResolver allTenantsResolver = (AllTenantsResolver) tenantResolver;
-                    Iterable<Serializable> tenantIds = allTenantsResolver.resolveTenantIds();
-
-                    for (Serializable tenantId : tenantIds) {
-                        addTenantForSchemaInternal(tenantId.toString());
+                    for (Serializable tenantId : ((AllTenantsResolver) tenantResolver).resolveTenantIds()) {
+                        tenantSchemaNames.add(tenantId.toString());
                     }
                 }
                 else {
-                    Collection<String> allSchemas = schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource());
-                    for (String schema : allSchemas) {
-                        addTenantForSchemaInternal(schema);
-                    }
+                    tenantSchemaNames.addAll(schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource()));
+                }
+                List<String> unmapped = findAssociationsToEntitiesMissingFromTenantSchemas(mappingContext.getPersistentEntities(), tenantSchemaNames);
+                if (!unmapped.isEmpty()) {
+                    throw new ConfigurationException("Multi-tenancy mode SCHEMA cannot map an association from a MultiTenant entity to an entity that is not MultiTenant and that a tenant schema does not map: " +
+                            String.join(", ", unmapped) + ". Make the target MultiTenant, map it on every tenant schema (datasource 'ALL', or name each schema), or use the DISCRIMINATOR multi-tenancy mode.");
+                }
+                for (String tenantSchemaName : tenantSchemaNames) {
+                    addTenantForSchemaInternal(tenantSchemaName);
                 }
             }
         }
@@ -757,5 +767,72 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
                 }
         );
         return hibernateConnectionSourceFactory;
+    }
+
+    private static final String JPA_ENTITY_ANNOTATION = "jakarta.persistence.Entity";
+
+    /**
+     * Finds each association of a multi tenant entity to an entity that a tenant schema does not map. With SCHEMA
+     * multi-tenancy only multi tenant entities are mapped into a tenant schema. A target is mapped when it uses every connection
+     * source or lists each of the named tenant schemas, so a shared entity that names the default connection and
+     * the tenant schemas explicitly is accepted.
+     *
+     * @param entities The persistent entities of the application
+     * @param tenantSchemaNames The names of the tenant schemas (connection sources) that exist now
+     * @return A description of each association of a multi tenant entity to an entity that at least one tenant
+     * schema does not map, in the form {@code Owner.property -> Target}; empty when there is none
+     */
+    private static List<String> findAssociationsToEntitiesMissingFromTenantSchemas(Iterable<? extends PersistentEntity> entities, Collection<String> tenantSchemaNames) {
+        List<String> found = new ArrayList<>();
+        for (PersistentEntity entity : entities) {
+            if (!entity.isMultiTenant()) {
+                continue;
+            }
+            for (PersistentProperty<?> property : entity.getPersistentProperties()) {
+                if (!(property instanceof Association) || property instanceof Embedded || property instanceof EmbeddedCollection) {
+                    continue;
+                }
+                PersistentEntity target = ((Association<?>) property).getAssociatedEntity();
+                if (target != null && !target.isMultiTenant() && !isMappedWhereOwnerIs(entity, target, tenantSchemaNames)) {
+                    found.add(entity.getJavaClass().getSimpleName() + '.' + property.getName() + " -> " + target.getJavaClass().getSimpleName());
+                }
+            }
+        }
+        return found;
+    }
+
+    /**
+     * Whether the target is mapped on every connection source the owner is mapped on: each tenant schema, and the default
+     * connection, which also maps a multi tenant entity. A target that lists the tenant schema but not the default connection
+     * leaves the default session factory with an association to an entity it does not map.
+     */
+    private static boolean isMappedWhereOwnerIs(PersistentEntity owner, PersistentEntity target, Collection<String> tenantSchemaNames) {
+        if (ConnectionSourcesSupport.getConnectionSourceNames(target).contains(ConnectionSource.ALL) || isMappedByJpaAnnotation(target)) {
+            return true;
+        }
+        if (tenantSchemaNames == null || tenantSchemaNames.isEmpty()) {
+            return false;
+        }
+        Set<String> names = new LinkedHashSet<>(tenantSchemaNames);
+        names.add(ConnectionSource.DEFAULT);
+        for (String name : names) {
+            if (ConnectionSourcesSupport.usesConnectionSource(owner, name) && !ConnectionSourcesSupport.usesConnectionSource(target, name)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Whether the entity is a JPA entity by its annotation. The Hibernate binders add such a class to every session factory,
+     * whatever datasources its mapping lists, so it is mapped on each tenant schema.
+     */
+    private static boolean isMappedByJpaAnnotation(PersistentEntity entity) {
+        for (java.lang.annotation.Annotation annotation : entity.getJavaClass().getAnnotations()) {
+            if (JPA_ENTITY_ANNOTATION.equals(annotation.annotationType().getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }
