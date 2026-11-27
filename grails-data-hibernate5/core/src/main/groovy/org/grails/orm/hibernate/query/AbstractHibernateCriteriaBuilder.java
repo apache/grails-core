@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,7 @@ import org.hibernate.criterion.PropertyProjection;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.criterion.Subqueries;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.transform.ResultTransformer;
 import org.hibernate.type.Type;
 
@@ -144,6 +146,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * applied once the criteria are built, see {@link #applyRequestedJoinTypes()}.
      */
     private final Map<String, JoinType> requestedJoinTypes = new LinkedHashMap<>();
+    /**
+     * The join types that a fetch mode replaced, by association path. They are kept for the join that
+     * the criteria make for the association, see {@link #applyRequestedJoinTypes()}.
+     */
+    private final Map<String, JoinType> supersededJoinTypes = new LinkedHashMap<>();
     protected static final String ALIAS = "_alias";
     protected ResultTransformer resultTransformer;
     protected int aliasCount;
@@ -323,8 +330,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria join(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.JOIN);
-        // the fetch mode alone replaces a join type that was requested for the association before
-        requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
+        supersedeJoinType(getRequestedJoinPath(associationPath));
         return this;
     }
 
@@ -337,7 +343,23 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public BuildableCriteria join(String property, JoinType joinType) {
         criteria.setFetchMode(calculatePropertyName(property), FetchMode.JOIN);
         requestedJoinTypes.put(getRequestedJoinPath(property), joinType);
+        supersededJoinTypes.remove(getRequestedJoinPath(property));
         return this;
+    }
+
+    /**
+     * Replaces a join type that was requested for an association with the fetch mode that is now
+     * requested for it. The fetch mode decides how the association is fetched, so the join type no
+     * longer joins the association by itself, but the join that the criteria make for the association
+     * keeps it, as it does in a where query.
+     *
+     * @param associationPath The path of the association from the queried class
+     */
+    private void supersedeJoinType(String associationPath) {
+        JoinType joinType = requestedJoinTypes.remove(associationPath);
+        if (joinType != null) {
+            supersededJoinTypes.put(associationPath, joinType);
+        }
     }
 
     /**
@@ -352,12 +374,74 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     /**
      * Applies the join types requested with {@link #join(String, JoinType)}. This happens once the
      * criteria are built, so that the requested type also applies to a join created by a block or alias.
+     * A join type that a fetch mode replaced is applied only to such a join.
      */
     private void applyRequestedJoinTypes() {
         for (Map.Entry<String, JoinType> requestedJoinType : requestedJoinTypes.entrySet()) {
             GrailsHibernateUtil.applyJoinType(datastore, targetClass, criteria, requestedJoinType.getKey(), requestedJoinType.getValue());
         }
         requestedJoinTypes.clear();
+        for (Map.Entry<String, JoinType> supersededJoinType : supersededJoinTypes.entrySet()) {
+            applyToCriteriaJoin(supersededJoinType.getKey(), supersededJoinType.getValue());
+        }
+        supersededJoinTypes.clear();
+    }
+
+    /**
+     * Makes the join that the criteria made for an association, with an association block or an alias, again
+     * with the given join type, under the same alias, so that the criteria that use the alias use it. Nothing
+     * is joined when the criteria made no join for the association.
+     *
+     * @param associationPath The path of the association from the queried class
+     * @param joinType The join type
+     */
+    private void applyToCriteriaJoin(String associationPath, JoinType joinType) {
+        if (!(criteria instanceof CriteriaImpl)) {
+            return;
+        }
+        String alias = null;
+        for (Map.Entry<String, String> aliased : aliasMap.entrySet()) {
+            if (associationPath.equals(getWholeAliasPath(aliased.getKey()))) {
+                alias = aliased.getValue();
+            }
+        }
+        if (alias == null) {
+            return;
+        }
+        org.hibernate.sql.JoinType hibernateJoinType = joinType == JoinType.INNER ? org.hibernate.sql.JoinType.INNER_JOIN :
+                joinType == JoinType.LEFT ? org.hibernate.sql.JoinType.LEFT_OUTER_JOIN : org.hibernate.sql.JoinType.RIGHT_OUTER_JOIN;
+        Iterator<CriteriaImpl.Subcriteria> subcriteria = ((CriteriaImpl) criteria).iterateSubcriteria();
+        while (subcriteria.hasNext()) {
+            CriteriaImpl.Subcriteria join = subcriteria.next();
+            if (alias.equals(join.getAlias())) {
+                if (join.getJoinType() != hibernateJoinType) {
+                    subcriteria.remove();
+                    join.getParent().createAlias(join.getPath(), join.getAlias(), hibernateJoinType, join.getWithClause());
+                }
+                return;
+            }
+        }
+    }
+
+    /**
+     * Returns the path from the queried class of the association that an alias was made for. An alias made
+     * through another alias, as {@code createAlias('t.club', 'c')} after {@code createAlias('team', 't')}, has a
+     * path that starts with the other alias.
+     *
+     * @param aliasedPath The path that the alias was made for
+     * @return The path from the queried class
+     */
+    private String getWholeAliasPath(String aliasedPath) {
+        int dot = aliasedPath.indexOf('.');
+        if (dot > 0) {
+            String head = aliasedPath.substring(0, dot);
+            for (Map.Entry<String, String> aliased : aliasMap.entrySet()) {
+                if (head.equals(aliased.getValue()) && !aliasedPath.equals(aliased.getKey())) {
+                    return getWholeAliasPath(aliased.getKey()) + aliasedPath.substring(dot);
+                }
+            }
+        }
+        return aliasedPath;
     }
 
     /**
@@ -381,10 +465,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             Object fetchValue = ((Map.Entry) entry).getValue();
             if (fetchValue instanceof JoinType) {
                 requestedJoinTypes.put(associationPath, (JoinType) fetchValue);
+                supersededJoinTypes.remove(associationPath);
             }
             else {
                 criteria.setFetchMode(associationPath, GrailsHibernateUtil.getFetchMode(fetchValue));
-                requestedJoinTypes.remove(associationPath);
+                supersedeJoinType(associationPath);
             }
         }
         Map remaining = new HashMap(arguments);
@@ -425,7 +510,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria select(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.SELECT);
-        requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
+        supersedeJoinType(getRequestedJoinPath(associationPath));
         return this;
     }
 
@@ -664,7 +749,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public void fetchMode(String associationPath, FetchMode fetchMode) {
         if (criteria != null) {
             criteria.setFetchMode(associationPath, fetchMode);
-            requestedJoinTypes.remove(associationPath);
+            supersedeJoinType(associationPath);
         }
     }
 
