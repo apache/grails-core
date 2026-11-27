@@ -128,4 +128,64 @@ class AggUnknownPropertyBook {
         e.message.contains('Cannot use aggregate function avg on property "nonExistentProperty"')
         e.message.contains('no such property on class')
     }
+
+    void "an aggregate function inside the block of an embedded property is refused when the query is compiled"() {
+        when:
+        new GroovyClassLoader().parseClass('''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+class AggEmbeddedStats {
+    Integer qty
+}
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AggEmbeddedReading {
+    AggEmbeddedStats stats
+
+    static embedded = ['stats']
+
+    static findInvalid() {
+        AggEmbeddedReading.where {
+            stats { qty > avg(qty) }
+        }
+    }
+}
+''')
+
+        then: 'the message names the function and the embedded property'
+        MultipleCompilationErrorsException e = thrown()
+        e.message.contains('Cannot use aggregate function avg inside the block of the embedded property "stats"')
+    }
+
+    void "an aggregate function outside the block of an embedded property is still accepted next to one"() {
+        when:
+        Class<?> compiled = new GroovyClassLoader().parseClass('''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+class AggEmbeddedOkStats {
+    Integer qty
+}
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AggEmbeddedOkReading {
+    Integer total
+    AggEmbeddedOkStats stats
+
+    static embedded = ['stats']
+
+    static ok() {
+        AggEmbeddedOkReading.where {
+            total > avg(total)
+        }
+    }
+}
+''')
+
+        then: 'it compiles, and an embedded block that holds no aggregate beside it does not change that'
+        compiled != null
+    }
 }

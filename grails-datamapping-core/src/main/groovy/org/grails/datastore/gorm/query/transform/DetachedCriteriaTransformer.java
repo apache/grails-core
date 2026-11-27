@@ -167,6 +167,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
     protected Map<String, ClassNode> staticDetachedCriteriaVariables = new HashMap<>();
     protected Set<Expression> aliasExpressions = new HashSet<>();
     protected ClassNode currentClassNode;
+    /** the embedded properties a block is inside of, outermost first: an aggregate cannot be built there */
+    private final java.util.ArrayDeque<String> embeddedPath = new java.util.ArrayDeque<>();
 
     public DetachedCriteriaTransformer(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
@@ -813,6 +815,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
                 List<String> associationPropertyNames = null;
                 ClassNode type = getPropertyType(methodName);
+                boolean embeddedBlock = false;
                 if (!AstUtils.isDomainClass(type)) {
                     // A collection association carries its element type in its generics; an
                     // embedded component does not, so keep its own type rather than
@@ -821,6 +824,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                     if (associationTypeFromGenerics != null) {
                         type = associationTypeFromGenerics;
                         associationPropertyNames = getPropertyNamesForAssociation(associationTypeFromGenerics);
+                    } else {
+                        embeddedBlock = true;
                     }
                 }
                 if (associationPropertyNames == null) {
@@ -828,14 +833,21 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                 }
 
                 ClassNode existing = currentClassNode;
+                boolean enteredEmbedded = embeddedBlock && type != null;
                 try {
                     if (type != null) {
+                        if (enteredEmbedded) {
+                            embeddedPath.addLast(methodName);
+                        }
                         currentClassNode = type;
                         addBlockStatementToNewQuery((BlockStatement) associationCode, currentBody, associationPropertyNames.isEmpty(), associationPropertyNames, variableScope);
                     }
 
                 } finally {
                     currentClassNode = existing;
+                    if (enteredEmbedded) {
+                        embeddedPath.removeLast();
+                    }
                 }
             }
         }
@@ -1253,6 +1265,11 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                         }
                     }
                 }
+            } else if (aggregateFunctionName != null && !embeddedPath.isEmpty()) {
+                // the subquery of an aggregate is built over an entity, and the class of the block of an embedded value is not
+                // one: the aggregate would be built over the embedded class and fail when the query runs
+                sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot use aggregate function " + aggregateFunctionName + " inside the block of the embedded property \"" + String.join(".", embeddedPath) + "\": an aggregate of the properties of an embedded value is not supported.", Token.newString(propertyName, aggregateMethodCall.getLineNumber(), aggregateMethodCall.getColumnNumber()), sourceUnit));
+                return;
             } else if (aggregateFunctionName != null) {
                 if ((methodTarget instanceof VariableExpression) &&
                     ((VariableExpression) methodTarget).isThisExpression()) {
@@ -1278,10 +1295,17 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
                                 addProjectionToCurrentBody(currentBody, aggregateFunctionName, aggregatePropertyName, variableScope);
 
-                                rightExpression = closureAndArguments.getClosureExpression();
-
                                 if ("property".equals(aggregateFunctionName) && METHOD_TO_SUBQUERY_MAP.containsKey(methodToCall)) {
+                                    rightExpression = closureAndArguments.getClosureExpression();
                                     methodToCall = methodToCall + "All";
+                                } else {
+                                    // Built explicitly so the subquery's own criteria receives the projection: a bare
+                                    // closure resolves its calls against the enclosing criteria when the query is
+                                    // declared in a service (@Where), and the aggregate then lands on the outer query.
+                                    rightExpression = new MethodCallExpression(
+                                            new ConstructorCallExpression(getParameterizedDetachedCriteriaClassNode(null),
+                                                    new ArgumentListExpression(new ClassExpression(this.currentClassNode))),
+                                            "build", new ArgumentListExpression(closureAndArguments.getClosureExpression()));
                                 }
                             } else {
                                 sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot use aggregate function " + aggregateFunctionName + " on property \"" + aggregatePropertyName + "\" - no such property on class " + this.currentClassNode.getName() + " exists.", Token.newString(propertyName, aggregateMethodCall.getLineNumber(), aggregateMethodCall.getColumnNumber()), sourceUnit));
