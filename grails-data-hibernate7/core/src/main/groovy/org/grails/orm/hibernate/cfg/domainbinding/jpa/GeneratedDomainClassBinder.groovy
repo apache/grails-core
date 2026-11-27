@@ -94,6 +94,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.jpa.facets.TypeFacets
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SharedJoinTableUniqueKeyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.CompositeUserTypeColumns
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefinitionBinder
@@ -195,6 +196,10 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
                 new StringColumnConstraintsBinder(),
                 new NumericColumnConstraintsBinder(jdbcEnvironment.dialect),
                 buildingContext.bootstrapContext.typeConfiguration)
+        // a composite user type is created the way the domain binder creates it: as a managed bean of the container Hibernate is
+        // configured with, else through its default constructor
+        CompositeUserTypeColumns compositeUserTypeColumns = new CompositeUserTypeColumns(namingStrategy, backticksRemover, buildingContext)
+        generator.compositeUserTypes = { HibernatePersistentProperty property -> compositeUserTypeColumns.userTypeOf(property) }
         Map<GrailsHibernatePersistentEntity, Class<?>> generated = generator.generateAll(toGenerate, classLoader.parent)
         classLoader.register(generated.values().first().classLoader)
         for (Map.Entry<GrailsHibernatePersistentEntity, Class<?>> entry : generated.entrySet()) {
