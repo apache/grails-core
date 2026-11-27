@@ -25,8 +25,11 @@ import org.hibernate.FlushMode
 import org.hibernate.SessionFactory
 
 import org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.DefaultTransactionStatus
+import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
@@ -65,6 +68,25 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
             if (holder != null) {
                 holder.session.setHibernateFlushMode(defaultFlushMode)
             }
+        }
+    }
+
+    @Override
+    protected void prepareSynchronization(DefaultTransactionStatus status, TransactionDefinition definition) {
+        super.prepareSynchronization(status, definition)
+        Runnable disconnectOuterSession = AbstractOuterSessionLifecycleStrategy.pendingDisconnect()
+        if (status.newSynchronization && disconnectOuterSession != null) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                int getOrder() {
+                    SessionFactoryUtils.SESSION_SYNCHRONIZATION_ORDER
+                }
+
+                @Override
+                void beforeCompletion() {
+                    disconnectOuterSession.run()
+                }
+            })
         }
     }
 }
