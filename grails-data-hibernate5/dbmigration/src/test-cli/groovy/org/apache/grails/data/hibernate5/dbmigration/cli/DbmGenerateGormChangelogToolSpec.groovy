@@ -148,6 +148,36 @@ databaseChangeLog = \\{
             e.message == "ChangeLogFile ${changeLogFile.canonicalPath} already exists!"
     }
 
+    def "leaves out the objects the configuration excludes, or takes only those it includes"() {
+        given:
+            configure([("grails.plugin.databasemigration.${setting}".toString()): 'book'])
+
+        when:
+            command.handle(getExecutionContext())
+            String changeLog = extractOutput(output)
+
+        then:
+            changeLog.contains('createTable(tableName:"author")') == author
+            changeLog.contains('createTable(tableName:"book")') == book
+
+        where:
+            setting          || author | book
+            'excludeObjects' || true   | false
+            'includeObjects' || false  | true
+    }
+
+    def "is not told both the objects to exclude and those to include"() {
+        given:
+            configure(['grails.plugin.databasemigration.excludeObjects': 'book', 'grails.plugin.databasemigration.includeObjects': 'author'])
+
+        when:
+            command.handle(getExecutionContext())
+
+        then:
+            def e = thrown(DatabaseMigrationException)
+            e.message == 'Cannot specify both excludeObjects and includeObjects'
+    }
+
     @Override
     protected Class[] getDomainClasses() {
         [Book, Author] as Class[]

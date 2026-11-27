@@ -19,6 +19,7 @@
 package org.apache.grails.data.hibernate7.dbmigration.cli
 
 import org.apache.grails.core.cli.ApplicationTool
+import org.grails.plugins.databasemigration.DatabaseMigrationException
 
 class DbmGenerateChangelogToolSpec extends ApplicationContextDatabaseMigrationCommandSpec {
 
@@ -114,4 +115,35 @@ databaseChangeLog = \\{
 \\}
 '''.replaceAll(/\s/, "")
     }
+
+    def "leaves out the objects the configuration excludes, or takes only those it includes"() {
+        given:
+            configure([("grails.plugin.databasemigration.${setting}".toString()): 'BOOK'])
+
+        when:
+            command.handle(getExecutionContext())
+            String changeLog = extractOutput(output)
+
+        then:
+            changeLog.contains('createTable(tableName:"AUTHOR")') == author
+            changeLog.contains('createTable(tableName:"BOOK")') == book
+
+        where:
+            setting          || author | book
+            'excludeObjects' || true   | false
+            'includeObjects' || false  | true
+    }
+
+    def "is not told both the objects to exclude and those to include"() {
+        given:
+            configure(['grails.plugin.databasemigration.excludeObjects': 'BOOK', 'grails.plugin.databasemigration.includeObjects': 'AUTHOR'])
+
+        when:
+            command.handle(getExecutionContext())
+
+        then:
+            def e = thrown(DatabaseMigrationException)
+            e.message == 'Cannot specify both excludeObjects and includeObjects'
+    }
+
 }

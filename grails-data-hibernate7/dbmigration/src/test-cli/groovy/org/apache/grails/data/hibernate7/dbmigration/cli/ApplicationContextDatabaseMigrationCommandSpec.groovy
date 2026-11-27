@@ -108,6 +108,16 @@ abstract class ApplicationContextDatabaseMigrationCommandSpec extends DatabaseMi
         )
     }
 
+    /**
+     * Gives the tool the configuration of the spec with these properties over it.
+     */
+    protected void configure(Map<String, Object> properties) {
+        MutablePropertySources propertySources = new MutablePropertySources(((PropertySourcesConfig) config).propertySources)
+        propertySources.addFirst(new MapPropertySource('FeatureConfig', properties))
+        config = new PropertySourcesConfig(propertySources)
+        applicationContext.getBean(GrailsApplication).config = config
+    }
+
     void cleanup() {
 
     }

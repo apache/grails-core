@@ -37,8 +37,8 @@ There are a few configuration options for the plugin. All configurations are pre
 |updateOnStartContexts |none |A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be run
 |updateAllOnStart |false |if `true` then changesets from the specified list of names will be run at startup for all dataSources. Useful for Grails Multitenancy with Multiple Databases (same db schema)
 |skipUpdateOnStartMainClasses |`['grails.ui.command.GrailsApplicationContextCommandRunner']` |the main classes of the JVM that do not run the update on start: by default the class that runs a tool in the application, so that a `dbm-*` tool that starts the application does not update the database first
-|excludeObjects |none |A comma-delimited list of database object names to ignore while performing a dbm-diff or dbm-gorm-diff
-|includeObjects |none |A comma-delimited list of database object names to look for while performing a dbm-diff or dbm-gorm-diff
+|excludeObjects |none |A comma-delimited list of database object names to ignore while performing a dbm-diff, dbm-gorm-diff, dbm-generate-changelog or dbm-generate-gorm-changelog; it cannot be set together with includeObjects
+|includeObjects |none |A comma-delimited list of the only database object names to look for while performing a dbm-diff, dbm-gorm-diff, dbm-generate-changelog or dbm-generate-gorm-changelog; it cannot be set together with excludeObjects
 |databaseChangeLogTableName |'databasechangelog' |the Liquibase changelog record table name
 |databaseChangeLogLockTableName |'databasechangeloglock' |the Liquibase lock table name
 |==================================

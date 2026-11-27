@@ -20,6 +20,8 @@ package org.apache.grails.data.hibernate7.dbmigration.cli
 
 import java.util.concurrent.TimeUnit
 
+import groovy.sql.Sql
+
 import org.springframework.context.annotation.Bean
 
 import spock.lang.Specification
@@ -56,6 +58,26 @@ class DatabaseMigrationToolArgumentsForkSpec extends Specification {
         then:
         result.exit == 0
         there.text.replaceAll(/\s/, '') == 'databaseChangeLog={}'
+    }
+
+    def "dbm-generate-changelog leaves out the objects the configuration excludes"() {
+        given: 'a database with a table to keep and one to leave out'
+        String url = "jdbc:h2:file:${new File(dir, 'generated').path};DB_CLOSE_ON_EXIT=FALSE".toString()
+        Sql.withInstance(url, 'sa', '', 'org.h2.Driver') { Sql sql ->
+            sql.execute('CREATE TABLE kept (id INT NOT NULL PRIMARY KEY)')
+            sql.execute('CREATE TABLE secret (id INT NOT NULL PRIMARY KEY)')
+        }
+
+        when:
+        Map result = run(["-DdataSource.url=${url}".toString(), '-DdataSource.username=sa', '-DdataSource.password=',
+                          '-DdataSource.driverClassName=org.h2.Driver', '-Dgrails.plugin.databasemigration.excludeObjects=SECRET'],
+                'dbm-generate-changelog', DatabaseMigrationForkApplication.name)
+        String changeLog = result.out.replaceAll(/\s/, '')
+
+        then:
+        result.exit == 0
+        changeLog.contains('createTable(tableName:"KEPT")')
+        !changeLog.contains('tableName:"SECRET"')
     }
 
     @Unroll
