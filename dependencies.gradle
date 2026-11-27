@@ -30,7 +30,7 @@ ext {
             'asciidoctorj.version'          : '3.0.1',
             'asset-pipeline-gradle.version' : '5.0.36',
             'bnd.version'                   : '7.1.0',
-            'byte-buddy.version'            : '1.18.16',
+            'byte-buddy.version'            : '1.18.17',
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
             'gradle-spock.version'          : '2.3-groovy-3.0',
@@ -90,7 +90,7 @@ ext {
             'asset-pipeline-bom.version'    : '5.0.36',
             'cas-client-core.version'       : '4.0.4',
             'bootstrap-icons.version'       : '1.13.2',
-            'bootstrap.version'             : '5.3.8',
+            'bootstrap.version'             : '5.3.9',
             // Align with pac4j-oauth 6.5.x so the BOM manages the transitive version too.
             'commons-codec.version'         : '1.22.1',
             'commons-compress.version'      : '1.28.0',
@@ -135,7 +135,7 @@ ext {
             // Security: overrides spring-boot-dependencies (1.15.12). 1.16.7 is the oldest open source release that
             // fixes CVE-2026-59295 (DoS in the Apache HttpAsyncClient instrumentation) and CVE-2026-59296 (metric
             // name/tag injection via unsanitised newlines); the 1.15.13 patch is Enterprise Support only.
-            'micrometer.version'            : '1.16.8',
+            'micrometer.version'            : '1.16.9',
             // Security: 5.11.1 fixes CVE-2026-88033 (GridFS query-operator injection in file identifiers) and
             // retains the 5.9.2 fix for CVE-2026-18710 (SOCKS5 proxy credentials exposed in logs).
             'mongodb.version'               : '5.11.1',
