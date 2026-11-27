@@ -44,6 +44,7 @@ import io.modelcontextprotocol.modern.client.SubscriptionEvent
 import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.PlainOutput
+import org.apache.grails.forge.cli.mcp.McpLeftovers
 import org.apache.grails.forge.cli.mcp.McpNames
 import org.apache.grails.forge.cli.mcp.protocol.InProcessMcp
 import org.grails.forge.application.ApplicationType
@@ -123,6 +124,7 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         ConsoleCommands.setSession(ConsoleCommands.Session.NONE)
         GradleBuild.setRunner(null)
         GradleBuild.closeConnections()
+        McpLeftovers.assertNoneLeft()
     }
 
     void "a command of the command line runs in the process, and its result is what it wrote, with the whole output kept in the project and linked"() {
@@ -524,6 +526,8 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'stubborn').text = ''
         GrailsMcpServer.Settings settings = settings()
         settings.abandonAfter = Duration.ofSeconds(1)
+        // closing the server waits for the builds it gave up on, which end when their Gradle is ended by force, 10 s after it was asked to end
+        settings.commandsAtShutdown = Duration.ofSeconds(60)
         serve(ForgeContext.of(beanContext), settings)
 
         when:
@@ -545,6 +549,34 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         calls().count { it == 'start testApp' } == 3
 
         cleanup:
+        new File(dir, 'stubborn').delete()
+    }
+
+    void "closing the server waits a while for a command that still runs in the process, and says which it no longer waits for"() {
+        given: 'a build that takes ten seconds to end when it is cancelled, and a server that waits one second for it when it is closed'
+        project()
+        new File(dir, 'stubborn').text = ''
+        GrailsMcpServer.Settings settings = settings()
+        settings.commandsAtShutdown = Duration.ofSeconds(1)
+        serve(ForgeContext.of(beanContext), settings)
+        try {
+            mcp.client.tool('test-app').callTimeout(Duration.ofSeconds(1)).call()
+        } catch (McpTimeoutException ignored) {
+            // the client gave up on it, and cancelled it
+        }
+
+        when:
+        long closing = System.nanoTime()
+        server.close()
+        long tookMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - closing)
+
+        then: 'it waited, and then said that the build still runs'
+        tookMillis >= 900
+        processErr.toString(StandardCharsets.UTF_8.name()).readLines().contains('| Warning grails mcp ends while a command still runs in its process (test-app): ' +
+                'what it wrote last may not be whole, and the next command of the project says so where it can')
+
+        cleanup: 'the build ends by itself, before the next feature'
+        eventually { mcp.server.calls.running().isEmpty() }
         new File(dir, 'stubborn').delete()
     }
 

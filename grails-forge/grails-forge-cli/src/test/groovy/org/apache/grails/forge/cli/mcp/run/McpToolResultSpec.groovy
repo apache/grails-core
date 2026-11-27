@@ -36,6 +36,7 @@ import org.apache.grails.forge.cli.console.RunDirectory
 import org.apache.grails.forge.cli.console.ToolCatalogFile
 import org.apache.grails.forge.cli.mcp.McpNames
 import org.apache.grails.forge.cli.mcp.protocol.InProcessMcp
+import org.apache.grails.forge.cli.mcp.McpLeftovers
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
@@ -105,6 +106,7 @@ class McpToolResultSpec extends CommandSpec implements CommandFixture {
                 ProcessHandle.of(pid.text.trim() as long).ifPresent { ProcessHandle each -> each.destroyForcibly() }
             }
         }
+        McpLeftovers.assertNoneLeft()
     }
 
     @Unroll

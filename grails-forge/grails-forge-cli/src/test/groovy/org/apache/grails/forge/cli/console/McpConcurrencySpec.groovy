@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.charset.StandardCharsets
+import org.apache.grails.forge.cli.mcp.McpLeftovers
 import java.util.concurrent.Callable
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.ExecutorService
@@ -117,6 +118,7 @@ class McpConcurrencySpec extends CommandSpec implements CommandFixture {
         System.setOut(originalOut)
         System.setErr(originalErr)
         System.setIn(originalIn)
+        McpLeftovers.assertNoneLeft()
     }
 
     void cleanupSpec() {

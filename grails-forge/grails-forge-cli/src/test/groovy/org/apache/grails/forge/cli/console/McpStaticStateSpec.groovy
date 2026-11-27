@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.charset.StandardCharsets
+import org.apache.grails.forge.cli.mcp.McpLeftovers
 import java.nio.file.Files
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
@@ -115,6 +116,7 @@ class McpStaticStateSpec extends CommandSpec implements CommandFixture {
         System.setOut(originalOut)
         System.setErr(originalErr)
         System.setIn(originalIn)
+        McpLeftovers.assertNoneLeft()
     }
 
     // what grails mcp does before it serves, as GrailsCli.main and the command do it

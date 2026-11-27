@@ -65,14 +65,16 @@ final class McpSession {
         String userDir = System.getProperty('user.dir')
         // once, for the session: every command of a call reads the current directory from it
         System.setProperty('user.dir', directory.toString())
+        Hooks hooks = new Hooks()
+        GrailsMcpServer handler = null
         ConsoleCommands.setSession(ConsoleCommands.Session.MCP)
         PlainOutput.enter()
-        Hooks hooks = new Hooks()
         try {
-            GrailsMcpServer handler = new GrailsMcpServer(context, directory, readOnly, settings, diagnostics)
+            handler = new GrailsMcpServer(context, directory, readOnly, settings, diagnostics)
+            GrailsMcpServer served = handler
             ModernServer server = new ModernServer(handler, guard.takeInput(), guard.takeOutput())
             McpLifecycle lifecycle = new McpLifecycle(server, diagnostics, RETURNS, hooks)
-                    .onShutdown('the commands that write files', { -> handler.close() } as Runnable)
+                    .onShutdown('the commands of the session', { -> served.close() } as Runnable)
                     .onShutdown('the connection to Gradle', { ->
                         if (!GradleBuild.closeConnections()) {
                             diagnostics.println('| Warning grails mcp gave up on the connection to Gradle: a build on it had not ended')
@@ -83,6 +85,8 @@ final class McpSession {
             handler.start(server.calls, { int exitCode -> lifecycle.requestExit(exitCode) } as IntConsumer)
             return lifecycle.serve()
         } finally {
+            // where the session did not get to end in its order, as when the server could not be made; once only
+            handler?.close()
             hooks.remove()
             PlainOutput.leave()
             ConsoleCommands.setSession(ConsoleCommands.Session.NONE)

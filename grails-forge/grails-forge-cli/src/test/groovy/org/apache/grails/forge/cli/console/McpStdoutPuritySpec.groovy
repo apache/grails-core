@@ -38,6 +38,7 @@ import io.modelcontextprotocol.modern.server.feature.ToolsFeature
 import io.modelcontextprotocol.modern.server.feature.ToolsPage
 import io.modelcontextprotocol.modern.server.transport.StdioMcpTransport
 import org.apache.grails.forge.cli.GrailsCli
+import org.apache.grails.forge.cli.mcp.McpLeftovers
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
@@ -90,6 +91,7 @@ class McpStdoutPuritySpec extends CommandSpec implements CommandFixture {
         System.setOut(originalOut)
         System.setErr(originalErr)
         System.setIn(originalIn)
+        McpLeftovers.assertNoneLeft()
     }
 
     void "a session on the SDK's modern server in this process writes only JSON-RPC messages on the standard output"() {

@@ -117,6 +117,10 @@ final class GrailsMcpServer implements McpHandler, Closeable {
     private final String instructions
     private final AtomicInteger abandoned = new AtomicInteger()
     private final AtomicBoolean ending = new AtomicBoolean()
+    private final AtomicBoolean closed = new AtomicBoolean()
+    private final Object commandsLock = new Object()
+    // guarded by commandsLock: the tools whose command lines run in this process now, once for each
+    private final List<String> runningCommands = []
     private volatile CallThreads calls
     private volatile IntConsumer exit
 
@@ -248,21 +252,45 @@ final class GrailsMcpServer implements McpHandler, Closeable {
     }
 
     /**
-     * Stops watching the directory and giving up on calls, and waits a while for the commands that run
-     * on threads of their own to end, so that the files they write are written whole.
+     * Stops watching the directory and giving up on calls, takes no more commands, and waits, for
+     * {@linkplain Settings#commandsAtShutdown a while} at most, until every command it started in this
+     * process has ended: those of the generator and direct lanes, so that the files they write are written
+     * whole, and those of the build lane, which their calls' interrupt has asked to stop, as well as a
+     * command it gave up on. When it returns, either no command of the server runs in this JVM any more,
+     * or one line on the standard error says which still do: Java cannot end a thread, so such a command
+     * goes on until it ends by itself, which the program {@code grails} does not wait for, since its JVM
+     * ends with the server. Closing again does nothing.
      */
     @Override
     void close() {
+        if (!closed.compareAndSet(false, true)) {
+            return
+        }
         watcher.close()
         timers.shutdownNow()
         commands.shutdown()
+        long deadline = System.nanoTime() + settings.commandsAtShutdown.toNanos()
+        List<String> left
         try {
-            if (!commands.awaitTermination(settings.commandsAtShutdown.toMillis(), TimeUnit.MILLISECONDS)) {
-                diagnostics.println('| Warning grails mcp ends while a command still writes the files of the project: ' +
-                        'what it wrote last may not be whole, and the next command of the project says so where it can')
+            synchronized (commandsLock) {
+                long wait = deadline - System.nanoTime()
+                while (!runningCommands.isEmpty() && wait > 0) {
+                    TimeUnit.NANOSECONDS.timedWait(commandsLock, wait)
+                    wait = deadline - System.nanoTime()
+                }
+                left = new ArrayList<String>(runningCommands)
             }
+            // and the threads of those that ended are gone
+            commands.awaitTermination(Math.max(0L, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)
         } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt()
+            synchronized (commandsLock) {
+                left = new ArrayList<String>(runningCommands)
+            }
+        }
+        if (!left.isEmpty()) {
+            diagnostics.println("| Warning grails mcp ends while ${left.size() == 1 ? 'a command still runs' : "${left.size()} commands still run"} in its process " +
+                    "(${left.join(', ')}): what ${left.size() == 1 ? 'it' : 'they'} wrote last may not be whole, and the next command of the project says so where it can")
         }
     }
 
@@ -301,7 +329,7 @@ final class GrailsMcpServer implements McpHandler, Closeable {
             if (lane == Lane.BUILD) {
                 int exitCode
                 try {
-                    exitCode = inProcess(commandLine, streams)
+                    exitCode = inProcess(tool, commandLine, streams)
                 } finally {
                     lanes.release(ticket)
                 }
@@ -313,7 +341,7 @@ final class GrailsMcpServer implements McpHandler, Closeable {
             try {
                 future = commands.submit({ ->
                     try {
-                        return inProcess(commandLine, streams)
+                        return inProcess(tool, commandLine, streams)
                     } finally {
                         lanes.release(ticket)
                     }
@@ -338,11 +366,15 @@ final class GrailsMcpServer implements McpHandler, Closeable {
         }
     }
 
-    // one command line, in this process, with the class loader of the command line for the thread it runs on
-    private int inProcess(List<String> commandLine, CommandStreams streams) {
+    // one command line, in this process, with the class loader of the command line for the thread it runs on; counted among
+    // the commands that run until it has ended, which closing the server waits for
+    private int inProcess(String tool, List<String> commandLine, CommandStreams streams) {
         Thread thread = Thread.currentThread()
         ClassLoader before = thread.contextClassLoader
         thread.contextClassLoader = GrailsMcpServer.classLoader
+        synchronized (commandsLock) {
+            runningCommands.add(tool)
+        }
         try {
             return ForgeCli.execute(context, streams, commandLine as String[])
         } catch (Exception e) {
@@ -350,6 +382,10 @@ final class GrailsMcpServer implements McpHandler, Closeable {
             return 1
         } finally {
             thread.contextClassLoader = before
+            synchronized (commandsLock) {
+                runningCommands.remove(tool)
+                commandsLock.notifyAll()
+            }
         }
     }
 
@@ -572,7 +608,7 @@ final class GrailsMcpServer implements McpHandler, Closeable {
         /** After how long without a line a call is told again how many it wrote. */
         Duration quietProgress = Duration.ofSeconds(30)
 
-        /** How long the commands that write files are waited for when the server ends. */
+        /** How long the commands that still run in the process are waited for when the server is closed. */
         Duration commandsAtShutdown = Duration.ofSeconds(5)
     }
 

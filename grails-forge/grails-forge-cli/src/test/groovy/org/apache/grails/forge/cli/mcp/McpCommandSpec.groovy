@@ -56,6 +56,7 @@ class McpCommandSpec extends CommandSpec implements CommandFixture {
         McpCommand.setTerminal(null)
         ConsoleCommands.setSession(ConsoleCommands.Session.NONE)
         System.setErr(originalErr)
+        McpLeftovers.assertNoneLeft()
     }
 
     void "grails mcp --help shows how it is used, and the help of the command line does not list it"() {
