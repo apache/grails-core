@@ -1337,10 +1337,16 @@ public class GroovyPageParser implements Tokens {
     }
 
     /**
-     * Prints the code of a {@code %{ }%} scriptlet. Each run of white space in it, line breaks too, is
-     * printed as one space, and a line break of HTML, such as {@code <br>}, as a line feed, so a line of
-     * the generated source can have the code of several lines of the page. Each line of the generated
-     * source is recorded with the line of the page that its code starts on.
+     * Prints the code of a {@code %{ }%} scriptlet. Each run of white space in it is printed as one space,
+     * and a line break of HTML, such as {@code <br>}, as a line feed. Each line of the generated source is
+     * recorded with the line of the page that its code starts on.
+     * <p>
+     * A run of white space with a line break of the page in it ends the line instead, with a space and a
+     * backslash, so that the code after it is on a line of its own: Groovy takes a backslash in front of a
+     * line break for white space in code and leaves both out of a string, so the code means what it means
+     * with the one space. It is one space after code that ends with a backslash, and up to the end of the line
+     * after code that {@link #continuesOnNextLine(StringBuilder)} says cannot go on on the next line, so a
+     * line of the generated source can have the code of several lines of the page.
      *
      * @param line the line of the page that the code starts on
      */
@@ -1350,18 +1356,28 @@ public class GroovyPageParser implements Tokens {
         int pageLine = line;
         // the line of the page that the code of the line being printed starts on, or 0 before its code starts
         int codeLine = 0;
+        // whether the code of the line being printed cannot go on on the next line, which it then cannot up to its end
+        boolean joinsLines = false;
         for (int ix = 0, ixz = text.length(); ix < ixz; ix++) {
             int from = ix;
             char c = text.charAt(ix);
             String rep = null;
             boolean lineFeed = false;
+            boolean continued = false;
             if (Character.isWhitespace(c)) {
+                boolean pageLineBreak = c == '\n';
                 for (ix++; ix < ixz; ix++) {
-                    if (Character.isWhitespace(text.charAt(ix))) {
+                    char next = text.charAt(ix);
+                    if (Character.isWhitespace(next)) {
+                        pageLineBreak |= next == '\n';
                         continue;
                     }
                     ix--;
                     rep = " ";
+                    if (pageLineBreak && codeLine > 0) {
+                        joinsLines = joinsLines || !continuesOnNextLine(code);
+                        continued = !joinsLines && code.charAt(code.length() - 1) != '\\';
+                    }
                     break;
                 }
             } else if (c == '&') {
@@ -1392,10 +1408,14 @@ public class GroovyPageParser implements Tokens {
                     }
                 }
             }
-            if (lineFeed) {
+            if (continued) {
+                code.append(" \\");
+            }
+            if (lineFeed || continued) {
                 out.printlnCode(code.toString(), codeLine > 0 ? codeLine : pageLine, true);
                 code.setLength(0);
                 codeLine = 0;
+                joinsLines = false;
             } else {
                 if (codeLine == 0 && (rep != null ? !" ".equals(rep) : !Character.isWhitespace(c))) {
                     codeLine = pageLine;
@@ -1414,6 +1434,16 @@ public class GroovyPageParser implements Tokens {
             }
         }
         out.printlnCode(code.toString(), codeLine > 0 ? codeLine : pageLine, false);
+    }
+
+    /**
+     * Whether the code of a line of a {@code %{ }%} scriptlet can go on on the next line after a backslash and
+     * mean what it means with a space in place of the line break. It cannot after a {@code /}, which can start
+     * a comment that a line break ends, nor after {@code assert}, as an assertion that fails quotes its code
+     * and would quote the backslash.
+     */
+    private static boolean continuesOnNextLine(StringBuilder code) {
+        return code.indexOf("/") < 0 && code.indexOf("assert") < 0;
     }
 
     public long getLastModified() {

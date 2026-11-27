@@ -160,7 +160,6 @@ class GspLineNumberSpec extends Specification {
         'inside a scriptlet in braces with Windows line breaks'             | 'one\r\n%{\r\n new no.such.Thing()\r\n}%\r\nfour' + AFTER         || 3
         'inside a scriptlet in braces, after a line break of HTML in it'    | 'one\n%{ int a = 1<br>\n new no.such.Thing() }%\nthree' + AFTER    || 3
         'inside a scriptlet in braces, after a line break of HTML on the line it is on' | 'one\n%{ int a = 1;\n int b = 2<br>new no.such.Thing() }%\nthree' + AFTER || 3
-        'inside a scriptlet in braces whose code of several lines is one line of code' | 'one\n%{ int a = 1;\n new no.such.Thing() }%\nthree' + AFTER  || 2
         'after a scriptlet in braces of several lines'                      | 'one\n%{ int a = 1;\n int b = 2 }%\nfour\n<% new no.such.Thing() %>' + AFTER || 5
         'after a scriptlet in braces with a line break of HTML in it'       | 'one\n%{ int a = 1<br>\n int b = 2 }%\nfour\n<% new no.such.Thing() %>' + AFTER || 5
         'because a block is left open, in a page that ends with a line break'    | 'one\n<% if (true) { %>\nthree\n' || 3
@@ -228,16 +227,85 @@ class GspLineNumberSpec extends Specification {
     }
 
     @Unroll
+    void "an error in a scriptlet in braces #where names line #line, when it is compiled and when it runs"() {
+        when: 'it names a class there is not'
+        render(source.replace('FAIL', 'new no.such.Thing()') + AFTER)
+
+        then:
+        GroovyPagesException e = thrown()
+        e.lineNumber == line
+
+        when: 'it calls a method there is not'
+        GroovyPageTemplate template = (GroovyPageTemplate) engine.createTemplate(source.replace('FAIL', '[].nope()') + AFTER, "runtime${source.hashCode().abs()}")
+        template.make([:]).writeTo(new StringWriter())
+
+        then: 'the line of the page class in the stack trace is the one of the page in the table of lines, as a view maps it'
+        MissingMethodException m = thrown()
+        StackTraceElement frame = m.stackTrace.find { StackTraceElement each -> each.className == template.metaInfo.pageClass.name }
+        template.metaInfo.lineNumbers[frame.lineNumber - 1] == line
+
+        where:
+        where                                                                  | source                                                        || line
+        'on the line it opens on'                                              | 'one\n%{ FAIL }%\nthree'                                       || 2
+        'on the line after the one it opens on'                                | 'one\n%{ int a = 1;\n FAIL }%\nthree'                          || 3
+        'on a later line, with Windows line breaks'                            | 'one\r\n%{ int a = 1;\r\n int b = 2;\r\n FAIL }%\r\nfour'     || 4
+        'after blank lines in it'                                              | 'one\n%{ int a = 1;\n\n\n FAIL }%\nfive'                      || 5
+        'in an expression that goes on from the line before'                   | 'one\n%{ def x = 1 +\n FAIL }%\nthree'                         || 3
+        'in a list that goes on from the line before'                          | 'one\n%{ def x = [1,\n 2,\n FAIL] }%\nfour'                     || 4
+        'after a string in quotes that goes on to the next line'               | 'one\n%{ def s = "a\n b"; FAIL }%\nthree'                       || 3
+        'after a string in three quotes that goes on to the next line'         | "one\n%{ def s = '''a\n b'''; FAIL }%\nthree"                 || 3
+        'on a later line than the line with a slash in its code'               | 'one\n%{ int a = 1;\n int b = 4 / 2;\n FAIL }%\nfour'          || 3
+        'on the line after a division, which is the line of the division'      | 'one\n%{ int a = 4 / 2;\n FAIL }%\nthree'                      || 2
+        'on the line after a comment in slashes, which is the line of the comment' | 'one\n%{ int a = 1 /* a */;\n FAIL }%\nthree'              || 2
+        'on the line a slashy string of two lines ends on, which is the line the string starts on' | 'one\n%{ def s = /a\n b/; FAIL }%\nthree' || 2
+        'on the line after an assertion, which is the line of the assertion'   | 'one\n%{ assert true;\n FAIL }%\nthree'                         || 2
+        'on the line after code that ends with a backslash, which is the line of the backslash' | 'one\n%{ def s = "a\\\\\n"; FAIL }%\nthree'  || 2
+        'on the line after a line break of HTML that ends a line with a slash' | 'one\n%{ int a = 4 / 2<br>\n FAIL }%\nthree'                    || 3
+        'on a later line after a line break of HTML that ends a line with a slash' | 'one\n%{ int a = 4 / 2;\n int b = 1<br>\n int c = 1;\n FAIL }%\nfive' || 5
+    }
+
+    @Unroll
     void "#what"() {
-        expect: 'the code of a scriptlet in braces is not split into statements where the page has a line break'
+        expect: 'the code of a scriptlet in braces is not split into statements where the page has a line break, and what the page writes is what it wrote before'
         render(source) == result
 
         where:
-        what                                                                   | source                          || result
-        'a line break of the page in a scriptlet in braces is a space'         | '%{ def x = 1\n + 2 }%${x}'     || '3'
-        'a Windows line break of the page in a scriptlet in braces is a space' | '%{ def x = 1\r\n + 2 }%${x}'   || '3'
-        'a line break of HTML in a scriptlet in braces is a line break'        | '%{ def x = 1<br> + 2 }%${x}'   || '1'
-        'a line break of the page in a scriptlet is a line break'              | '<% def x = 1\n + 2 %>${x}'     || '1'
+        what                                                                   | source                                                 || result
+        'a line break of the page in a scriptlet in braces does not end a statement'         | '%{ def x = 1\n + 2 }%${x}'      || '3'
+        'a Windows line break of the page in a scriptlet in braces does not end a statement' | '%{ def x = 1\r\n + 2 }%${x}'    || '3'
+        'blank lines in a scriptlet in braces do not end a statement'          | '%{ def x = 1\n\n\n + 2 }%${x}'                          || '3'
+        'code of a scriptlet in braces on three lines'                         | '%{ int a = 1;\n int b = 2;\n def c = a +\n b }%${c}'  || '3'
+        'a call without parentheses whose argument is on the next line'        | '%{ def b = new StringBuilder(); b.append\n "x" }%${b}' || 'x'
+        'an else on the line after its if'                                     | '%{ def r; if (false) { r = 1 }\n else { r = 2 } }%${r}' || '2'
+        'a write to out whose value is on the next line'                       | '%{ out <<\n "a" }%'                                     || 'a'
+        'a line break in a string in single quotes is a space'                 | "%{ def s = 'a\n   b' }%\${s}"                             || 'a b'
+        'a Windows line break in a string in single quotes is a space'         | "%{ def s = 'a\r\n   b' }%\${s}"                           || 'a b'
+        'a line break in a GString is a space'                                 | '%{ def n = 1; def s = "a ${n}\n  b ${n +\n 1} c" }%${s}' || 'a 1 b 2 c'
+        'a line break after a name in a GString is a space'                    | '%{ def n = 1; def s = "x $n\n y" }%${s}'               || 'x 1 y'
+        'a line break in a string in three single quotes is a space'           | "%{ def s = '''a\n   b''' }%\${s}"                       || 'a b'
+        'a line break in a string in three double quotes is a space'           | '%{ def s = """a ${1 +\n 1}\n   b""" }%${s}'              || 'a 2 b'
+        'a line break in a slashy string is a space'                           | '%{ def s = /a\n   b/ }%${s}'                             || 'a b'
+        'a line break in a dollar slashy string is a space'                    | '%{ def s = $/a\n   b/$ }%${s}'                           || 'a b'
+        'a line break after an escaped backslash in a string is a space'       | '%{ def s = "a\\\\\n b" }%${s}'                           || 'a\\ b'
+        'a comment to the end of a line takes in the next line of the page'    | '%{ def x = 1 // one\n x = 2 }%${x}'                      || '1'
+        'a comment to the end of a later line takes in the next line of the page' | '%{ def x = 1;\n x = 2 // two\n x = 3 }%${x}'        || '2'
+        'a comment in slashes over two lines'                                  | '%{ def x = 1 /* one\n x = 2 */ }%${x}'                  || '1'
+        'a comment in slashes over two later lines'                            | '%{ def x = 1;\n /* one\n x = 2 */ }%${x}'              || '1'
+        'a division with its operator before a line break'                     | '%{ def y = 6 /\n 2 }%${y}'                               || '3'
+        'a division with its operator after a line break'                      | '%{ def y = 6\n / 2 }%${y}'                               || '3'
+        'an assertion over several lines'                                      | '%{ def a = 1;\n assert a ==\n 1 }%${a}'                 || '1'
+        'a line break of HTML in a scriptlet in braces is a line break'        | '%{ def x = 1<br> + 2 }%${x}'                             || '1'
+        'a line break of the page after a line break of HTML does not end a statement' | '%{ def x = 1<br>\n def y = x +\n 2 }%${y}'     || '3'
+        'a line break of the page in a scriptlet is a line break'              | '<% def x = 1\n + 2 %>${x}'                               || '1'
+    }
+
+    void "an assertion of several lines in a scriptlet in braces that fails quotes its code as one line"() {
+        when:
+        render('one\n%{ def a = 1;\n assert a ==\n 2 }%\nfour')
+
+        then:
+        AssertionError e = thrown()
+        e.message.readLines()[0] == 'assert a == 2'
     }
 
     void "a comment is still left out of what a page writes"() {

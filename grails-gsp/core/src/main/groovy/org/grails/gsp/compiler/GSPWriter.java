@@ -155,8 +155,9 @@ public class GSPWriter extends PrintWriter {
      * line breaks are not printed as they are in the page.
      *
      * @param line the line of the page that the code starts on
-     * @param lineFeed whether a line feed ends the line, as one ends it for a {@code <br>} in the code,
-     * rather than the line separator that {@link #println()} prints
+     * @param lineFeed whether a line feed ends the line, as one ends it for a {@code <br>} in the code and
+     * after a backslash that the code goes on from on the next line, rather than the line separator that
+     * {@link #println()} prints
      */
     void printlnCode(String code, int line, boolean lineFeed) {
         pageLine = line;
