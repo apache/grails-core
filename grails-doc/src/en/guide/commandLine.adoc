@@ -448,7 +448,7 @@ $ grails help audit-report
 Every command of `grails` itself also shows its help when it is given `--help` (`-h`): `grails create-app --help` is `grails help create-app`. Three kinds of commands give everything after their name to something else, and `--help` with it, so for them `--help` is not the help of `grails`:
 
 * `gradle --help` is the help of Gradle. `help gradle` is the help of the `gradle` command.
-* `run-tool NAME --help` gives `--help` to the tool `NAME`, and runs it.
+* `run-tool NAME --help` gives `--help` to the tool `NAME`: a tool that declares no option and no parameter runs with it, and one that declares them refuses it as an option it does not have.
 * `NAME --help`, for a tool of the application or of a plugin that declares no option and no parameter, or for a script of the application, runs that tool with `--help` as its argument: what it does with it is up to the tool, and the build is started for it unless it is a standalone tool. `help NAME` is the way to ask about such a tool. A tool that declares its options or parameters answers `NAME --help` with the help of the command line, as `help NAME` does, and runs nothing; so does `-h`, unless the tool declares `-h` itself.
 
 In a project, `help` lists the commands and the tools of the project as well, in every directory of it. A command there is not ends `help` with exit code 2.

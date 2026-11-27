@@ -80,8 +80,8 @@ Commands:
 ...
 ----
 
-`help` runs nothing to answer, also for a tool of the application or of a plugin, or a script of the application: it describes those from what the build of the project listed of them, with where each comes from and how it is run, and starts neither the build nor the tool.
+`help` runs nothing to answer, also for a tool of the application or of a plugin, or a script of the application: it describes those from what the build of the project listed of them, with where each comes from and how it is run, and the options and parameters a tool declares, and starts neither the build nor the tool.
 
-Every command of `grails` itself also shows how it is used when it is given `--help` (`-h`): `grails create-app --help` is `grails help create-app`. A command that gives everything after its name to something else does not: `help gradle` is how to see the help of the link:gradle.html[gradle] command itself, since `gradle --help` is given to Gradle, and `NAME --help` for a tool of the application or of a plugin gives `--help` to that tool and runs it, so `grails help NAME` is the way to ask about a tool. A command there is not ends `help` with exit code 2.
+Every command of `grails` itself also shows how it is used when it is given `--help` (`-h`): `grails create-app --help` is `grails help create-app`. A command that gives everything after its name to something else does not: `help gradle` is how to see the help of the link:gradle.html[gradle] command itself, since `gradle --help` is given to Gradle, and `NAME --help` for a tool of the application or of a plugin that declares no option and no parameter gives `--help` to that tool and runs it, so `grails help NAME` is the way to ask about such a tool. A tool that declares its options or parameters answers `NAME --help`, and `-h` unless it declares `-h`, with the same help as `help NAME`, and runs nothing. A command there is not ends `help` with exit code 2.
 
 See "Help" in link:{guidePath}commandLine.html[The Command Line] for the JSON document.
