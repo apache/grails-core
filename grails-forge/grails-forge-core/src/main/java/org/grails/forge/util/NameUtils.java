@@ -77,6 +77,30 @@ public final class NameUtils {
         return !StringUtils.isEmpty(appName) && !appName.equalsIgnoreCase(MICRONAUT);
     }
 
+    /**
+     * Names a project after a directory, as {@code create-app --inplace} does without a name. Unlike {@link #parse(String)}
+     * the whole directory name is the application name: a dot in it does not split a package off, so
+     * {@code bookstore.demo} names the application {@code bookstore.demo}. The package is made from the name as it is
+     * for a name without dots.
+     *
+     * @param directoryName The name of the directory
+     * @return The project
+     * @throws IllegalArgumentException If the name is not a valid application name or gives no valid package
+     */
+    public static Project parseDirectoryName(String directoryName) throws IllegalArgumentException {
+        if (!isValidAppName(directoryName)) {
+            throw new IllegalArgumentException("\"" + directoryName + "\" is not a valid app name");
+        }
+        String packageName = createPackageName(directoryName);
+        if (!isValidJavaPackage(packageName)) {
+            throw new IllegalArgumentException("Cannot create a valid package name for [" + packageName + "]. Please specify a name that is also a valid Java package.");
+        }
+        // a dot is not valid in a class name, so the class and its property are made as for a name with a hyphen there
+        String scriptName = directoryName.replace('.', '-');
+        String className = getNameFromScript(scriptName);
+        return new Project(packageName, packageName.replace('.', '/'), className, getNaturalName(scriptName), getPropertyName(className), directoryName);
+    }
+
     public static Project parse(String name) throws IllegalArgumentException {
         ProjectIdentifier projectIdentifier = parseProjectIdentifier(name);
         String packageName = projectIdentifier.getPackageName();

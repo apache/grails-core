@@ -38,4 +38,41 @@ class NameUtilsSpec extends Specification {
         ex = thrown(IllegalArgumentException)
         ex.message == '"" is not a valid app name'
     }
+
+    void "a directory name is the whole application name, a dot does not split a package off"() {
+        when:
+        def project = NameUtils.parseDirectoryName('bookstore.demo')
+
+        then:
+        project.name == 'bookstore.demo'
+        project.packageName == 'bookstoredemo'
+        project.className == 'BookstoreDemo'
+
+        when: 'parse, as for a name given on the command, still splits the last piece off'
+        def given = NameUtils.parse('bookstore.demo')
+
+        then:
+        given.name == 'demo'
+        given.packageName == 'bookstore'
+    }
+
+    void "a directory name without a dot gives the same project as the same name given on the command"() {
+        expect:
+        NameUtils.parseDirectoryName(dir).name == NameUtils.parse(dir).name
+        NameUtils.parseDirectoryName(dir).packageName == NameUtils.parse(dir).packageName
+
+        where:
+        dir << ['inplaceapp', 'my-app', 'App']
+    }
+
+    void "a directory name that gives no valid application or package is rejected"() {
+        when:
+        NameUtils.parseDirectoryName(dir)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        dir << ['', 'micronaut', '123']
+    }
 }
