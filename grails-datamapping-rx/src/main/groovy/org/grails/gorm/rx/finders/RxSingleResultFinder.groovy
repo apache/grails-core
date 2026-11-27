@@ -31,8 +31,8 @@ import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.finders.MethodExpression
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.rx.RxDatastoreClient
-import rx.Observable
-import rx.Subscriber
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 
 /**
  * Implements every RxGORM dynamic finder that returns a single result: {@code findBy*}, the
@@ -143,53 +143,28 @@ class RxSingleResultFinder implements FinderMethod {
             return result
         }
         Observable observable = (Observable) result
-        return observable.switchIfEmpty(Observable.create({ Subscriber s ->
-            Thread.start {
-                try {
-                    Map m = [:]
-                    List<MethodExpression> expressions = invocation.expressions
-                    for (MethodExpression me in expressions) {
-                        if (!(me instanceof MethodExpression.Equal)) {
-                            throw new MissingMethodException(invocation.methodName, invocation.javaClass, invocation.arguments)
-                        }
-                        String propertyName = me.propertyName
-                        Object[] meArguments = me.getArguments()
-                        m.put(propertyName, meArguments[0])
-                    }
-
-                    def newInstance = invocation.javaClass.newInstance(m)
-                    if (save) {
-                        def saveObservable = ((RxEntity) newInstance).save()
-                        saveObservable.subscribe(new Subscriber() {
-                            @Override
-                            void onCompleted() {
-                                s.onCompleted()
-                            }
-
-                            @Override
-                            void onError(Throwable e) {
-                                s.onError(e)
-                            }
-
-                            @Override
-                            void onNext(Object o) {
-                                s.onNext o
-                            }
-                        })
-                    }
-                    else {
-                        s.onNext newInstance
-                        s.onCompleted()
-                    }
+        // Observable.defer routes anything the supplier throws (e.g. the MissingMethodException from the
+        // non-Equal-expression check below, or a failure constructing newInstance) to the Observable's
+        // error channel, so a blocking call on the returned Observable fails instead of hanging.
+        return observable.switchIfEmpty(Observable.defer {
+            Map m = [:]
+            List<MethodExpression> expressions = invocation.expressions
+            for (MethodExpression me in expressions) {
+                if (!(me instanceof MethodExpression.Equal)) {
+                    throw new MissingMethodException(invocation.methodName, invocation.javaClass, invocation.arguments)
                 }
-                catch (Throwable e) {
-                    // Without this, a thrown exception (e.g. MissingMethodException from the
-                    // non-Equal-expression check above, or a failure constructing newInstance)
-                    // kills this spawned Thread silently: it never reaches the Observable's error
-                    // channel, so any blocking call on the returned Observable hangs forever.
-                    s.onError(e)
-                }
+                String propertyName = me.propertyName
+                Object[] meArguments = me.getArguments()
+                m.put(propertyName, meArguments[0])
             }
-        } as Observable.OnSubscribe))
+
+            def newInstance = invocation.javaClass.newInstance(m)
+            if (save) {
+                return (Observable) ((RxEntity) newInstance).save()
+            }
+            else {
+                return Observable.just(newInstance)
+            }
+        }.subscribeOn(Schedulers.io()))
     }
 }

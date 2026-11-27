@@ -432,6 +432,32 @@ class MongoDatastoreLifecycleSpec extends Specification {
         datastore.close()
     }
 
+    void 'a Groovy closure handed to the constructor is the supplier the datastore builds its own clients from'() {
+        given: 'a closure taking no declared parameter, as an application hands one to the constructor'
+        AtomicInteger built = new AtomicInteger()
+        MongoDatastore datastore = new MongoDatastore({
+            built.incrementAndGet()
+            MongoClients.create(unreachableUrl('test'))
+        }, DatastoreUtils.createPropertyResolver([:]), new MongoMappingContext('test'), new DefaultApplicationEventPublisher())
+
+        when:
+        datastore.start()
+
+        then: 'the datastore built its client from the closure, and owns it'
+        built.get() == 1
+        datastore.mongoClient instanceof RestartableMongoClient
+
+        when: 'it is checkpointed and restored'
+        datastore.stop()
+        datastore.start()
+
+        then: 'the restore built another from the closure'
+        built.get() == 2
+
+        cleanup:
+        datastore?.close()
+    }
+
     void 'with a supplied default client, the clients GORM created for the named connections are still stopped and restarted'() {
         given:
         MongoClient supplied = Mock(MongoClient)

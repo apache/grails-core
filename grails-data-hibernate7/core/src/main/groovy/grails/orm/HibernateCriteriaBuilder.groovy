@@ -36,6 +36,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.MultiTenant
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.BuildableCriteria
@@ -46,10 +49,12 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.query.HibernateAlias
 import org.grails.orm.hibernate.query.HibernateQuery
 import org.grails.orm.hibernate.query.SqlGroupProjection
 import org.grails.orm.hibernate.query.SqlProjection
 import org.grails.orm.hibernate.query.SqlRestriction
+import org.grails.orm.hibernate.query.SqlSyntax
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 
 /**
@@ -112,11 +117,9 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder
  * To customise which methods are handled, either extend {@link CriteriaMethodInvoker} and inject it
  * via {@link #setCriteriaMethodInvoker(CriteriaMethodInvoker)}, or subclass this class directly.
  *
- * @author Graeme Rocher
  * @see HibernateQuery
  * @see grails.gorm.DetachedCriteria
  */
-@SuppressWarnings('PMD.AvoidDuplicateLiterals')
 @CompileStatic
 class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableCriteria, ProjectionList {
 
@@ -128,20 +131,17 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
     private CriteriaQuery<?> criteriaQuery
     private boolean uniqueResult = false
 
-    @SuppressWarnings('PMD.AvoidFieldNameMatchingMethodName')
     private boolean scroll
 
-    @SuppressWarnings('PMD.AvoidFieldNameMatchingMethodName')
     private boolean count
 
     private boolean paginationEnabledList = false
     private int defaultFlushMode
 
-    @SuppressWarnings('PMD.AvoidFieldNameMatchingMethodName')
     private boolean distinct = false
     private CriteriaMethodInvoker criteriaMethodInvoker
 
-    @SuppressWarnings(['rawtypes', 'PMD.CloseResource'])
+    @SuppressWarnings('rawtypes')
     HibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory, HibernateDatastore datastore) {
         this.targetClass = targetClass
         setDatastore(datastore)
@@ -222,30 +222,95 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
         }
     }
 
-    org.grails.datastore.mapping.query.api.Criteria createAlias(String associationPath, String alias) {
-        def prop = hibernateQuery.getEntity().getPropertyByName(associationPath)
-        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(
-                    new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, JoinType.INNER))
+    Criteria createAlias(String associationPath, String alias) {
+        return createAlias(associationPath, alias, 0)
+    }
+
+    Criteria createAlias(
+            String associationPath, String alias, int joinType) {
+        DetachedCriteria<?> criteria = hibernateQuery.getDetachedCriteria()
+        JoinType convertedJoinType = convertFromInt(joinType)
+        String path = pathFromDeclaredAlias(criteria, associationPath, alias)
+        if (path.contains(ALIAS_SEPARATOR)) {
+            criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType))
             return this
         }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias)
-        hibernateQuery.getDetachedCriteria().join(associationPath, JoinType.INNER)
+        def prop = criteria.getPersistentEntity().getPropertyByName(path)
+        criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType))
+        if (prop instanceof Basic) {
+            return this
+        }
+        criteria.createAlias(path, alias)
+        criteria.join(path, convertedJoinType)
         return this
     }
 
-    org.grails.datastore.mapping.query.api.Criteria createAlias(
-            String associationPath, String alias, int joinType) {
-        def prop = hibernateQuery.getEntity().getPropertyByName(associationPath)
-        JoinType convertedJoinType = convertFromInt(joinType)
-        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(
-                    new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, convertedJoinType))
-            return this
+    /**
+     * Resolves the path of an alias that starts with an alias the criteria already declare, as
+     * {@code createAlias('f.tag', 't')} does after {@code createAlias('favorite', 'f')}. The first alias of an
+     * association path shares the join of that path, so the path continues the path of that alias
+     * ({@code favorite.tag}) and shares its joins. A later alias of the same path has a join of its own: the
+     * path then names that alias, followed by {@link #ALIAS_SEPARATOR} ({@code f2:tag}), and is joined from it.
+     *
+     * @return the path the alias is registered with, which is the given path when it starts with an association
+     */
+    private static String pathFromDeclaredAlias(DetachedCriteria<?> criteria, String associationPath, String alias) {
+        int dot = associationPath.indexOf('.')
+        if (dot < 0 || associationPath.substring(0, dot) == alias) {
+            return associationPath
         }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias)
-        hibernateQuery.getDetachedCriteria().join(associationPath, convertedJoinType)
-        return this
+        List<HibernateAlias> declared = new ArrayList<>()
+        for (Query.Criterion criterion : criteria.getCriteria()) {
+            if (criterion instanceof HibernateAlias) {
+                declared.add((HibernateAlias) criterion)
+            }
+        }
+        int rootIndex = lastIndexOfAlias(declared, associationPath.substring(0, dot), declared.size())
+        if (rootIndex < 0) {
+            return associationPath
+        }
+        String rest = associationPath.substring(dot + 1)
+        PersistentEntity entity = aliasedEntity(criteria.getPersistentEntity(), declared, rootIndex)
+        for (String segment : rest.split('\\.')) {
+            def property = entity == null ? null : entity.getPropertyByName(segment)
+            if (!(property instanceof Association)) {
+                throw new IllegalArgumentException("Argument [${associationPath}] is not an association".toString())
+            }
+            entity = ((Association<?>) property).getAssociatedEntity()
+        }
+        HibernateAlias root = declared.get(rootIndex)
+        HibernateAlias first = declared.find { HibernateAlias declaredAlias -> declaredAlias.path() == root.path() }
+        boolean sharesPathJoin = first != null && root == first
+        return sharesPathJoin ? "${root.path()}.${rest}".toString() : "${root.alias()}${ALIAS_SEPARATOR}${rest}".toString()
+    }
+
+    private static int lastIndexOfAlias(List<HibernateAlias> declared, String alias, int end) {
+        for (int i = end - 1; i >= 0; i--) {
+            if (declared.get(i).alias() == alias) {
+                return i
+            }
+        }
+        return -1
+    }
+
+    /**
+     * @return the entity the alias declared at the given position refers to, or {@code null} when its path
+     * does not lead to an entity
+     */
+    private static PersistentEntity aliasedEntity(PersistentEntity queried, List<HibernateAlias> declared, int index) {
+        String path = declared.get(index).path()
+        PersistentEntity entity = queried
+        int separator = path.indexOf(ALIAS_SEPARATOR)
+        if (separator >= 0) {
+            int rootIndex = lastIndexOfAlias(declared, path.substring(0, separator), index)
+            entity = rootIndex < 0 ? null : aliasedEntity(queried, declared, rootIndex)
+            path = path.substring(separator + ALIAS_SEPARATOR.length())
+        }
+        for (String segment : path.split('\\.')) {
+            def property = entity == null ? null : entity.getPropertyByName(segment)
+            entity = property instanceof Association ? ((Association<?>) property).getAssociatedEntity() : null
+        }
+        return entity
     }
 
     /**
@@ -1179,7 +1244,7 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
      * @throws IllegalArgumentException if the numbers of projected values, column aliases and types differ
      */
     ProjectionList sqlProjection(String sql, List<String> columnAliases, List<?> types) {
-        for (SqlProjection projection : closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types))) {
+        for (SqlProjection projection : closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types, sqlSyntax()))) {
             hibernateQuery.projections().add(projection)
         }
         return this
@@ -1199,8 +1264,8 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
      *     group by clause is empty
      */
     ProjectionList sqlGroupProjection(String sql, String groupBy, List<String> columnAliases, List<?> types) {
-        List<SqlProjection> projections = closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types))
-        for (SqlGroupProjection groupProjection : closingSessionOnError(() -> SqlGroupProjection.of(groupBy))) {
+        List<SqlProjection> projections = closingSessionOnError(() -> SqlProjection.of(sql, columnAliases, types, sqlSyntax()))
+        for (SqlGroupProjection groupProjection : closingSessionOnError(() -> SqlGroupProjection.of(groupBy, sqlSyntax()))) {
             hibernateQuery.projections().add(groupProjection)
         }
         for (SqlProjection projection : projections) {
@@ -1226,26 +1291,31 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
      * Restricts the results with a native SQL condition. {@code {alias}} in the SQL stands for the table alias of
      * the queried entity.
      *
-     * @param sql the SQL condition
+     * @param sqlRestriction the SQL condition
      * @return this criteria
      */
-    org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sql) {
-        return sqlRestriction(sql, Collections.emptyList())
+    org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sqlRestriction) {
+        return this.sqlRestriction(sqlRestriction, Collections.emptyList())
     }
 
     /**
      * Restricts the results with a native SQL condition whose {@code ?} placeholders are bound to the given values.
      * {@code {alias}} in the SQL stands for the table alias of the queried entity.
      *
-     * @param sql the SQL condition
+     * @param sqlRestriction the SQL condition
      * @param values the values of the {@code ?} placeholders, in order, none of them {@code null}
      * @return this criteria
      * @throws IllegalArgumentException if the number of {@code ?} placeholders differs from the number of values,
      *     or a value is {@code null}
      */
-    org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sql, List<?> values) {
-        hibernateQuery.add(new SqlRestriction(sql, values))
+    org.grails.datastore.mapping.query.api.Criteria sqlRestriction(String sqlRestriction, List<?> values) {
+        hibernateQuery.add(closingSessionOnError(() -> SqlRestriction.of(sqlRestriction, values, sqlSyntax())))
         return this
+    }
+
+    /** The syntax of the native SQL of the database the session factory connects to, in which the DSL's SQL is read. */
+    private SqlSyntax sqlSyntax() {
+        SqlSyntax.forSessionFactory(sessionFactory)
     }
 
     /**
@@ -1449,7 +1519,6 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
         throw t
     }
 
-    @SuppressWarnings('PMD.NullAssignment')
     private void closeSessionFollowingException() {
         closeSession()
         criteriaQuery = null

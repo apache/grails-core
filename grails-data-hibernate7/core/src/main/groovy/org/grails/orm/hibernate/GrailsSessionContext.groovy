@@ -44,9 +44,6 @@ import org.grails.orm.hibernate.support.hibernate7.SpringSessionSynchronization
 
 /**
  * Based on org.springframework.orm.hibernate4.SpringSessionContext.
- *
- * @author Juergen Hoeller
- * @author Burt Beckwith
  */
 @CompileStatic
 class GrailsSessionContext implements CurrentSessionContext {

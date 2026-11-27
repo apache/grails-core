@@ -65,7 +65,6 @@ class MappingCacheHolder {
         mappingCache.clear()
     }
 
-    @SuppressWarnings('PMD.DataflowAnomalyAnalysis')
     void clear(Class<?> theClass) {
         String className = theClass.getName()
         Iterator<Class<?>> keys = mappingCache.keySet().iterator()

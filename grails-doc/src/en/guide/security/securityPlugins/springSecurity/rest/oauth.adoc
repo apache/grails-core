@@ -93,7 +93,26 @@ You can also define the URL as a `callback` parameter in the original link, eg:
 
 `http://your-grails-api.com/oauth/authenticate/google?callback=http://your-frontend-app.com/auth-success.html?token=`
 
-In this case, the token will be *concatenated* to the end of the URL.
+In this case, the token will be *concatenated* to the end of the URL, so the URL needs a path, a query or a fragment
+after the host. The plugin only uses a `callback` URL whose origin, that is its scheme, host and port, is listed in
+`grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins`:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins = ['http://your-frontend-app.com']
+----
+
+Each entry is an origin alone. The plugin does not compare the path of the `callback` URL, so every page of a listed
+origin can be the `callback` URL, and it ignores an entry that has a path other than `/`, a query, a fragment or user
+information, such as `http://your-frontend-app.com/app`, and logs a warning. It redirects to the `callback` URL with
+every character outside US-ASCII percent-encoded as UTF-8, as browsers send it. Write a host with characters outside
+US-ASCII in its ASCII form, such as `+https://xn--bcher-kva.example+` for `https://bücher.example`; the plugin ignores
+an entry or a `callback` URL whose host is not ASCII.
+
+It compares the scheme and the host without regard to case, applies the scheme's default port when a URL has none, and
+compares an IPv6 address by its value, so that `http://[::1]:8080` also matches `http://[0:0:0:0:0:0:0:1]:8080/`. The
+plugin ignores any other `callback` URL, and every `callback` URL when `allowedCallbackOrigins` is not set, and
+redirects to the `frontendCallbackUrl` instead.
 
 Upon successful OAuth authorisation (after step 6.1 in the above diagram), an
 link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/oauth/OauthUser.html[OauthUser]

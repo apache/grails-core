@@ -23,7 +23,7 @@ import grails.gorm.api.GormAllOperations
 import grails.gorm.rx.CriteriaBuilder
 import grails.gorm.rx.DetachedCriteria
 import grails.gorm.rx.proxy.ObservableProxy
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 
 /**
  * Static methods allowed by RxGORM

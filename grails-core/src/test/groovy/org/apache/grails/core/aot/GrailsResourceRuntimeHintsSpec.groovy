@@ -50,6 +50,12 @@ class GrailsResourceRuntimeHintsSpec extends Specification {
                 .collect { it.pattern } as Set
     }
 
+    void 'what the build writes about the application is registered'() {
+        expect: 'it says which environment the application was packaged for, so an image without it ' +
+                'starts in development'
+            'META-INF/grails.build.info' in registeredPatterns()
+    }
+
     void 'the compiled assets are registered'() {
         expect: 'asset-pipeline serves them from the classpath by the path that was asked for'
             registeredPatterns().containsAll(['assets/*', 'assets/**'])

@@ -88,7 +88,7 @@ def index(Integer max) {
 
 By providing an `index.gsp` file you can render an appropriate view for the given model. If the content type is something other than HTML then the `respond` method will attempt to lookup an appropriate `grails.rest.render.Renderer` instance that is capable of rendering the passed object. This is done by inspecting the `grails.rest.render.RendererRegistry`.
 
-By default there are already renderers configured for JSON and XML, to find out how to register a custom renderer see the section on "Customizing Response Rendering".
+By default there are already renderers configured for JSON, and for XML when the `grails-xml` module is present (the Grails 9 web starter and `grails-web-boot` bring it). To find out how to register a custom renderer see the section on "Customizing Response Rendering".
 
 
 ==== Implementing the 'show' action

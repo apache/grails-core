@@ -73,12 +73,8 @@ import org.grails.orm.hibernate.HibernateDatastore
 /**
  * Listens for Hibernate events and publishes corresponding Datastore events.
  *
- * @author Graeme Rocher
- * @author Lari Hotari
- * @author Burt Beckwith
  * @since 1.0
  */
-@SuppressWarnings(['PMD.DataflowAnomalyAnalysis', 'PMD.NonSerializableClass'])
 @CompileStatic
 class ClosureEventTriggeringInterceptor
         implements Serializable,

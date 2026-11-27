@@ -25,6 +25,7 @@ import java.sql.SQLException
 import javax.sql.DataSource
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import jakarta.persistence.PersistenceException
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
@@ -61,7 +62,6 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.grails.orm.hibernate.support.hibernate7.TransactionResources
 
 @CompileStatic
-@SuppressWarnings(['PMD.CloseResource', 'PMD.DataflowAnomalyAnalysis', 'PMD.CompareObjectsWithEquals', 'PMD.EmptyIfStmt'])
 class GrailsHibernateTemplate implements IHibernateTemplate {
 
     /**
@@ -191,7 +191,8 @@ class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     /** Maps a Hibernate {@link FlushMode} to one of the {@code FLUSH_*} constants of this class. */
-    private static int hibernateFlushModeToConstant(FlushMode mode) {
+    @PackageScope
+    static int hibernateFlushModeToConstant(FlushMode mode) {
         switch (mode) {
             case FlushMode.MANUAL:
                 return FLUSH_NEVER
@@ -210,7 +211,6 @@ class GrailsHibernateTemplate implements IHibernateTemplate {
         return execute(hibernateCallback)
     }
 
-    @SuppressWarnings('PMD.DataflowAnomalyAnalysis')
     @Override
     <T> T executeWithNewSession(Closure<T> callable) {
         SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory)
@@ -337,7 +337,6 @@ class GrailsHibernateTemplate implements IHibernateTemplate {
         this.cacheQueries = cacheQueries
     }
 
-    @SuppressWarnings('PMD.PreserveStackTrace')
     <T> T execute(HibernateCallback<T> action) throws DataAccessException {
         return doExecute(action, false)
     }
@@ -381,7 +380,6 @@ class GrailsHibernateTemplate implements IHibernateTemplate {
      * @return a result object returned by the action, or <code>null</code>
      * @throws org.springframework.dao.DataAccessException in case of Hibernate errors
      */
-    @SuppressWarnings('PMD.PreserveStackTrace')
     protected <T> T doExecute(HibernateCallback<T> action, boolean enforceNativeSession) throws DataAccessException {
 
         Assert.notNull(action, 'Callback object must not be null')

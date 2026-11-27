@@ -31,7 +31,7 @@ class DiscriminatorWithoutColumnSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(DiscAnimal, DiscDog, DiscOwner, DiscColumnOnly)
     }
 
-    void "a one-to-many to a subclass whose root maps only a discriminator value loads its elements"() {
+    void 'a one-to-many to a subclass whose root maps only a discriminator value loads its elements'() {
         given:
         DiscOwner owner = new DiscOwner(name: 'ann')
         owner.addToDogs(new DiscDog(name: 'rex'))
@@ -42,7 +42,7 @@ class DiscriminatorWithoutColumnSpec extends HibernateGormDatastoreSpec {
         DiscOwner.get(owner.id).dogs*.name == ['rex']
     }
 
-    void "the discriminator column name of a root that maps only a value is the default"() {
+    void 'the discriminator column name of a root that maps only a value is the default'() {
         given:
         def entity = DiscDog.gormPersistentEntity
 
@@ -51,7 +51,7 @@ class DiscriminatorWithoutColumnSpec extends HibernateGormDatastoreSpec {
         entity.discriminatorValue == 'dog'
     }
 
-    void "the discriminator value defaults to the class name when only a column is mapped"() {
+    void 'the discriminator value defaults to the class name when only a column is mapped'() {
         given:
         def entity = DiscColumnOnly.gormPersistentEntity
 

@@ -160,4 +160,30 @@ class DefaultApplicationEventPublisherSpec extends Specification {
         1 * supported.onApplicationEvent(_)
         0 * unsupported.onApplicationEvent(_)
     }
+
+    void 'a listener can add another listener while an event is published'() {
+        given: 'a listener that adds one, as a datastore that adds a schema while it saves does'
+        List<String> received = []
+        ApplicationListener<ApplicationEvent> added = { ApplicationEvent event -> received << "added:${event.source}".toString() } as ApplicationListener<ApplicationEvent>
+        publisher.addApplicationListener({ ApplicationEvent event ->
+            received << "adding:${event.source}".toString()
+            if (event.source == 'first') {
+                publisher.addApplicationListener(added)
+            }
+        } as ApplicationListener<ApplicationEvent>)
+
+        when:
+        publisher.publishEvent(new TestEvent('first'))
+        publisher.publishEvent(new TestEvent('second'))
+
+        then: 'the added listener receives the events published after it was added'
+        received == ['adding:first', 'adding:second', 'added:second']
+    }
+
+    static class TestEvent extends ApplicationEvent {
+
+        TestEvent(Object source) {
+            super(source)
+        }
+    }
 }

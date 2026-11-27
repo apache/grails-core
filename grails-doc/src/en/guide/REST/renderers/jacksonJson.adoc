@@ -1,0 +1,145 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+`render json:` writes JSON with a Grails mapper derived from Spring Boot's configured `JsonMapper`, and so does
+`respond` when `grails.web.rendering.json.spring` is `true`, and for a response it is given a `jsonConfiguration` for. A
+`ProblemDetail` is written by Spring's message converter with Spring Boot's mapper itself, as a Spring MVC controller
+writes it. The Grails mapper keeps the application's Jackson settings, such as the `spring.jackson.*`
+properties, and writes domain class instances as `grails.converters.JSON` writes them with `grails.converters.json.legacy`
+set to `false`, so customize it as you customize the mapper of any Spring Boot application.
+
+
+==== Serializers for Every Response
+
+
+Register Jackson serializers with a Spring Boot `JsonMapperBuilderCustomizer`, so that they apply to Spring MVC and the
+other Jackson-based integrations, to `render json:`, to `respond` where it writes with the Grails mapper, and to
+`grails.converters.JSON` with `grails.converters.json.legacy` set to `false`:
+
+[source,groovy]
+----
+import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer
+import tools.jackson.databind.module.SimpleModule
+
+@Bean
+JsonMapperBuilderCustomizer bookJsonCustomizer() {
+    { builder ->
+        builder.addModule(new SimpleModule()
+                .addSerializer(Book, new BookValueSerializer()))
+    } as JsonMapperBuilderCustomizer
+}
+----
+
+`BookValueSerializer` is an application-provided Jackson `ValueSerializer<Book>`. With the Grails 9 defaults, `respond`
+writes JSON with the legacy `grails.converters.JSON`, which does not use the serializer, unless it writes a
+`ProblemDetail` or is given a `jsonConfiguration`. A marshaller registered with `JSON.registerObjectMarshaller(...)`
+applies to `grails.converters.JSON` only.
+
+
+==== Jackson Views of an Action
+
+
+With `grails.web.rendering.json.spring: true`, annotate an action `@JsonView` to have `respond` write the properties of
+that view, as Spring MVC writes the value of a controller method annotated so:
+
+[source,groovy]
+----
+import com.fasterxml.jackson.annotation.JsonView
+
+class Book {
+    @JsonView(BookViews.Brief)
+    String title
+    String isbn
+}
+
+class BookController {
+
+    @JsonView(BookViews.Brief)
+    def brief(Long id) {
+        respond Book.get(id)
+    }
+}
+----
+
+The properties without the view are written as the mapper's `DEFAULT_VIEW_INCLUSION` decides, which Spring Boot's mapper
+has off. A problem `respond` writes, such as the validation errors of the action, is written with all of its properties,
+and a named configuration, which has a `view` of its own, is not given the action's. In a controller unit test, an
+action the test calls has its annotations applied, as in the application, and `respond` called outside of an action has
+none.
+
+
+==== Named JSON Configurations
+
+
+A named configuration writes some responses differently from the others, such as a public and an internal shape of the
+same class. Register it with the `NamedJsonConfigurationRegistry` bean, which derives the mapper of each configuration
+from Spring Boot's `JsonMapper`, so that it keeps the application's Jackson settings without changing the shared mapper:
+
+[source,groovy]
+----
+import grails.converters.json.NamedJsonConfigurationRegistry
+
+class BootStrap {
+    NamedJsonConfigurationRegistry namedJsonConfigurationRegistry
+
+    def init = { servletContext ->
+        namedJsonConfigurationRegistry.register('catalog') {
+            it.serializer(Category, new CatalogCategorySerializer())
+            it.view(CatalogView)
+        }
+    }
+}
+----
+
+A configuration is made of:
+
+* `serializer(type, serializer)` - a Jackson `ValueSerializer` that writes the instances of a type
+* `view(viewClass)` - a Jackson view to write with, so that the properties annotated `@JsonView` are written only in the
+views they name, and the others as the mapper's `DEFAULT_VIEW_INCLUSION` decides
+* `deep()` - writing the associated instances of domain class instances in full, rather than as references of their ids
+* `attribute(name, value)` - an attribute of its writes, which a serializer reads from its `SerializationContext`
+
+Every registry has a configuration named `deep` that writes the associated instances of domain class instances in full.
+With `grails.converters.json.default.deep` set, every configuration writes them in full. A configuration cannot be
+changed once it is registered: register the name again to replace it.
+
+Select a configuration for a response with the `jsonConfiguration` argument of `respond` or `render`:
+
+[source,groovy]
+----
+respond book, jsonConfiguration: 'catalog'
+render json: book, jsonConfiguration: 'catalog', excludes: ['isbn']
+----
+
+With `respond`, the default JSON renderers, and `JsonRenderer` and `JsonCollectionRenderer` beans, write the value with
+the configuration, and throw `IllegalArgumentException` for a name that is not registered, as `render json:` does; the
+HAL and Vnd.Error renderers do not use it. `respond` writes a `ProblemDetail`, and validation errors, as it writes them
+without a configuration, where `render json:` writes whatever it is given with the configuration.
+
+Both accept `includes` and `excludes`, which apply to the properties of the instances of the value's class, or of its
+elements' classes for a collection or an array, though not to a `ProblemDetail` `respond` writes, nor to the instances
+of a class a serializer of its own writes, which a warning names. A response written with a configuration is written by
+the Grails mapper alone, without the prefix Spring MVC's JSON converter may write ahead of a response.
+
+To write a value other than a response, call the registry's `writeValueAsString(name, value)`, or
+`writeValue(name, writer, value)`, which leaves the writer open and unflushed; a `null` name selects the default
+configuration.
+
+`JSON.createNamedConfig(...)` and `JSON.use(...)`, which select a configuration of the JSON converter for a block of code,
+are deprecated and scheduled for removal in Grails 11.

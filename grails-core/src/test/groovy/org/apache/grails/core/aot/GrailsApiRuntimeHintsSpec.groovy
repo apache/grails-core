@@ -23,14 +23,26 @@ import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.TypeReference
 import spock.lang.Specification
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.support.AbstractBeanDefinition
 import org.springframework.context.ApplicationContext
 import org.springframework.core.env.Environment
 import org.springframework.core.env.PropertyResolver
+import org.springframework.util.ClassUtils
 
 import grails.config.Config
 import grails.config.ConfigMap
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPluginManager
+import grails.spring.BeanBuilder
+import grails.util.BuildSettings
+import grails.util.Environment as GrailsEnvironment
+import grails.util.GrailsUtil
+import org.grails.spring.RuntimeSpringConfiguration
 
 /**
  * Covers the framework's own interfaces being callable from an image.
@@ -75,6 +87,42 @@ class GrailsApiRuntimeHintsSpec extends Specification {
             invocable(PropertyResolver)
             invocable(Environment)
             invocable(ApplicationContext)
+    }
+
+    void 'a descriptor can create its logger and log through it'() {
+        given: 'the call a dynamically compiled descriptor declaring @Slf4j makes in its static initializer'
+            def getLogger = LoggerFactory.getMethod('getLogger', String)
+
+        expect: 'the first such descriptor to load stopped the application before any plugin was registered'
+            getLogger.declaringClass == LoggerFactory
+            invocable(LoggerFactory)
+            invocable(Logger)
+    }
+
+    void 'the constants and static helpers dynamically compiled code reads can be reached'() {
+        expect: 'a descriptor reads Settings.MIME_TYPES and asks Environment.current reflectively'
+            [Settings, BuildSettings, GrailsEnvironment, GrailsUtil].every {
+                def hint = hints.reflection().getTypeHint(TypeReference.of(it))
+                hint != null && hint.memberCategories.containsAll([MemberCategory.INVOKE_DECLARED_METHODS,
+                                                                  MemberCategory.ACCESS_PUBLIC_FIELDS])
+            }
+    }
+
+    void 'the builder a descriptor declares its beans with can be called'() {
+        expect: 'the bean DSL is called the same dynamic way'
+            invocable(BeanBuilder)
+            invocable(RuntimeSpringConfiguration)
+    }
+
+    void 'what a bean DSL closure calls on Spring can be called'() {
+        expect: 'a descriptor checks for an optional dependency, asks what is declared and sets a bean option dynamically'
+            [ClassUtils, BeanFactory, AbstractBeanDefinition].every { invocable(it) }
+    }
+
+    void 'a method can be added through a meta class property'() {
+        expect: 'the codecs add every encodeAs method with metaClass.encodeAsHTML << { ... }'
+            def hint = hints.reflection().getTypeHint(TypeReference.of('groovy.lang.ExpandoMetaClass$ExpandoMetaProperty'))
+            hint != null && hint.memberCategories.contains(MemberCategory.INVOKE_DECLARED_METHODS)
     }
 
     void 'the call that stopped a context from starting is covered'() {

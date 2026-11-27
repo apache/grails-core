@@ -1,4 +1,9 @@
-# Keep java version synced with .github/workflows/release.yml ($JAVA_VERSION) and etc/bin/Dockerfile (primary JDK).
+# The release workflows read the java version from here (.github/actions/sdkmanrc-java). When it changes,
+# also update:
+# - LIBERICA_VERSION in etc/bin/Dockerfile: the version plus the build actions/setup-java installs for it,
+#   as the bell-sw/Liberica GitHub release names it (<version>+<build>)
+# - LIBERICA_SHA256_AMD64 and LIBERICA_SHA256_AARCH64 in etc/bin/Dockerfile: the sha256 of that release's
+#   bellsoft-jdk<version>+<build>-linux-amd64.tar.gz and -linux-aarch64.tar.gz
 # This is the default JDK for all of grails-core EXCEPT the Grails-Micronaut "island"
 # (grails-micronaut, grails-micronaut-bom), which is built against Micronaut 5 / JVM 25
 # bytecode. The release workflow installs a secondary Liberica JDK pinned via
@@ -8,4 +13,4 @@
 java=21.0.12-librca
 # Keep gradle version synced with gradle.properties (gradleToolingApiVersion).
 # Update the gradle-bootstrap project to propagate the version to all gradle-wrapper.properties files.
-gradle=9.8.1
+gradle=9.9.2

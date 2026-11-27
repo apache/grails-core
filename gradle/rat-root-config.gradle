@@ -127,9 +127,6 @@ tasks.named('rat') {
             'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/snapshot/HibernateTableSnapshotGenerator.groovy',
             'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/snapshot/HibernateUniqueConstraintSnapshotGenerator.groovy',
             'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/snapshot/HibernateViewSnapshotGenerator.groovy',
-            // Derived from liquibase-hibernate (Apache 2.0): fixes ported after v4.27.0
-            'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/diff/HibernateChangedIndexChangeGenerator.groovy',
-            'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/snapshot/IdentifierGeneratorSupport.groovy',
             // Third-party test fixtures from liquibase-hibernate v4.27.0
             'grails-data-hibernate7/dbmigration-core/src/testFixtures/groovy/com/example/columnremarks/**',
             'grails-data-hibernate7/dbmigration-core/src/testFixtures/groovy/com/example/customconfig/**',
@@ -178,6 +175,7 @@ tasks.named('rat') {
             '**/*.log', // exclude log files
             'local-tasks.gradle', // exclude local helper scripts
             '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
+            'end-to-end/native-i18n/src/native/resources/META-INF/native-image/reachability-metadata.json', // JSON files cannot contain license headers
             'grails-test-examples/spring-security/cas/test1/src/main/resources/cas/services/*.json', // CAS service registry definitions; JSON files cannot contain license headers
             'grails-data-hibernate7/core/src/test/resources/classic-oracle/**', // recorded output of the classic domain binder, one record per line; a license header would alter the compared text
             'grails-test-examples/benchmarks/src/reportTest/resources/jmh-golden/**', // byte-exact JMH report fixtures; a license header would alter the compared bytes

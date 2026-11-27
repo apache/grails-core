@@ -1,21 +1,21 @@
-package com.example.pojo.auction;
+package com.example.pojo.auction
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
 @CompileStatic
 class Bid extends Persistent {
 
-    AuctionItem item;
-    float amount;
-    Date datetime;
-    User bidder;
+    AuctionItem item
+    float amount
+    Date datetime
+    User bidder
 
     String toString() {
-        return bidder.getUserName() + ' \$' + amount;
+        return bidder.getUserName() + ' \$' + amount
     }
 
     boolean isBuyNow() {
-        return false;
+        return false
     }
 
 }

@@ -16,14 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.example.ejb3.customid;
+package com.example.ejb3.customid
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-import org.hibernate.annotations.IdGeneratorType;
+import org.hibernate.annotations.IdGeneratorType
 
 /**
  * Custom ID generator annotation using @IdGeneratorType.
@@ -33,10 +33,10 @@ import org.hibernate.annotations.IdGeneratorType;
 @Retention(RetentionPolicy.RUNTIME)
 @interface SnowflakeId {
 
-    String name() default "snowflake";
+    String name() default 'snowflake'
 
-    int startWith() default 1;
+    int startWith() default 1
 
-    int incrementBy() default 50;
+    int incrementBy() default 50
 
 }

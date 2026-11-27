@@ -13,40 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import groovy.transform.CompileStatic;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.Expression;
-import org.hibernate.metamodel.model.domain.ReturnableType;
-import org.hibernate.query.criteria.JpaExpression;
-import org.hibernate.query.sqm.NodeBuilder;
-import org.hibernate.query.sqm.function.SqmFunctionDescriptor;
-import org.hibernate.query.sqm.tree.SqmTypedNode;
-import org.hibernate.type.BasicType;
-import org.hibernate.type.BasicTypeReference;
+import groovy.transform.CompileStatic
+import jakarta.persistence.criteria.CriteriaBuilder
+import jakarta.persistence.criteria.Expression
+import org.hibernate.metamodel.model.domain.ReturnableType
+import org.hibernate.query.criteria.JpaExpression
+import org.hibernate.query.sqm.NodeBuilder
+import org.hibernate.query.sqm.function.SqmFunctionDescriptor
+import org.hibernate.query.sqm.tree.SqmTypedNode
+import org.hibernate.type.BasicType
+import org.hibernate.type.BasicTypeReference
 
-import org.grails.datastore.mapping.query.Projections;
-import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.datastore.mapping.query.Projections
+import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 /**
  * A class that translates GORM projections to JPA expressions.
  *
  * @since 8.0
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
 @CompileStatic
-@SuppressWarnings(['unchecked', 'UnnecessarySemicolon', 'UnnecessaryGString'])
+@SuppressWarnings('unchecked')
 class JpaProjectionTranslator {
 
-    private final CriteriaBuilder criteriaBuilder;
-    private final JpaQueryContext context;
-    private final GrailsHibernatePersistentEntity entity;
+    private final CriteriaBuilder criteriaBuilder
+    private final JpaQueryContext context
+    private final GrailsHibernatePersistentEntity entity
 
     JpaProjectionTranslator(CriteriaBuilder criteriaBuilder, JpaQueryContext context) {
-        this(criteriaBuilder, context, null);
+        this(criteriaBuilder, context, null)
     }
 
     /**
@@ -54,9 +53,9 @@ class JpaProjectionTranslator {
      */
     JpaProjectionTranslator(
             CriteriaBuilder criteriaBuilder, JpaQueryContext context, GrailsHibernatePersistentEntity entity) {
-        this.criteriaBuilder = criteriaBuilder;
-        this.context = context;
-        this.entity = entity;
+        this.criteriaBuilder = criteriaBuilder
+        this.context = context
+        this.entity = entity
     }
 
     /**
@@ -69,28 +68,28 @@ class JpaProjectionTranslator {
      */
     JpaExpression<?> translateSql(String sql, Object type) {
         if (entity == null && sql.contains(GrailsSqlRestrictionFunction.ALIAS_PLACEHOLDER)) {
-            throw new IllegalStateException("Cannot replace {alias} in a SQL projection without the queried entity: " + sql);
+            throw new IllegalStateException('Cannot replace {alias} in a SQL projection without the queried entity: ' + sql)
         }
-        List<Expression<?>> arguments = PredicateGenerator.nativeSqlArguments(criteriaBuilder, sql, context.root, entity);
+        List<Expression<?>> arguments = PredicateGenerator.nativeSqlArguments(criteriaBuilder, sql, context.root, entity)
         if (criteriaBuilder instanceof NodeBuilder) {
-            NodeBuilder nodeBuilder = (NodeBuilder) criteriaBuilder;
-            ReturnableType<?> returnType = basicType(nodeBuilder, type);
+            NodeBuilder nodeBuilder = (NodeBuilder) criteriaBuilder
+            ReturnableType<?> returnType = basicType(nodeBuilder, type)
             if (returnType != null) {
                 // criteriaBuilder.function only takes the Java class, which would read a DATE as a TIMESTAMP, or a
                 // YES_NO without its conversion
                 SqmFunctionDescriptor function = nodeBuilder.queryEngine.sqmFunctionRegistry
-                        .findFunctionDescriptor(GrailsSqlProjectionFunction.NAME);
+                        .findFunctionDescriptor(GrailsSqlProjectionFunction.NAME)
                 if (function != null) {
-                    List<SqmTypedNode<?>> sqmArguments = new ArrayList<>(arguments.size());
+                    List<SqmTypedNode<?>> sqmArguments = new ArrayList<>(arguments.size())
                     for (Expression<?> argument : arguments) {
-                        sqmArguments.add((SqmTypedNode<?>) argument);
+                        sqmArguments.add((SqmTypedNode<?>) argument)
                     }
-                    return function.generateSqmExpression(sqmArguments, returnType, nodeBuilder.queryEngine);
+                    return function.generateSqmExpression(sqmArguments, returnType, nodeBuilder.queryEngine)
                 }
             }
         }
         return (JpaExpression<?>) criteriaBuilder.function(
-                GrailsSqlProjectionFunction.NAME, SqlProjection.javaType(type), arguments.toArray(new Expression<?>[0]));
+                GrailsSqlProjectionFunction.NAME, SqlProjection.javaType(type), arguments.toArray(new Expression<?>[0]))
     }
 
     /**
@@ -100,91 +99,103 @@ class JpaProjectionTranslator {
      */
     private static ReturnableType<?> basicType(NodeBuilder nodeBuilder, Object type) {
         if (type instanceof BasicTypeReference) {
-            return nodeBuilder.typeConfiguration.basicTypeRegistry.resolve((BasicTypeReference<?>) type);
+            return nodeBuilder.typeConfiguration.basicTypeRegistry.resolve((BasicTypeReference<?>) type)
         }
-        return type instanceof BasicType ? (BasicType<?>) type : null;
+        return type instanceof BasicType ? (BasicType<?>) type : null
     }
 
     JpaExpression<?> translate(Query.Projection projection) {
-        JpaExpression<?> jpaExpression;
-        String propertyName = null;
-        String alias = null;
+        JpaExpression<?> jpaExpression
+        String propertyName = null
+        String alias = null
+        String requestedPath = null
 
         if (projection instanceof SqlGroupProjection) {
-            return null;
+            return null
         } else if (projection instanceof SqlProjection) {
-            SqlProjection sqlProjection = (SqlProjection) projection;
-            jpaExpression = translateSql(sqlProjection.sql, sqlProjection.declaredType);
+            SqlProjection sqlProjection = (SqlProjection) projection
+            jpaExpression = translateSql(sqlProjection.sql, sqlProjection.declaredType)
             if (sqlProjection.columnAlias != null) {
-                jpaExpression.alias(sqlProjection.columnAlias);
-                context.registerSelectionAlias(sqlProjection.columnAlias, jpaExpression);
+                jpaExpression.alias(sqlProjection.columnAlias)
+                context.registerSelectionAlias(sqlProjection.columnAlias, jpaExpression)
             }
-            return jpaExpression;
+            return jpaExpression
         }
 
         if (projection instanceof Hibernate7CountProjection) {
-            propertyName = ((Hibernate7CountProjection) projection).propertyName;
+            propertyName = ((Hibernate7CountProjection) projection).propertyName
         } else if (projection instanceof Query.GroupPropertyProjection) {
-            propertyName = ((Query.GroupPropertyProjection) projection).propertyName;
+            propertyName = ((Query.GroupPropertyProjection) projection).propertyName
         } else if (projection instanceof Query.PropertyProjection) {
-            propertyName = ((Query.PropertyProjection) projection).propertyName;
+            propertyName = ((Query.PropertyProjection) projection).propertyName
         } else if (projection instanceof Query.CountDistinctProjection) {
-            propertyName = ((Query.CountDistinctProjection) projection).propertyName;
+            propertyName = ((Query.CountDistinctProjection) projection).propertyName
         }
 
         if (propertyName != null && propertyName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            String[] parts = propertyName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
-            alias = parts[0];
-            propertyName = parts[1];
+            String[] parts = propertyName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)
+            alias = parts[0]
+            propertyName = parts[1]
         }
+        requestedPath = propertyName
 
         if (projection instanceof Query.CountProjection) {
-            Expression<?> pathExpr;
+            Expression<?> pathExpr
             if (propertyName != null) {
-                pathExpr = context.getAliasedExpression(propertyName);
+                pathExpr = context.getAliasedExpression(propertyName)
                 if (pathExpr == null) {
-                    pathExpr = context.getFullyQualifiedExpression("root.${propertyName}".toString());
+                    pathExpr = context.getFullyQualifiedExpression("root.${propertyName}".toString())
                 }
+                requireResolved(pathExpr, requestedPath)
             } else {
-                pathExpr = context.root;
+                pathExpr = context.root
             }
-            jpaExpression = (JpaExpression<?>) criteriaBuilder.count(pathExpr);
+            jpaExpression = (JpaExpression<?>) criteriaBuilder.count(pathExpr)
         } else if (projection instanceof Query.CountDistinctProjection) {
-            Expression<?> pathExpr = context.getAliasedExpression(propertyName);
+            Expression<?> pathExpr = context.getAliasedExpression(propertyName)
             if (pathExpr == null) {
-                pathExpr = context.getFullyQualifiedExpression("root.${propertyName}".toString());
+                pathExpr = context.getFullyQualifiedExpression("root.${propertyName}".toString())
             }
-            jpaExpression = (JpaExpression<?>) criteriaBuilder.countDistinct(pathExpr);
+            requireResolved(pathExpr, requestedPath)
+            jpaExpression = (JpaExpression<?>) criteriaBuilder.countDistinct(pathExpr)
         } else if (projection instanceof Query.IdProjection) {
-            jpaExpression = (JpaExpression<?>) context.getFullyQualifiedPath("root.id");
+            jpaExpression = (JpaExpression<?>) context.getFullyQualifiedPath('root.id')
         } else if (projection instanceof Query.DistinctPropertyProjection) {
-            Query.DistinctPropertyProjection distinctPropertyProjection = (Query.DistinctPropertyProjection) projection;
-            return translate(Projections.property(distinctPropertyProjection.propertyName));
+            Query.DistinctPropertyProjection distinctPropertyProjection = (Query.DistinctPropertyProjection) projection
+            return translate(Projections.property(distinctPropertyProjection.propertyName))
         } else if (projection instanceof Query.DistinctProjection) {
-            return null;
+            return null
         } else if (projection instanceof Query.PropertyProjection) {
-            Expression<?> expression = context.getFullyQualifiedExpression(propertyName);
+            Expression<?> expression = context.getFullyQualifiedExpression(propertyName)
+            requireResolved(expression, requestedPath)
 
             if (projection instanceof Query.MaxProjection) {
-                jpaExpression = (JpaExpression<?>) criteriaBuilder.max((Expression<? extends Number>) expression);
+                jpaExpression = (JpaExpression<?>) criteriaBuilder.max((Expression<? extends Number>) expression)
             } else if (projection instanceof Query.MinProjection) {
-                jpaExpression = (JpaExpression<?>) criteriaBuilder.min((Expression<? extends Number>) expression);
+                jpaExpression = (JpaExpression<?>) criteriaBuilder.min((Expression<? extends Number>) expression)
             } else if (projection instanceof Query.AvgProjection) {
-                jpaExpression = (JpaExpression<?>) criteriaBuilder.avg((Expression<? extends Number>) expression);
+                jpaExpression = (JpaExpression<?>) criteriaBuilder.avg((Expression<? extends Number>) expression)
             } else if (projection instanceof Query.SumProjection) {
-                jpaExpression = (JpaExpression<?>) criteriaBuilder.sum((Expression<? extends Number>) expression);
+                jpaExpression = (JpaExpression<?>) criteriaBuilder.sum((Expression<? extends Number>) expression)
             } else {
-                jpaExpression = (JpaExpression<?>) expression;
+                jpaExpression = (JpaExpression<?>) expression
             }
         } else {
-            throw new UnsupportedOperationException("Unsupported projection: ${projection.class.name}".toString());
+            throw new UnsupportedOperationException("Unsupported projection: ${projection.class.name}".toString())
         }
 
         if (alias != null && jpaExpression != null) {
-            jpaExpression.alias(alias);
-            context.registerAlias(alias, jpaExpression);
+            jpaExpression.alias(alias)
+            context.registerAlias(alias, jpaExpression)
         }
-        return jpaExpression;
+        return jpaExpression
+    }
+
+    private void requireResolved(Expression<?> expression, String path) {
+        if (expression == null) {
+            throw new ConfigurationException('Cannot use projection on non-existent property [' + path +
+                    '] of class [' + context.getRoot().getJavaType().getName() + ']')
+        }
     }
 
 }

@@ -24,7 +24,22 @@ import org.springframework.context.support.StaticMessageSource
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
 
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
+
+import graphql.ExecutionResult
+import graphql.GraphQL
+import graphql.Scalars
+import graphql.schema.DataFetcher
+import graphql.schema.FieldCoordinates
 import graphql.schema.GraphQLCodeRegistry
+import graphql.schema.GraphQLFieldDefinition
+import graphql.schema.GraphQLObjectType
+import graphql.schema.GraphQLSchema
+import org.apache.grails.datamapping.core.querytail.QueryTailRecord
+import org.apache.grails.datamapping.core.querytail.QueryTailRequestAttribution
+import org.apache.grails.datastore.core.querytail.QueryTailSettings
 import org.grails.gorm.graphql.types.DefaultGraphQLTypeManager
 
 import spock.lang.Specification
@@ -73,6 +88,45 @@ class GormGraphqlGrailsPluginSpec extends Specification {
 
         then:
         typeManager.codeRegistry.is(beanFactory.getBean('graphQLCodeRegistry', GraphQLCodeRegistry.Builder))
+    }
+
+    void "the GraphQL the plugin builds counts statements under each operation only while statements are captured: #setting"() {
+        given: 'a schema whose one field answers with the page a statement its fetcher ran would count under'
+        def beanFactory = new DefaultListableBeanFactory()
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('test', settings))
+        applyRegistrar(beanFactory, environment)
+        beanFactory.removeBeanDefinition('graphQLSchema')
+        beanFactory.registerSingleton('graphQLSchema', pageSchema())
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest('POST', '/graphql')))
+
+        when:
+        ExecutionResult result = beanFactory.getBean('graphQL', GraphQL).execute('query Probe { page }')
+
+        then:
+        result.errors.empty
+        result.data.page == page
+
+        cleanup:
+        RequestContextHolder.resetRequestAttributes()
+
+        where:
+        setting    | settings                                         || page
+        'enabled'  | [(QueryTailSettings.SETTING_ENABLED): 'true']  || 'POST /? (query Probe)'
+        'disabled' | [(QueryTailSettings.SETTING_ENABLED): 'false'] || null
+        'absent'   | [:]                                              || null
+    }
+
+    /**
+     * @return a schema whose field {@code page} answers with the page of a statement run where its fetcher runs
+     */
+    private static GraphQLSchema pageSchema() {
+        DataFetcher<String> page = { env -> new QueryTailRequestAttribution().attribute(new QueryTailRecord(sql: 'select 1')).page } as DataFetcher<String>
+        GraphQLSchema.newSchema()
+                .query(GraphQLObjectType.newObject().name('Query')
+                        .field(GraphQLFieldDefinition.newFieldDefinition().name('page').type(Scalars.GraphQLString)))
+                .codeRegistry(GraphQLCodeRegistry.newCodeRegistry().dataFetcher(FieldCoordinates.coordinates('Query', 'page'), page).build())
+                .build()
     }
 
     private static void applyRegistrar(DefaultListableBeanFactory beanFactory, StandardEnvironment environment) {

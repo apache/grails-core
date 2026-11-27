@@ -119,7 +119,9 @@ class PromiseList<T> implements Promise<List<T>> {
 
     @Override
     Promise<List<T>> then(Closure callable) {
-        return Promises.onComplete(promises, { List<T> values -> return values }).then(callable)
+        // onComplete makes the closure's result the List<T> value, which its Closure<T> parameter does not express
+        Closure allValues = { List<T> values -> return values }
+        return Promises.onComplete(promises, allValues).then(callable)
     }
 
     /**

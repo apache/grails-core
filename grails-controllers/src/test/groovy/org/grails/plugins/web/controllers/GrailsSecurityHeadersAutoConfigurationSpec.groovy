@@ -37,11 +37,14 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.security.web.header.ContentSecurityPolicyNonceGeneratingFilter
 import org.springframework.security.web.header.HeaderWriterFilter
+import org.springframework.security.web.header.writers.ContentSecurityPolicyHeaderWriter
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
 import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter
 import org.springframework.web.filter.CharacterEncodingFilter
 
+import grails.web.http.ContentSecurityPolicyNonce
 import org.grails.web.config.http.GrailsFilters
 
 import spock.lang.Specification
@@ -275,6 +278,170 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
         response.getHeader('Referrer-Policy') == 'no-referrer-when-downgrade'
         response.getHeader('Strict-Transport-Security') == 'max-age=63072000; includeSubDomains'
         response.getHeader('Content-Security-Policy') == "default-src 'self'"
+    }
+
+    void 'each {nonce} in the Content-Security-Policy is the nonce a view of the request renders'() {
+        given:
+        def request = new MockHttpServletRequest('GET', '/')
+        def response = new MockHttpServletResponse()
+        def properties = cspProperties("script-src 'self' 'nonce-{nonce}'; style-src 'nonce-{nonce}'")
+        String rendered = null
+        FilterChain view = { viewRequest, viewResponse ->
+            rendered = ContentSecurityPolicyNonce.nonceOf(viewRequest as HttpServletRequest)
+        } as FilterChain
+
+        when:
+        new GrailsSecurityHeadersFilter(properties).doFilter(request, response, view)
+
+        then: '128 random bits, Base64 without padding, as Spring Security generates a nonce'
+        rendered ==~ /[A-Za-z0-9+\/]{22}/
+        response.getHeader('Content-Security-Policy') ==
+                "script-src 'self' 'nonce-${rendered}'; style-src 'nonce-${rendered}'"
+    }
+
+    void 'every request gets a nonce of its own'() {
+        given:
+        def filter = new GrailsSecurityHeadersFilter(cspProperties("script-src 'nonce-{nonce}'"))
+
+        when:
+        def first = new MockHttpServletResponse()
+        filter.doFilter(new MockHttpServletRequest('GET', '/'), first, new MockFilterChain())
+        def second = new MockHttpServletResponse()
+        filter.doFilter(new MockHttpServletRequest('GET', '/'), second, new MockFilterChain())
+
+        then:
+        first.getHeader('Content-Security-Policy') ==~ /script-src 'nonce-[A-Za-z0-9+\/]{22}'/
+        first.getHeader('Content-Security-Policy') != second.getHeader('Content-Security-Policy')
+    }
+
+    @Unroll
+    void 'a request carries no nonce when the Content-Security-Policy #description'() {
+        given:
+        def request = new MockHttpServletRequest('GET', '/')
+        def response = new MockHttpServletResponse()
+        def properties = cspProperties(policy)
+        properties.contentSecurityPolicy.enabled = enabled
+        Object carried = 'unset'
+        FilterChain view = { viewRequest, viewResponse ->
+            carried = viewRequest.getAttribute('_csp')
+        } as FilterChain
+
+        when:
+        new GrailsSecurityHeadersFilter(properties).doFilter(request, response, view)
+
+        then:
+        carried == null
+        response.getHeader('Content-Security-Policy') == header
+
+        where:
+        description               | enabled | policy                       || header
+        'has no {nonce}'          | true    | "default-src 'self'"         || "default-src 'self'"
+        'is not sent'             | false   | "script-src 'nonce-{nonce}'" || null
+    }
+
+    void 'an error dispatch of the request keeps the nonce its view rendered'() {
+        given:
+        def request = new MockHttpServletRequest('GET', '/')
+        def filter = new GrailsSecurityHeadersFilter(cspProperties("script-src 'nonce-{nonce}'"))
+        def original = new MockHttpServletResponse()
+        filter.doFilter(request, original, new MockFilterChain())
+        String rendered = ContentSecurityPolicyNonce.nonceOf(request)
+
+        when: 'the container dispatches the same request to its error page'
+        request.dispatcherType = DispatcherType.ERROR
+        def errorPage = new MockHttpServletResponse()
+        filter.doFilter(request, errorPage, new MockFilterChain())
+
+        then:
+        original.getHeader('Content-Security-Policy') == "script-src 'nonce-${rendered}'"
+        errorPage.getHeader('Content-Security-Policy') == "script-src 'nonce-${rendered}'"
+    }
+
+    void 'Spring Security writing its own nonce-based policy inside the filter wins, with the nonce the view renders'() {
+        given: 'the chain the headers DSL builds when its policy uses {nonce}: the nonce filter, then the header writer'
+        def request = new MockHttpServletRequest('GET', '/')
+        def response = new MockHttpServletResponse()
+        def springSecurityNonce = new ContentSecurityPolicyNonceGeneratingFilter()
+        def springSecurityHeaders = new HeaderWriterFilter([
+                new ContentSecurityPolicyHeaderWriter("script-src 'self' 'nonce-{nonce}'")
+        ])
+        def view = new NonceRenderingServlet()
+
+        when:
+        new GrailsSecurityHeadersFilter(cspProperties("default-src 'none'; script-src 'nonce-{nonce}'"))
+                .doFilter(request, response, new MockFilterChain(view, springSecurityNonce, springSecurityHeaders))
+
+        then:
+        response.contentAsString ==~ /[A-Za-z0-9+\/]{22}/
+        response.getHeader('Content-Security-Policy') == "script-src 'self' 'nonce-${response.contentAsString}'"
+    }
+
+    void 'the filter writes the nonce Spring Security put on the request when its chain runs ahead of the filter'() {
+        given: 'spring.security.filter.order ahead of the Grails filter, so the Grails writer is the inner one and writes first'
+        def request = new MockHttpServletRequest('GET', '/')
+        def response = new MockHttpServletResponse()
+        def springSecurityNonce = new ContentSecurityPolicyNonceGeneratingFilter()
+        def springSecurityHeaders = new HeaderWriterFilter([
+                new ContentSecurityPolicyHeaderWriter("script-src 'self' 'nonce-{nonce}'")
+        ])
+        def grails = new GrailsSecurityHeadersFilter(cspProperties("default-src 'none'; script-src 'nonce-{nonce}'"))
+        def view = new NonceRenderingServlet()
+
+        when:
+        springSecurityNonce.doFilter(request, response,
+                new MockFilterChain(view, springSecurityHeaders, grails))
+
+        then: 'the Grails policy, with the nonce Spring Security generated and the view rendered'
+        response.contentAsString ==~ /[A-Za-z0-9+\/]{22}/
+        response.getHeader('Content-Security-Policy') ==
+                "default-src 'none'; script-src 'nonce-${response.contentAsString}'"
+    }
+
+    void 'a request attribute that holds no nonce leaves the policy unsent and is warned about once'() {
+        given:
+        def logCapture = new LogCapture(GrailsSecurityHeadersFilter)
+        def filter = new GrailsSecurityHeadersFilter(cspProperties("script-src 'nonce-{nonce}'"))
+
+        when: 'two requests arrive with something else under the attribute'
+        def first = new MockHttpServletResponse()
+        def firstRequest = new MockHttpServletRequest('GET', '/')
+        firstRequest.setAttribute('_csp', 'not a nonce')
+        filter.doFilter(firstRequest, first, new MockFilterChain())
+        def second = new MockHttpServletResponse()
+        def secondRequest = new MockHttpServletRequest('GET', '/')
+        secondRequest.setAttribute('_csp', 'not a nonce')
+        filter.doFilter(secondRequest, second, new MockFilterChain())
+
+        then: 'a policy that names no nonce would block every inline script the view nonced'
+        first.getHeader('Content-Security-Policy') == null
+        second.getHeader('Content-Security-Policy') == null
+        first.getHeader('X-Content-Type-Options') == 'nosniff'
+
+        and:
+        def warnings = logCapture.events.findAll { it.level == Level.WARN }
+        warnings.size() == 1
+        warnings[0].formattedMessage.contains('{nonce}')
+        warnings[0].formattedMessage.contains('_csp')
+        warnings[0].formattedMessage.contains(String.name)
+
+        cleanup:
+        logCapture.close()
+    }
+
+    void 'a nonce-based policy binds from application configuration'() {
+        expect:
+        new WebApplicationContextRunner()
+                .withPropertyValues('grails.security.headers.content-security-policy.enabled=true',
+                        "grails.security.headers.content-security-policy.value=script-src 'self' 'nonce-{nonce}'")
+                .withConfiguration(AutoConfigurations.of(GrailsSecurityHeadersAutoConfiguration))
+                .run { context ->
+                    def request = new MockHttpServletRequest('GET', '/')
+                    def response = new MockHttpServletResponse()
+                    context.getBean(GrailsSecurityHeadersFilter).doFilter(request, response, new MockFilterChain())
+                    String nonce = ContentSecurityPolicyNonce.nonceOf(request)
+                    assert nonce ==~ /[A-Za-z0-9+\/]{22}/
+                    assert response.getHeader('Content-Security-Policy') == "script-src 'self' 'nonce-${nonce}'"
+                }
     }
 
     void 'filter respects per-header disable switches and existing response headers'() {
@@ -1235,6 +1402,22 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
         'auto'   | GrailsSecurityHeadersProperties.Defaults.AUTO     | false
         'never'  | GrailsSecurityHeadersProperties.Defaults.NEVER    | false
         outcome = defaultsSent ? 'receives' : 'does not receive'
+    }
+
+    private static GrailsSecurityHeadersProperties cspProperties(String policy) {
+        def properties = new GrailsSecurityHeadersProperties()
+        properties.contentSecurityPolicy.enabled = true
+        properties.contentSecurityPolicy.value = policy
+        properties
+    }
+
+    /** Renders the nonce of the request as its body, as a view renders it into a script's nonce attribute. */
+    static class NonceRenderingServlet extends HttpServlet {
+
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+            response.writer.write(ContentSecurityPolicyNonce.nonceOf(request))
+        }
     }
 
     @Configuration(proxyBeanMethods = false)

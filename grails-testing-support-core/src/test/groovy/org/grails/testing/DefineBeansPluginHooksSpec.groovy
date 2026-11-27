@@ -26,6 +26,11 @@ import spock.lang.Specification
 
 class DefineBeansPluginHooksSpec extends Specification implements GrailsUnitTest {
 
+    void "plain unit tests do not load the converters' web beans"() {
+        expect: 'grails-converters, which this module tests with, is the one module of them on its classpath'
+        !applicationContext.containsBean('namedJsonConfigurationRegistry')
+    }
+
     static class BothHooksPlugin {
 
         Closure doWithSpring() {

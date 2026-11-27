@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.bootstrap.ConfigurableBootstrapContext;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
@@ -117,16 +119,16 @@ public class I18nEnvironmentPostProcessor implements EnvironmentPostProcessor, O
         propertySources.addLast(new MapPropertySource(DEFAULTS_PROPERTY_SOURCE_NAME, defaults(environment)));
 
         List<I18nDescriptor> descriptors = I18nDescriptors.load(application.getClassLoader());
-        if (descriptors.isEmpty()) {
-            return;
+        List<String> discovered = List.of();
+        if (!descriptors.isEmpty()) {
+            boolean includePluginBundles = environment.getProperty(INCLUDE_PLUGIN_BUNDLES_PROPERTY, Boolean.class,
+                    Boolean.TRUE);
+            EffectiveI18nDescriptors effective = EffectiveI18nDescriptors.of(descriptors,
+                    pluginNamesInTopologicalOrder(environment, descriptors, includePluginBundles), includePluginBundles);
+            discovered = effective.basenames();
         }
 
-        boolean includePluginBundles = environment.getProperty(INCLUDE_PLUGIN_BUNDLES_PROPERTY, Boolean.class,
-                Boolean.TRUE);
-        EffectiveI18nDescriptors effective = EffectiveI18nDescriptors.of(descriptors,
-                pluginNamesInTopologicalOrder(environment, descriptors, includePluginBundles), includePluginBundles);
-
-        List<String> composed = compose(environment, effective.basenames());
+        List<String> composed = compose(environment, discovered);
         if (!composed.isEmpty()) {
             Map<String, Object> source = new LinkedHashMap<>();
             source.put(BASENAME_PROPERTY, String.join(",", composed));
@@ -147,12 +149,10 @@ public class I18nEnvironmentPostProcessor implements EnvironmentPostProcessor, O
     }
 
     private List<String> declaredBasenames(ConfigurableEnvironment environment) {
-        String declared = environment.getProperty(BASENAME_PROPERTY);
-        if (declared == null || declared.isBlank()) {
-            return List.of();
-        }
+        List<String> declared = Binder.get(environment).bind(BASENAME_PROPERTY, Bindable.listOf(String.class))
+                .orElseGet(List::of);
         List<String> basenames = new ArrayList<>();
-        for (String basename : declared.split(",")) {
+        for (String basename : declared) {
             String trimmed = basename.trim();
             if (!trimmed.isEmpty()) {
                 basenames.add(trimmed);

@@ -28,7 +28,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 @CompileStatic
-@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class DefaultColumnNameFetcher {
 
     /** The suffix of a foreign key column named after the property or the entity it refers to. */

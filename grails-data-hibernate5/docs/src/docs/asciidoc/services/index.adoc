@@ -42,6 +42,7 @@ include::serviceValidation.adoc[]
 
 include::multipleDataSources.adoc[]
 
+[[dataServicesRxJava]]
 === RxJava Support
 
 include::rxServices.adoc[]

@@ -1,6 +1,6 @@
 ---
 name: hibernate-developer
-description: Guide for working in the grails-data-hibernate7 module, especially Hibernate 7 domain binding, mapping migration, generators, and integration tests. Use this when changing code or tests under grails-data-hibernate7.
+description: Guide for working in the grails-data-hibernate modules (Hibernate 7 on 8.0.x and Hibernate 5 on 7.0.x), covering domain binding, session and transaction lifecycle management across GrailsHibernateTemplate and executeWithNewSession, criteria and SQM subquery correlation, patch-line API minimalism, dialect semantics, and integration testing. Use this when changing code or tests under grails-data-hibernate*.
 license: Apache-2.0
 ---
 <!--
@@ -18,17 +18,19 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## When to Use Me
 
-Activate this skill when working on the Hibernate 7 module, especially for:
+Activate this skill when working on the Hibernate modules, especially for:
 
-- Changes under `grails-data-hibernate7/**`.
-- Hibernate 7 mapping and metadata binding work.
+- Changes under `grails-data-hibernate7/**` or `grails-data-hibernate5/**`.
+- Session and transaction lifecycle management across `GrailsHibernateTemplate`, `executeWithNewSession`, and `OuterSessionLifecycleStrategy`.
+- Hibernate mapping and metadata binding work.
 - Identifier, version, collection, association, or generator binding changes.
-- Hibernate 7 regression fixes and migration follow-up tasks.
-- Specs that exercise Hibernate-backed mapping behavior rather than lightweight unit behavior.
+- Criteria, DetachedCriteria, SQM AST, alias scoping, and subquery correlation.
+- Hibernate regression fixes and migration follow-up tasks.
+- Specs that exercise Hibernate-backed mapping behavior or transaction lifecycle rather than lightweight unit behavior.
 
 ## Module Context
 
-This skill is for the Grails framework's Hibernate 7 integration module, not for a Grails application. Prefer guidance from this skill over generic Grails app patterns when working in `grails-data-hibernate7`.
+This skill is for the Grails framework's Hibernate 7 integration module on the 8.0.x line (where 8.1.x is the Spring Boot 4.1 line), not for a Grails application. Prefer guidance from this skill over generic Grails app patterns when working in `grails-data-hibernate7`.
 
 Native domain binding is the only binding: `GrailsDomainGenerator` generates a JPA-annotated class for every GORM entity from the mapping model, Hibernate's own annotation binder binds those classes, and `GeneratedDomainClassBinder` aligns the bound model with what the mapping asks for and points the bound entities at the real domain classes. The classic binder of Grails 8, which built Hibernate's boot model by hand, was removed in 9.0.x; its behaviour is recorded in `core/src/test/resources/classic-oracle/` and the two differential specs compare native binding with it (see `grails-data-hibernate7/README.md`). Changes often ripple through:
 
@@ -67,7 +69,8 @@ Read the package in the order the binding runs:
 
 - `ColumnConfigToColumnBinder`, `StringColumnConstraintsBinder`, `NumericColumnConstraintsBinder`, `IndexBinder` (`domainbinding.column`): apply a column config to a Hibernate `Column`; the generator and the aligner share them.
 - `DefaultColumnNameFetcher`, `ColumnNameForPropertyAndPathFetcher`, `TableForManyCalculator`, `NamingStrategyWrapper`, `BackticksRemover`, `CascadeBehaviorFetcher`, `CreateKeyForProps`, `UniqueNameGenerator` (`domainbinding.util`).
-- `GrailsDomainGenerator.compositeUserTypeFacets` / `defineCompositeUserTypeField`: a property mapped with a Hibernate `CompositeUserType` becomes an `@Embedded` field of the value class with `@CompositeType` and one `@AttributeOverride` per attribute of the user type's `embeddable()` class (record components, else fields and readable properties, alphabetical; configured columns by position, else `<property>_<attribute>`), the schema Grails 8's classic binder created for it.
+- `GrailsDomainGenerator.compositeUserTypeFacets` / `defineCompositeUserTypeField`: a property mapped with a Hibernate `CompositeUserType` becomes an `@Embedded` field of the value class with `@CompositeType` and one `@AttributeOverride` per attribute of the user type's `embeddable()` class (record components, else fields and readable properties, alphabetical; configured columns by position, else `<property>_<attribute>`), the schema Grails 8's classic binder created for it. The user type is resolved by `CompositeUserTypeColumns.userTypeOf` (a managed bean of the configured container, else its default constructor); the attribute columns take their own configuration and, for a numeric attribute, the default precision of the dialect, never the constraints of the property; a unique property, or a group that names it, is one key over all of its columns (`CreateKeyForProps.createKeyForColumns`).
+- `GeneratedDomainClassBinder.shareJoinTables` (`SharedJoinTableUniqueKeyBinder`, `SharedJoinTableUniqueness`, `UniqueIndexNulls`): Hibernate's annotation binder knows nothing of a join table that several collections of one owner write, so once the metadata is complete each such collection gets a unique key of its own in the shape the database needs, nullable key and index columns, and no primary key those columns would fill with nulls.
 
 ### Generators
 
@@ -81,6 +84,56 @@ Keep these module-specific expectations in mind:
 - Utility classes in `domainbinding.util` and `domainbinding.column` should prefer Hibernate-aware GORM types internally, but public signatures may still need base interfaces when Spock mocks require them.
 - A new `@Entity` fixture in the core test tree is scanned by the differential specs and needs its records in the classic oracle (see the README for how to record them).
 - `GrailsIncrementGenerator` still contains reflection-based Hibernate 7 compatibility workarounds; avoid broad refactors unless the change explicitly addresses that area.
+
+## Transaction and Session Lifecycle Management
+
+Framework code touching `GrailsHibernateTemplate`, `executeWithNewSession`, or session binding operates at the collision point of Spring's transaction synchronization, Hibernate's logical connection lifecycle, and the JDBC connection pool. Follow these non-negotiable rules:
+
+- **Never disconnect active write-bearing transactions**: Disconnecting an outer session in `beforeCompletion` drops uncommitted entity dirty checks and pending flushes. The outer transaction reports commit success, but rows are silently lost. Only disconnect an outer session if it is an idle or read-only `PROPAGATION_SUPPORTS` context that owns no active transaction.
+- **Prevent pool starvation on non-lazy data sources**: Calling connection probes (such as `con.getAutoCommit()` or `con.getMetaData()`) on a datasource that is *not* wrapped in `LazyConnectionDataSourceProxy` immediately checks out a physical connection from the pool. If the outer session is idle and the pool is small, this starves the pool and deadlocks inner sessions.
+- **Save and restore connection holders and synchronizations symmetrically**: In `executeWithNewSession`, capture the previous `ConnectionHolder` and Spring `TransactionSynchronization` list before rebinding, and strictly restore them in a `finally` block.
+- **Coordinate with `SESSION_SYNCHRONIZATION_ORDER`**: When registering synchronizations with Spring's `TransactionSynchronizationManager`, ensure the logical connection disconnects before Spring's `ConnectionSynchronization` closes the physical connection, without interfering with active flushes.
+- **Suspend and restore closed bound holders**: When a `SessionHolder` is bound to the thread in Spring's `TransactionSynchronizationManager`, it must be suspended and restored across `withNewSession` even if its underlying session is closed, preventing `IllegalStateException: Already value bound to thread`.
+- **Translate post-callback flush exceptions**: Call `flushIfNecessary` inside the exception-translation block (`executeInSession`) so Hibernate flush exceptions (e.g. database constraint overruns) are converted to Spring's `DataAccessException` hierarchy (`DataIntegrityViolationException`) rather than escaping unconverted.
+- **Strict patch-line API minimalism**: On maintenance and patch branches (`7.0.x` or `8.0.x`), never introduce new public or protected methods, classes, or extension points. Never introduce fields or internal state that are assigned but never read. Keep bugfix diffs strictly minimal.
+- **Avoid test-driven production pollution**: Do not add multi-argument constructor or method overloads to production classes solely to facilitate unit-test mocks; test behavior through real entity execution or pass necessary runtime flags directly.
+- **Authentic exception testing**: Exercise real database/ORM constraint overruns (e.g. column length violation) in tests rather than throwing mock `HibernateException` instances directly, verifying real exception conversion paths.
+
+## Criteria, SQM AST, and Subquery Correlation
+
+Hibernate 7 compiles Criteria into an internal Semantic Query Model (SQM) AST. When working with DetachedCriteria, subqueries, and criteria builders:
+
+- **Lexical alias scoping**: Materialize nested aliases strictly on the association scope that declares them. Never fall back to implicit parent aliases or materialize them onto the query root.
+- **Sibling association block isolation**: Sibling association blocks querying the same association name must maintain independent joins rather than collapsing into a shared join that leaks predicates between blocks.
+- **Subquery correlation over inherited joins**: When correlating a subquery to an outer query through nested or inherited joins, ensure the outer join path remains accessible to the subquery predicates without dropping the comparison or creating redundant inner joins.
+
+## Dialect Matrix and Database Engine Differences
+
+Do not assume H2 or default SQL semantics apply across all supported database engines:
+
+- **Unique index null semantics**:
+  - **Single property `unique: true, nullable: true`**: A `null` value is always exempt from uniqueness checks across all datastores and in-memory test environments. Never execute a uniqueness query when the target value is `null`.
+  - **Oracle B-Tree index**: Oracle omits index entries where *every* column of the unique index is `null`. Multiple all-null rows are accepted by the database. If even one column in a composite unique key is non-null, Oracle indexes it and enforces uniqueness.
+  - **IBM Db2**: In Hibernate 7, `DB2Dialect` appends `exclude null keys` for LUW, while `DB2iDialect` and `DB2zDialect` render `create unique where not null index`. Do not force GORM `value` comparisons on all-null rows that the database dialect omits.
+  - **NoSQL / Neo4j**: A null unique association represents the non-existence of a relationship. Never match null unique associations against nodes that have existing relationships.
+- **Shared join tables**:
+  - Sets on a dialect that compares nulls, Oracle and Db2 LUW, share one unique key across the associations. A separate key per association rejects two valid rows that are null in one association's columns and equal in the element. Dialects that treat nulls as distinct keep a separate key per association. Lists and maps stay indexed, and bags stay without a key.
+  - Calling `clear()` or bulk-deleting one association on a shared join table with separate key columns must leave the rows of the other association intact.
+
+## Mandatory Invariant Verification Protocol
+
+Before submitting changes in Hibernate, transaction, or GORM layers, you must evaluate and document the **Invariant Matrix**:
+
+1. **Transaction Matrix**:
+   - `PROPAGATION_REQUIRED`: uncommitted writes flushed on commit, no premature disconnect.
+   - `PROPAGATION_REQUIRES_NEW`: inner transaction isolated from outer transaction.
+   - `PROPAGATION_SUPPORTS` (read-only): outer session remains usable after inner block without connection leaks.
+   - Direct `DataSource` vs `LazyConnectionDataSourceProxy`: verify no eager physical connection checkout when session is idle.
+2. **Adversarial Audit Questions**:
+   - *Does this disconnect an active transaction that has uncommitted dirty entities?*
+   - *Does this allocate a pooled connection if the session never executes a query?*
+   - *What does the physical database index do when composite keys are all-null vs partially-null, and do sets on shared join tables use one combined key or a key per association?*
+   - *What happens when two sibling closures in a criteria query join the same property name?*
 
 ## Testing Rules
 

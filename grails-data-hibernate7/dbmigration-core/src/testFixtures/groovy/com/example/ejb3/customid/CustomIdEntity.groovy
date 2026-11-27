@@ -16,26 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.example.ejb3.customid;
+package com.example.ejb3.customid
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import groovy.transform.CompileStatic
+
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
 
 /**
  * Entity using a custom @IdGeneratorType-based ID generator.
  */
+@CompileStatic
 @Entity
-@Table(name = "custom_id_entity")
+@Table(name = 'custom_id_entity')
 class CustomIdEntity {
 
     @Id
     @SnowflakeId
-    @Column(name = "id", nullable = false, updatable = false)
-    Long id;
+    @Column(name = 'id', nullable = false, updatable = false)
+    Long id
 
-    @Column(name = "name", nullable = false, length = 100)
-    String name;
+    @Column(name = 'name', nullable = false, length = 100)
+    String name
 
 }

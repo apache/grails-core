@@ -25,9 +25,11 @@ import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.core.env.StandardEnvironment
 
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.web.mapping.UrlMappings
+import org.grails.config.PropertySourcesConfig
 import org.grails.core.artefact.UrlMappingsArtefactHandler
 import org.grails.spring.beans.factory.HotSwappableTargetSourceFactoryBean
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
@@ -101,6 +103,31 @@ class UrlMappingsGrailsPluginSpec extends Specification {
         holder.beanClassName == UrlMappingsHolderFactoryBean.name
         holder.lazyInit
         !registry.containsBeanDefinition('urlMappingsTargetSource')
+    }
+
+    void "the handler mapping marks the requests its mappings handle only with grails.mime.negotiation.spring: #setting"() {
+        given:
+        def beanFactory = new DefaultListableBeanFactory()
+        def config = new PropertySourcesConfig(setting == null ? [:] : [(Settings.MIME_NEGOTIATION_SPRING): setting])
+        def application = Mock(GrailsApplication) {
+            getArtefacts(UrlMappingsArtefactHandler.TYPE) >> { [Mock(GrailsClass)] as GrailsClass[] }
+            getConfig() >> config
+        }
+        applyRegistrar(beanFactory, application)
+        def registry = new DefaultListableBeanFactory()
+
+        when:
+        beanFactory.getBean('urlMappingsBeanDefinitionsPostProcessor', UrlMappingsBeanDefinitionsPostProcessor)
+                .postProcessBeanDefinitionRegistry(registry)
+
+        then:
+        registry.getBeanDefinition('urlMappingsHandlerMapping').propertyValues.getPropertyValue('markHandledRequests')?.value == marks
+
+        where:
+        setting || marks
+        null    || null
+        false   || null
+        true    || true
     }
 
     private static void applyRegistrar(DefaultListableBeanFactory beanFactory, GrailsApplication application) {

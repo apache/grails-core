@@ -18,10 +18,20 @@
  */
 package grails.plugin.geb
 
+import java.nio.charset.StandardCharsets
+import java.time.Duration
 import java.time.LocalDateTime
 
+import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.async.ResultCallback
+import com.github.dockerjava.api.command.LogContainerCmd
+import com.github.dockerjava.api.model.Frame
+import com.github.dockerjava.api.model.StreamType
 import org.testcontainers.containers.BrowserWebDriverContainer
+import org.testcontainers.containers.ContainerLaunchException
+import org.testcontainers.containers.Network
 import org.testcontainers.containers.VncRecordingContainer
+import org.testcontainers.containers.wait.strategy.WaitStrategyTarget
 
 import org.openqa.selenium.WebDriver
 
@@ -250,6 +260,88 @@ class WebDriverContainerHolderSpec extends Specification {
 
         expect:
         !holder.recordingContainerAvailable
+    }
+
+    void 'the recording container for a test is not started while its recorder has only connected'() {
+        given: 'the recording container that is started before a test'
+        def waitStrategy = createRecordingContainer().waitStrategy
+                .withStartupTimeout(Duration.ofSeconds(1))
+
+        and: 'a recorder that has connected, but is still receiving the screen'
+        def recorder = recorderLogging(RECORDER_CONNECTED_LOG)
+
+        when:
+        waitStrategy.waitUntilReady(recorder)
+
+        then: 'the recording container is not ready, as its recording would only show a black screen'
+        thrown(ContainerLaunchException)
+    }
+
+    void 'the recording container for a test is started once its recording shows the screen'() {
+        given: 'the recording container that is started before a test'
+        def waitStrategy = createRecordingContainer().waitStrategy
+
+        and: 'a recorder that has received the screen and written it to the recording'
+        def recorder = recorderLogging(RECORDER_CONNECTED_LOG + RECORDER_SCREEN_RECORDED_LOG)
+
+        when:
+        waitStrategy.waitUntilReady(recorder)
+
+        then: 'the recording container is ready'
+        noExceptionThrown()
+    }
+
+    // Debug output of the VNC recorder (flvrec.py of testcontainers/vnc-recorder:1.3.0, as run by
+    // VncRecordingContainer) connecting to selenium/standalone-chrome:4.49.0
+    private static final List<String> RECORDER_CONNECTED_LOG = [
+            'start recording',
+            'Connected: browser:5900',
+            'protocol_version: 3.8',
+            'server_result: 0',
+            'Server Encoding:',
+            " width=1920, height=1080, name='browser:99.0'",
+            "init_screen: 1920x1080, name='browser:99.0'",
+            'start: 0,0 (1920x1080)',
+            'set_screen_size: 1920x1080',
+            'FrameBufferUpdateRequest',
+            'write_video_frame: timestamp=0, data=55085',
+            'FrameBufferUpdate: nrects=1',
+            ' 1920 x 1080 at (0,0), enc=0',
+    ]
+    private static final List<String> RECORDER_SCREEN_RECORDED_LOG = [
+            ' RawEncoding: received=8294400',
+            'write_video_frame: timestamp=266, data=28035',
+            'FrameBufferUpdateRequest',
+    ]
+
+    private VncRecordingContainer createRecordingContainer() {
+        holder.container = Stub(BrowserWebDriverContainer) {
+            getNetwork() >> Stub(Network)
+            getNetworkAliases() >> ['browser']
+        }
+        holder.createVncRecordingContainer()
+    }
+
+    /**
+     * A container whose log, as read by a {@link org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy},
+     * consists of the given lines.
+     */
+    private WaitStrategyTarget recorderLogging(List<String> lines) {
+        def logCommand = Stub(LogContainerCmd)
+        logCommand.withFollowStream(_) >> logCommand
+        logCommand.withSince(_) >> logCommand
+        logCommand.withStdOut(_) >> logCommand
+        logCommand.withStdErr(_) >> logCommand
+        logCommand.exec(_) >> { ResultCallback<Frame> callback ->
+            lines.each { callback.onNext(new Frame(StreamType.STDERR, (it + '\n').getBytes(StandardCharsets.UTF_8))) }
+            callback
+        }
+        def dockerClient = Stub(DockerClient) {
+            logContainerCmd(_) >> logCommand
+        }
+        Stub(WaitStrategyTarget) {
+            getDockerClient() >> dockerClient
+        }
     }
 
     private void enablePerTestRecording() {

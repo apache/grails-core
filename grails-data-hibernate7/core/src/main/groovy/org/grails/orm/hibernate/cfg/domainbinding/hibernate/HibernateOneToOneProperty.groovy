@@ -16,54 +16,51 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import groovy.transform.CompileStatic;
-import org.hibernate.FetchMode;
-import org.hibernate.MappingException;
-import org.hibernate.type.ForeignKeyDirection;
+import groovy.transform.CompileStatic
+import org.hibernate.FetchMode
+import org.hibernate.MappingException
+import org.hibernate.type.ForeignKeyDirection
 
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.mapping.OneToOneWithMapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.mapping.OneToOneWithMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
-import java.beans.PropertyDescriptor;
+import java.beans.PropertyDescriptor
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToOne} */
-// TODO(groovyism-cleanup): semicolons kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon'])
 @CompileStatic
 class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig> implements HibernateToOneProperty {
 
     HibernateOneToOneProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        super(entity, context, property);
+        super(entity, context, property)
     }
 
     @Override
     void validateAssociation() {
-        HibernateToOneProperty.super.validateAssociation();
+        HibernateToOneProperty.super.validateAssociation()
         if (isHasOne() && !isBidirectional()) {
             throw new MappingException('hasOne property [' + getName() +
-                    '] is not bidirectional. Specify the other side of the relationship!');
+                    '] is not bidirectional. Specify the other side of the relationship!')
         }
     }
 
     @Override
     GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity()
     }
 
     @Override
     HibernateOneToOneProperty getHibernateInverseSide() {
-        return (HibernateOneToOneProperty) getInverseSide();
+        return (HibernateOneToOneProperty) getInverseSide()
     }
 
     /** True when the FK is on this side (hasOne on the other side). Maps to Hibernate constrained. */
     boolean isHibernateConstrained() {
-        HibernateOneToOneProperty otherSide = getHibernateInverseSide();
-        return otherSide != null && otherSide.isHasOne();
+        HibernateOneToOneProperty otherSide = getHibernateInverseSide()
+        return otherSide != null && otherSide.isHasOne()
     }
 
     /**
@@ -71,10 +68,10 @@ class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig> impl
      * side's owner; otherwise the directly associated entity.
      */
     String getHibernateReferencedEntityName() {
-        HibernateOneToOneProperty otherSide = getHibernateInverseSide();
+        HibernateOneToOneProperty otherSide = getHibernateInverseSide()
         return otherSide != null ?
                 otherSide.getOwner().getName() :
-                getAssociatedEntity().getName();
+                getAssociatedEntity().getName()
     }
 
     /**
@@ -82,19 +79,19 @@ class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig> impl
      * meaningful when {@link #isHibernateConstrained()} is false and the other side exists.
      */
     String getHibernateReferencedPropertyName() {
-        HibernateOneToOneProperty otherSide = getHibernateInverseSide();
-        return otherSide != null ? otherSide.getName() : null;
+        HibernateOneToOneProperty otherSide = getHibernateInverseSide()
+        return otherSide != null ? otherSide.getName() : null
     }
 
     /** FK direction: FROM_PARENT when constrained (hasOne on other side), TO_PARENT otherwise. */
     ForeignKeyDirection getHibernateForeignKeyDirection() {
-        return isHibernateConstrained() ? ForeignKeyDirection.FROM_PARENT : ForeignKeyDirection.TO_PARENT;
+        return isHibernateConstrained() ? ForeignKeyDirection.FROM_PARENT : ForeignKeyDirection.TO_PARENT
     }
 
     /** Resolved fetch mode: uses the configured value or falls back to {@link FetchMode#DEFAULT}. */
     FetchMode getHibernateFetchMode() {
-        PropertyConfig config = getHibernateMappedForm();
-        return (config != null && config.getFetchMode() != null) ? config.getFetchMode() : FetchMode.DEFAULT;
+        PropertyConfig config = getHibernateMappedForm()
+        return (config != null && config.getFetchMode() != null) ? config.getFetchMode() : FetchMode.DEFAULT
     }
 
     /**
@@ -102,28 +99,28 @@ class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig> impl
      * This is the case when the FK is on this side (constrained) or no inverse side exists.
      */
     boolean needsSimpleValueBinding() {
-        return isHibernateConstrained() || getHibernateReferencedPropertyName() == null;
+        return isHibernateConstrained() || getHibernateReferencedPropertyName() == null
     }
 
     @Override
     boolean isValidHibernateOneToOne() {
-        validateAssociation();
+        validateAssociation()
         return canBindOneToOneWithSingleColumnAndForeignKey() ||
-                isHasOne() && isBidirectional() && getInverseSide() != null;
+                isHasOne() && isBidirectional() && getInverseSide() != null
     }
 
     @Override
     boolean isValidHibernateManyToOne() {
-        validateAssociation();
-        return !isValidHibernateOneToOne();
+        validateAssociation()
+        return !isValidHibernateOneToOne()
     }
 
     @Override
     boolean isAssociationColumnNullable() {
         if (isBidirectional() && !isOwningSide()) {
-            HibernateOneToOneProperty inverseSide = getHibernateInverseSide();
-            return inverseSide == null || !inverseSide.isHasOne();
+            HibernateOneToOneProperty inverseSide = getHibernateInverseSide()
+            return inverseSide == null || !inverseSide.isHasOne()
         }
-        return true;
+        return true
     }
 }

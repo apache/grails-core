@@ -28,7 +28,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyPr
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 
 @CompileStatic
-@SuppressWarnings('PMD.LoggerIsNotStaticFinal')
 class LogCascadeMapping {
 
     private final Logger log

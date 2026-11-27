@@ -1,0 +1,84 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Merging a pull request, or labelling it "no ci", does not stop the runs still queued or in progress for its head
+# commit, and except for the tests a "run ci" label asked for, their result can no longer change anything. This
+# workflow cancels the pull_request runs of every open pull request labelled "no ci", and on a push to a release
+# branch also those of every pull request merged by the pushed commit that were created before the merge, unless
+# that pull request is labelled "run ci": on a release branch below the default branch, the push after a merge
+# builds without the tests, so the tests the label ran on the pull request are the only ones the change gets there,
+# and a late failure still calls for a follow-up fix. A run is also kept when an open pull request not labelled
+# "no ci" has the same head commit, since it reports for that pull request too. A pull_request run from a fork gets
+# a read-only token, so the label only cancels at once on a pull request from this repository; the runs of a fork's
+# pull request are cancelled by the next push to a release branch. That is also why merges are found from the push
+# and not from the pull request being closed.
+name: "Cancel Unneeded PR Runs"
+on:
+  push:
+    branches:
+      - '[0-9]+.[0-9]+.x'
+  pull_request:
+    types: [ labeled ]
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+jobs:
+  cancel:
+    name: "Cancel Unneeded PR Runs"
+    # Unlike every other workflow that reacts to a pull request, the "no ci" label runs this one rather than skipping it.
+    if: >-
+      github.event_name == 'push'
+      || (github.event.label.name == 'no ci' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: "🛑 Cancel the runs of merged and \"no ci\" pull requests"
+        env:
+          EVENT: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          # Every open pull request as its head repository, its head commit and whether it is labelled "no ci".
+          gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
+            --jq '.[] | [.head.repo.full_name, .head.sha, (any(.labels[]; .name == "no ci") | tostring)] | @tsv' > open.tsv
+          # The head repository and head commit of each pull request whose runs are unneeded, with the time its runs
+          # must have been created before: the merge, or now for a pull request labelled "no ci". A merged pull
+          # request labelled "run ci" is left out, since its tests may be the only ones its change gets.
+          {
+            if [[ "$EVENT" == push ]]; then
+              gh api "repos/$REPO/commits/$SHA/pulls" \
+                --jq '.[] | select(.merged_at != null and (any(.labels[]; .name == "run ci") | not)) | [.head.repo.full_name, .head.sha, .merged_at] | @tsv'
+            fi
+            awk -F '\t' -v now="$(date -u +%Y-%m-%dT%H:%M:%SZ)" '$3 == "true" { print $1 "\t" $2 "\t" now }' open.tsv
+          } > unneeded.tsv
+          # The runs of this workflow are never cancelled: a sweep started by another label would stop this one.
+          workflow=${GITHUB_WORKFLOW_REF#"$REPO/"}
+          workflow=${workflow%@*}
+          # Every pull_request run not finished yet, listed once rather than per pull request to spare the API rate
+          # limit; pending is a run waiting for its concurrency group.
+          for status in queued pending in_progress; do
+            gh api --paginate "repos/$REPO/actions/runs?event=pull_request&status=$status&per_page=100" \
+              --jq ".workflow_runs[] | select(.path != \"$workflow\") | [.id, .head_repository.full_name, .head_sha, .created_at] | @tsv"
+          done > runs.tsv
+          awk -F '\t' '
+            FILENAME == "open.tsv" { if ($3 == "false") kept[$2] = 1; next }
+            FILENAME == "unneeded.tsv" { if (!($2 in kept) && $3 > before[$1 FS $2]) before[$1 FS $2] = $3; next }
+            ($2 FS $3) in before && $4 < before[$2 FS $3] { print $1 }
+          ' open.tsv unneeded.tsv runs.tsv | sort -u | while read -r id; do
+            # A run that finished after it was listed cannot be cancelled, which is the outcome wanted anyway.
+            gh run cancel "$id" -R "$REPO" || echo "::warning title=Run not cancelled::Could not cancel run $id"
+          done

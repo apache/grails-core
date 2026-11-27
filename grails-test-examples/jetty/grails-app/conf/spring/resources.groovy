@@ -17,6 +17,8 @@
  *  under the License.
  */
 
-// Place your Spring DSL code here
+import issue12688.SpringMvcHandlers
+
 beans = {
+    springMvcHandlers(SpringMvcHandlers)
 }

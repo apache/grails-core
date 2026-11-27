@@ -1,0 +1,122 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+An action can return what a Spring MVC handler method returns to write the response, and Spring MVC writes it as it
+writes what a handler method returns: with the return value handlers of its handler adapter, its message converters and
+content negotiation, and the `ResponseBodyAdvice` beans that apply to the controller. These are written whatever the
+action is annotated with, also where an action of an error page returns them:
+
+* a `ResponseEntity`, or another `HttpEntity`, written with its status, headers and body,
+* a `ProblemDetail`, or an `ErrorResponse` such as `ErrorResponseException`, written as an RFC 9457 problem with its
+status and headers,
+* `HttpHeaders`, written as the headers of a response without a body,
+* a `StreamingResponseBody`, or a `ResponseBodyEmitter` such as an `SseEmitter`, which write the body asynchronously.
+
+[source,groovy]
+.grails-app/controllers/com/demo/BookController.groovy
+----
+package com.demo
+
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
+import org.springframework.http.ProblemDetail
+import org.springframework.http.ResponseEntity
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
+
+class BookController {
+
+    def show(Long id) {
+        Book book = Book.get(id)
+        book ? ResponseEntity.ok().header('X-Book', book.title).body([title: book.title]) :
+                ResponseEntity.notFound().build()
+    }
+
+    def retired() {
+        ProblemDetail.forStatusAndDetail(HttpStatus.GONE, 'The edition is retired')
+    }
+
+    ResponseEntity<StreamingResponseBody> download() {
+        ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body({ OutputStream out ->
+            out << 'Streamed'
+        } as StreamingResponseBody)
+    }
+}
+----
+
+Spring MVC selects how to write the body of a `ResponseEntity` by the type the action declares, so declare it, as
+`ResponseEntity<StreamingResponseBody>` above, for a body it writes asynchronously. Return such a `ResponseEntity`
+from the action itself: one an asynchronous value completes with is written as the value it is, which Spring MVC writes
+as a `ResponseEntity` of a bean.
+
+With `grails.controllers.responseBody: true`, which Grails 10 makes the default, annotate an action `@ResponseBody`, or
+its controller to annotate all of its actions, directly or with an annotation such as `@RestController`, and Spring MVC
+writes any value the action returns as the body of the response, as it writes the value of a controller method
+annotated so: in the format its content negotiation selects, with the properties of
+the action's `@JsonView` and the status of its `@ResponseStatus`. A `CompletableFuture`, a `DeferredResult` or a
+`Callable` such an action returns is processed asynchronously, with the executor, timeout and interceptors of Spring
+MVC's handler adapter, which `spring.mvc.async.request-timeout` and the `configureAsyncSupport` of the application's
+`WebMvcConfigurer` beans configure, and the value it completes with is written as the body. A Grails `Promise`, and a
+reactive `Publisher` with the `grails-async` plugin, are processed by Grails, as before.
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    controllers:
+        responseBody: true
+----
+
+[source,groovy]
+.grails-app/controllers/com/demo/TitleController.groovy
+----
+package com.demo
+
+import java.util.concurrent.CompletableFuture
+
+import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.bind.annotation.ResponseStatus
+
+class TitleController {
+
+    @ResponseBody
+    def index() {
+        Book.list()*.title
+    }
+
+    @ResponseBody
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    def later() {
+        CompletableFuture.supplyAsync { [title: 'Written later'] }
+    }
+}
+----
+
+An action that returns `null` is left to Grails, and so is the value of an action that rendered the response itself,
+with `render`, `respond` or `redirect`, or forwarded the request. A model an action not annotated `@ResponseBody`
+returns renders the action's view, as before, and so does the model of an action annotated so without the setting. As for an action that renders the response itself, Spring MVC writes the
+response before an interceptor's `after` runs, which sees no model.
+
+Spring MVC writes JSON with Spring Boot's `JsonMapper`, which writes a domain class instance as Grails does only with
+`grails.converters.json.domain.jackson.enabled: true`, which gives it the domain class serializer. Without the setting,
+return a map or another object of the properties to write, or `respond` with the instance, which writes it with the
+Grails mapper.
+
+In a controller unit test, an action the test calls returns its value, which nothing writes to the `response`, so
+assert on the value the action returns.

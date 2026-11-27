@@ -16,26 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package liquibase.ext.hibernate.snapshot;
+package liquibase.ext.hibernate.snapshot
 
-import groovy.transform.CompileStatic;
-import groovy.transform.PackageScope;
-import liquibase.Scope;
-import org.hibernate.boot.model.naming.Identifier;
-import org.hibernate.boot.model.relational.QualifiedName;
-import org.hibernate.boot.model.relational.SqlStringGenerationContext;
-import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
-import org.hibernate.generator.Generator;
-import org.hibernate.id.NativeGenerator;
-import org.hibernate.mapping.GeneratorSettings;
-import org.hibernate.mapping.SimpleValue;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import groovy.transform.RecordOptions
+import groovy.transform.TupleConstructor
+import liquibase.Scope
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.relational.QualifiedName
+import org.hibernate.boot.model.relational.SqlStringGenerationContext
+import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl
+import org.hibernate.generator.Generator
+import org.hibernate.id.NativeGenerator
+import org.hibernate.mapping.GeneratorSettings
+import org.hibernate.mapping.SimpleValue
 
 /**
  * Shared helpers for the snapshot generators that inspect identifier generators.
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 @PackageScope
 final class IdentifierGeneratorSupport {
@@ -47,25 +46,29 @@ final class IdentifierGeneratorSupport {
      * Uses the configured creator when available, otherwise checks explicit annotation or mapping intent.
      */
     static boolean hasGenerationIntent(SimpleValue simpleValue) {
-        def creator = simpleValue.getCustomIdGeneratorCreator();
+        def creator = simpleValue.getCustomIdGeneratorCreator()
         if (creator != null) {
-            return !creator.isAssigned();
+            return !creator.isAssigned()
         }
-        def memberDetails = simpleValue.getMemberDetails();
+        def memberDetails = simpleValue.getMemberDetails()
         return memberDetails == null ||
                 memberDetails.hasDirectAnnotationUsage(jakarta.persistence.GeneratedValue) ||
-                memberDetails.hasDirectAnnotationUsage(org.hibernate.annotations.NativeGenerator);
+                memberDetails.hasDirectAnnotationUsage(org.hibernate.annotations.NativeGenerator)
     }
 
     static SequenceKey sequenceKey(QualifiedName name) {
         return new SequenceKey(canonicalName(name.getCatalogName()), canonicalName(name.getSchemaName()),
-                canonicalName(name.getObjectName()));
+                canonicalName(name.getObjectName()))
     }
 
     private static String canonicalName(Identifier identifier) {
-        return identifier == null ? null : identifier.getCanonicalName();
+        return identifier == null ? null : identifier.getCanonicalName()
     }
 
+    // CodeNarc reads the components of an annotated nested record as fields and reports their indentation
+    @SuppressWarnings('Indentation')
+    @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+    @TupleConstructor(defaults = false, namedVariant = false)
     record SequenceKey(String catalog, String schema, String name) {
     }
 
@@ -76,36 +79,36 @@ final class IdentifierGeneratorSupport {
      */
     static Generator nativeDelegate(NativeGenerator nativeGen) {
         try {
-            def field = NativeGenerator.getDeclaredField('dialectNativeGenerator');
-            field.setAccessible(true);
-            return (Generator) field.get(nativeGen);
+            def field = NativeGenerator.getDeclaredField('dialectNativeGenerator')
+            field.setAccessible(true)
+            return (Generator) field.get(nativeGen)
         } catch (ReflectiveOperationException | RuntimeException e) {
             Scope.getCurrentScope().getLog(IdentifierGeneratorSupport)
-                    .fine("Could not access NativeGenerator delegate", e);
-            return null;
+                    .fine('Could not access NativeGenerator delegate', e)
+            return null
         }
     }
 
     static GeneratorSettings createGeneratorSettings(SimpleValue simpleValue) {
-        def buildingContext = simpleValue.getBuildingContext();
+        def buildingContext = simpleValue.getBuildingContext()
         return new GeneratorSettings() {
             @Override
             String getDefaultCatalog() {
-                return null;
+                return null
             }
 
             @Override
             String getDefaultSchema() {
-                return null;
+                return null
             }
 
             @Override
             SqlStringGenerationContext getSqlStringGenerationContext() {
-                def db = buildingContext.getMetadataCollector().getDatabase();
+                def db = buildingContext.getMetadataCollector().getDatabase()
                 return SqlStringGenerationContextImpl.fromExplicit(
-                        db.getJdbcEnvironment(), db, getDefaultCatalog(), getDefaultSchema());
+                        db.getJdbcEnvironment(), db, getDefaultCatalog(), getDefaultSchema())
             }
-        };
+        }
     }
 
 }

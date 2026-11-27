@@ -16,13 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.example.ejb3.customid;
+package com.example.ejb3.customid
 
-import java.util.concurrent.atomic.AtomicLong;
+import groovy.transform.CompileStatic
+import java.util.concurrent.atomic.AtomicLong
 
-import org.hibernate.HibernateException;
-import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.id.IdentifierGenerator;
+import org.hibernate.HibernateException
+import org.hibernate.engine.spi.SharedSessionContractImplementor
+import org.hibernate.id.IdentifierGenerator
 
 /**
  * Custom ID generator implementing the legacy {@link IdentifierGenerator} interface.
@@ -30,13 +31,14 @@ import org.hibernate.id.IdentifierGenerator;
  * This test generator simply returns incrementing {@code long} values using an in-memory
  * counter and does not interact with any {@code GeneratorCreationContext} or its properties.
  */
+@CompileStatic
 class SnowflakeIdGenerator implements IdentifierGenerator {
 
-    private static final AtomicLong counter = new AtomicLong(1);
+    private static final AtomicLong counter = new AtomicLong(1)
 
     @Override
     Serializable generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
-        return counter.getAndIncrement();
+        return counter.getAndIncrement()
     }
 
 }

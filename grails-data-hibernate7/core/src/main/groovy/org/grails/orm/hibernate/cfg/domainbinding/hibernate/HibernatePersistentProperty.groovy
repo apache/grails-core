@@ -57,7 +57,8 @@ interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig>
         return propertyClass != null && !propertyClass.isEnum() ? propertyClass.getName() : null
     }
 
-    private static @Nullable Class<?> classForName(String className) {
+    @Nullable
+    private static Class<?> classForName(String className) {
         try {
             return Class.forName(className, true, Thread.currentThread().getContextClassLoader())
         } catch (ClassNotFoundException ignored) {
@@ -133,19 +134,20 @@ interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig>
     }
 
     /**
-     * The {@link CompositeUserType} the property is mapped with: the {@code type} of its own mapping, or
-     * the {@code user-type} registered for its class in the mapping of its owner, when that class
-     * implements the interface. A composite user type spans one column per attribute of its
-     * {@linkplain CompositeUserType#embeddable() embeddable class} and is bound as a component.
+     * The {@link CompositeUserType} the property is mapped with: the {@code type} of its own mapping, or, when its
+     * own mapping has no {@code type}, the {@code user-type} registered for its class in the mapping of its owner,
+     * when that class implements the interface. A {@code type} of its own that is not a composite user type, such
+     * as {@code 'serializable'}, wins over the registration, as it does for every other type. A composite user
+     * type spans one column per attribute of its {@linkplain CompositeUserType#embeddable() embeddable class} and
+     * is bound as a component.
      *
      * @return The composite user type, or {@code null} when the property is not mapped with one
      */
+    @Nullable
     @SuppressWarnings('unchecked')
-    default @Nullable Class<? extends CompositeUserType<?>> getCompositeUserType() {
-        Class<?> userType = getUserType()
-        if (userType == null) {
-            userType = getRegisteredUserType()
-        }
+    default Class<? extends CompositeUserType<?>> getCompositeUserType() {
+        PropertyConfig config = getMappedForm()
+        Class<?> userType = config != null && config.getType() != null ? getUserType() : getRegisteredUserType()
         return userType != null && CompositeUserType.isAssignableFrom(userType) ?
                 (Class<? extends CompositeUserType<?>>) userType :
                 null
@@ -155,7 +157,8 @@ interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig>
      * @return The {@code user-type} registered for the class of the property in the mapping of its owner,
      * or {@code null} when there is none
      */
-    private @Nullable Class<?> getRegisteredUserType() {
+    @Nullable
+    private Class<?> getRegisteredUserType() {
         Mapping mapping = getHibernateOwner() == null ? null : getHibernateOwner().getMappedForm()
         String typeName = mapping == null ? null : mapping.getTypeName(getType())
         return typeName == null ? null : classForName(typeName)

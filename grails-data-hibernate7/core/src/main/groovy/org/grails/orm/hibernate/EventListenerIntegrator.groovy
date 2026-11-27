@@ -77,7 +77,7 @@ class EventListenerIntegrator implements Integrator {
         this.eventListeners = eventListeners
     }
 
-    @SuppressWarnings(['unchecked', 'rawtypes', 'PMD.DataflowAnomalyAnalysis'])
+    @SuppressWarnings(['unchecked', 'rawtypes'])
     @Override
     void integrate(
             Metadata metadata,
@@ -109,7 +109,6 @@ class EventListenerIntegrator implements Integrator {
         }
     }
 
-    @SuppressWarnings('PMD.DataflowAnomalyAnalysis')
     protected <T> void appendListeners(
             EventListenerRegistry listenerRegistry, EventType<T> eventType, Collection<T> listeners) {
 

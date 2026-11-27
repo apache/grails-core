@@ -16,77 +16,74 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
-import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.grails.orm.hibernate.HibernateSession;
-import org.grails.orm.hibernate.IHibernateTemplate;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.GrailsHibernateTemplate
+import org.grails.orm.hibernate.HibernateSession
+import org.grails.orm.hibernate.IHibernateTemplate
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class SelectHqlQuery extends Query implements HqlQueryMethods, Serializable {
 
-    protected final transient HqlQueryContext queryContext;
+    protected final transient HqlQueryContext queryContext
     // Read as this.@delegate: a bare `delegate` inside a closure resolves to Closure.getDelegate(), not this field.
-    protected final transient HqlQueryDelegate delegate;
+    protected final transient HqlQueryDelegate delegate
 
     protected SelectHqlQuery(HibernateSession session, GrailsHibernatePersistentEntity entity, HqlQueryContext queryContext, HqlQueryDelegate delegate) {
-        super(session, entity);
-        this.queryContext = queryContext;
-        this.@delegate = delegate;
+        super(session, entity)
+        this.queryContext = queryContext
+        this.@delegate = delegate
     }
 
     @Override
     List<?> list() {
-        GrailsHibernateTemplate template = (GrailsHibernateTemplate) hibernateTemplate;
+        GrailsHibernateTemplate template = (GrailsHibernateTemplate) hibernateTemplate
         return template.execute({ Object __ ->
-            applyQuerySettings(this.@delegate);
-            return this.@delegate.list();
-        });
+            applyQuerySettings(this.@delegate)
+            return this.@delegate.list()
+        })
     }
 
     @Override
     Object singleResult() {
-        GrailsHibernateTemplate template = (GrailsHibernateTemplate) hibernateTemplate;
+        GrailsHibernateTemplate template = (GrailsHibernateTemplate) hibernateTemplate
         return template.execute({ Object __ ->
-            applyQuerySettings(this.@delegate);
-            List<?> results = this.@delegate.list();
-            return results.isEmpty() ? null : results.first;
-        });
+            applyQuerySettings(this.@delegate)
+            List<?> results = this.@delegate.list()
+            return results.isEmpty() ? null : results.first
+        })
     }
 
     protected void applyQuerySettings(HqlQueryDelegate d) {
-        Integer m = this.@max;
+        Integer m = this.@max
         if (m != null && m > -1) {
-            d.setMaxResults(m);
+            d.setMaxResults(m)
         }
-        Integer o = this.@offset;
+        Integer o = this.@offset
         if (o != null && o > -1) {
-            d.setFirstResult(o);
+            d.setFirstResult(o)
         }
-        populateQuerySettings(d, queryContext.querySettings());
-        populateHints(d, queryContext.hints());
-        HqlQueryMethods.populateParameters(d, queryContext);
+        populateQuerySettings(d, queryContext.settings().settings())
+        populateHints(d, queryContext.settings().hints())
+        HqlQueryMethods.populateParameters(d, queryContext.parameters())
     }
 
     int executeUpdate() {
-        throw new UnsupportedOperationException("SELECT query cannot be used for executeUpdate(); use a MutationHqlQuery instead");
+        throw new UnsupportedOperationException('SELECT query cannot be used for executeUpdate(); use a MutationHqlQuery instead')
     }
 
     protected IHibernateTemplate getHibernateTemplate() {
-        HibernateSession hibernateSession = (HibernateSession) session;
-        return (IHibernateTemplate) hibernateSession.nativeInterface;
+        HibernateSession hibernateSession = (HibernateSession) session
+        return (IHibernateTemplate) hibernateSession.nativeInterface
     }
 
     @Override
     protected List executeQuery(org.grails.datastore.mapping.model.PersistentEntity entity, Junction criteria) {
-        return list();
+        return list()
     }
 
     void setReadOnly(Boolean ignoredReadOnly) {
@@ -94,27 +91,27 @@ class SelectHqlQuery extends Query implements HqlQueryMethods, Serializable {
     }
 
     org.hibernate.query.Query<?> selectQuery() {
-        return this.@delegate.selectQuery();
+        return this.@delegate.selectQuery()
     }
 
     @Override
     Integer getMax() {
-        Integer m = this.@max;
+        Integer m = this.@max
         if (m != null && m > -1) {
-            return m;
+            return m
         }
-        Object value = queryContext.querySettings().get(HibernateQueryArgument.MAX.value());
-        return value == null ? -1 : HqlQueryMethods.toInteger(value);
+        Object value = queryContext.settings().getSetting(HibernateQueryArgument.MAX)
+        return value == null ? -1 : HqlQueryMethods.toInteger(value)
     }
 
     @Override
     Integer getOffset() {
-        Integer o = this.@offset;
+        Integer o = this.@offset
         if (o != null && o > -1) {
-            return o;
+            return o
         }
-        Object value = queryContext.querySettings().get(HibernateQueryArgument.OFFSET.value());
-        return value == null ? 0 : HqlQueryMethods.toInteger(value);
+        Object value = queryContext.settings().getSetting(HibernateQueryArgument.OFFSET)
+        return value == null ? 0 : HqlQueryMethods.toInteger(value)
     }
 
 }

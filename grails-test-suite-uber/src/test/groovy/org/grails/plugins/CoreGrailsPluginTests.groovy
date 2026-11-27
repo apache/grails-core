@@ -19,11 +19,13 @@
 
 package org.grails.plugins
 
+import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.StandardEnvironment
 
+import static org.junit.jupiter.api.Assertions.assertEquals
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
@@ -44,6 +46,7 @@ import org.springframework.beans.factory.config.RuntimeBeanReference
  */
 class CoreGrailsPluginTests extends AbstractGrailsMockTests {
 
+    @Test
     void testCorePlugin() {
         def plugin = corePlugin()
 
@@ -57,6 +60,7 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         assert appCtx.getBean("org.springframework.aop.config.internalAutoProxyCreator") instanceof GroovyAwareAspectJAwareAdvisorAutoProxyCreator
     }
 
+    @Test
     void testDisableAspectj() {
         def plugin = corePlugin()
 
@@ -113,6 +117,7 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
      *
      * @author Luke Daley
      */
+    @Test
     void testBeanPropertyOverride() {
         def co = new ConfigSlurper().parse('''
             dataSource {
@@ -154,8 +159,12 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         def plugin = new DefaultGrailsPlugin(pluginClass, ga)
         plugin.doWithRuntimeConfiguration(springConfig)
 
-        // the configurer that applies the beans {} config block comes from the core registrar
-        applyBeanRegistrar(corePlugin, springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext)
+        // the configurer that applies the beans {} config block comes from the core registrar,
+        // the dataSource bean and the service beans from the registrars of their plugins
+        def context = springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext
+        applyBeanRegistrar(corePlugin, context)
+        applyBeanRegistrar(dataSourcePlugin, context)
+        applyBeanRegistrar(plugin, context)
 
         def appCtx = springConfig.getApplicationContext()
 

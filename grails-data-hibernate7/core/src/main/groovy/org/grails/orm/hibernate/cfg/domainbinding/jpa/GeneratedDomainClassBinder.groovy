@@ -89,8 +89,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.jpa.facets.NaturalIdFacets
 import org.grails.orm.hibernate.cfg.domainbinding.jpa.facets.TenantFacets
 import org.grails.orm.hibernate.cfg.domainbinding.jpa.facets.ToManyFacets
 import org.grails.orm.hibernate.cfg.domainbinding.jpa.facets.TypeFacets
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SharedJoinTableUniqueKeyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.CompositeUserTypeColumns
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefinitionBinder
@@ -187,11 +189,15 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
         generator = new GrailsDomainGenerator(
                 namingStrategy,
                 new ColumnNameForPropertyAndPathFetcher(
-                        namingStrategy, new DefaultColumnNameFetcher(namingStrategy, backticksRemover), backticksRemover),
+                        namingStrategy, new DefaultColumnNameFetcher(namingStrategy, backticksRemover), backticksRemover, buildingContext),
                 new ColumnConfigToColumnBinder(),
                 new StringColumnConstraintsBinder(),
                 new NumericColumnConstraintsBinder(jdbcEnvironment.dialect),
                 buildingContext.bootstrapContext.typeConfiguration)
+        // a composite user type is created the way the domain binder creates it: as a managed bean of the container Hibernate is
+        // configured with, else through its default constructor
+        CompositeUserTypeColumns compositeUserTypeColumns = new CompositeUserTypeColumns(namingStrategy, backticksRemover, buildingContext)
+        generator.compositeUserTypes = { HibernatePersistentProperty property -> compositeUserTypeColumns.userTypeOf(property) }
         Map<GrailsHibernatePersistentEntity, Class<?>> generated = generator.generateAll(toGenerate, classLoader.parent)
         classLoader.register(generated.values().first().classLoader)
         for (Map.Entry<GrailsHibernatePersistentEntity, Class<?>> entry : generated.entrySet()) {
@@ -233,9 +239,26 @@ class GeneratedDomainClassBinder implements SessionFactoryBuilderFactory {
             }
         }
         alignCompositeForeignKeys(metadata)
+        shareJoinTables(metadata)
         createIdentifierGenerators(metadata)
         defineTenantFilter(metadata)
         return null
+    }
+
+    /**
+     * Gives every collection with a join table the uniqueness of its own that the domain binder gives it, so that a join table
+     * several collections of one owner share stays unique per collection: a unique key over the key column and the element
+     * in the shape the database needs, nullable key and index columns for a list or a map, and no primary key those columns
+     * would fill with nulls. Hibernate's annotation binder knows nothing of a table that more than one collection writes.
+     */
+    private void shareJoinTables(MetadataImplementor metadata) {
+        if (buildingContext == null) {
+            return
+        }
+        SharedJoinTableUniqueKeyBinder sharedJoinTables = new SharedJoinTableUniqueKeyBinder(buildingContext)
+        for (org.hibernate.mapping.Collection collection : new ArrayList<org.hibernate.mapping.Collection>(metadata.collectionBindings)) {
+            sharedJoinTables.bind(collection)
+        }
     }
 
     /**

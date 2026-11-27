@@ -24,6 +24,8 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 
+import org.gradle.api.GradleException
+
 import org.apache.maven.model.Dependency
 import org.apache.maven.model.Model
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader
@@ -66,6 +68,47 @@ class PomVersions {
 
     static boolean isImport(Dependency dependency) {
         dependency.scope == 'import'
+    }
+
+    /**
+     * Returns the version the model's own {@code <dependencyManagement>} gives {@code module}, a
+     * {@code group:artifact}, or {@code null} when it has no entry for it. The BOMs it imports are not
+     * read, so this resolves no other POM, and since a BOM's own entry wins over the ones it imports,
+     * a version found here is the one the BOM manages.
+     *
+     * @throws GradleException when the entry's version cannot be resolved from the model's own
+     * properties and the Maven built-ins
+     */
+    static String managedVersion(Model model, String module) {
+        Map<String, String> properties = properties(model)
+        Dependency entry = managedDependencies(model).find { Dependency dependency ->
+            !isImport(dependency) && key(dependency, properties) == module
+        }
+        if (entry == null) {
+            return null
+        }
+        String version = interpolate(entry.version, properties)
+        if (!version) {
+            throw new GradleException("Cannot resolve ${module}:${entry.version.trim()}, managed by " +
+                    "${properties['project.groupId']}:${model.artifactId}:${properties['project.version']}, from that POM's own properties.")
+        }
+        version
+    }
+
+    /**
+     * Returns the artifacts of {@code groupId} the model's own {@code <dependencyManagement>} manages, in
+     * the order it lists them. As with {@link #managedVersion}, the BOMs it imports are not read, so this
+     * resolves no other POM; {@code <pluginManagement>} is not read either, since it manages plugins.
+     * An entry whose coordinates cannot be resolved from the model's own properties is not included.
+     */
+    static List<String> managedArtifactIds(Model model, String groupId) {
+        Map<String, String> properties = properties(model)
+        String prefix = "${groupId}:"
+        managedDependencies(model).findAll { Dependency dependency -> !isImport(dependency) }
+                .collect { Dependency dependency -> key(dependency, properties) }
+                .findAll { String module -> module?.startsWith(prefix) }
+                .collect { String module -> module.substring(prefix.length()) }
+                .unique()
     }
 
     /**

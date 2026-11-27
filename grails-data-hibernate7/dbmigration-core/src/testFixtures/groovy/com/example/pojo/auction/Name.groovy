@@ -1,25 +1,25 @@
-package com.example.pojo.auction;
+package com.example.pojo.auction
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
 @CompileStatic
 class Name {
 
-    String firstName;
-    String lastName;
-    Character initial;
+    String firstName
+    String lastName
+    Character initial
 
     public Name(String first, Character middle, String last) {
-        firstName = first;
-        initial = middle;
-        lastName = last;
+        firstName = first
+        initial = middle
+        lastName = last
     }
 
     public String toString() {
-        StringBuffer buf = new StringBuffer().append(firstName).append(' ');
+        StringBuffer buf = new StringBuffer().append(firstName).append(' ')
         if (initial != null)
-            buf.append(initial).append(' ');
-        return buf.append(lastName).toString();
+            buf.append(initial).append(' ')
+        return buf.append(lastName).toString()
     }
 
 }

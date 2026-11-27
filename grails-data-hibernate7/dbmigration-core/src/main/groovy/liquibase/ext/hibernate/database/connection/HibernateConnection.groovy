@@ -1,66 +1,63 @@
-@SuppressWarnings('UnnecessarySemicolon')
-package liquibase.ext.hibernate.database.connection;
+package liquibase.ext.hibernate.database.connection
 
-import java.nio.charset.StandardCharsets;
-import java.sql.Array;
-import java.sql.Blob;
-import java.sql.CallableStatement;
-import java.sql.Clob;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.NClob;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
-import java.sql.SQLWarning;
-import java.sql.SQLXML;
-import java.sql.Savepoint;
-import java.sql.Statement;
-import java.sql.Struct;
-import java.util.concurrent.Executor;
+import java.nio.charset.StandardCharsets
+import java.sql.Array
+import java.sql.Blob
+import java.sql.CallableStatement
+import java.sql.Clob
+import java.sql.Connection
+import java.sql.DatabaseMetaData
+import java.sql.NClob
+import java.sql.PreparedStatement
+import java.sql.SQLException
+import java.sql.SQLFeatureNotSupportedException
+import java.sql.SQLWarning
+import java.sql.SQLXML
+import java.sql.Savepoint
+import java.sql.Statement
+import java.sql.Struct
+import java.util.concurrent.Executor
 
-import groovy.transform.CompileStatic;
-import liquibase.resource.ResourceAccessor;
+import groovy.transform.CompileStatic
+import liquibase.resource.ResourceAccessor
 
 /**
  * Implements java.sql.Connection in order to pretend a hibernate configuration is a database in order to fit into the Liquibase framework.
  * Beyond standard Connection methods, this class exposes {@link #getPrefix()}, {@link #getPath()} and {@link #getProperties()} to access the setting passed in the JDBC URL.
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 class HibernateConnection implements Connection {
 
-    private final String prefix;
-    private final String url;
+    private final String prefix
+    private final String url
 
-    private String path;
-    private final ResourceAccessor resourceAccessor;
-    private final Properties properties;
+    private String path
+    private final ResourceAccessor resourceAccessor
+    private final Properties properties
 
     HibernateConnection(String url, ResourceAccessor resourceAccessor) {
-        this.url = url;
+        this.url = url
 
-        this.prefix = url.replaceFirst(':[^:]+$', '');
+        this.prefix = url.replaceFirst(':[^:]+$', '')
 
         // Trim the prefix off the URL for the path
-        path = url.substring(prefix.length() + 1);
-        this.resourceAccessor = resourceAccessor;
+        path = url.substring(prefix.length() + 1)
+        this.resourceAccessor = resourceAccessor
 
         // Check if there is a parameter/query string value.
-        properties = new Properties();
+        properties = new Properties()
 
-        int queryIndex = path.indexOf('?');
+        int queryIndex = path.indexOf('?')
         if (queryIndex >= 0) {
             // Convert the query string into properties
-            properties.putAll(readProperties(path.substring(queryIndex + 1)));
+            properties.putAll(readProperties(path.substring(queryIndex + 1)))
 
-            if (properties.containsKey("dialect") && !properties.containsKey("hibernate.dialect")) {
-                properties.put("hibernate.dialect", properties.getProperty("dialect"));
+            if (properties.containsKey('dialect') && !properties.containsKey('hibernate.dialect')) {
+                properties.put('hibernate.dialect', properties.getProperty('dialect'))
             }
 
             // Remove the query string
-            path = path.substring(0, queryIndex);
+            path = path.substring(0, queryIndex)
         }
     }
 
@@ -68,37 +65,37 @@ class HibernateConnection implements Connection {
      * Creates properties to attach to this connection based on the passed query string.
      */
     protected final Properties readProperties(String queryString) {
-        Properties properties = new Properties();
-        String propertiesString = queryString.replaceAll("&", System.lineSeparator());
+        Properties properties = new Properties()
+        String propertiesString = queryString.replaceAll('&', System.lineSeparator())
         try {
-            propertiesString = URLDecoder.decode(propertiesString, StandardCharsets.UTF_8);
-            properties.load(new StringReader(propertiesString));
+            propertiesString = URLDecoder.decode(propertiesString, StandardCharsets.UTF_8)
+            properties.load(new StringReader(propertiesString))
         } catch (IOException ioe) {
-            throw new IllegalStateException("Failed to read properties from url", ioe);
+            throw new IllegalStateException('Failed to read properties from url', ioe)
         }
 
-        return properties;
+        return properties
     }
 
     /**
      * Returns the entire connection URL
      */
     String getUrl() {
-        return url;
+        return url
     }
 
     /**
      * Returns the 'protocol' of the URL. For example, "hibernate:classic" or "hibernate:ejb3"
      */
     String getPrefix() {
-        return prefix;
+        return prefix
     }
 
     /**
      * The portion of the url between the path and the query string. Normally a filename or a class name.
      */
     String getPath() {
-        return path;
+        return path
     }
 
     /**
@@ -109,7 +106,7 @@ class HibernateConnection implements Connection {
      * This will have a property called 'foo' with a value of 'bar'.
      */
     Properties getProperties() {
-        return properties;
+        return properties
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -118,22 +115,22 @@ class HibernateConnection implements Connection {
 
     @Override
     Statement createStatement() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        throw new SQLFeatureNotSupportedException()
     }
 
     @Override
     PreparedStatement prepareStatement(String sql) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        throw new SQLFeatureNotSupportedException()
     }
 
     @Override
     CallableStatement prepareCall(String sql) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        throw new SQLFeatureNotSupportedException()
     }
 
     @Override
     String nativeSQL(String sql) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        throw new SQLFeatureNotSupportedException()
     }
 
     @Override
@@ -141,7 +138,7 @@ class HibernateConnection implements Connection {
 
     @Override
     boolean getAutoCommit() {
-        return false;
+        return false
     }
 
     @Override
@@ -155,12 +152,12 @@ class HibernateConnection implements Connection {
 
     @Override
     boolean isClosed() {
-        return false;
+        return false
     }
 
     @Override
     DatabaseMetaData getMetaData() {
-        return new HibernateConnectionMetadata(url);
+        return new HibernateConnectionMetadata(url)
     }
 
     @Override
@@ -168,7 +165,7 @@ class HibernateConnection implements Connection {
 
     @Override
     boolean isReadOnly() {
-        return true;
+        return true
     }
 
     @Override
@@ -176,7 +173,7 @@ class HibernateConnection implements Connection {
 
     @Override
     String getCatalog() {
-        return "HIBERNATE";
+        return 'HIBERNATE'
     }
 
     @Override
@@ -184,12 +181,12 @@ class HibernateConnection implements Connection {
 
     @Override
     int getTransactionIsolation() {
-        return Connection.TRANSACTION_NONE;
+        return Connection.TRANSACTION_NONE
     }
 
     @Override
     SQLWarning getWarnings() {
-        return null;
+        return null
     }
 
     @Override
@@ -197,22 +194,22 @@ class HibernateConnection implements Connection {
 
     @Override
     Statement createStatement(int resultSetType, int resultSetConcurrency) {
-        return null;
+        return null
     }
 
     @Override
     PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency) {
-        return null;
+        return null
     }
 
     @Override
     CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) {
-        return null;
+        return null
     }
 
     @Override
     Map<String, Class<?>> getTypeMap() {
-        return (Map<String, Class<?>>) Collections.emptyMap();
+        return (Map<String, Class<?>>) Collections.emptyMap()
     }
 
     @Override
@@ -223,17 +220,17 @@ class HibernateConnection implements Connection {
 
     @Override
     int getHoldability() {
-        return 0;
+        return 0
     }
 
     @Override
     Savepoint setSavepoint() {
-        return null;
+        return null
     }
 
     @Override
     Savepoint setSavepoint(String name) {
-        return null;
+        return null
     }
 
     @Override
@@ -244,59 +241,59 @@ class HibernateConnection implements Connection {
 
     @Override
     Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
-        return null;
+        return null
     }
 
     @Override
     PreparedStatement prepareStatement(
             String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
-        return null;
+        return null
     }
 
     @Override
     CallableStatement prepareCall(
             String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
-        return null;
+        return null
     }
 
     @Override
     PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) {
-        return null;
+        return null
     }
 
     @Override
     PreparedStatement prepareStatement(String sql, int[] columnIndexes) {
-        return null;
+        return null
     }
 
     @Override
     PreparedStatement prepareStatement(String sql, String[] columnNames) {
-        return null;
+        return null
     }
 
     @Override
     Clob createClob() {
-        return null;
+        return null
     }
 
     @Override
     Blob createBlob() {
-        return null;
+        return null
     }
 
     @Override
     NClob createNClob() {
-        return null;
+        return null
     }
 
     @Override
     SQLXML createSQLXML() {
-        return null;
+        return null
     }
 
     @Override
     boolean isValid(int timeout) {
-        return false;
+        return false
     }
 
     @Override
@@ -307,32 +304,32 @@ class HibernateConnection implements Connection {
 
     @Override
     String getClientInfo(String name) {
-        return null;
+        return null
     }
 
     @Override
     Properties getClientInfo() {
-        return new Properties();
+        return new Properties()
     }
 
     @Override
     Array createArrayOf(String typeName, Object[] elements) {
-        return null;
+        return null
     }
 
     @Override
     Struct createStruct(String typeName, Object[] attributes) {
-        return null;
+        return null
     }
 
     @Override
     def <T> T unwrap(Class<T> iface) {
-        return null;
+        return null
     }
 
     @Override
     boolean isWrapperFor(Class<?> iface) {
-        return false;
+        return false
     }
 
     @Override
@@ -340,12 +337,12 @@ class HibernateConnection implements Connection {
 
     @Override
     int getNetworkTimeout() {
-        return 0;
+        return 0
     }
 
     @Override
     String getSchema() {
-        return "HIBERNATE";
+        return 'HIBERNATE'
     }
 
     @Override
@@ -355,7 +352,7 @@ class HibernateConnection implements Connection {
     void setSchema(String arg0) {}
 
     ResourceAccessor getResourceAccessor() {
-        return resourceAccessor;
+        return resourceAccessor
     }
 
 }

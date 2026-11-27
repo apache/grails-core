@@ -94,10 +94,14 @@ public class ConvertersConfigurationHolder {
     }
 
     /**
-     * Sets the Jackson mapper that {@link grails.converters.JSON} writes through, normally Spring Boot's
-     * auto-configured {@code JsonMapper}.
+     * Sets the Jackson mapper that {@link grails.converters.JSON} writes through, as it is given. Without
+     * {@code grails.converters.json.legacy}, the converters' initializer sets a copy of the application's
+     * {@code JsonMapper} with the converter's modules, which write enums by name and apply the converter's includes and
+     * excludes; a mapper without them writes enums and beans as Jackson does.
      *
-     * @param mapper the mapper, or null for a default mapper
+     * @param mapper the mapper, or null for {@link JsonMapperSupport#DEFAULT}, which writes JSON as Grails 8 wrote it
+     *        where {@link #setLegacyJson(boolean)} is {@code true}, as the converters' initializer sets them with
+     *        {@code grails.converters.json.legacy}
      * @since 9.0
      */
     public static void setJsonMapper(JsonMapper mapper) {

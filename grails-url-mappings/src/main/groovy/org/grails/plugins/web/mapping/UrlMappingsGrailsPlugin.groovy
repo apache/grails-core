@@ -50,6 +50,7 @@ import org.grails.core.artefact.UrlMappingsArtefactHandler
 import org.grails.web.mapping.CachingLinkGenerator
 import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
+import org.grails.web.mapping.mvc.ActionExceptionHandlerResolver
 import org.grails.web.mapping.mvc.UrlMappingsInfoHandlerAdapter
 import org.grails.web.mapping.servlet.UrlMappingsErrorPageCustomizer
 import org.grails.web.util.HiddenHttpMethod
@@ -110,6 +111,9 @@ class UrlMappingsGrailsPlugin extends Plugin {
         }
 
         bean(UrlMappingsInfoHandlerAdapter).conditionalOnMissingBean()
+
+        // Spring MVC's @ExceptionHandler methods, for an exception an action throws, where the application opts in
+        bean(ActionExceptionHandlerResolver).conditionalOnMissingBean()
     }
 
     @Override
@@ -128,6 +132,10 @@ class UrlMappingsGrailsPlugin extends Plugin {
             // With no servlet filter rewriting the request method, the handler mapping resolves "_method"
             // itself so browser forms still reach the PUT, PATCH and DELETE routes of a 'resources' mapping.
             boolean resolveHiddenHttpMethod = !HiddenHttpMethod.isServletFilterMode(environment)
+            // Only Spring MVC's content negotiation of grails.mime.negotiation.spring reads which requests a URL
+            // mapping handles; it is read from the Grails configuration, as the negotiation reads it
+            boolean markHandledRequests = grailsApplication.config?.getProperty(Settings.MIME_NEGOTIATION_SPRING, Boolean,
+                    Boolean.valueOf(Settings.MIME_NEGOTIATION_SPRING_DEFAULT)) ?: false
 
             // The url-mapping holder is a ProxyFactoryBean (reload mode) whose produced UrlMappings
             // type must stay answerable from the bean definition for by-type autowiring of
@@ -136,7 +144,8 @@ class UrlMappingsGrailsPlugin extends Plugin {
             // FactoryBean.OBJECT_TYPE_ATTRIBUTE. See that class for why the attribute is load-bearing.
             registry.registerBean('urlMappingsBeanDefinitionsPostProcessor', UrlMappingsBeanDefinitionsPostProcessor) {
                 it.infrastructure().supplier {
-                    new UrlMappingsBeanDefinitionsPostProcessor(reloadEnabled, corsFilterEnabled, resolveHiddenHttpMethod)
+                    new UrlMappingsBeanDefinitionsPostProcessor(reloadEnabled, corsFilterEnabled, resolveHiddenHttpMethod,
+                            markHandledRequests)
                 }
             }
         }

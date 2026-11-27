@@ -36,7 +36,6 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 /**
  * A Mapping context for Hibernate optimized for Java to Groovy conversion.
  *
- * @author Graeme Rocher
  * @since 5.0
  */
 @CompileStatic

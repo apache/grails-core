@@ -18,12 +18,15 @@
  */
 package com.example.ejb3.qualifiedsequence
 
+import groovy.transform.CompileStatic
+
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.SequenceGenerator
 
+@CompileStatic
 @Entity
 class QualifiedSequenceEntity {
 

@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.rx.internal.RxDatastoreClientImplementor
 import org.grails.datastore.rx.query.QueryState
 import org.grails.datastore.rx.query.RxQuery
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 class RxJavassistProxyFactorySpec extends Specification {
@@ -82,6 +82,38 @@ class RxJavassistProxyFactorySpec extends Specification {
         1 * query.singleResult() >> Observable.empty()
         proxy instanceof Widget
         ((ProxyObject) proxy).getHandler() instanceof IdQueryObservableProxyMethodHandler
+    }
+
+    void "a created proxy is an ObservableSource that RxJava 3 operators compose with"() {
+        given:
+        Widget widget = new Widget(name: 'loaded')
+        RxDatastoreClientImplementor client = Stub(RxDatastoreClientImplementor)
+        client.get(Widget, 42L, _ as QueryState) >> Observable.just(widget)
+
+        when:
+        Widget proxy = factory.createProxy(client, new QueryState(), Widget, 42L)
+        List<String> names = Observable.wrap((ObservableProxy) proxy)
+                .map { Widget w -> w.name }
+                .toList()
+                .blockingGet()
+
+        then:
+        names == ['loaded']
+    }
+
+    void "a created proxy composes with concatWith as an ObservableSource"() {
+        given:
+        Widget widget = new Widget(name: 'loaded')
+        Widget other = new Widget(name: 'other')
+        RxDatastoreClientImplementor client = Stub(RxDatastoreClientImplementor)
+        client.get(Widget, 42L, _ as QueryState) >> Observable.just(widget)
+
+        when:
+        Widget proxy = factory.createProxy(client, new QueryState(), Widget, 42L)
+        List<Widget> results = Observable.just(other).concatWith((ObservableProxy) proxy).toList().blockingGet()
+
+        then:
+        results == [other, widget]
     }
 
     void "isProxy returns true only for ObservableProxy instances"() {

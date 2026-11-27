@@ -62,3 +62,26 @@ new Book(name:"Groovy in Action")
 
 This is the expected behaviour as, just like Hibernate, only one side of a many-to-many can take responsibility for managing the relationship.
 
+A many-to-many with a `Map` on either side needs no `belongsTo` to be stored, because each `Map` side writes its own join table, so GORM logs no warning for it.
+
+A many-to-many can also join a class to itself, with both properties on that class:
+
+[source,groovy]
+----
+class User {
+    String name
+    static hasMany = [following: User, followers: User]
+    static mappedBy = [following: 'followers', followers: 'following']
+}
+----
+
+Such a mapping needs no `belongsTo`, and GORM logs no warning for it. Each of the two properties writes its own join table, so use `addToFollowing` and `removeFromFollowing`, which update both sides. Before deleting a `User`, remove it from both sides, otherwise the delete fails on a foreign key:
+
+[source,groovy]
+----
+user.following.toList().each { user.removeFromFollowing(it) }
+user.followers.toList().each { it.removeFromFollowing(user) }
+user.delete()
+----
+
+Declaring `belongsTo` on such a class changes which table each property uses, so do not add it to a mapping that already works.

@@ -36,6 +36,7 @@ import org.neo4j.harness.ServerControls;
 
 import org.springframework.core.env.PropertyResolver;
 
+import org.apache.grails.data.neo4j.core.querytail.QueryTailDriver;
 import org.grails.datastore.gorm.neo4j.config.Settings;
 import org.grails.datastore.gorm.neo4j.util.EmbeddedNeo4jServer;
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
@@ -99,14 +100,19 @@ public class Neo4jConnectionSourceFactory extends AbstractConnectionSourceFactor
                 if (embeddedSettings.isEphemeral()) {
                     dataDir.deleteOnExit();
                 }
-                ServerControls serverControls;
+                ServerControls serverControls = null;
+                Driver driver = null;
                 try {
                     serverControls = url != null ? EmbeddedNeo4jServer.start(url, dataDir, options) : EmbeddedNeo4jServer.start(dataDir, options);
                     Config config = Config.builder().withoutEncryption().build();
                     URI boltURI = serverControls.boltURI();
-                    Driver driver = GraphDatabase.driver(boltURI, config);
-                    return new Neo4jEmbeddedConnectionSource(name, driver, settings, serverControls);
+                    driver = QueryTailDriver.install(name, settings.getQueryTail(), GraphDatabase.driver(boltURI, config));
+                    return createEmbeddedConnectionSource(name, driver, settings, serverControls);
                 } catch (Throwable e) {
+                    // nothing else would close what was opened before the failure: the driver, whose query-tail
+                    // capture closes with it, and the server
+                    closeAfterFailure(driver, e);
+                    closeAfterFailure(serverControls, e);
                     throw new DatastoreConfigurationException("Unable to start embedded Neo4j server: " + e.getMessage(), e);
                 }
             } else {
@@ -121,8 +127,35 @@ public class Neo4jConnectionSourceFactory extends AbstractConnectionSourceFactor
         }
 
         Config driverConfig = settings.getOptions().build();
-        Driver driver = GraphDatabase.driver(url != null ? url : Settings.DEFAULT_URL, authToken, driverConfig);
+        Driver driver = QueryTailDriver.install(name, settings.getQueryTail(),
+                GraphDatabase.driver(url != null ? url : Settings.DEFAULT_URL, authToken, driverConfig));
         return new DefaultConnectionSource<>(name, driver, settings);
+    }
+
+    /**
+     * Creates the connection source of an embedded server. Should it fail, the driver and the server are closed.
+     *
+     * @param name the name of the connection source
+     * @param driver the driver connected to the server, which records statements when query-tail capture is enabled
+     * @param settings the settings
+     * @param serverControls the server
+     * @return the connection source, which closes the driver and the server
+     * @since 9.0
+     */
+    protected ConnectionSource<Driver, Neo4jConnectionSourceSettings> createEmbeddedConnectionSource(String name, Driver driver,
+            Neo4jConnectionSourceSettings settings, ServerControls serverControls) {
+        return new Neo4jEmbeddedConnectionSource(name, driver, settings, serverControls);
+    }
+
+    private static void closeAfterFailure(AutoCloseable opened, Throwable failure) {
+        if (opened == null) {
+            return;
+        }
+        try {
+            opened.close();
+        } catch (Exception e) {
+            failure.addSuppressed(e);
+        }
     }
 
     @Override

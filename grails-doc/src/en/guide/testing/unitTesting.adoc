@@ -20,3 +20,43 @@ under the License.
 Unit testing are tests at the "unit" level. In other words you are testing individual methods or blocks of code without consideration for surrounding infrastructure or interactions with other classes. Unit tests are typically run without the presence of physical resources that involve I/O such as databases, socket connections or files. This is to ensure they run as quick as possible since quick feedback is important.
 
 The Grails Unit Testing Support provides support for writing concise expressive units tests for Grails artifacts with simple, easy to use traits and supporting classes. The use of Traits makes functionality woven into the unit test class at compile time, which allows developers to explicitly view and explore the code. In addition, the Grails Unit Testing Support makes testing more IDE-friendly so developers can take advantage of auto-completion and click through navigation.
+
+Web test traits such as `ControllerUnitTest` and `TagLibUnitTest` automatically include
+`restResponder`, including when a spec overrides `getIncludePlugins()`. They provide JSON conversion
+beans and Boot's Jackson configuration, and contribute XML beans when `grails-xml` is present.
+This does not automatically load the controllers, URL mappings or i18n plugins. Web tests resolve
+locales with the resolver `grails.i18n.localeResolver` configures, as the application does, or with
+any other locale resolver the test's context has, and a URL mappings holder or link generator the test
+declares in `doWithSpring`, `beanRegistrar()` or a `@Bean` method a nested `@Configuration` class declares or inherits,
+under its name or with its name as an alias, replaces the one the traits provide; one of a class that
+configuration class imports does not. The traits replace the URL mappings holder and link generator of the URL mappings
+plugin, which a test including the `controllers` or `urlMappings` plugin loads, with their own, which
+generate links from the application's `UrlMappings` and absolute links from `grails.serverURL`, or
+`http://localhost:8080`. Such a test declares its URL mappings holder in `doWithSpring` or
+`beanRegistrar()`, since the plugin's holder takes the place of one a configuration class declares. A
+`UrlMappingsUnitTest` replaces the holder for each feature with one for the URL mappings it tests.
+`JsonViewUnitTest` keeps the URL mappings holder, link generator and locale resolver in the same way. Non-web traits such as `ServiceUnitTest` retain their own plugin selection.
+
+Web unit tests do not start Spring MVC, but they build its message converters the same way: Spring's
+defaults for the libraries on the test classpath, with JSON written by Boot's configured mapper, then
+Boot's converter customizers, which add the test's `HttpMessageConverter` beans, and the test's
+`WebMvcConfigurer` beans. Adding
+`jackson-dataformat-xml`, for example, installs the Jackson XML converter in unit tests as it does at
+runtime. They build Spring MVC's content negotiation manager, which decides the type `respond` writes a
+`ProblemDetail` in, the same way: from the formats of those converters, then `spring.mvc.contentnegotiation.*`,
+which the test's `application.yml` or `doWithConfig` sets and a `WebMvcConfigurer` bean the traits add applies, as
+Spring Boot's auto-configuration applies them with one, and the test's `WebMvcConfigurer` beans, in the
+order Spring MVC applies them. The `format` parameter that `favor-parameter` reads is one the test adds to the request
+with `request.addParameter`, as a query parameter is added, not `params.format`, which stands for the format a URL
+mapping gives and which Spring MVC does not read either. A test that declares a bean named
+`mvcContentNegotiationManager` negotiates with it instead, as a test for an application that declares `@EnableWebMvc`,
+which turns those properties off with Spring Boot's Spring MVC auto-configuration, declares the manager the application
+configures. `respond` writes a `ProblemDetail` with the handler that Spring MVC's handler adapter writes a
+`ResponseEntity` with, and the traits register that adapter as Spring MVC builds it, with those converters, that manager
+and the test's `WebMvcConfigurer` beans, unless the test declares a `requestMappingHandlerAdapter` bean, so that the
+`@ControllerAdvice` `ResponseBodyAdvice` beans and the `ErrorResponse.Interceptor` beans a test declares apply as in the
+application. Declare converter customizations and mapper beans as `@Bean` methods on a nested Spring
+`@Configuration` class; the deprecated `doWithSpring` callback and `beanRegistrar()` run too late for a
+mapper bean to make Boot's auto-configuration back off. In any unit test, the bean of a `@Bean` method such a class
+declares or inherits, from a superclass or as a default method of an interface, replaces the stand-in the test's
+context registers under its name, such as the `StaticMessageSource` named `messageSource`.

@@ -24,10 +24,6 @@ dependencies {
     add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
-tasks.named('compileTestGroovy', GroovyCompile) {
-    groovyOptions.forkOptions.jvmArgs = ['-Xmx768m']
-}
-
 boolean cacheTests = !doNotCacheTests
 tasks.withType(Test).configureEach {
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
@@ -62,6 +58,15 @@ tasks.withType(Test).configureEach {
         showCauses = true
         showExceptions = true
         showStackTraces = true
+    }
+    // EmbeddedMongoVersions writes a line starting with its NOTICE, 'Embedded MongoDB: ', to standard error when
+    // flapdoodle has no line for the MongoDB the build asked for and an older one runs the replica-set specifications
+    // instead. A passing job's test reports go unread, so that line alone is copied onto the build log; the rest of
+    // standard error stays in them.
+    onOutput { TestDescriptor descriptor, TestOutputEvent event ->
+        if (event.destination == TestOutputEvent.Destination.StdErr && event.message.startsWith('Embedded MongoDB: ')) {
+            System.out.print("${descriptor.className ?: descriptor.name}: ${event.message}")
+        }
     }
     // Used in the TCK test to selectively enable/disable tests
     systemProperty('mongodb.gorm.suite', 'true')

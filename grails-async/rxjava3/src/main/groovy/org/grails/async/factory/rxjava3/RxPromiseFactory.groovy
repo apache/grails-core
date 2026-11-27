@@ -42,12 +42,12 @@ class RxPromiseFactory extends AbstractPromiseFactory {
 
     @Override
     <T> Promise<T> createPromise(Class<T> returnType) {
-        new RxPromise<T>(this, Single.just(null))
+        new RxPromise<T>(this, Single.just(RxPromise.NULL_VALUE))
     }
 
     @Override
     Promise<Object> createPromise() {
-        new RxPromise<Object>(this, Single.just(null))
+        new RxPromise<Object>(this, Single.just(RxPromise.NULL_VALUE))
     }
 
     @Override
@@ -76,24 +76,29 @@ class RxPromiseFactory extends AbstractPromiseFactory {
 
     @Override
     <T> Promise<T> onComplete(List<Promise<T>> promises, Closure<T> callable) {
-        new RxPromise<T>(this, Observable.concat(
-            promises.collect { Promise p ->
-                if (p instanceof BoundPromise) {
-                    return Observable.just(((BoundPromise) p).value) as Observable<T>
-                }
-                else {
-                    return ((RxPromise) p).toObservable() as Observable<T>
-                }
-            }
-        ).toList())
-         .onComplete(callable)
+        new RxPromise<T>(this, values(promises)).onComplete(callable)
     }
 
     @Override
     <T> Promise<List<T>> onError(List<Promise<T>> promises, Closure<?> callable) {
-        new RxPromise(this, Observable.concat(
-                promises.collect { ((RxPromise<T>) it).toObservable() }
-        ).toList())
-        .onError(callable) as Promise<List<T>>
+        new RxPromise(this, values(promises)).onError(callable) as Promise<List<T>>
+    }
+
+    /**
+     * Concatenates the results of the given promises into one list, in order, with a {@code null} value restored
+     * from the sentinel it travels through the stream as. A bound promise contributes its result through
+     * {@code get()}, so one that holds a failure fails the list, as it does with the default and synchronous
+     * factories.
+     */
+    private static <T> Single<List<T>> values(List<Promise<T>> promises) {
+        List<Observable<T>> sources = promises.collect { Promise<T> p ->
+            if (p instanceof BoundPromise) {
+                return Observable.fromCallable { RxPromise.wrap(p.get()) } as Observable<T>
+            }
+            return ((RxPromise<T>) p).toObservable()
+        }
+        return Observable.concat(sources).toList().map { List<T> values ->
+            values.collect { T value -> (T) RxPromise.unwrap(value) } as List<T>
+        }
     }
 }

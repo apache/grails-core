@@ -51,6 +51,9 @@ dependencies {
     api project(':grails-mimetypes')
     api project(':grails-web-core')
     api project(':grails-converters')
+    // XML request bodies are only supported when the application adds the optional module; the
+    // methods that need it fail with a clear message when it is absent at runtime.
+    compileOnly project(':grails-xml')
 
     api 'org.apache.groovy:groovy'
 
@@ -63,6 +66,8 @@ dependencies {
     compileOnly 'org.jline:jline' // command line requirements
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
     // Logging
     api 'org.slf4j:slf4j-api'
     api 'org.slf4j:jcl-over-slf4j'
@@ -70,4 +75,5 @@ dependencies {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

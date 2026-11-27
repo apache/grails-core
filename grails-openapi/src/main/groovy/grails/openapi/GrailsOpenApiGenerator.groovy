@@ -55,6 +55,7 @@ import org.grails.openapi.ComponentSchemas
 import org.grails.openapi.ControllerCatalog
 import org.grails.openapi.DocumentCompletion
 import org.grails.openapi.DocumentParts
+import org.grails.openapi.ErrorsRendering
 import org.grails.openapi.ErrorsViews
 import org.grails.openapi.GrailsModelConverter
 import org.grails.openapi.MappingVersions
@@ -92,6 +93,15 @@ class GrailsOpenApiGenerator {
      * something else as {@link #VALIDATION_ERRORS_SCHEMA}: that of the class Grails renders them from.
      */
     private static final String QUALIFIED_VALIDATION_ERRORS_SCHEMA = 'grails.validation.ValidationErrors'
+
+    /** The name of the problem respond writes validation errors as with {@code grails.web.rendering.json.spring}. */
+    private static final String VALIDATION_PROBLEM_SCHEMA = 'ValidationProblem'
+
+    /** The name of the validation errors the JSON converter writes with {@code grails.converters.json.legacy} false. */
+    private static final String JSON_VALIDATION_ERRORS_SCHEMA = 'JsonValidationErrors'
+
+    /** The prefix of the name a schema is described under where the document describes something else by its name. */
+    private static final String QUALIFIED_SCHEMA_PREFIX = 'grails.validation.'
 
     private static final String CONTROLLER_TOKEN = 'controller'
     private static final String ACTION_TOKEN = 'action'
@@ -263,8 +273,17 @@ class GrailsOpenApiGenerator {
             boolean errorsDeclared = VALIDATION_ERRORS_SCHEMA in declared
             String errorsSchema = schemas.reserve(errorsDeclared || !components.schemas?.containsKey(VALIDATION_ERRORS_SCHEMA)
                     ? VALIDATION_ERRORS_SCHEMA : QUALIFIED_VALIDATION_ERRORS_SCHEMA)
-            responses = new OperationResponses(schemas, new ValidationErrorsContent(components,
-                    ErrorsViews.of(grailsApplication?.mainContext), errorsSchema, errorsDeclared))
+            ErrorsViews errorsViews = ErrorsViews.of(grailsApplication?.mainContext)
+            // The JSON the converters write the errors in where the settings make it differ from their XML: the problem
+            // respond writes with grails.web.rendering.json.spring, or what the JSON converter writes without
+            // grails.converters.json.legacy
+            String jsonErrorsName = errorsDeclared || errorsViews.rendering() != ErrorsRendering.CONVERTERS ? null :
+                    settings.springJson ? VALIDATION_PROBLEM_SCHEMA :
+                    settings.legacyJson ? null : JSON_VALIDATION_ERRORS_SCHEMA
+            String jsonErrorsSchema = jsonErrorsName == null ? null : schemas.reserve(
+                    components.schemas?.containsKey(jsonErrorsName) ? QUALIFIED_SCHEMA_PREFIX + jsonErrorsName : jsonErrorsName)
+            responses = new OperationResponses(schemas, new ValidationErrorsContent(components, errorsViews,
+                    errorsSchema, errorsDeclared, settings.springJson, jsonErrorsSchema))
             GrailsModelConverter.withSchemaNames(schemas.names) {
                 for (UrlMapping mapping : urlMappingsHolder.urlMappings) {
                     DocumentParts.describe("URL mapping [${mapping.urlData?.urlPattern}]".toString()) {

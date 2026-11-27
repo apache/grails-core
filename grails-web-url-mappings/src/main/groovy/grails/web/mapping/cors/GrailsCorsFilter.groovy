@@ -25,6 +25,8 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import org.springframework.web.filter.CorsFilter
 
+import org.grails.web.config.http.GrailsFilters
+
 /**
  * A class to be registered as a filter for Cors based on Grails configuration
  *
@@ -52,6 +54,6 @@ class GrailsCorsFilter extends CorsFilter implements Ordered {
 
     @Override
     int getOrder() {
-        HIGHEST_PRECEDENCE
+        GrailsFilters.CORS_FILTER.order
     }
 }

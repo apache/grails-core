@@ -1,29 +1,26 @@
-@SuppressWarnings('UnnecessarySemicolon')
-package liquibase.ext.hibernate.database;
+package liquibase.ext.hibernate.database
 
-import java.sql.Connection;
-import java.sql.SQLException;
+import java.sql.Connection
+import java.sql.SQLException
 
-import groovy.transform.CompileStatic;
-import groovy.transform.PackageScope;
-import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 
 /**
  * Used by hibernate to ensure no database access is performed.
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['UnnecessarySemicolon', 'UnnecessaryGString'])
 @CompileStatic
 @PackageScope
 class NoOpConnectionProvider implements ConnectionProvider {
 
     // Fix: Classes implementing Serializable should set a serialVersionUID (PMD #12)
     @Serial
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L
 
     @Override
     Connection getConnection() throws SQLException {
-        throw new SQLException("No connection");
+        throw new SQLException('No connection')
     }
 
     @Override
@@ -33,31 +30,31 @@ class NoOpConnectionProvider implements ConnectionProvider {
 
     @Override
     boolean supportsAggressiveRelease() {
-        return false;
+        return false
     }
 
     @Override
     boolean isUnwrappableAs(Class<?> unwrapType) {
-        return false;
+        return false
     }
 
     @Override
     def <T> T unwrap(Class<T> unwrapType) {
-        return null;
+        return null
     }
 
     /**
      * Helper for multi-tenant or legacy calls.
      */
     Connection getConnection(String tenantIdentifier) throws SQLException {
-        return getConnection();
+        return getConnection()
     }
 
     /**
      * Helper for Hibernate 5/6 SPI calls.
      */
     Connection getConnection(Object o) throws SQLException {
-        return getConnection();
+        return getConnection()
     }
 
     /**

@@ -158,11 +158,11 @@ The following table summarizes the available implementation and the dependency t
 |`grails-async-gpars`
 |`org.grails.async.factory.gpars.GparsPromiseFactory`
 
-|RxJava 1.2.x
+|RxJava 1.x (deprecated, see below)
 |`grails-async-rxjava`
 |`org.grails.async.factory.rxjava.RxPromiseFactory`
 
-|RxJava 2.x
+|RxJava 2.x (deprecated, see below)
 |`grails-async-rxjava2`
 |`org.grails.async.factory.rxjava2.RxPromiseFactory`
 
@@ -177,6 +177,8 @@ The `grails-async-groovy-concurrent` dependency selects a factory built on Groov
 NOTE: Like the GPars and RxJava factories, a service-loaded factory is created by the framework, so in a Grails application it does not use Boot's `applicationTaskExecutor` or the `TaskDecorator` beans that the default factory receives. `Awaitable.setExecutor` is the supported way to change where its tasks run.
 
 The GPars integration in `grails-async-gpars` is deprecated and will be removed in a future release, because Groovy 6 folds the GPars patterns into `groovy.concurrent`. It logs a warning when it is selected. Replace the dependency with `grails-async-groovy-concurrent`; do not add both, since only one service-loaded `PromiseFactory` is used.
+
+The RxJava 1 and RxJava 2 integrations in `grails-async-rxjava` and `grails-async-rxjava2` are deprecated and will be removed in a future release, because neither RxJava version is maintained any more. Their promise factories log a warning when they are created. Replace either dependency with `grails-async-rxjava3`; the `Promise` API an application uses is the same, and a promise that holds `null` resolves to `null` with the RxJava 3 factory as it does with every other.
 
 You can also override the `grails.async.PromiseFactory` class used by `Promises` by setting the `promiseFactory` static field.
 

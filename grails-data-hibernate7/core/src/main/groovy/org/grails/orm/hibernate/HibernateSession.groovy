@@ -16,170 +16,167 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate;
+package org.grails.orm.hibernate
 
-import groovy.transform.CompileStatic;
-import groovy.transform.PackageScope;
-import jakarta.persistence.FlushModeType;
-import jakarta.persistence.LockModeType;
-import org.hibernate.FlushMode;
-import org.hibernate.HibernateException;
-import org.hibernate.LockMode;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.proxy.HibernateProxy;
-import org.hibernate.query.MutationQuery;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import jakarta.persistence.FlushModeType
+import jakarta.persistence.LockModeType
+import org.hibernate.FlushMode
+import org.hibernate.HibernateException
+import org.hibernate.LockMode
+import org.hibernate.Session
+import org.hibernate.SessionFactory
+import org.hibernate.proxy.HibernateProxy
+import org.hibernate.query.MutationQuery
 
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.core.convert.ConversionService
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
-import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
-import org.grails.datastore.mapping.core.AbstractAttributeStoringSession;
-import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.engine.Persister;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.api.QueryAliasAwareSession;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.datastore.mapping.query.event.PostQueryEvent;
-import org.grails.datastore.mapping.query.event.PreQueryEvent;
-import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder;
-import org.grails.datastore.mapping.query.jpa.JpaQueryInfo;
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
-import org.grails.datastore.mapping.transactions.Transaction;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
-import org.grails.orm.hibernate.query.HibernateHqlQueryCreator;
-import org.grails.orm.hibernate.query.HibernateQuery;
-import org.grails.orm.hibernate.query.HqlQueryContext;
-import org.grails.orm.hibernate.query.MutationHqlQuery;
+import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider
+import org.grails.datastore.mapping.core.AbstractAttributeStoringSession
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.engine.Persister
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.query.Query
+import org.grails.datastore.mapping.query.api.QueryAliasAwareSession
+import org.grails.datastore.mapping.query.api.QueryableCriteria
+import org.grails.datastore.mapping.query.event.PostQueryEvent
+import org.grails.datastore.mapping.query.event.PreQueryEvent
+import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder
+import org.grails.datastore.mapping.query.jpa.JpaQueryInfo
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
+import org.grails.datastore.mapping.transactions.Transaction
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler
+import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
+import org.grails.orm.hibernate.query.HibernateQuery
+import org.grails.orm.hibernate.query.HqlQueryContext
+import org.grails.orm.hibernate.query.MutationHqlQuery
 
 /**
  * Session implementation that wraps a Hibernate {@link org.hibernate.Session}.
  *
- * @author Graeme Rocher
  * @since 1.0
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
 @CompileStatic
-@SuppressWarnings(['rawtypes', 'PMD.DataflowAnomalyAnalysis', 'PMD.AvoidDuplicateLiterals', 'UnnecessarySemicolon', 'UnnecessaryGString'])
+@SuppressWarnings('rawtypes')
 class HibernateSession extends AbstractAttributeStoringSession implements QueryAliasAwareSession {
 
     /** The datastore. */
-    protected HibernateDatastore datastore;
+    protected HibernateDatastore datastore
 
     /** The connected. */
-    protected boolean connected = true;
+    protected boolean connected = true
 
     /** The hibernate template. */
-    protected IHibernateTemplate hibernateTemplate;
+    protected IHibernateTemplate hibernateTemplate
 
-    @PackageScope ProxyHandler proxyHandler = new HibernateProxyHandler();
-    @PackageScope DefaultTimestampProvider timestampProvider;
+    @PackageScope ProxyHandler proxyHandler = new HibernateProxyHandler()
+    @PackageScope DefaultTimestampProvider timestampProvider
 
     HibernateSession(HibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
-        datastore = hibernateDatastore;
-        hibernateTemplate = (IHibernateTemplate) hibernateDatastore.hibernateTemplate;
+        datastore = hibernateDatastore
+        hibernateTemplate = (IHibernateTemplate) hibernateDatastore.hibernateTemplate
     }
 
     @Override
     boolean isSchemaless() {
-        return false;
+        return false
     }
 
     @Override
     Serializable insert(Object o) {
-        return persist(o);
+        return persist(o)
     }
 
     @Override
     boolean isConnected() {
-        return connected;
+        return connected
     }
 
     @Override
     void disconnect() {
-        connected = false; // don't actually do any disconnection here. This will be handled by OSVI
+        connected = false // don't actually do any disconnection here. This will be handled by OSVI
     }
 
     @Override
     Transaction beginTransaction() {
-        throw new UnsupportedOperationException("Use HibernatePlatformTransactionManager instead");
+        throw new UnsupportedOperationException('Use HibernatePlatformTransactionManager instead')
     }
 
     @Override
     Transaction beginTransaction(TransactionDefinition definition) {
-        throw new UnsupportedOperationException("Use HibernatePlatformTransactionManager instead");
+        throw new UnsupportedOperationException('Use HibernatePlatformTransactionManager instead')
     }
 
     @Override
     MappingContext getMappingContext() {
-        return getDatastore().mappingContext;
+        return getDatastore().mappingContext
     }
 
     @Override
     Serializable persist(Object o) {
-        hibernateTemplate.persist(o);
+        hibernateTemplate.persist(o)
         try {
-            MappingContext ctx = getDatastore().mappingContext;
-            GrailsHibernatePersistentEntity pe = (GrailsHibernatePersistentEntity) ctx.getPersistentEntity(o.class.name);
+            MappingContext ctx = getDatastore().mappingContext
+            GrailsHibernatePersistentEntity pe = (GrailsHibernatePersistentEntity) ctx.getPersistentEntity(o.class.name)
             if (pe != null) {
-                return ctx.getEntityReflector(pe).getIdentifier(o);
+                return ctx.getEntityReflector(pe).getIdentifier(o)
             }
         } catch (Exception ignored) {
             // ignore and return null when identifier cannot be obtained
         }
-        return null;
+        return null
     }
 
     @Override
     Object merge(Object o) {
-        return hibernateTemplate.merge(o);
+        return hibernateTemplate.merge(o)
     }
 
     @Override
     void refresh(Object o) {
-        hibernateTemplate.refresh(o);
+        hibernateTemplate.refresh(o)
     }
 
     @Override
     void attach(Object o) {
         ((GrailsHibernateTemplate) hibernateTemplate).execute({ Session session ->
-            HibernateAttachSupport.attach(o, session);
-            return null;
-        });
+            HibernateAttachSupport.attach(o, session)
+            return null
+        })
     }
 
     @Override
     void flush() {
-        hibernateTemplate.flush();
+        hibernateTemplate.flush()
     }
 
     @Override
     void clear() {
-        hibernateTemplate.clear();
+        hibernateTemplate.clear()
     }
 
     @Override
     void clear(Object o) {
-        hibernateTemplate.evict(o);
+        hibernateTemplate.evict(o)
     }
 
     @Override
     boolean contains(Object o) {
-        return hibernateTemplate.contains(o);
+        return hibernateTemplate.contains(o)
     }
 
     @Override
     void lock(Object o) {
-        hibernateTemplate.lock(o, LockMode.PESSIMISTIC_WRITE);
+        hibernateTemplate.lock(o, LockMode.PESSIMISTIC_WRITE)
     }
 
     @Override
@@ -195,86 +192,86 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
     @Deprecated
     @Override
     List<Serializable> persist(Iterable objects) {
-        List<Serializable> ids = [];
+        List<Serializable> ids = []
         for (Object object : objects) {
-            Serializable id = persist(object);
-            ids.add(id);
+            Serializable id = persist(object)
+            ids.add(id)
         }
-        return ids;
+        return ids
     }
 
     @Override
     <T> T retrieve(Class<T> type, Serializable key) {
-        return getHibernateTemplate().execute({ Session session -> session.find(type, key) });
+        return getHibernateTemplate().execute({ Session session -> session.find(type, key) })
     }
 
     @Override
     <T> T proxy(Class<T> type, Serializable key) {
-        return hibernateTemplate.load(type, key);
+        return hibernateTemplate.load(type, key)
     }
 
     @Override
     <T> T lock(Class<T> type, Serializable key) {
-        return getHibernateTemplate().execute({ Session session -> session.find(type, key, LockModeType.PESSIMISTIC_WRITE) });
+        return getHibernateTemplate().execute({ Session session -> session.find(type, key, LockModeType.PESSIMISTIC_WRITE) })
     }
 
     @Override
     void delete(Iterable objects) {
-        Collection list = getIterableAsCollection(objects);
-        hibernateTemplate.deleteAll(list);
+        Collection list = getIterableAsCollection(objects)
+        hibernateTemplate.deleteAll(list)
     }
 
     protected Collection<?> getIterableAsCollection(Iterable<?> objects) {
         if (objects instanceof Collection) {
-            return (Collection<?>) objects;
+            return (Collection<?>) objects
         }
-        List<Object> list = [];
+        List<Object> list = []
         for (Object object : objects) {
-            list.add(object);
+            list.add(object)
         }
-        return list;
+        return list
     }
 
     @Override
     void delete(Object obj) {
-        hibernateTemplate.remove(obj);
+        hibernateTemplate.remove(obj)
     }
 
     @Override
     List retrieveAll(Class type, Serializable... keys) {
-        return retrieveAll(type, Arrays.asList(keys));
+        return retrieveAll(type, Arrays.asList(keys))
     }
 
     @Override
     Persister getPersister(Object o) {
-        return null;
+        return null
     }
 
     @Override
     Transaction getTransaction() {
-        throw new UnsupportedOperationException("Use HibernatePlatformTransactionManager instead");
+        throw new UnsupportedOperationException('Use HibernatePlatformTransactionManager instead')
     }
 
     @Override
     boolean hasTransaction() {
-        Object resource = TransactionSynchronizationManager.getResource(hibernateTemplate.sessionFactory);
-        return resource != null;
+        Object resource = TransactionSynchronizationManager.getResource(hibernateTemplate.sessionFactory)
+        return resource != null
     }
 
     @Override
     Datastore getDatastore() {
-        return datastore;
+        return datastore
     }
 
     @Override
     boolean isDirty(Object o) {
         // not used, Hibernate manages dirty checking itself
-        return true;
+        return true
     }
 
     @Override
     Object getNativeInterface() {
-        return hibernateTemplate;
+        return hibernateTemplate
     }
 
     @Override
@@ -283,22 +280,21 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
     }
 
     @Override
-    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     Serializable getObjectIdentifier(Object instance) {
         if (instance == null) {
-            return null;
+            return null
         }
         if (proxyHandler.isProxy(instance)) {
-            return (Serializable) ((HibernateProxy) instance).hibernateLazyInitializer.identifier;
+            return (Serializable) ((HibernateProxy) instance).hibernateLazyInitializer.identifier
         }
-        Class<?> type = instance.class;
-        ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(type);
-        GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) mappingContext.getPersistentEntity(type.name);
+        Class<?> type = instance.class
+        ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(type)
+        GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) mappingContext.getPersistentEntity(type.name)
         if (persistentEntity != null) {
             return (Serializable) cpf.getPropertyValue(
-                    instance, persistentEntity.identity.name);
+                    instance, persistentEntity.identity.name)
         }
-        return null;
+        return null
     }
 
     /**
@@ -308,37 +304,36 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
      * @return The total number of records deleted
      */
     @Override
-    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     long deleteAll(QueryableCriteria criteria) {
         return getHibernateTemplate().execute({ Session session ->
-            JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
-            builder.conversionService = mappingContext.conversionService;
-            builder.hibernateCompatible = true;
-            JpaQueryInfo jpaQueryInfo = builder.buildDelete();
+            JpaQueryBuilder builder = new JpaQueryBuilder(criteria)
+            builder.conversionService = mappingContext.conversionService
+            builder.hibernateCompatible = true
+            JpaQueryInfo jpaQueryInfo = builder.buildDelete()
 
-            MutationQuery query = createMutationQuery(session, jpaQueryInfo);
+            MutationQuery query = createMutationQuery(session, jpaQueryInfo)
 
-            HqlQueryContext ctx = HqlQueryContext.prepare(criteria.persistentEntity, jpaQueryInfo.query, null, null, null, new HashMap<>(), false, true);
-            MutationHqlQuery hqlQuery = (MutationHqlQuery) HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.sessionFactory, criteria.persistentEntity, ctx);
-            ApplicationEventPublisher applicationEventPublisher = datastore.applicationEventPublisher;
-            applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
-            int result = query.executeUpdate();
+            HqlQueryContext ctx = HqlQueryContext.prepare(criteria.persistentEntity, jpaQueryInfo.query, null, null, null, new HashMap<>(), false, true)
+            MutationHqlQuery hqlQuery = (MutationHqlQuery) HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.sessionFactory, criteria.persistentEntity, ctx)
+            ApplicationEventPublisher applicationEventPublisher = datastore.applicationEventPublisher
+            applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery))
+            int result = query.executeUpdate()
             applicationEventPublisher.publishEvent(
-                    new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
-            return result;
+                    new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)))
+            return result
         } as GrailsHibernateTemplate.HibernateCallback<Integer>)
     }
 
     private MutationQuery createMutationQuery(Session session, JpaQueryInfo jpaQueryInfo) {
-        MutationQuery query = session.createMutationQuery(jpaQueryInfo.query);
+        MutationQuery query = session.createMutationQuery(jpaQueryInfo.query)
 
-        List<?> parameters = jpaQueryInfo.parameters;
+        List<?> parameters = jpaQueryInfo.parameters
         if (parameters != null) {
             for (int i = 0; i < parameters.size(); i++) {
-                query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
+                query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i))
             }
         }
-        return query;
+        return query
     }
 
     /**
@@ -349,62 +344,60 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
      * @return The total number of records updated
      */
     @Override
-    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     long updateAll(QueryableCriteria criteria, Map<String, Object> properties) {
         return getHibernateTemplate().execute({ Session session ->
-            JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
-            builder.conversionService = mappingContext.conversionService;
-            builder.hibernateCompatible = true;
-            GrailsHibernatePersistentEntity targetEntity = (GrailsHibernatePersistentEntity) criteria.persistentEntity;
-            PersistentProperty lastUpdated = targetEntity.getPropertyByName(GormProperties.LAST_UPDATED);
+            JpaQueryBuilder builder = new JpaQueryBuilder(criteria)
+            builder.conversionService = mappingContext.conversionService
+            builder.hibernateCompatible = true
+            GrailsHibernatePersistentEntity targetEntity = (GrailsHibernatePersistentEntity) criteria.persistentEntity
+            PersistentProperty lastUpdated = targetEntity.getPropertyByName(GormProperties.LAST_UPDATED)
             if (lastUpdated != null && ((HibernatePersistentEntity) targetEntity).mapping.mappedForm.isAutoTimestamp()) {
                 if (timestampProvider == null) {
-                    timestampProvider = new DefaultTimestampProvider();
+                    timestampProvider = new DefaultTimestampProvider()
                 }
-                Class<?> type = lastUpdated.type;
-                properties.put(GormProperties.LAST_UPDATED, timestampProvider.createTimestamp(type));
+                Class<?> type = lastUpdated.type
+                properties.put(GormProperties.LAST_UPDATED, timestampProvider.createTimestamp(type))
             }
 
-            JpaQueryInfo jpaQueryInfo = builder.buildUpdate(properties);
+            JpaQueryInfo jpaQueryInfo = builder.buildUpdate(properties)
 
-            MutationQuery query = createMutationQuery(session, jpaQueryInfo);
+            MutationQuery query = createMutationQuery(session, jpaQueryInfo)
 
-            HqlQueryContext ctx = HqlQueryContext.prepare(targetEntity, jpaQueryInfo.query, null, null, null, new HashMap<>(), false, true);
-            MutationHqlQuery hqlQuery = (MutationHqlQuery) HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.sessionFactory, targetEntity, ctx);
-            ApplicationEventPublisher applicationEventPublisher = datastore.applicationEventPublisher;
-            applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
-            int result = query.executeUpdate();
+            HqlQueryContext ctx = HqlQueryContext.prepare(targetEntity, jpaQueryInfo.query, null, null, null, new HashMap<>(), false, true)
+            MutationHqlQuery hqlQuery = (MutationHqlQuery) HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.sessionFactory, targetEntity, ctx)
+            ApplicationEventPublisher applicationEventPublisher = datastore.applicationEventPublisher
+            applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery))
+            int result = query.executeUpdate()
             applicationEventPublisher.publishEvent(
-                    new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
-            return result;
+                    new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)))
+            return result
         } as GrailsHibernateTemplate.HibernateCallback<Integer>)
     }
 
     @Override
-    @SuppressWarnings('PMD.DataflowAnomalyAnalysis')
     List retrieveAll(Class type, Iterable keys) {
-        GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) mappingContext.getPersistentEntity(type.name);
-        String entityName = persistentEntity.name;
-        String idName = persistentEntity.identity.name;
-        String hql = "from ${entityName} as e where e.${idName} in (:keys)".toString();
-        Class idType = persistentEntity.identity.type;
-        ConversionService conversionService = mappingContext.conversionService;
+        GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) mappingContext.getPersistentEntity(type.name)
+        String entityName = persistentEntity.name
+        String idName = persistentEntity.identity.name
+        String hql = "from ${entityName} as e where e.${idName} in (:keys)".toString()
+        Class idType = persistentEntity.identity.type
+        ConversionService conversionService = mappingContext.conversionService
 
         // Convert each requested id to the entity's identifier type, preserving order and
         // duplicates. getAll() must return entities in the supplied id order with a null slot
         // for any id that does not resolve to a row, so order is driven by the request rather
         // than the database.
-        List<Serializable> requestedIds = [];
+        List<Serializable> requestedIds = []
         for (Object key : keys) {
-            requestedIds.add(convertToIdentifierType(key, idType, conversionService));
+            requestedIds.add(convertToIdentifierType(key, idType, conversionService))
         }
 
         return getHibernateTemplate().execute({ Session session ->
             // Query only the distinct, non-null ids; a missing id simply yields no row.
-            Set<Serializable> distinctIds = new LinkedHashSet<>();
+            Set<Serializable> distinctIds = new LinkedHashSet<>()
             for (Serializable requestedId : requestedIds) {
                 if (requestedId != null) {
-                    distinctIds.add(requestedId);
+                    distinctIds.add(requestedId)
                 }
             }
 
@@ -413,7 +406,7 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
             // ConversionService can't convert it, so a requestedId that Hibernate itself
             // coerced during the query would not equal the typed identifier returned by
             // session.getIdentifier(). Normalizing both sides to String avoids that mismatch.
-            Map<String, Object> entitiesById = [:];
+            Map<String, Object> entitiesById = [:]
             if (!distinctIds.isEmpty()) {
                 HqlQueryContext queryContext = HqlQueryContext.prepare(
                     persistentEntity,
@@ -425,54 +418,54 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
                     false,
                     false,
                     type
-                );
+                )
 
                 List results = HibernateHqlQueryCreator.createHqlQuery(
                     (HibernateDatastore) getDatastore(),
                     getHibernateTemplate().sessionFactory,
                     persistentEntity,
                     queryContext
-                ).list();
+                ).list()
                 for (Object entity : results) {
-                    entitiesById.put(String.valueOf(session.getIdentifier(entity)), entity);
+                    entitiesById.put(String.valueOf(session.getIdentifier(entity)), entity)
                 }
             }
 
             // Reassemble in the requested order, leaving a null slot for missing ids.
-            List ordered = new ArrayList<>(requestedIds.size());
+            List ordered = new ArrayList<>(requestedIds.size())
             for (Serializable requestedId : requestedIds) {
-                ordered.add(requestedId == null ? null : entitiesById.get(String.valueOf(requestedId)));
+                ordered.add(requestedId == null ? null : entitiesById.get(String.valueOf(requestedId)))
             }
-            return ordered;
-        });
+            return ordered
+        })
     }
 
     private Serializable convertToIdentifierType(Object key, Class idType, ConversionService conversionService) {
         if (key == null || idType.isInstance(key)) {
-            return (Serializable) key;
+            return (Serializable) key
         }
         if (conversionService != null && conversionService.canConvert(key.class, idType)) {
-            return (Serializable) conversionService.convert(key, idType);
+            return (Serializable) conversionService.convert(key, idType)
         }
-        return (Serializable) key;
+        return (Serializable) key
     }
 
     @Override
     Query createQuery(Class type) {
-        return createQuery(type, null);
+        return createQuery(type, null)
     }
 
     @Override
     Query createQuery(Class type, String alias) {
-        HibernateQuery query = new HibernateQuery(this, (GrailsHibernatePersistentEntity) mappingContext.getPersistentEntity(type.name));
+        HibernateQuery query = new HibernateQuery(this, (GrailsHibernatePersistentEntity) mappingContext.getPersistentEntity(type.name))
         if (alias != null) {
-            query.detachedCriteria.alias = alias;
+            query.detachedCriteria.alias = alias
         }
-        return query;
+        return query
     }
 
     GrailsHibernateTemplate getHibernateTemplate() {
-        return (GrailsHibernateTemplate) getNativeInterface();
+        return (GrailsHibernateTemplate) getNativeInterface()
     }
 
     /**
@@ -482,13 +475,13 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
      */
     @Override
     FlushModeType getFlushMode() {
-        Session session = getCurrentNativeSession();
+        Session session = getCurrentNativeSession()
         if (session != null) {
-            return session.getFlushMode();
+            return session.getFlushMode()
         }
-        FlushMode defaultFlushMode = ((HibernateDatastore) getDatastore()).getDefaultFlushMode();
+        FlushMode defaultFlushMode = ((HibernateDatastore) getDatastore()).getDefaultFlushMode()
         return defaultFlushMode == FlushMode.COMMIT || defaultFlushMode == FlushMode.MANUAL ?
-                FlushModeType.COMMIT : FlushModeType.AUTO;
+                FlushModeType.COMMIT : FlushModeType.AUTO
     }
 
     /**
@@ -499,18 +492,18 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
      */
     @Override
     void setFlushMode(FlushModeType flushMode) {
-        Session session = getCurrentNativeSession();
+        Session session = getCurrentNativeSession()
         if (session == null) {
-            throw new IllegalStateException("No Hibernate session is bound to the current thread");
+            throw new IllegalStateException('No Hibernate session is bound to the current thread')
         }
-        session.setFlushMode(flushMode);
+        session.setFlushMode(flushMode)
     }
 
     private Session getCurrentNativeSession() {
         try {
-            return hibernateTemplate.getSessionFactory().getCurrentSession();
+            return hibernateTemplate.getSessionFactory().getCurrentSession()
         } catch (HibernateException ignored) {
-            return null;
+            return null
         }
     }
 
@@ -522,7 +515,7 @@ class HibernateSession extends AbstractAttributeStoringSession implements QueryA
             Thread.currentThread().contextClassLoader,
             ((HibernateDatastore) getDatastore()).transactionManager,
             null
-        );
+        )
     }
 
 }

@@ -1,0 +1,354 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A page that is slow because it runs hundreds of queries is easy to miss in a log: `logSql` prints
+every statement, but not which page ran it or how many a request added up to. The `query-tail`
+command answers that. It shows the pages of the running application ranked by the statements they
+run per request, and for each page the statement that repeats most within a single request, which
+is what an N+1 looks like. It covers every store GORM runs statements on: SQL through Hibernate,
+Cypher through Neo4j and commands through MongoDB, and the reads and writes of the simple
+in-memory datastore, which runs no statements of its own.
+
+It takes two terminals. In the first, start the application with capture turned on:
+
+[source,shell]
+----
+grails run-app --query-tail
+----
+
+or, with Gradle, `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`. In the second, follow the
+capture and use the application:
+
+[source,shell]
+----
+grails query-tail
+----
+
+The summary refreshes as requests are served:
+
+----
+query-tail build/query-tail/capture.log  312 statements in 14 requests  (refreshes as statements run; Ctrl-C to stop)
+PAGE        REQUESTS  AVG/REQ    MAX   TOTAL  MOST REPEATED IN ONE REQUEST
+book/show          6     48.0     61     288  44× select ... from author a1_0 where a1_0.id=?
+book/index         5      4.2      5      21  5× select ... from book b1_0
+author/show        3      1.0      1       3  1× select ... from author a1_0 where a1_0.id=?
+----
+
+Statements are shown without their column lists, so the same query counts as one statement wherever
+it is run from. A select whose list calls a function, such as the `count(*)` of a paginated list, is
+shown whole, so it never counts as a repeat of the select that lists the rows it counts, and so is a
+select whose list reads a subquery, such as one a formula property adds. The common
+table expressions a statement opens with are kept, and so is every space
+in a quoted name, so statements that read different tables never count as one. `--statements` ranks the statements themselves, `--page=book/show` shows the
+statements of one page, and `--stream` prints each statement as it runs with a header for each
+request, which shows a page load adding up. `--all --once` prints a report of everything captured
+so far and exits, which is also how to look at what an integration test run executed:
+
+[source,shell]
+----
+./gradlew integrationTest -Pgrails.gorm.queryTail.enabled
+grails query-tail --all --once
+----
+
+The Grails Gradle plugin names one run for each build and hands it to every test JVM the build
+forks, as `grails.gorm.queryTail.run`, whether capture is turned on by the flag or for the test
+environment in `application.yml`, so the report covers the whole test run: the
+datastores the specs open and close one after another, and the test tasks of a project that write
+to the same file, such as `test` and `integrationTest`, add to that one run, and the next build
+starts its own. What tests run is captured only as they run, so while the flag is given a test task
+is neither taken from the build cache nor skipped as up to date. Gradle does not know of capture
+turned on in `application.yml` alone: to capture tests whose results Gradle would reuse, give the
+flag, or run the task with `--rerun`. Tests run another way, from an IDE for example, start a new
+run with each datastore that opens after the last one closed.
+
+See link:{commandLineRef}query-tail.html[query-tail] for every option.
+
+Statements are attributed to the controller and action Grails resolved for the request on the
+thread that runs them, so a statement run by an interceptor, the action or a GSP all count for the
+same page, even for a request to a controller's default action, such as `/book`, whose `before`
+interceptors run before Grails names the action. Work a request hands to another thread that carries the request with it, as Grails
+promises and `@Async` methods do, counts for the request and its page too. Other work on another
+thread, such as a scheduled job, is shown under the name of its thread, with the numbers in it
+replaced so that the threads of one pool are one page, and so is a statement a task runs once the
+request that started it has completed. A thread serves no request, so it is listed
+after the pages of requests, the busiest first, with `-` for its requests and its averages, and the
+request count leaves it out: the inserts of a `BootStrap` or the statements of a test worker never
+hide the page an N+1 slows down. A request that a Spring MVC handler serves,
+rather than a Grails controller, is shown under its method and the pattern its handler mapping
+matched, such as `GET /api/books/?`. A GraphQL endpoint serves every operation its clients send on
+one page, so with the GORM GraphQL plugin the statements of each operation are counted under the
+operation, after the page: `graphql/index (query BookList)` for an operation the document names, and
+`graphql/index (query {bookList, authorCount})`, the fields it selects at the top, for one it does not
+name. An argument, an alias or a variable of the operation is never part of it. Everything the
+operation runs counts, including the associations GraphQL loads as it reads their fields, and
+`--page=graphql/index` or `--page=graphql` takes in every operation of the endpoint. A request that does not reach a handler is shown under its
+method and the shape of its path, every segment replaced, as is a statement run before the
+controller is chosen. A request whose
+statements land on two pages, one forwarded to another action or one that queries in a filter
+before its controller is chosen, counts as a request of each page with the statements it ran there.
+Request ids are local to a capture file: if separate datastores write to different files, each file
+counts the requests it sees independently, including requests that use both datastores.
+In the `--stream` view, requests served at the same time interleave: a request that comes back is
+headed as continued, and the count printed when another request interrupts it is its running total.
+The request itself is recorded as its method and path, with the values in the path replaced by `?`.
+The path is read against the URL mapping that matched it: a segment the mapping spells out is kept,
+and so is one a variable of the mapping took that names the controller, action or namespace, while
+every other segment a variable took is replaced whole, so `"/book/show/$id"` records `/book/show/42`
+as `/book/show/?` and `"/reset/${token}_confirm"` records `/reset/k9fQ2x_confirm` as `/reset/?`. The
+extension of a last segment kept that way is a value the client chooses, as a format is, so
+`/book/show.json` is recorded as `/book/show.?`. Every segment a greedy variable takes is replaced,
+so `"/images/$name**.jpg"` records `/images/customer-secret/private-secret.jpg` as `/images/?/?`, and
+so is every path parameter after a semicolon, such as the `jsessionid` a container rewrites a URL
+with. An action a page includes, as `<g:include>` includes one, is recorded under the URI it was
+included by, read against the URL mapping that matched that URI, rather than under the path of the
+page. When nothing tells a literal segment from a value, only the shape of the path is recorded,
+such as `GET /?/?/?`, so an id, a token or a key carried in a path never reaches the capture file:
+for a statement run before the URL mapping has chosen the controller, for a request that never
+reaches one, and for a path that does not follow the mapping it is read against, as one kept from
+before a forward may not. Only the controller the framework resolved the request to counts as the
+mapping having run, and only with an action and a namespace that controller has, never a parameter a
+client sent or a value of the path that a mapping which resolved no controller read as a name. The
+parameters of the request are never read, so a form posted to it is left whole for the application
+to read. A request is described once, and the
+description is reused for its later statements until the request moves on, as a forward or an
+include moves it.
+
+Statements are captured without their values. Every string, number, dollar-quoted literal and
+Transact-SQL amount is recorded as `?` and every comment is dropped, so a password written into a
+native query, a key in a comment, or a literal Hibernate copies into its SQL comments with
+`hibernate.use_sql_comments` never reaches the capture file or the command. Only the recorded copy
+changes: the database runs the statement as written. Where a value or a comment ends is read by the
+lexical rules of the database the dialect belongs to, which were verified against the databases
+themselves: H2, PostgreSQL, CockroachDB, Oracle, Db2, HSQLDB, Informix, MySQL and MariaDB, SQL
+Server and Sybase, and Cloud Spanner's GoogleSQL, with SAP HANA read from its documentation and
+Derby, whose Hibernate 5 dialect extends Db2's, read as Db2. A rule that depends on a server setting
+the capture cannot see, such as whether a backslash escapes a quote in MySQL and PostgreSQL, or
+whether MySQL starts a `--` comment before a character outside ASCII, which its connection character
+set decides, is read every way the setting allows, and the statement is recorded only when every
+reading finds the same values. A statement that fails that, that has a literal or comment that
+never ends, or whose `/*! ... */` comment MySQL runs as SQL on some server versions, is recorded as
+`(statement withheld: its values could not be redacted)`, never as written. A square bracket after
+whitespace or a comment is read both ways on H2 as well, as a name in its SQL Server mode and as the
+start of an array literal after `ARRAY`, so `ARRAY ['x']` and `ARRAY/**/['x']` are withheld while
+`[name]` is recorded. A value is not always a literal. SQL Server and Sybase take a bare word
+passed to a procedure as a string, as in `EXEC sp_password NULL, NewSecret, app`, so on those
+databases a statement that runs a procedure is withheld: one with `EXEC` or `EXECUTE`, one with the
+JDBC `{call ...}` escape a driver turns into `EXEC`, and one that opens with the name of a procedure,
+which runs it when it is the first statement of its batch. Nor is a password always a literal:
+Oracle takes the one `IDENTIFIED BY` gives as a name, quoted or bare, and SAP HANA takes the
+`PASSWORD` of a user as one. So a statement that gives a password is withheld whole on every
+database, wherever in the statement it gives it, as a block or a procedure may: one with
+`IDENTIFIED BY`, one that creates or alters a user, a role or a login and gives it a `PASSWORD`, or a
+`PASSWD` as Sybase spells it, one that sets a Sybase role with its password, and one that connects,
+other than by the `CONNECT BY` of a hierarchical query. Nor is the value of a setting a literal:
+PostgreSQL takes `SET app.api_key = token` as giving the setting the word `token`, and MySQL, Oracle,
+Db2 and SQL Server read the value of a setting the same way, so a statement that sets one is withheld
+whole on every database: a `SET` that opens the statement, follows a semicolon or opens a block, an
+`ALTER` of the system, the session, a database, a role, a user, a login or a routine that sets one,
+and a function or a procedure created with one. The `SET` of an `UPDATE` or a `MERGE`, in which a
+bare word names a column, is recorded as any other statement.
+
+Double-quoted text is a value on some databases and a name on others. MySQL and MariaDB read it as
+a string, and so do Informix, and SQL Server and Sybase when `QUOTED_IDENTIFIER` is off, which is
+Sybase's default, so on those databases it is recorded as `?`, even when a statement written by hand
+uses it to quote a name. Cloud Spanner's GoogleSQL reads it as a string too, and a string there can be
+triple-quoted and then hold quotes of its own, which is how statements are read with Hibernate 7's
+Spanner dialect. Any other dialect, such as SQLite's, whose database reads double-quoted text as a
+string when no column has that name, Firebird's, SQL Anywhere's, whose database reads `//` as a
+comment, Spanner's PostgreSQL dialect, or a dialect that is not Hibernate's, such as the Spanner
+dialect with Hibernate 5, is read in every known syntax, so a statement that quotes a name in double
+quotes, doubles a quote inside a string, or triple-quotes a string is withheld there, and so is one
+that SQL Server would read as running a procedure.
+
+Cypher statements are read by the rules of Cypher, verified against Neo4j 5 and Neo4j 3.5: a string
+in single or double quotes with a backslash escaping inside it, a name in backticks, `//` and
+`/* */` comments, and `$name` parameters, which are kept, as a parameter names a value without
+holding it; the values GORM passes as parameters are never recorded. The two versions differ on two
+points, and the capture takes neither side. Neo4j 5 ends a `//` comment at a carriage return where
+3.5 does not, so a statement with a bare carriage return in a comment is read both ways. Neo4j 5
+decodes a `\uXXXX` escape before it parses, wherever it is written, where 3.5 decodes one only inside
+a string. An escape that decodes into a quote, a backtick, a backslash, a line break, `*` or `/` can
+end a string, a comment or a name early, so a statement with one is withheld, and so is a statement
+with a backslash outside a string, a comment or a name, where an escape can spell a value. Any other
+escape, such as the one in `+'caf\u00e9'+`, is redacted as usual, and so is an escaped backslash
+followed by a `u`, as in `+'C:\\users'+`, which is not an escape. Statements run through the
+driver's asynchronous and reactive sessions, which GORM does not use, are not recorded.
+
+A MongoDB command is a document rather than text, so it is recorded as its name, the database and
+collection it runs against, and the document of its entries with every value replaced:
+`find shop.book {"filter": {"title": ?}, "sort": {"title": ?}, "limit": ?}`. The collection is
+taken only from a command that runs against one, such as `find`, `insert`, `aggregate` or
+`createIndexes`. The first value of any other command is an argument, so it is replaced like any
+other value: `{"dropUser": "alice"}` is recorded as `dropUser admin {"dropUser": ?}`. An array is
+recorded with each of its different elements once: an element recorded as one before it in the array
+is left out, so that an `insertOne` and an `insertMany` of fifty documents, or an `$in` of one value
+and one of seven, are recorded as the one statement each is:
+`insert shop.book {"documents": [{"title": ?}]}`, `{"$in": [?]}`. An empty array is recorded as `[]`. The command is kept and
+shown exactly as it was recorded, its names quoted as JSON quotes them, so two field or collection
+names that differ only in their spaces or quotes stay apart, and nothing in a name is read as SQL. Its keys are kept, as
+they name the command's options, its operators and the fields of the collection, except where a key
+may hold data: below the top level of a document, a key is recorded as `?` too unless the mapping
+of the domain classes knows it as a field, so the keys inside a map property, inside a dynamic
+attribute, or inside a document of a collection no domain class is mapped to are not recorded, nor
+is any segment of a dotted path past such a key. At the top of stored data, the documents an insert
+writes, a replacement document, the fields an update writes and the operand of `$literal`, `$const`
+or `$documents`, a key is recorded as `?` unless the mapping knows it as well, as the name of a
+dynamic attribute may itself be data; the keys at the top of a condition, a pipeline, a sort or a
+projection are the fields the application asks for, and are kept. An update written as a pipeline
+writes the documents its stages build, so the keys at the top of what a `$set`, `$addFields` or
+`$project` stage of it holds, of the new root of a `$replaceWith` or `$replaceRoot`, and of a
+document `$mergeObjects` merges into that root are recorded as `?` unless the mapping knows them, as
+those of a classic `$set` are. A numeric key is kept only where it indexes a list
+the mapping knows, as in `stops.0.city`; in a map, or at the top of a document, it is recorded as
+`?` like any other key that may be data; so is a numeric key inside an element of such a list,
+which is a map or a document unless the property is a list of lists. A key that starts with `$` is
+kept as an operator only where operators go: in a condition, a pipeline and the operators of an
+update, and in a condition only when it is one of MongoDB's query operators, among them `$within`,
+which GORM writes for a box, a polygon or a circle. Any other `$` key in a
+condition, such as one beside the `$geometry` of a `$near`, is recorded as `?`, with everything under
+it, since the server rejects it after the capture has recorded the command. The operand of an
+`$elemMatch` is a condition wherever it is, so one in a projection, which returns the first element
+that matches, is read as the same `$elemMatch` in a filter is. In stored data, the documents an insert writes, a replacement document and the values an
+update operator writes, MongoDB allows a field name to start with `$`, so such a key is recorded as
+`?` unless the mapping knows it. So is a `$` key in the operand of a comparison in a condition, such
+as `$eq`, `$in` or `$all`, which is the value the field is compared with. A document or array
+compared by implicit equality is treated the same way: keys inside its nested data are not operators,
+even if they start with `$`. This also applies to nested matching documents, such as a graph lookup's
+`restrictSearchWithMatch`. The same holds in a `$jsonSchema`, whose `enum` lists values, and in
+GeoJSON query geometries, whose extra fields can hold data alongside the type and coordinates.
+A DBRef is data as well: a condition reads its `$ref`, `$id` and `$db` as fields compared with
+their whole value, in whatever order they are written, whether the reference is the value of a
+field, the condition itself or what an `$elemMatch` matches, so no key of the reference, or of its
+id, is recorded.
+In an aggregation expression, which `$expr`, the `let` of a command and
+stages such as `$project` and `$group` hold, the operands of a comparison are expressions, and
+their operators are kept: `{"$expr": {"$gt": [{"$size": ?}, ?]}}`. The operand of `$literal`, and of
+`$const`, which MongoDB accepts in its place, is a value rather than an expression, so none of its
+keys are recorded either. The keys of the command itself are its options, and are kept, but a
+document under an option is read only where the option is known to hold one: the fields, a
+condition, a pipeline, an update or stored data, or options in turn, as the write and read
+concerns, the collation and the cursor of a command, the statements of a write, the indexes it
+builds and the operations of `applyOps` do. Any other option may hold any document, as a comment,
+the constants of an update, the `scope` of a map-reduce command and the document an operation of
+`applyOps` applies do, so none of its keys are recorded, including nested keys in documents and
+arrays and keys that happen to match mapped field names. The entries the driver adds for its
+session and its transaction are left out.
+
+The simple datastore keeps its entries in memory, and the unit tests that implement `DataTest` run
+on it. It runs no statements, so it records what GORM asks of it as statements in the shape of SQL,
+built from the query and the mapping rather than from text:
+`select * from com.example.Book where title = ? and pages > ? order by title asc limit ?`. The name
+after `from` is the class the entries are kept under, unless the mapping names another family.
+Every value is `?`, and so is every property name the mapping does not know, and every segment of
+a path past one, such as part of a sort taken from a request. A projection takes the place of `*`,
+as in `select count(*) from com.example.Book`, the criteria of an association are paths through it,
+as in `author.name = ?`, and a subquery is in parentheses. An entry read by its key, as `get` and a
+proxy read it, is `select * from com.example.Book where id = ?`, and entries read by their keys
+together, as `getAll` and a lazy collection read them, are
+`select * from com.example.Book where id in (?)`. Each write is recorded:
+`insert into com.example.Book`, `update com.example.Book where id = ?` and
+`delete from com.example.Book where id = ?`. A read is recorded once, however much it reads: the
+entries a query reads to find, sort and load its rows, an association an entry loads eagerly, and
+an entry a write reads, are part of that query, read or write. An entry already in the session is not read again, so nothing is recorded
+for it, and an association loaded when it is first used, as a lazy one is, is a read of its own,
+which is how an N+1 shows up.
+
+Capture is off unless the application is started with it. An application started without the
+flag carries no connection wrapper, driver wrapper, command listener or capture of the simple
+datastore, so it costs nothing in production or in development. The
+flag sets `grails.gorm.queryTail.enabled`, which can also be kept in `application.yml` for the
+development environment, and `grails.gorm.queryTail.file` moves the capture away from
+`build/query-tail/capture.log`, where the command looks for it. A relative file is read against the
+application directory, where the command reads it too, when the application is started by Gradle or
+`grails run-app`; started another way, such as with `java -jar`, against the working directory. The file is written fresh each time
+the application starts, and data sources added at runtime record to it like the others. The
+statements Hibernate runs to create the schema as a session factory starts, and to drop it as the
+session factory closes, as `dbCreate: create-drop` has it, are not recorded. JVMs that
+run at the same time with the flag, such as the parallel forks of a test task, share the file: the
+first to start truncates it, the others append to its run with their requests numbered apart, and a
+lock file beside the capture coordinates them, beside the file itself even when a JVM names it
+through a symbolic link, so JVMs that name it differently still share one run. Two applications
+that run in one JVM, such as two web applications deployed to one servlet container, cannot share a
+file, since the locks of a file belong to the process: the second to open it is reported with a
+warning and records nothing, so give each its own `grails.gorm.queryTail.file`. It is
+closed when the application's session factories, Neo4j drivers, MongoDB connections and simple
+datastores close, so a
+restart in the same JVM, such as a DevTools restart, starts a new capture, and the command starts
+its summary over. A capture file that cannot be created, such as one in a directory the application
+cannot write to, is reported with a warning and records nothing, and the application starts as it
+would without the capture, and so is one whose lock file another JVM holds for ten seconds while
+it starts writing the file, as a test fork paused in a debugger may. A write that fails, as on a
+disk that fills, is reported and stops the capture until the next session factory, driver or
+connection that captures opens the file again, which reopens it for all of them and appends to the
+run it holds rather than truncate what was recorded before. A MongoDB connection opens its capture once its datastore is built, or
+as it sends its first command, so a connection built and closed before either, as one whose client
+settings are invalid is, leaves the capture file as it was. On a file
+system that cannot lock files, as some network and shared folders cannot, the capture writes
+without the lock file, as if it were the only JVM writing. An application checkpointed with CRaC,
+while it runs or as its context refreshes (`-Dspring.context.checkpoint=onRefresh`), closes the
+capture file and its lock file before the checkpoint, as CRaC refuses to checkpoint a process that
+holds a file open, and opens the file again after the restore as a start would, so the restored
+application starts a run of its own; a statement run in between is not recorded. The capture takes
+part through `org.crac`, which checkpointing with Spring requires on the classpath. Recording never fails the statement
+recorded: a statement whose request cannot be read, or whose values cannot be taken out, is left out
+of the capture with a warning, and the statement runs as it would without the capture. A statement
+run on a thread that has been interrupted, as that of a task cancelled while it runs is, is
+recorded like any other, and so is every statement after it.
+
+MongoDB commands are captured for the clients GORM builds: from `grails.mongodb` settings, or from
+Spring Boot's own `MongoClientSettings`, which GORM adds its listener to. A `MongoClient` the
+application builds itself, such as a `MongoClient` bean, is not captured, and GORM logs a warning
+saying so when capture is enabled. The same holds for a connection whose client a
+`MongoConnectionSourceFactory` subclass builds itself: it is captured only when the subclass creates
+its connection source with `MongoConnectionSource.create`, which registers the listener on the
+settings the client is built from, and GORM warns of one that is not:
+
+[source,groovy]
+----
+@Override
+ConnectionSource<MongoClient, MongoConnectionSourceSettings> create(String name, MongoConnectionSourceSettings settings) {
+    MongoConnectionSource.create(name, settings, { Consumer<MongoClientSettings.Builder> gormSettings ->
+        MongoClientSettings.Builder builder = MongoClientSettings.builder().applyConnectionString(settings.url)
+        gormSettings.accept(builder)
+        MongoClients.create(builder.build())
+    } as Function<Consumer<MongoClientSettings.Builder>, MongoClient>)
+}
+----
+
+A Neo4j `Driver` the application hands GORM records its
+statements as one GORM builds does, reading the capture settings from `grails.gorm.queryTail` unless
+`grails.neo4j.queryTail` sets them; it takes no other `grails.gorm` setting, which the application's
+other datastores may be configured with.
+An application started by Gradle writes under the build directory the
+build configures, even one moved with `layout.buildDirectory`, which the Grails Gradle plugin hands
+the application as `grails.project.target.dir`. The `grails` command runs outside Gradle, so it
+looks under `build` unless it is started with the same property, as with
+`JAVA_OPTS=-Dgrails.project.target.dir=out grails query-tail`; with a moved build directory, pass that
+property, set `grails.gorm.queryTail.file`, which both sides read, or pass `--file`. An application that configures its own Hibernate `StatementInspector`,
+with `hibernate.session_factory.statement_inspector`, by its class or by a name registered with
+Hibernate's strategy selector, or in a `hibernate.configClass`, keeps it: Hibernate runs it as it
+does without the capture, and the capture records the statement it returns, without its values. SQL is counted at JDBC execution: a
+statement reused for multiple executions is counted each time, and each entry submitted by
+`executeBatch` is counted separately. For example, 50 inserts count as 50 with or without JDBC
+batching; this measures statements submitted, not network round trips or committed rows. An unused
+prepared statement or a batch cleared before execution contributes nothing. Failed execution
+attempts are included, as are statements later rolled back. A setting Hibernate cannot resolve fails
+the start as it does without the capture. A `SessionFactoryObserver` a `hibernate.configClass` sets
+keeps being called, even one it sets as it builds the session factory or creates its service
+registry, and the capture still closes with the session factory.

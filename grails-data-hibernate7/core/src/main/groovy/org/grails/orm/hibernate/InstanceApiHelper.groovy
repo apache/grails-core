@@ -26,8 +26,6 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate.HibernateCallback
 
 /**
  * Workaround for VerifyErrors in Groovy when using a HibernateCallback.
- *
- * @author Burt Beckwith
  */
 @CompileStatic
 class InstanceApiHelper {

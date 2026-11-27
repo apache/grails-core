@@ -188,6 +188,8 @@ class JSONTokenerApiSpec extends Specification {
         '2.5'                           | 2.5d                               | Double
         '1.2300'                        | 1.2300G                            | BigDecimal
         '0.123456789012345678901'        | 0.123456789012345678901G            | BigDecimal
+        '1e400'                         | 1e400G                             | BigDecimal
+        '-1e400'                        | -1e400G                            | BigDecimal
         '0xZZ'                          | '0xZZ'                             | String
         '-invalid'                      | '-invalid'                         | String
         'new Date(123)'                 | new Date(123L)                     | Date

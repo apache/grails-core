@@ -43,11 +43,11 @@ final class HibernateDetachedCriteriaExtension {
      * the criteria's entity.
      *
      * @param self the detached criteria
-     * @param sql the SQL condition
+     * @param sqlRestriction the SQL condition
      * @return the detached criteria
      */
-    static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sql) {
-        return sqlRestriction(self, sql, List.of())
+    static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sqlRestriction) {
+        return HibernateDetachedCriteriaExtension.sqlRestriction(self, sqlRestriction, List.of())
     }
 
     /**
@@ -55,14 +55,16 @@ final class HibernateDetachedCriteriaExtension {
      * {@code {alias}} in the SQL stands for the table alias of the criteria's entity.
      *
      * @param self the detached criteria
-     * @param sql the SQL condition
+     * @param sqlRestriction the SQL condition
      * @param values the values of the {@code ?} placeholders, in order, none of them {@code null}
      * @return the detached criteria
-     * @throws IllegalArgumentException if the number of {@code ?} placeholders differs from the number of values,
-     *     or a value is {@code null}
+     * @throws IllegalArgumentException if the SQL or a value is {@code null}. A number of {@code ?} placeholders that
+     *     differs from the number of values is not reported here, since a detached criteria does not know the
+     *     database, and so the syntax its SQL is read in, until it is executed on a connection; the query then fails
+     *     with an exception whose cause is an {@code IllegalArgumentException}
      */
-    static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sql, List<?> values) {
-        self.add(new SqlRestriction(sql, values))
+    static Criteria sqlRestriction(AbstractDetachedCriteria<?> self, String sqlRestriction, List<?> values) {
+        self.add(new SqlRestriction(sqlRestriction, values))
         return self
     }
 

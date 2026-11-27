@@ -33,7 +33,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 
 /** The basic value creator class. */
 @CompileStatic
-@SuppressWarnings('PMD.DataflowAnomalyAnalysis')
 class BasicValueCreator {
 
     private final MetadataBuildingContext metadataBuildingContext

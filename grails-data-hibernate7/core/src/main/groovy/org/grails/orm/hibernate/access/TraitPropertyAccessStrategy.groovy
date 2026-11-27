@@ -16,120 +16,120 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-@SuppressWarnings('UnnecessarySemicolon')
-package org.grails.orm.hibernate.access;
+package org.grails.orm.hibernate.access
 
-import groovy.transform.CompileStatic;
-import org.codehaus.groovy.transform.trait.Traits;
-import org.hibernate.MappingException;
-import org.hibernate.property.access.spi.Getter;
-import org.hibernate.property.access.spi.GetterFieldImpl;
-import org.hibernate.property.access.spi.GetterMethodImpl;
-import org.hibernate.property.access.spi.PropertyAccess;
-import org.hibernate.property.access.spi.PropertyAccessStrategy;
-import org.hibernate.property.access.spi.Setter;
-import org.hibernate.property.access.spi.SetterFieldImpl;
-import org.hibernate.property.access.spi.SetterMethodImpl;
-import org.springframework.util.ReflectionUtils;
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.transform.trait.Traits
+import org.hibernate.MappingException
+import org.hibernate.property.access.spi.Getter
+import org.hibernate.property.access.spi.GetterFieldImpl
+import org.hibernate.property.access.spi.GetterMethodImpl
+import org.hibernate.property.access.spi.PropertyAccess
+import org.hibernate.property.access.spi.PropertyAccessStrategy
+import org.hibernate.property.access.spi.Setter
+import org.hibernate.property.access.spi.SetterFieldImpl
+import org.hibernate.property.access.spi.SetterMethodImpl
+import org.springframework.util.ReflectionUtils
 
-import org.grails.datastore.mapping.reflect.NameUtils;
+import org.grails.datastore.mapping.reflect.NameUtils
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.lang.reflect.Field
+import java.lang.reflect.Method
 
 /**
  * Support reading and writing trait fields with Hibernate 5+
  *
- * @author Graeme Rocher
  * @since 6.1.3
  */
-// TODO(groovyism-cleanup): semicolons + double-quoted strings kept to preserve rename-similarity against the original .java (see matrei's review on #16576). Removed by the stacked groovyism-cleanup PR.
-@SuppressWarnings(['rawtypes', 'PMD.DataflowAnomalyAnalysis', 'UnnecessarySemicolon', 'UnnecessaryGString'])
+@SuppressWarnings('rawtypes')
 @CompileStatic
 class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
 
     PropertyAccess buildPropertyAccess(Class containerJavaType, String propertyName) {
-        return buildPropertyAccess(containerJavaType, propertyName, true);
+        return buildPropertyAccess(containerJavaType, propertyName, true)
     }
 
     protected String getTraitFieldName(Class traitClass, String fieldName) {
-        return traitClass.name.replace('.' as char, '_' as char) + "__${fieldName}";
+        return traitClass.name.replace('.' as char, '_' as char) + "__${fieldName}"
     }
 
     @Override
     PropertyAccess buildPropertyAccess(Class<?> containerJavaType, String propertyName, boolean setterRequired) {
-        Method readMethod = ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName));
+        Method readMethod = ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName))
         if (readMethod == null) {
             // See https://issues.apache.org/jira/browse/GROOVY-11512
             Method booleanReadMethod =
-                    ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName, true));
+                    ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName, true))
             if (booleanReadMethod != null &&
                     (booleanReadMethod.returnType == Boolean ||
                             booleanReadMethod.returnType == boolean.class)) {
-                readMethod = booleanReadMethod;
+                readMethod = booleanReadMethod
             }
         }
 
         if (readMethod == null) {
             throw new IllegalStateException("TraitPropertyAccessStrategy used on property [${propertyName}] " +
-                    "of class [${containerJavaType.name}] that is not provided by a trait!");
+                    "of class [${containerJavaType.name}] that is not provided by a trait!")
         }
 
-        Traits.Implemented traitImplemented = readMethod.getAnnotation(Traits.Implemented);
-        final String traitFieldName;
+        Traits.Implemented traitImplemented = readMethod.getAnnotation(Traits.Implemented)
+        String traitFieldName
         if (traitImplemented == null) {
-            Traits.TraitBridge traitBridge = readMethod.getAnnotation(Traits.TraitBridge);
+            Traits.TraitBridge traitBridge = readMethod.getAnnotation(Traits.TraitBridge)
             if (traitBridge != null) {
-                traitFieldName = getTraitFieldName(traitBridge.traitClass(), propertyName);
+                Class<?> tc = traitBridge.traitClass()
+                traitFieldName = getTraitFieldName(tc, propertyName)
             }
             else {
                 throw new IllegalStateException("TraitPropertyAccessStrategy used on property [${propertyName}] " +
-                        "of class [${containerJavaType.name}] that is not provided by a trait!");
+                        "of class [${containerJavaType.name}] that is not provided by a trait!")
             }
         }
         else {
-            traitFieldName = getTraitFieldName(readMethod.declaringClass, propertyName);
+            traitFieldName = getTraitFieldName(readMethod.declaringClass, propertyName)
         }
 
-        Field field = ReflectionUtils.findField(containerJavaType, traitFieldName);
-        Getter getter;
-        Setter setter;
+        Field field = ReflectionUtils.findField(containerJavaType, traitFieldName)
+        Getter getter
+        Setter setter
         if (field == null) {
-            getter = new GetterMethodImpl(containerJavaType, propertyName, readMethod);
+            getter = new GetterMethodImpl(containerJavaType, propertyName, readMethod)
             Method writeMethod = ReflectionUtils.findMethod(
-                    containerJavaType, NameUtils.getSetterName(propertyName), readMethod.returnType);
+                    containerJavaType, NameUtils.getSetterName(propertyName), readMethod.returnType)
             if (writeMethod == null) {
                 if (setterRequired) {
                     throw new MappingException("TraitPropertyAccessStrategy used on property [${propertyName}] " +
-                            "of class [${containerJavaType.name}] that has no setter!");
+                            "of class [${containerJavaType.name}] that has no setter!")
                 }
-                setter = null;
+                setter = null
             }
             else {
-                setter = new SetterMethodImpl(containerJavaType, propertyName, writeMethod);
+                setter = new SetterMethodImpl(containerJavaType, propertyName, writeMethod)
             }
         }
         else {
-            getter = new GetterFieldImpl(containerJavaType, propertyName, field);
-            setter = new SetterFieldImpl(containerJavaType, propertyName, field);
+            // Groovy generates the trait field as private, and Hibernate's field accessors do not make it accessible
+            ReflectionUtils.makeAccessible(field)
+            getter = new GetterFieldImpl(containerJavaType, propertyName, field)
+            setter = new SetterFieldImpl(containerJavaType, propertyName, field)
         }
 
         return new PropertyAccess() {
             @Override
             PropertyAccessStrategy getPropertyAccessStrategy() {
-                return TraitPropertyAccessStrategy.this;
+                return TraitPropertyAccessStrategy.this
             }
 
             @Override
             Getter getGetter() {
-                return getter;
+                return getter
             }
 
             @Override
             Setter getSetter() {
-                return setter;
+                return setter
             }
-        };
+        }
     }
 
 }

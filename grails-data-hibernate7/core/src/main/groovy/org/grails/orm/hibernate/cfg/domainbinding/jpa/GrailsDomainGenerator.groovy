@@ -25,6 +25,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.lang.reflect.RecordComponent
 import java.sql.Types
+import java.util.function.Function
 
 import groovy.transform.CompileStatic
 import jakarta.persistence.AssociationOverride
@@ -110,6 +111,7 @@ import org.hibernate.annotations.OptimisticLockType
 import org.hibernate.annotations.OptimisticLocking
 import org.hibernate.annotations.ParamDef
 import org.hibernate.annotations.Parameter
+import org.hibernate.annotations.SQLRestriction
 import org.hibernate.annotations.SortNatural
 import org.hibernate.annotations.Type
 import org.hibernate.annotations.UuidGenerator
@@ -232,6 +234,18 @@ class GrailsDomainGenerator {
     private final ColumnConfigToColumnBinder columnConfigBinder
     private final StringColumnConstraintsBinder stringConstraints
     private final NumericColumnConstraintsBinder numericConstraints
+    private Function<HibernatePersistentProperty, CompositeUserType<?>> compositeUserTypes =
+            { HibernatePersistentProperty property -> BeanUtils.instantiateClass(property.compositeUserType) }
+
+    /**
+     * Sets how the composite user type of a property is instantiated: through its default constructor unless the caller says
+     * otherwise, as the binder of Hibernate's boot does when no bean container is configured. A binder that has a metadata
+     * building context hands the resolution that context allows, so that a type only a bean container can create is created
+     * the way {@code CompositeUserTypeBinder} creates it.
+     */
+    void setCompositeUserTypes(Function<HibernatePersistentProperty, CompositeUserType<?>> compositeUserTypes) {
+        this.compositeUserTypes = compositeUserTypes
+    }
     private final TypeConfiguration typeConfiguration
     private final TableForManyCalculator tableForMany
     private final DefaultColumnNameFetcher defaultColumnNames
@@ -906,19 +920,44 @@ class GrailsDomainGenerator {
         }
         return new ConstraintFacets(
                 table.indexes.values().collect { org.hibernate.mapping.Index index ->
-                    new IndexFacets(index.name, index.columns*.name)
+                    new IndexFacets(index.name, index.columns.collect { Column column -> annotationName(column) })
                 },
                 table.uniqueKeys.values().collect { org.hibernate.mapping.UniqueKey key ->
-                    new UniqueKeyFacets(key.name, key.columns*.name)
+                    new UniqueKeyFacets(key.name, key.columns.collect { Column column -> annotationName(column) })
                 },
                 table.primaryKey?.orderingUniqueKey?.columns*.name)
     }
 
+    /**
+     * The name of a column as an annotation states it: a quoted column keeps its backticks, which {@code Column.getName()} drops, so
+     * that a key or an index over {@code `order`} is rendered quoted like the column itself.
+     */
+    private static String annotationName(Column column) {
+        return column.quoted ? "`${column.name}`".toString() : column.name
+    }
+
     private void applyConstraintSites(org.hibernate.mapping.Table table, List<ConstraintSite> sites) {
-        for (ConstraintSite site : sites) {
-            Column column = new Column(site.columnName)
-            indexBinder.bindIndex(site.columnName, column, site.columnConfig, table)
-            keyForProps.createKeyForProps(site.property, site.path, table, site.columnName)
+        int next = 0
+        while (next < sites.size()) {
+            ConstraintSite site = sites.get(next)
+            if (isCompositeUserType(site.property)) {
+                // CompositeUserTypeBinder binds every attribute column of the user type, then keys the columns once, together: a
+                // unique property, or a uniqueness group that names it, is one key over all of them
+                List<Column> columns = []
+                while (next < sites.size() && sites.get(next).property.is(site.property) && sites.get(next).path == site.path) {
+                    ConstraintSite attribute = sites.get(next)
+                    Column column = new Column(attribute.columnName)
+                    indexBinder.bindIndex(attribute.columnName, column, attribute.columnConfig, table)
+                    columns << column
+                    next++
+                }
+                keyForProps.createKeyForColumns(site.property, site.path, table, columns)
+            } else {
+                Column column = new Column(site.columnName)
+                indexBinder.bindIndex(site.columnName, column, site.columnConfig, table)
+                keyForProps.createKeyForProps(site.property, site.path, table, site.columnName)
+                next++
+            }
         }
     }
 
@@ -989,9 +1028,9 @@ class GrailsDomainGenerator {
      * @return why the generator rejects a property mapped with a composite user type, or null: the mapping names more columns than
      *     the user type's embeddable class has attributes, the one mapping the classic binder refused as well
      */
-    private static String compositeProblem(HibernatePersistentProperty property) {
+    private String compositeProblem(HibernatePersistentProperty property) {
         Class<? extends CompositeUserType<?>> userType = property.compositeUserType
-        Class<?> embeddable = BeanUtils.instantiateClass(userType).embeddable()
+        Class<?> embeddable = compositeUserTypes.apply(property).embeddable()
         List<CompositeAttribute> attributes = compositeAttributes(embeddable)
         List<ColumnConfig> columns = property.hibernateMappedForm.columns ?: []
         if (columns.size() > attributes.size()) {
@@ -1016,7 +1055,7 @@ class GrailsDomainGenerator {
             throw new UnsupportedOperationException("Property [${property.name}] of [${property.hibernateOwner.name}] ${problem}")
         }
         Class<? extends CompositeUserType<?>> userType = property.compositeUserType
-        Class<?> embeddable = BeanUtils.instantiateClass(userType).embeddable()
+        Class<?> embeddable = compositeUserTypes.apply(property).embeddable()
         PropertyConfig mappedForm = property.hibernateMappedForm
         List<ColumnConfig> columns = mappedForm.columns ?: []
         List<CompositeAttribute> declared = compositeAttributes(embeddable)
@@ -1032,9 +1071,14 @@ class GrailsDomainGenerator {
                 column.customRead = columnConfig.read
                 column.customWrite = columnConfig.write
             }
+            // ColumnBinder.bindColumnWithoutUniqueness: the constraints of the property describe the whole value, so the column takes
+            // its own configuration, and a numeric attribute without a configured precision gets the default precision of the dialect
+            if (Number.isAssignableFrom(attribute.javaType)) {
+                numericConstraints.bindNumericColumnConstraints(column, columnConfig, null, attribute.javaType)
+            }
             String name = columnConfig?.name ? columnConfig.name : defaultCompositeColumnName(property, path, attribute.name)
             attributes << new CompositeAttributeFacets(attribute.name, attribute.javaType, columnConfig,
-                    facets(property, column, name, isNullable(property, parent), mappedForm.isUnique() && !mappedForm.isUniqueWithinGroup()))
+                    facets(property, column, name, isNullable(property, parent), false))
         }
         return new CompositeUserTypeFacets(userType, embeddable, attributes)
     }
@@ -1788,8 +1832,17 @@ class GrailsDomainGenerator {
     private List<ColumnFacets> collectionKeyColumns(HibernateToManyProperty property) {
         GrailsHibernatePersistentEntity owner = property.hibernateOwner
         if (property instanceof HibernateToManyEntityProperty && property.shouldBindWithForeignKey()) {
-            // the classic collection key binder copies the foreign key columns of the other side into the key; the key updater makes them nullable
-            return toOneColumnsFacets((HibernateToOneProperty) property.hibernateInverseSide).collect { ColumnFacets column ->
+            // the classic collection key binder copies the foreign key columns of the other side into the key; the key updater makes them nullable.
+            // The columns are the ones the root of the hierarchy bound for the to-one it declares: seen from a subclass the same property
+            // is inherited, and the default name of an inherited to-one carries the name of the root entity
+            HibernateToOneProperty inverse = (HibernateToOneProperty) property.hibernateInverseSide
+            if (inverse.isInherited()) {
+                HibernatePersistentProperty declared = inverse.hibernateOwner.hibernateRootEntity.getHibernatePropertyByName(inverse.name)
+                if (declared instanceof HibernateToOneProperty && !declared.isInherited()) {
+                    inverse = (HibernateToOneProperty) declared
+                }
+            }
+            return toOneColumnsFacets(inverse).collect { ColumnFacets column ->
                 new ColumnFacets(column.name(), true, false, true, true, null, null, null, null, null, null, null, null)
             }
         }
@@ -3091,6 +3144,15 @@ class GrailsDomainGenerator {
             annotations << AnnotationDescription.Builder.ofType(Filter)
                     .define('name', GormProperties.TENANT_IDENTITY)
                     .define('condition', facets.tenantCondition())
+                    .build()
+        }
+        GrailsHibernatePersistentEntity referenced = property.hibernateAssociatedEntity
+        if (!facets.manyToMany() && referenced.isTablePerHierarchySubclass()) {
+            // HibernateToManyEntityOrderByBinder: the collection is restricted to the subclass by the discriminator column of the
+            // element's table. Hibernate's own subclass discriminator does not reach every statement on the collection: the
+            // emptiness test of a kennel that has a cat and no dog counts the cat
+            annotations << AnnotationDescription.Builder.ofType(SQLRestriction)
+                    .define('value', referenced.discriminatorColumnName + ' in (' + referenced.buildDiscriminatorSet().join(',') + ')')
                     .build()
         }
         for (Annotation constraint : carriedAnnotations(property)) {

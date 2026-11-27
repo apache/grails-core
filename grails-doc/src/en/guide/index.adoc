@@ -240,6 +240,11 @@ include::conf/dataSource/databaseConsole.adoc[]
 
 include::conf/dataSource/multipleDatasources.adoc[]
 
+[[queryTail]]
+==== Finding Query-Heavy Pages with query-tail
+
+include::conf/dataSource/queryTail.adoc[]
+
 [[versioning]]
 === Versioning
 
@@ -1555,6 +1560,11 @@ include::ref/Command Line/schema-export.adoc[]
 ==== shell
 
 include::ref/Command Line/shell.adoc[]
+
+[[ref-command-line-query-tail]]
+==== query-tail
+
+include::ref/Command Line/query-tail.adoc[]
 
 [[ref-command-line-stats]]
 ==== stats
