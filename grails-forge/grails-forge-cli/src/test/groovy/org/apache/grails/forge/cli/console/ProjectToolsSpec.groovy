@@ -178,7 +178,9 @@ class ProjectToolsSpec extends CommandSpec implements CommandFixture {
 
     void "the document for a tool has the commands the build lists after those of the CLI, with what the build says of them"() {
         given:
-        catalog([HELLO, [name: 'audit-report', origin: 'application', target: 'application', registration: 'factories', options: [[names: [['deep']]]], later: 1]], [later: [a: [b: 1]]])
+        // members the command line does not read, as a later task may write them, nested deeper than what it reads
+        catalog([HELLO, [name: 'audit-report', origin: 'application', target: 'application', registration: 'factories', examples: [[lines: [['deep']]]], later: 1]],
+                [later: [a: [b: 1]]])
 
         when:
         int exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -1119,6 +1121,7 @@ class ProjectToolsSpec extends CommandSpec implements CommandFixture {
         then: 'the numbers are the same in the two builds'
         ToolCatalogFile.MAX_BYTES == ToolCatalogBuilder.MAX_BYTES
         ToolCatalogFile.MAX_COMMANDS == ToolCatalogBuilder.MAX_COMMANDS
+        ToolCatalogFile.MAX_VALUES == ToolCatalogBuilder.MAX_VALUES
         ToolCatalogFile.MAX_ORIGIN == ToolCatalogBuilder.MAX_ORIGIN_LENGTH
         ToolCatalogFile.MAX_DESCRIPTION == ToolDescriptor.MAX_DESCRIPTION_LENGTH
         ToolCatalogFile.MAX_NAME == ToolDescriptor.MAX_NAME_LENGTH

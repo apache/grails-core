@@ -95,16 +95,19 @@ final class PlainOutput {
     /**
      * Takes the options of the command line itself from the commands that give everything after
      * their name to something else, which are the commands that have none of the options every
-     * command has: there the options are no options of the command, and its help does not show them.
+     * command has, and the tools of the application, whose options are those they declare: there the
+     * options are no options of the command, and its help does not show them.
      *
      * @param commandLine the command line of the CLI, with every command it has
      */
     static void notForWhatIsPassedOn(CommandLine commandLine) {
         for (CommandLine command : new LinkedHashSet<CommandLine>(commandLine.getSubcommands().values())) {
             CommandLine.Model.CommandSpec spec = command.getCommandSpec()
-            if (spec.options().every { CommandLine.Model.OptionSpec option -> option.inherited() }) {
+            if (spec.userObject() instanceof ToolCommand || spec.options().every { CommandLine.Model.OptionSpec option -> option.inherited() }) {
                 for (CommandLine.Model.OptionSpec option : new ArrayList<CommandLine.Model.OptionSpec>(spec.options())) {
-                    spec.remove(option)
+                    if (option.inherited()) {
+                        spec.remove(option)
+                    }
                 }
             }
         }

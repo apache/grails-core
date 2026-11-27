@@ -159,6 +159,35 @@ class ToolHelpJsonSpec extends CommandSpec implements CommandFixture {
         ToolCommand.TASK == 'runTool'
     }
 
+    void "8. what a tool declares follows what the build says of it, each member where it says something, and a tool that declares nothing has none of them"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        File catalog = new File(dir, ToolCatalogFile.LOCATION)
+        catalog.parentFile.mkdirs()
+        catalog.bytes = ProjectToolsSpec.doc([
+                APPLICATION_TOOL + [options: [[names: ['--force', '-f'], arity: '0', type: 'boolean', description: 'Replaces what is there']],
+                                    hints: [readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false]],
+                STANDALONE + [parameters: [[label: 'DOMAIN-CLASS', arity: '1', type: 'string']], incomplete: ['hints']],
+                WITHOUT_APPLICATION + [options: [], parameters: [], readsInput: false, incomplete: []],
+                DEPRECATED + [readsInput: true]]).getBytes(StandardCharsets.UTF_8)
+
+        when:
+        Map<String, Map> tools = ((List<Map>) document().commands).findAll { it.project && it.origin != 'built-in' }.collectEntries { [(it.name): it] }
+
+        then:
+        tools.report.keySet() as List == ['name', 'aliases', 'description', 'project', 'origin', 'target', 'startsApplication', 'registration', 'options', 'hints', 'commands']
+        tools.report.options == [[names: ['--force', '-f'], arity: '0', type: 'boolean', label: null, required: false, description: 'Replaces what is there',
+                                  repeatable: false, split: null, choices: null, default: null]]
+        tools.report.hints == [readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false]
+        tools['generate-all'].keySet() as List == ['name', 'aliases', 'description', 'project', 'origin', 'target', 'startsApplication', 'registration', 'parameters',
+                                                   'incomplete', 'commands']
+        tools['generate-all'].parameters == [[label: 'DOMAIN-CLASS', arity: '1', type: 'string', description: '', repeatable: false, split: null, choices: null]]
+        tools['query-tail'].keySet() as List == ['name', 'aliases', 'description', 'project', 'origin', 'target', 'startsApplication', 'registration', 'commands']
+        tools['old-report'].keySet() as List == ['name', 'aliases', 'description', 'project', 'origin', 'target', 'startsApplication', 'registration', 'deprecated',
+                                                 'readsInput', 'commands']
+        tools['clean-cache'] == null || !tools['clean-cache'].containsKey('options')
+    }
+
     private Map document() {
         out.reset()
         assert ForgeCli.execute(beanContext, 'help', '--json') == 0

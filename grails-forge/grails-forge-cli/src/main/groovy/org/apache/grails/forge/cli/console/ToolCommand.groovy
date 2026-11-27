@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.nio.file.Path
 import java.util.function.Consumer
 import groovy.transform.CompileStatic
 import org.grails.forge.application.OperatingSystem
@@ -43,6 +44,18 @@ import picocli.CommandLine
  * of them is on a command line. Before Gradle is started one line on the error stream says which
  * tool of which origin is run, and one more line for each thing of the tool that is deprecated.</p>
  *
+ * <p>A tool that declares its options and parameters ({@link ToolDeclarations}) has them in its help
+ * and in completion, and is held to them before anything is started: arguments it does not take are
+ * refused with one line, as the class that runs the tool refuses them, and the exit code 2. A tool that
+ * reads what is typed is refused with {@code --non-interactive}, and is run with the Gradle wrapper and
+ * the terminal in the interactive console, whose builds are otherwise given no input. Both hold where
+ * the build listed the tool in a file that is current; where the file may be out of date, the class that
+ * runs the tool holds it to what it declares then.</p>
+ *
+ * <p>What the tool gives as its result ({@code executionContext.result}) is read when it has ended,
+ * and kept for whoever ran the command line in its process ({@link ToolResult}); at the terminal
+ * nothing is said of it.</p>
+ *
  * @since 9.0
  */
 @CommandLine.Command(name = 'tool', preprocessor = ToolCommand.EverythingIsTheTools)
@@ -57,6 +70,9 @@ class ToolCommand extends InProjectCommand {
 
     /** The environment a tool of the application runs in, which is the one {@code run-tool} has unless it is given another. */
     public static final String ENVIRONMENT = 'development'
+
+    /** The exit code of a tool whose arguments are refused, as the class that runs a tool refuses them and the command line refuses a command line. */
+    public static final int REFUSED = 2
 
     /** What names the environment of the build, which a tool of the application takes before its name with run-tool and not after it. */
     public static final String ENVIRONMENT_OPTION = '-Dgrails.env='
@@ -90,6 +106,21 @@ class ToolCommand extends InProjectCommand {
         for (CommandLine.Model.OptionSpec option : new ArrayList<CommandLine.Model.OptionSpec>(spec.options())) {
             spec.remove(option)
         }
+        ToolDeclarations declared = entry.declarations
+        if (declared.isDeclaring()) {
+            // what the tool declares is its help and what is completed, in the place of the arguments it is given as they are
+            for (CommandLine.Model.PositionalParamSpec positional : new ArrayList<CommandLine.Model.PositionalParamSpec>(spec.positionalParameters())) {
+                spec.remove(positional)
+            }
+            // the options the command line gives every command are added to this one too, and taken away again (PlainOutput)
+            Set<String> taken = new HashSet<>()
+            for (CommandLine.Model.OptionSpec option : root.getCommandSpec().options()) {
+                if (option.scopeType() == CommandLine.ScopeType.INHERIT) {
+                    taken.addAll(option.names())
+                }
+            }
+            declared.addTo(spec, taken)
+        }
         spec.name(entry.name)
         spec.aliases(entry.aliases as String[])
         // a description is text of a plugin, in which nothing stands for a variable of the command line
@@ -114,14 +145,37 @@ class ToolCommand extends InProjectCommand {
                 description.add(deprecation.replace('%', '%%') + '.')
             }
         }
-        description.add('Everything after the name of the tool is given to the tool as it is, the options too.')
-        description.add('--help after the name is given to the tool as well, which runs it. This help is what the build of the project listed of the tool, ' +
-                'and nothing was run for it.')
+        if (declared.readsInput) {
+            description.add('It reads what is typed: --non-interactive refuses it, and agents are not offered it.')
+        }
+        if (!declared.incomplete.isEmpty()) {
+            description.add("It lacks ${lacking(declared.incomplete)}, which help, completion and agents read.".toString())
+        }
+        if (declared.isDeclaring()) {
+            description.add('What is given after the name of the tool is held to the options and parameters below before the tool is started, ' +
+                    'and refused when it does not fit them. -Dname=value is a system property of the tool.')
+            description.add('This help is what the build of the project listed of the tool, and nothing was run for it.')
+        } else {
+            description.add('Everything after the name of the tool is given to the tool as it is, the options too.')
+            description.add('--help after the name is given to the tool as well, which runs it. This help is what the build of the project listed of the tool, ' +
+                    'and nothing was run for it.')
+        }
         if (entry.isStandalone()) {
             description.add("The Gradle task ${TASK} of the project runs it as well, without the application: ${RUN_TOOL} ${entry.name}".toString())
         }
         spec.usageMessage().description(description as String[])
         return spec
+    }
+
+    /**
+     * @param incomplete what a tool lacks, of {@link ToolDeclarations#LACKING}
+     * @return what it lacks, in words: {@code a description, the declarations of its arguments and its hints}
+     */
+    static String lacking(List<String> incomplete) {
+        List<String> words = incomplete.collect { String lacks ->
+            lacks == ToolDeclarations.LACKS_DESCRIPTION ? 'a description' : lacks == ToolDeclarations.LACKS_ARGUMENTS ? 'the declarations of its arguments' : 'its hints'
+        }
+        return words.size() == 1 ? words[0] : "${words.subList(0, words.size() - 1).join(', ')} and ${words[-1]}".toString()
     }
 
     /**
@@ -173,8 +227,10 @@ class ToolCommand extends InProjectCommand {
 
     /**
      * @return the tool as the document for a tool of an IDE describes it: with what the build says of
-     * it, and without options and parameters, which the build does not know. A script is a tool of the
-     * application the build runs without the application.
+     * it, and what the tool declares: its {@code options} and {@code parameters}, described as those of
+     * a command of the command line are, its {@code hints}, {@code readsInput} and what it lacks,
+     * {@code incomplete}. {@link CommandCatalog} leaves out those that say nothing. A script is a tool of
+     * the application the build runs without the application, and declares nothing.
      */
     Map<String, Object> describe() {
         Map<String, Object> described = new LinkedHashMap<>()
@@ -189,6 +245,12 @@ class ToolCommand extends InProjectCommand {
         if (!entry.deprecated.isEmpty()) {
             described.put('deprecated', entry.deprecated)
         }
+        ToolDeclarations declared = entry.declarations
+        described.put(ToolDeclarations.OPTIONS, declared.describedOptions())
+        described.put(ToolDeclarations.PARAMETERS, declared.describedParameters())
+        described.put(ToolDeclarations.HINTS, declared.hints)
+        described.put(ToolDeclarations.READS_INPUT, declared.readsInput)
+        described.put(ToolDeclarations.INCOMPLETE, declared.incomplete)
         described.put('commands', [])
         return described
     }
@@ -196,6 +258,23 @@ class ToolCommand extends InProjectCommand {
     @Override
     protected String notDone() {
         return 'The tool was not run'
+    }
+
+    /**
+     * Runs the tool, or answers {@code --help} of a tool that declares its arguments: such a tool cannot
+     * declare {@code --help}, nor {@code -h} where it declares no option of that name, so the command line
+     * shows what {@code help NAME} shows, and nothing is started. A tool that declares nothing is given
+     * {@code --help} as every other argument.
+     *
+     * @return the exit code
+     */
+    @Override
+    Integer call() throws Exception {
+        if (entry.declarations.asksForHelp(arguments)) {
+            spec.commandLine().usage(spec.commandLine().getOut(), spec.commandLine().getColorScheme())
+            return 0
+        }
+        return super.call()
     }
 
     /**
@@ -213,6 +292,17 @@ class ToolCommand extends InProjectCommand {
         if (refused != null) {
             throw new CommandLine.ParameterException(spec.commandLine(), "The tool cannot be given these arguments: ${refused}")
         }
+        // what the tool declares, where the file of the build that lists it is current: the class that runs the tool holds it to the same
+        if (entry.current) {
+            if (entry.declarations.readsInput && GradleBuild.isNonInteractive()) {
+                throw new CommandLine.ParameterException(spec.commandLine(), "${entry.name} reads what is typed, and --non-interactive gives it nothing to read")
+            }
+            String wrong = entry.declarations.refusal(arguments)
+            if (wrong != null) {
+                err("${entry.name}: ${wrong}. ${UsageHelp.toType(spec, "help ${entry.name}")} shows its options")
+                return REFUSED
+            }
+        }
         if (entry.isStandalone()) {
             Integer ended = standalone(project, vector)
             if (ended != null) {
@@ -227,6 +317,7 @@ class ToolCommand extends InProjectCommand {
             err("The arguments of the tool could not be written for Gradle: ${GradleRunner.line(e.getMessage())}. Gradle was not run")
             return 1
         }
+        Path result = entry.isScript() ? null : ToolResult.prepare(project, file)
         try {
             // On the error stream, since what the tool writes is the output: what is typed can be
             // the name of a tool of a plugin by one letter, and this says what runs before it does.
@@ -238,11 +329,14 @@ class ToolCommand extends InProjectCommand {
                 warnOfEnvironment(said)
             }
             said.flush()
-            GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
+            // a tool that reads what is typed is given the terminal: the Tooling API gives a build no input
+            GradleBuild.Purpose purpose = entry.declarations.readsInput ? GradleBuild.Purpose.TERMINAL_SESSION : GradleBuild.Purpose.BUILD
+            GradleBuild runner = GradleBuild.of(purpose, { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
             return runner.run(project, gradleArguments(project, file))
         } catch (GradleRunner.RefusedArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         } finally {
+            ToolResult.collect(project, result, entry.name, spec.commandLine().getErr())
             file.close()
         }
     }
@@ -312,6 +406,7 @@ class ToolCommand extends InProjectCommand {
             err("The arguments of the tool could not be written: ${GradleRunner.line(e.getMessage())}. The tool was not run")
             return 1
         }
+        Path result = ToolResult.prepare(project, written)
         try {
             said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Running|@ the tool ${name} of " +
                     "${entry.origin == ToolCatalogFile.APPLICATION ? 'the application' : entry.origin}, as a process of its own, without Gradle"))
@@ -320,6 +415,7 @@ class ToolCommand extends InProjectCommand {
             said.flush()
             return StandaloneToolProcess.run(project, java.program, file.classpath, written, showStacktrace(), windows, { String message -> err(message) } as Consumer<String>)
         } finally {
+            ToolResult.collect(project, result, name, said)
             written.close()
         }
     }

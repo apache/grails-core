@@ -32,6 +32,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.util.regex.Pattern
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 /**
  * The file in which the build of a project lists the tools of the application and of its plugins:
@@ -50,6 +51,11 @@ import groovy.transform.CompileStatic
  * task writes. A file that is not such a document is not used at all. A tool in it that is not as
  * the task writes one is left out, alone, and the others are used; why is one line that repeats
  * nothing of the file.</p>
+ *
+ * <p>What a tool declares of its command line and of what it does, its {@code options},
+ * {@code parameters}, {@code hints}, {@code readsInput} and what it lacks of that, {@code incomplete},
+ * is read with the tool and held to the rules the compiler holds a declaration to
+ * ({@link ToolDeclarations}): a tool whose declarations break one is left out as well.</p>
  *
  * <p>The file may be out of date when something it is made from, as far as that is in a fixed place
  * of the project, was changed after it was written: a build file ({@link #BUILD_FILES}), a source of
@@ -84,6 +90,12 @@ final class ToolCatalogFile {
 
     /** How many characters a line about what the build could not list has, at most. */
     public static final int MAX_DIAGNOSTIC = 2048
+
+    /**
+     * How many values the file has, at most, counting every string, number, boolean, {@code null}, array
+     * and object, and not the names of the members of objects: as many as the task writes.
+     */
+    public static final int MAX_VALUES = 100_000
 
     /** How many characters the name of a tool has, at most. */
     public static final int MAX_NAME = 64
@@ -146,9 +158,8 @@ final class ToolCatalogFile {
     /** The ending of a descriptor. */
     public static final String DESCRIPTOR_ENDING = '.json'
 
-    // the document is four deep; what a later task adds to a tool and is not read here may go deeper
+    // the document is seven deep where a tool names its options; what a later task adds to a tool and is not read here may go deeper
     private static final int MAX_DEPTH = 8
-    private static final int MAX_VALUES = 100_000
     private static final int MAX_TEXT = 4096
     private static final Pattern NAME = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*')
     private static final Pattern TASK_NAME = Pattern.compile('[A-Za-z][A-Za-z0-9_-]*')
@@ -262,7 +273,12 @@ final class ToolCatalogFile {
             }
             ToolCatalogFile read = parse(bytes)
             String changed = read.state == State.CURRENT ? changedSince(project, attributes.lastModifiedTime()) : null
-            return changed == null ? read : new ToolCatalogFile(State.STALE, changed, read.tools, read.complete, read.diagnostics, read.leftOut, read.testPhases, read.declaredOptions)
+            if (changed == null) {
+                return read
+            }
+            // what the tools declare may no longer be what their classes declare
+            List<Entry> stale = read.tools.collect { Entry entry -> entry.ofStaleCatalog() }
+            return new ToolCatalogFile(State.STALE, changed, stale.asImmutable(), read.complete, read.diagnostics, read.leftOut, read.testPhases, read.declaredOptions)
         } catch (IOException | RuntimeException ignored) {
             return refused('cannot be read')
         }
@@ -347,12 +363,20 @@ final class ToolCatalogFile {
             } else {
                 Map<String, Object> tool = (Map<String, Object>) each
                 wrong = wrongWith(tool)
+                ToolDeclarations declarations = null
+                if (wrong == null) {
+                    try {
+                        declarations = ToolDeclarations.read(tool)
+                    } catch (ToolDeclarations.Refused refused) {
+                        wrong = refused.getMessage()
+                    }
+                }
                 if (wrong == null) {
                     String target = (String) tool.get('target')
                     entry = new Entry((String) tool.get('name'), tool.containsKey('aliases') ? (List<String>) tool.get('aliases') : Collections.<String>emptyList(),
                             tool.containsKey('description') ? (String) tool.get('description') : '', (String) tool.get('origin'), (String) tool.get('registration'),
                             target, target == APPLICATION && tool.get(STARTS_APPLICATION) != Boolean.FALSE,
-                            tool.containsKey(DEPRECATED) ? (List<String>) tool.get(DEPRECATED) : Collections.<String>emptyList())
+                            tool.containsKey(DEPRECATED) ? (List<String>) tool.get(DEPRECATED) : Collections.<String>emptyList(), declarations, true)
                     if (entry.names().any { String name -> names.contains(name) } || entry.names().toSet().size() < entry.names().size()) {
                         wrong = 'it has a name that a tool before it has'
                     }
@@ -648,8 +672,19 @@ final class ToolCatalogFile {
         /** What of the tool is deprecated: {@link #DEPRECATED_TYPE}, {@link #DEPRECATED_FOLDER}, both, or nothing. */
         final List<String> deprecated
 
+        /** What the tool declares of its command line and of what it does, and what it lacks of that. */
+        final ToolDeclarations declarations
+
+        /**
+         * Whether the file the tool is listed in was current when it was read: nothing it is made from
+         * was changed after it was written, so what it says the tool declares is what the class of the
+         * tool declares. A tool of a file that may be out of date is not held to its declarations
+         * before it runs; the class that runs it holds it to those it has then.
+         */
+        final boolean current
+
         private Entry(String name, List<String> aliases, String description, String origin, String registration, String target, boolean startsApplication,
-                      List<String> deprecated) {
+                      List<String> deprecated, ToolDeclarations declarations, boolean current) {
             this.name = name
             this.aliases = new ArrayList<String>(aliases).asImmutable()
             this.description = description
@@ -658,6 +693,14 @@ final class ToolCatalogFile {
             this.target = target
             this.startsApplication = target == APPLICATION && startsApplication
             this.deprecated = new ArrayList<String>(deprecated).asImmutable()
+            this.declarations = declarations ?: ToolDeclarations.NONE
+            this.current = current
+        }
+
+        // the same tool, of a file that may be out of date
+        @PackageScope
+        Entry ofStaleCatalog() {
+            return new Entry(name, aliases, description, origin, registration, target, startsApplication, deprecated, declarations, false)
         }
 
         /**
@@ -673,7 +716,8 @@ final class ToolCatalogFile {
          * gives it, and that the build runs it without the application
          */
         static Entry script(String name) {
-            return new Entry(name, Collections.<String>emptyList(), '', APPLICATION, ScriptCommandFiles.REGISTRATION, APPLICATION, false, Collections.<String>emptyList())
+            return new Entry(name, Collections.<String>emptyList(), '', APPLICATION, ScriptCommandFiles.REGISTRATION, APPLICATION, false, Collections.<String>emptyList(),
+                    ToolDeclarations.NONE, true)
         }
 
         /**

@@ -40,10 +40,9 @@ import spock.lang.Unroll
  * directory of the project is compared as {@code <project>}; everything else is compared as it is written.
  *
  * <p>The tools of the third sample declare their options, parameters and hints, read what is typed, or
- * lack a description, as the catalog of the tools of the project has them. Where {@code help --json}
- * does not have those members of a tool yet, the sample has them as the catalog this specification
- * writes declares them, in the order and with the rule of {@link CommandCatalog#TOOL_MEMBERS}; once
- * {@code help --json} has them itself, they are compared as it writes them.</p>
+ * lack a description, as the catalog of the tools of the project has them: in the form the task that
+ * writes the catalog gives them, with only the members that say something. {@code help --json} describes
+ * them with every member, as it describes the options and parameters of a command of the command line.</p>
  *
  * <p>After a change of {@code help --json} that is meant, write the samples again by running this spec
  * with the environment variable {@code FORGE_UPDATE_GOLDEN} set to {@code true}, and read the difference
@@ -63,13 +62,14 @@ class HelpJsonSamplesSpec extends CommandSpec implements CommandFixture {
 
     // The tools of the third sample, as the catalog of the tools of a project lists them: a tool of the application that
     // declares everything, one that reads what is typed, one that declares nothing, a tool of a plugin of Grails, a tool
-    // of another plugin that says it changes nothing, and a standalone tool of a plugin of Grails.
+    // of another plugin that says it changes nothing, and a standalone tool of a plugin of Grails. Their options are in the
+    // order they are declared, which is not the order help --json gives them in.
     static final List<Map<String, Object>> TOOLS = [
             [name       : 'audit-report', aliases: [], description: 'Writes the audit report', origin: APPLICATION, target: APPLICATION, startsApplication: true,
              registration: DESCRIPTOR,
-             options    : [option(['--format'], '1', 'string', 'FORMAT', 'The format of the report', ['TEXT', 'JSON'], 'TEXT'),
-                           option(['--include-deleted'], '0', 'boolean', null, 'Lists deleted records as well', null, null),
-                           option(['-s', '--since'], '1', 'string', 'DATE', 'The first day of the report', null, null)],
+             options    : [option(['-s', '--since'], '1', 'string', 'DATE', 'The first day of the report', null, null),
+                           option(['--format'], '1', 'string', 'FORMAT', 'The format of the report', ['TEXT', 'JSON'], 'TEXT'),
+                           option(['--include-deleted'], '0', 'boolean', null, 'Lists deleted records as well', null, null)],
              parameters : [parameter('OUTPUT', '1', 'The file to write')],
              hints      : DEFAULT_HINTS + [readOnlyHint: true]],
             [name       : 'import-data', aliases: [], description: 'Imports the records the user types in', origin: APPLICATION, target: APPLICATION, startsApplication: true,
@@ -78,9 +78,9 @@ class HelpJsonSamplesSpec extends CommandSpec implements CommandFixture {
              incomplete : ['description', 'arguments', 'hints']],
             [name       : 'dbm-update', aliases: [], description: 'Updates the database to the current version of the change log',
              origin     : 'org.apache.grails:grails-data-hibernate7-dbmigration-cli:9.0.0', target: APPLICATION, startsApplication: true, registration: DESCRIPTOR,
-             options    : [option(['--contexts'], '1', 'string', 'CONTEXTS', 'The contexts of the change sets to run', null, null),
-                           option(['--dataSource'], '1', 'string', 'DATASOURCE', 'The data source to update', null, null),
-                           option(['--defaultSchema'], '1', 'string', 'SCHEMA', 'The schema to update', null, null)],
+             options    : [option(['--dataSource'], '1', 'string', 'DATASOURCE', 'The data source to update', null, null),
+                           option(['--defaultSchema'], '1', 'string', 'SCHEMA', 'The schema to update', null, null),
+                           option(['--contexts'], '1', 'string', 'CONTEXTS', 'The contexts of the change sets to run', null, null)],
              hints      : DEFAULT_HINTS],
             [name       : 'example-report', aliases: [], description: 'Reports on the example data', origin: 'org.example:example-tools-cli:1.0.0', target: APPLICATION,
              startsApplication: false, registration: DESCRIPTOR,
@@ -101,7 +101,7 @@ class HelpJsonSamplesSpec extends CommandSpec implements CommandFixture {
 
         when:
         int exit = ForgeCli.execute(ForgeContext.of(beanContext), streams, '--plain-output', '--non-interactive', 'help', '--json')
-        Map<String, Object> document = (Map<String, Object>) comparable(withDeclarations((Map<String, Object>) new JsonSlurper().parseText(streams.standardOutput())))
+        Map<String, Object> document = (Map<String, Object>) comparable(new JsonSlurper().parseText(streams.standardOutput()))
         String written = text(document)
         File file = new File(previousUsrDir, "${SAMPLES}/${sample}.json")
         if (System.getenv('FORGE_UPDATE_GOLDEN') == 'true' && !System.getenv('CI')) {
@@ -177,33 +177,6 @@ class HelpJsonSamplesSpec extends CommandSpec implements CommandFixture {
         }
     }
 
-    // Until help --json has what a tool declares, a tool of the catalog has it in the sample as the catalog declares it.
-    private static Map<String, Object> withDeclarations(Map<String, Object> document) {
-        Map<String, Map<String, Object>> declared = TOOLS.collectEntries { [(it.name): it] }
-        for (Map<String, Object> entry : (List<Map<String, Object>>) document.commands) {
-            Map<String, Object> tool = declared.get(entry.name)
-            if (tool == null || entry.origin == CommandCatalog.BUILT_IN || CommandCatalog.TOOL_MEMBERS.any { entry.containsKey(it) }) {
-                continue
-            }
-            Map<String, Object> rebuilt = new LinkedHashMap<>()
-            entry.each { String member, Object value ->
-                if (member != 'commands') {
-                    rebuilt.put(member, value)
-                }
-            }
-            CommandCatalog.TOOL_MEMBERS.each { String member ->
-                Object value = tool.get(member)
-                if (value instanceof Collection ? !((Collection) value).isEmpty() : value instanceof Map ? !((Map) value).isEmpty() : value == Boolean.TRUE) {
-                    rebuilt.put(member, value)
-                }
-            }
-            rebuilt.put('commands', entry.commands)
-            entry.clear()
-            entry.putAll(rebuilt)
-        }
-        return document
-    }
-
     // the document with the directory of the project as <project>, wherever it is said
     private Object comparable(Object value) {
         if (value instanceof Map) {
@@ -273,12 +246,18 @@ class HelpJsonSamplesSpec extends CommandSpec implements CommandFixture {
         return ((List<Map>) document.commands).findAll { it.origin != CommandCatalog.BUILT_IN && it.project }.collectEntries { [(it.name): it] }
     }
 
+    // an option as the task that writes the catalog writes one: only the members that say something
     private static Map<String, Object> option(List<String> names, String arity, String type, String label, String description, List<String> choices, String defaultValue) {
-        return [names: names, arity: arity, type: type, label: label, required: false, description: description, repeatable: false, split: null,
-                choices: choices, default: defaultValue]
+        Map<String, Object> option = [names: names, arity: arity, type: type]
+        [label: label, description: description, choices: choices, default: defaultValue].each { String member, Object value ->
+            if (value != null) {
+                option.put(member, value)
+            }
+        }
+        return option
     }
 
     private static Map<String, Object> parameter(String label, String arity, String description) {
-        return [label: label, arity: arity, type: 'string', description: description, repeatable: false, split: null, choices: null]
+        return [label: label, arity: arity, type: 'string', description: description]
     }
 }
