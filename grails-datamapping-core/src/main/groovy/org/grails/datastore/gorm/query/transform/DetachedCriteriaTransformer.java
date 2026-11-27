@@ -105,9 +105,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
     private boolean appliedWhereTransform;
     private static final Set<String> CANDIDATE_METHODS = newSet("where", "whereLazy", "whereAny", "findAll", "find");
 
-    private static final Set<String> SUPPORTED_FUNCTIONS = newSet(
-            "lower", "upper", "trim", "length", "second",
-            "hour", "minute", "day", "month", "year");
+    private static final Set<String> SUPPORTED_FUNCTIONS = FunctionCallingCriterion.SUPPORTED_FUNCTIONS;
 
     private static final Map<String, String> OPERATOR_TO_CRITERIA_METHOD_MAP = (Map<String, String>) newMap(
             "==", "eq",

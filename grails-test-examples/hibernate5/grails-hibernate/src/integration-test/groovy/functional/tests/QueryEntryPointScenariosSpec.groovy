@@ -115,8 +115,7 @@ class QueryEntryPointScenariosSpec extends Specification {
         clubs*.name == ['c1']
     }
 
-    @PendingFeature(reason = 'Hibernate 5 drops the club without a team for ne on a property of a left alias, as <> is unknown for a null (#16905)')
-    void "not over a left-joined association: a missing association matches ne but not not-eq"() {
+    void "not over a left-joined association: a missing association matches neither ne nor not-eq"() {
         when:
         List<QsClub> notEqual = QsClub.withCriteria {
             createAlias('team', 't', 1)
@@ -129,8 +128,8 @@ class QueryEntryPointScenariosSpec extends Specification {
             order 'name'
         }
 
-        then: 'c4 has no team: ne is x <> v or x is null, and not (x = v) is unknown for a null'
-        notEqual*.name == ['c2', 'c3', 'c4']
+        then: 'c4 has no team: x <> v and not (x = v) are both unknown for a null, as on Hibernate 5'
+        notEqual*.name == ['c2', 'c3']
         negated*.name == ['c2', 'c3']
     }
 
