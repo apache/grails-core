@@ -27,10 +27,8 @@ import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
-import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -290,7 +288,6 @@ public class JpaCriteriaQueryCreator<T> {
         boolean distinctEntities = isDistinctEntities();
         boolean orderedBySelection = !countOnly && !distinctEntities && isOrderedBySelection();
         List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
-        boolean collectionSort = false;
         for (Query.Order order : orders) {
             var propertyName = order.getProperty();
             // an order of an association block, and the context that the criteria of its block were built against
@@ -332,8 +329,8 @@ public class JpaCriteriaQueryCreator<T> {
                 expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context));
             }
             if (countOnly) {
-                // Keep the joins of the sort, which can restrict the rows, without ordering the aggregate.
-                collectionSort |= crossesCollection(expression);
+                // Keep the joins of the sort without ordering the aggregate: they decide the rows that the
+                // list pages through, so the count has a row for each element of a collection that it sorts by
                 continue;
             }
             if (expression == null) {
@@ -350,11 +347,6 @@ public class JpaCriteriaQueryCreator<T> {
             } else {
                 jpaOrders.add(ascending ? criteriaBuilder.asc(expression) : criteriaBuilder.desc(expression));
             }
-        }
-        if (collectionSort && projections.getProjectionList().size() == 1 &&
-                projections.getProjectionList().getFirst().getClass() == Query.CountProjection.class) {
-            // A collection sort can multiply rows, but an entity list returns each root once.
-            ((CriteriaQuery<Long>) cq).select(criteriaBuilder.countDistinct(context.getRoot()));
         }
         if (distinctInMemory) {
             // SQL only orders a distinct query by what it selects, and an order through a join is not among
@@ -409,15 +401,6 @@ public class JpaCriteriaQueryCreator<T> {
                 return HqlListQueryBuilder.isForeignKey(association, tokens[i + 1]);
             }
             current = association.getAssociatedEntity();
-        }
-        return false;
-    }
-
-    private static boolean crossesCollection(Expression<?> expression) {
-        for (Path<?> path = expression instanceof Path<?> p ? p : null; path != null; path = path.getParentPath()) {
-            if (path instanceof Join<?, ?> join && join.getAttribute().isCollection()) {
-                return true;
-            }
         }
         return false;
     }

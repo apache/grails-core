@@ -22,6 +22,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
@@ -83,6 +84,17 @@ class HqlListQueryBuilderSpec extends Specification {
 
         expect:
         builder.buildCountHql() == "select count(distinct e) from Person e"
+    }
+
+    void 'a count of a list sorted by a collection counts the rows of the join'() {
+        given:
+        leftJoinSort = false
+        final players = associated(entity, 'players', Mock(ToMany))
+        property(players, 'name', String)
+
+        expect: 'max and offset page through a row for each element, so the total counts those rows'
+        new HqlListQueryBuilder(entity, [sort: 'players.name']).buildCountHql() ==
+                'select count(e) from Person e join e.players s0'
     }
 
     void 'a count keeps sort joins without ordering and can be built after the list'() {

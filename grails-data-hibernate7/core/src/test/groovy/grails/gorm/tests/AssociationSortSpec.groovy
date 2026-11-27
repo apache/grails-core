@@ -419,16 +419,16 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         [property, joinType, request] << [['name', 'id'], [JoinType.LEFT, JoinType.INNER], ['before', 'after']].combinations()
     }
 
-    void 'a collection sort counts roots once through #api'() {
-        given:
+    void 'the total of #api sorted by a collection counts the rows that it pages through'() {
+        given: 'two owners with two scores each, and one without a score, which only a left join has a row for'
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
         manager.session.clear()
 
         when:
         final result = query.call()
 
-        then:
-        result == (leftJoinSort ? 3 : 2)
+        then: 'as with Hibernate 5, max and offset page through the rows of the join, so the total counts them'
+        result == (leftJoinSort ? 5 : 4)
 
         where:
         api               | query
@@ -436,6 +436,29 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'criteria page'   | { AssociationSortOwner.createCriteria().list(max: 10, sort: 'scores.score') {}.totalCount }
         'detached page'   | { new DetachedCriteria(AssociationSortOwner).list(max: 10, sort: 'scores.score').totalCount }
         'static page'     | { AssociationSortOwner.list(max: 10, sort: 'scores.score').totalCount }
+    }
+
+    void 'every row of #api sorted by a collection is on a page that its total reaches'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when: 'the pages that a pager asks for, which stops at the total'
+        final first = query.call(0)
+        final names = [] as Set
+        for (int offset = 0; offset < first.totalCount; offset += 2) {
+            names.addAll(query.call(offset)*.name)
+        }
+
+        then: 'no owner is on a page beyond the total'
+        names == (leftJoinSort ? ['Ann', 'Bob', 'Empty'] : ['Ann', 'Bob']) as Set
+
+        where:
+        api             | query
+        'a where query' | { int offset -> AssociationSortOwner.where { name ==~ '%' }.list(max: 2, offset: offset, sort: 'scores.score') }
+        'a criteria'    | { int offset -> AssociationSortOwner.createCriteria().list(max: 2, offset: offset, sort: 'scores.score') {} }
+        'a detached'    | { int offset -> new DetachedCriteria(AssociationSortOwner).list(max: 2, offset: offset, sort: 'scores.score') }
+        'a list'        | { int offset -> AssociationSortOwner.list(max: 2, offset: offset, sort: 'scores.score') }
     }
 
     void 'a detached page retains its sort restriction when counting at offset #offset'() {
