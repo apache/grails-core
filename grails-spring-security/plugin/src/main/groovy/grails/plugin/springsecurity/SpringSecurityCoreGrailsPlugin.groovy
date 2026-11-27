@@ -149,7 +149,7 @@ import jakarta.servlet.DispatcherType
  */
 @Slf4j
 @GrailsPluginDescriptor(
-        loadAfter = ['controllers', 'hibernate', 'hibernate4', 'hibernate5', 'services'],
+        after = ['controllers', 'hibernate', 'services'],
         observe = ['controllers'])
 class SpringSecurityCoreGrailsPlugin extends Plugin {
 

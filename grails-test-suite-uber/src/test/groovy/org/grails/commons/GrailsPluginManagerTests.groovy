@@ -87,7 +87,7 @@ class AnotherGrailsPlugin extends Plugin {
 class SomeOtherGrailsPlugin extends Plugin {
 }
 
-@GrailsPluginDescriptor(loadAfter = ['my', 'someOther'])
+@GrailsPluginDescriptor(after = ['my', 'someOther'])
 class ShouldLoadLastGrailsPlugin extends Plugin {
 }
 
@@ -266,7 +266,7 @@ class VersionedGrailsPlugin extends grails.plugins.Plugin {
         !pluginManager.getGrailsPlugin('versioned', '1.2')
     }
 
-    def 'loads plugins successfully when a plugin declares loadAfter dependencies'() {
+    def 'loads plugins successfully when a plugin declares after'() {
         given: 'a plugin manager with a plugin that declares loadAfter dependencies'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
             pluginClasses = plugins('ShouldLoadLast', 'My', 'Another')

@@ -1,0 +1,8 @@
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-dependencies'
+}
+
+dependencies {
+    implementation project(':provider')
+}

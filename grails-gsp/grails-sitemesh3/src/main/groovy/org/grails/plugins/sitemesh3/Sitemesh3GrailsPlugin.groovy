@@ -104,7 +104,7 @@ import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 @ConditionalOnClass(SiteMeshViewResolverBeanPostProcessor)
 @ConditionalOnSiteMeshIntegration(Integration.VIEW_RESOLVER)
 @GrailsPluginDescriptor(
-        loadBefore = ['groovyPages'],
+        before = ['groovyPages'],
         providedArtefacts = [
                 RenderSitemeshTagLib,
                 Sitemesh3LayoutTagLib,

@@ -26,7 +26,7 @@ import org.springframework.core.env.Environment
 
 import grails.plugins.metadata.GrailsPluginDescriptor
 
-@GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
+@GrailsPluginDescriptor(after = ['springSecurityCore'])
 class LoadafterGrailsPlugin extends Plugin {
 
     // Exercises the beanRegistrar() API end-to-end using the concise closure-coercion form. Registrar

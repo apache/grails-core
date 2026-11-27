@@ -110,11 +110,11 @@ class PluginUtilsSpec extends Specification {
         new GroovyClassLoader(PluginUtilsSpec.classLoader).parseClass(source)
     }
 
-    def "createPluginInfo extracts loadAfter, loadBefore, and dependsOn from the annotation"() {
+    def "createPluginInfo extracts after, before, and dependsOn from the annotation"() {
         given:
         def pluginClass = parsePlugin('''
             @grails.plugins.metadata.GrailsPluginDescriptor(
-                    loadAfter = ['alpha', 'beta'], loadBefore = ['gamma'], dependsOn = ['delta:1.0'])
+                    after = ['alpha', 'beta'], before = ['gamma'], dependsOn = ['delta:1.0'])
             class PluginWithAllOrderingGrailsPlugin extends grails.plugins.Plugin { }
         ''')
 
@@ -124,8 +124,8 @@ class PluginUtilsSpec extends Specification {
         then:
         metadata.name == 'pluginWithAllOrdering'
         metadata.pluginClass == pluginClass
-        metadata.loadAfterNames == ['alpha', 'beta'] as String[]
-        metadata.loadBeforeNames == ['gamma'] as String[]
+        metadata.afterNames == ['alpha', 'beta'] as String[]
+        metadata.beforeNames == ['gamma'] as String[]
         metadata.dependsOnNames == ['delta'] as String[]
         metadata.getDependentVersion('delta') == '1.0'
     }
@@ -139,8 +139,8 @@ class PluginUtilsSpec extends Specification {
 
         then:
         metadata.name == 'utilsTestSimple'
-        metadata.loadAfterNames.length == 0
-        metadata.loadBeforeNames.length == 0
+        metadata.afterNames.length == 0
+        metadata.beforeNames.length == 0
         metadata.dependsOnNames.length == 0
         metadata.environments.isEmpty()
     }

@@ -66,22 +66,38 @@ public @interface GrailsPluginDescriptor {
     String grailsVersion() default "";
 
     /**
-     * Logical names of plugins that this plugin prefers to load after.
+     * Logical names of plugins this plugin comes after, when they are present. A named plugin that is
+     * absent is ignored.
      *
-     * @return plugin names to load after
+     * <p>Plugins are put in one order, and every part of Grails follows it: the order the plugins'
+     * hooks are called in, their bean registrars, their generated auto-configurations, their
+     * configuration and messages, and the order their views, static resources and URL mappings are
+     * searched in. Where two plugins provide the same thing, the later one wins (the application
+     * still beats every plugin).</p>
+     *
+     * @return plugin names to come after
      */
-    String[] loadAfter() default {};
+    String[] after() default {};
 
     /**
-     * Logical names of plugins that this plugin prefers to load before.
+     * Logical names of plugins this plugin comes before, when they are present. A named plugin that
+     * is absent is ignored.
      *
-     * @return plugin names to load before
+     * @return plugin names to come before
+     * @see #after()
      */
-    String[] loadBefore() default {};
+    String[] before() default {};
 
     /**
      * Required plugin dependencies, formatted as {@code "<pluginName>:<versionRange>"}
      * (for example {@code "core:9.0.0 > *"}) or {@code "<pluginName>"} when any version is accepted.
+     *
+     * <p>A dependency means the plugin cannot work without the other one: the application does not
+     * start when it is missing, outside the version range, or left out. The plugin also comes after
+     * the plugins it depends on, as if {@link #after()} named them. The Grails Gradle plugin checks
+     * when the plugin is built that a dependency of its project provides each plugin named here; a
+     * plugin that only needs to come after another one, when that one is present, names it in
+     * {@link #after()} instead.</p>
      *
      * @return required plugin dependency declarations
      */

@@ -19,16 +19,15 @@
 package org.apache.grails.core.plugins;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,8 +52,9 @@ import org.apache.grails.core.plugins.filters.PluginFilterRetriever;
  *
  * <p>When {@link #init(Environment)} is invoked, the discovery process loads candidate plugins, applies the
  * configured {@link PluginFilter}, leaves out the plugins that do not support the current Grails environment,
- * resolves load ordering and delayed dependencies, and exposes both the load order and the topologically sorted
- * order required by later bootstrap components.</p>
+ * checks every plugin's dependencies, applies evictions, and puts the plugins in their one order with
+ * {@link GrailsPluginSorter}. Configuration, bean registrars, hooks, artefacts, views and messages all follow
+ * that order.</p>
  *
  * <p>Every {@code dependsOn} of every plugin must be met. A plugin whose dependency is missing, has a version
  * outside the required range, was left out by the plugin filter or by its environments, or cannot load itself,
@@ -70,14 +70,10 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     protected Class<?>[] pluginClasses = new Class[0];
     protected LinkedHashMap<String, PluginInfo> plugins;
     protected List<PluginInfo> orderedPlugins;
-    protected List<PluginInfo> loadOrderedPlugins;
-    protected Map<String, Set<PluginInfo>> pluginToObserverMap;
-    protected List<PluginInfo> delayedLoadPlugins;
     protected Map<String, PluginInfo> failedPlugins;
     protected Map<String, List<String>> unmetDependencies;
     protected Map<String, PluginInfo> filteredOutPlugins;
     protected Map<String, PluginInfo> environmentExcludedPlugins;
-    protected Map<PluginInfo, String[]> delayedEvictions;
     protected PluginFilter pluginFilter;
     protected boolean loadClasspathPlugins = true;
     protected boolean requireClasspathPlugin = true;
@@ -123,41 +119,30 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         return null;
     }
 
+    /**
+     * The plugins that observe the given one, by name or with {@code *}, in plugin order. A plugin never observes
+     * itself.
+     */
     @Override
     public Collection<PluginInfo> findPluginObservers(PluginInfo plugin) {
         Objects.requireNonNull(plugin, "Argument [plugin] cannot be null");
-
-        var observers = pluginToObserverMap.get(plugin.getName());
-
-        // Add any wildcard observers.
-        var wildcardObservers = pluginToObserverMap.get(PluginUtils.WILDCARD_OBSERVER_PATTERN);
-        if (wildcardObservers != null) {
-            if (observers != null) {
-                observers.addAll(wildcardObservers);
-            } else {
-                observers = wildcardObservers;
+        validateInitialized();
+        var observers = new ArrayList<PluginInfo>();
+        for (var candidate : orderedPlugins) {
+            if (!candidate.equals(plugin)) {
+                var observed = Arrays.asList(candidate.getObservedPluginNames());
+                if (observed.contains(plugin.getName()) || observed.contains(PluginUtils.WILDCARD_OBSERVER_PATTERN)) {
+                    observers.add(candidate);
+                }
             }
         }
-
-        if (observers != null) {
-            // Make sure this plugin is not observing itself!
-            observers.remove(plugin);
-            return observers;
-        }
-
-        return Collections.emptySet();
+        return Collections.unmodifiableList(observers);
     }
 
     @Override
     public List<PluginInfo> getPluginsInTopologicalOrder() {
         validateInitialized();
         return Collections.unmodifiableList(orderedPlugins);
-    }
-
-    @Override
-    public List<PluginInfo> getPluginsInLoadOrder() {
-        validateInitialized();
-        return Collections.unmodifiableList(loadOrderedPlugins);
     }
 
     @Override
@@ -194,15 +179,11 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     public void reset() {
         initialized = false;
         plugins = new LinkedHashMap<>();
-        loadOrderedPlugins = new ArrayList<>();
-        pluginToObserverMap = new HashMap<>();
-        delayedLoadPlugins = new LinkedList<>();
+        orderedPlugins = new ArrayList<>();
         failedPlugins = new LinkedHashMap<>();
-        unmetDependencies = new HashMap<>();
+        unmetDependencies = new LinkedHashMap<>();
         filteredOutPlugins = new HashMap<>();
         environmentExcludedPlugins = new HashMap<>();
-        delayedEvictions = new HashMap<>();
-        orderedPlugins = new ArrayList<>();
     }
 
     /**
@@ -227,15 +208,14 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     }
 
     /**
-     * Discovers, filters, and orders plugins for the current environment.
+     * Discovers, filters, checks and orders plugins for the current environment.
      *
      * <p>This method discovers classpath plugins, adds the plugin classes registered directly, applies the
      * configured filter, resets previous discovery state, leaves out the plugins that do not support the current
-     * Grails environment, and then registers plugins immediately or defers them until their dependencies can be
-     * satisfied.</p>
+     * Grails environment, checks the dependencies of the others, applies their evictions and sorts them.</p>
      *
      * @param environment the environment used to determine plugin filtering and load order
-     * @throws PluginException if a {@code dependsOn} of any plugin is not met
+     * @throws PluginException if a {@code dependsOn} of any plugin is not met, or the plugins' order is circular
      */
     void populatePlugins(Environment environment) {
         var classLoader = resolveClassLoader();
@@ -275,26 +255,24 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
             return;
         }
 
-        attemptRegisterPlugins(candidates);
-
-        if (!delayedLoadPlugins.isEmpty()) {
-            loadDelayedPlugins();
+        for (var candidate : candidates) {
+            registerPlugin(candidate);
         }
-        if (!failedPlugins.isEmpty()) {
+        removePluginsWithUnmetDependencies();
+        if (!unmetDependencies.isEmpty()) {
             initialized = false;
             throw new PluginException(unmetDependenciesMessage());
         }
-        if (!delayedEvictions.isEmpty()) {
-            processDelayedEvictions();
-        }
+        applyEvictions();
 
-        // TODO: why do we sort if we know the order it had to load in?
-        orderedPlugins = GrailsPluginSorter.sort(
-                loadOrderedPlugins,
-                PluginInfo::getName,
-                PluginInfo::getLoadAfterNames,
-                PluginInfo::getLoadBeforeNames
-        );
+        try {
+            orderedPlugins = GrailsPluginSorter.sort(plugins.values(), PluginInfo::getName,
+                    plugin -> plugin.getDefinition().getOrderedAfter(), plugin -> plugin.getDefinition().getBefore());
+        }
+        catch (PluginException e) {
+            initialized = false;
+            throw e;
+        }
     }
 
     /**
@@ -315,70 +293,56 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         return supported;
     }
 
-    protected void evictPlugin(PluginInfo evictor, String evicteeName) {
-        var pluginToEvict = plugins.get(evicteeName);
-        if (pluginToEvict != null) {
-            orderedPlugins.remove(pluginToEvict);
-            loadOrderedPlugins.remove(pluginToEvict);
-            plugins.remove(pluginToEvict.getName());
-
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Grails plug-in {} was evicted by {}", pluginToEvict, evictor);
-            }
-        }
-    }
-
     private void validateInitialized() {
         if (!initialized) {
             throw new IllegalStateException("init() must be called prior to fetching the plugin order.");
         }
     }
 
-    private void processDelayedEvictions() {
-        for (var entry : delayedEvictions.entrySet()) {
-            var plugin = entry.getKey();
-            for (var pluginName : entry.getValue()) {
-                evictPlugin(plugin, pluginName);
+    /**
+     * Removes every plugin a dependency of which is not met, recording why. A plugin depending on one removed
+     * this way cannot load either, so removing repeats until every remaining plugin has its dependencies. Each
+     * round checks every plugin against the same plugins, so what is reported does not depend on the order the
+     * plugins were found in.
+     */
+    private void removePluginsWithUnmetDependencies() {
+        boolean removed = true;
+        while (removed) {
+            var unmetThisRound = new LinkedHashMap<PluginInfo, List<String>>();
+            for (var plugin : plugins.values()) {
+                var unmet = unresolvedDependencies(plugin);
+                if (!unmet.isEmpty()) {
+                    unmetThisRound.put(plugin, unmet);
+                }
             }
+            unmetThisRound.forEach((plugin, unmet) -> {
+                plugins.remove(plugin.getName());
+                failedPlugins.put(plugin.getName(), plugin);
+                unmetDependencies.put(plugin.getName(), unmet);
+            });
+            removed = !unmetThisRound.isEmpty();
         }
     }
 
     /**
-     * Attempts to register plugins that could not be loaded during the first registration pass.
-     *
-     * <p>Plugins remain delayed until their dependencies are available and any declared {@code loadAfter}
-     * relationships can be satisfied. Plugins whose dependencies can never be resolved are recorded as failed,
-     * which stops discovery once every plugin has been tried.</p>
+     * Applies the evictions of the plugins that remain. Evictions are applied together, after the dependencies
+     * were checked, so a plugin that evicts another one stands in for it as a dependency.
      */
-    private void loadDelayedPlugins() {
-        while (!delayedLoadPlugins.isEmpty()) {
-            var plugin = delayedLoadPlugins.remove(0);
-            if (areDependenciesResolved(plugin)) {
-                if (!hasValidPluginsToLoadBefore(plugin)) {
-                    registerPlugin(plugin);
-                } else {
-                    delayedLoadPlugins.add(plugin);
-                }
-            } else {
-                // ok, it still hasn't resolved the dependency after the initial
-                // load of all plugins. All hopes are not lost, however, so let's first
-                // look inside the remaining delayed loads before giving up
-                boolean foundInDelayed = false;
-                for (var remainingPlugin : delayedLoadPlugins) {
-                    if (isDependentOn(plugin, remainingPlugin)) {
-                        foundInDelayed = true;
-                        break;
-                    }
-                }
-                if (foundInDelayed) {
-                    delayedLoadPlugins.add(plugin);
-                } else {
-                    failedPlugins.put(plugin.getName(), plugin);
-                    // described now, while the plugins it waited for are still pending
-                    unmetDependencies.put(plugin.getName(), unresolvedDependencies(plugin));
-                }
+    private void applyEvictions() {
+        var evictions = new LinkedHashMap<PluginInfo, String[]>();
+        for (var plugin : plugins.values()) {
+            if (plugin.getEvictions().length > 0) {
+                evictions.put(plugin, plugin.getEvictions());
             }
         }
+        evictions.forEach((evictor, names) -> {
+            for (var name : names) {
+                var evicted = plugins.remove(PluginUtils.normalizePluginName(name));
+                if (evicted != null && LOG.isInfoEnabled()) {
+                    LOG.info("Grails plug-in {} was evicted by {}", evicted, evictor);
+                }
+            }
+        });
     }
 
     /**
@@ -387,14 +351,15 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
      */
     private String unmetDependenciesMessage() {
         var message = new StringBuilder("Grails plug-ins cannot be loaded because their dependencies are not met:");
-        for (var plugin : failedPlugins.values()) {
+        unmetDependencies.forEach((name, unmet) -> {
+            var plugin = failedPlugins.get(name);
             message.append(System.lineSeparator())
-                    .append("- Grails plug-in [").append(plugin.getName()).append(']');
+                    .append("- Grails plug-in [").append(name).append(']');
             if (plugin.getPluginVersion() != null) {
                 message.append(" with version [").append(plugin.getPluginVersion()).append(']');
             }
-            message.append(" cannot be loaded: ").append(String.join("; ", unmetDependencies.get(plugin.getName())));
-        }
+            message.append(" cannot be loaded: ").append(String.join("; ", unmet));
+        });
         return message.toString();
     }
 
@@ -402,9 +367,8 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         var unresolvedDependencies = new ArrayList<String>();
         for (var name : plugin.getDependsOnNames()) {
             var requiredVersion = plugin.getDependentVersion(name);
-            var dependency = findPlugin(name);
-            var delayedDependency = dependency == null ? findDelayedPlugin(name) : null;
             var normalizedName = PluginUtils.normalizePluginName(name);
+            var dependency = plugins.get(normalizedName);
             if (dependency != null) {
                 if (!GrailsVersionUtils.isValidVersion(dependency.getPluginVersion(), requiredVersion)) {
                     unresolvedDependencies.add(
@@ -412,15 +376,9 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                                     "] but requires [" + requiredVersion + "]"
                     );
                 }
-            } else if (failedPlugins.containsKey(normalizedName)) {
+            } else if (unmetDependencies.containsKey(normalizedName)) {
                 unresolvedDependencies.add(
                         "dependency [" + name + "] with required version [" + requiredVersion + "] failed to load"
-                );
-            } else if (delayedDependency != null) {
-                unresolvedDependencies.add(
-                        "dependency [" + name + "] with required version [" + requiredVersion +
-                                "] is still pending load and only version [" + delayedDependency.getPluginVersion() +
-                                "] was found"
                 );
             } else if (environmentExcludedPlugins.containsKey(normalizedName)) {
                 unresolvedDependencies.add(
@@ -443,79 +401,8 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     }
 
     /**
-     * Finds a plugin of the given name that is still waiting to be resolved.
-     *
-     * @param name the plugin name to look for
-     * @return the matching plugin currently in {@link #delayedLoadPlugins}, or {@code null} if there is none
-     */
-    private PluginInfo findDelayedPlugin(String name) {
-        var normalizedName = PluginUtils.normalizePluginName(name);
-        for (var delayed : delayedLoadPlugins) {
-            if (PluginUtils.normalizePluginName(delayed.getName()).equals(normalizedName)) {
-                return delayed;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Checks whether the first plugin is dependent on the second plugin.
-     *
-     * @param plugin the plugin to check
-     * @param dependency the plugin that may satisfy one of {@code plugin}'s declared dependencies
-     * @return {@code true} if {@code plugin} depends on {@code dependency}
-     */
-    private boolean isDependentOn(PluginInfo plugin, PluginInfo dependency) {
-        for (var name : plugin.getDependsOnNames()) {
-            var requiredVersion = plugin.getDependentVersion(name);
-            if (name.equals(dependency.getName()) &&
-                    GrailsVersionUtils.isValidVersion(dependency.getPluginVersion(), requiredVersion)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasValidPluginsToLoadBefore(PluginInfo plugin) {
-        var loadAfterNames = plugin.getLoadAfterNames();
-        for (var other : delayedLoadPlugins) {
-            for (var name : loadAfterNames) {
-                if (other.getName().equals(name)) {
-                    return hasDelayedDependencies(other) || areDependenciesResolved(other);
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean hasDelayedDependencies(PluginInfo other) {
-        var dependencyNames = other.getDependsOnNames();
-        for (var dependencyName : dependencyNames) {
-            for (var grailsPlugin : delayedLoadPlugins) {
-                if (grailsPlugin.getName().equals(dependencyName)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private void attemptRegisterPlugins(List<PluginInfo> filteredPlugins) {
-        for (var eligiblePlugin : filteredPlugins) {
-            if (areDependenciesResolved(eligiblePlugin) && areNoneToLoadBefore(eligiblePlugin)) {
-                registerPlugin(eligiblePlugin);
-            } else {
-                delayedLoadPlugins.add(eligiblePlugin);
-            }
-        }
-    }
-
-    /**
-     * Registers a plugin that is eligible to be loaded.
-     *
-     * <p>This method skips plugins already registered under the same name (a plugin may be declared by more
-     * than one descriptor on the classpath), records eviction and observer
-     * relationships, and appends the plugin to the discovered load order.</p>
+     * Registers a candidate plugin, skipping one already registered under the same name (a plugin may be
+     * declared by more than one descriptor on the classpath): the first one found wins.
      *
      * @param plugin the plugin to register
      */
@@ -539,47 +426,7 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                     plugin.getPluginVersion()
             );
         }
-
-        var evictionNames = plugin.getEvictions();
-        if (evictionNames.length > 0) {
-            delayedEvictions.put(plugin, evictionNames);
-        }
-
-        var observedPlugins = plugin.getObservedPluginNames();
-        for (var observedPlugin : observedPlugins) {
-            var observers = pluginToObserverMap.computeIfAbsent(observedPlugin, k -> new HashSet<>());
-            observers.add(plugin);
-        }
-        loadOrderedPlugins.add(plugin);
         plugins.put(plugin.getName(), plugin);
-    }
-
-    /**
-     * Returns true if there are no plugins left that should, if possible, be loaded before this plugin.
-     *
-     * @param plugin the plugin to check
-     * @return {@code true} if every declared {@code loadAfter} plugin has already been registered
-     */
-    private boolean areNoneToLoadBefore(PluginInfo plugin) {
-        for (var name : plugin.getLoadAfterNames()) {
-            if (findPlugin(name) == null) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean areDependenciesResolved(PluginInfo plugin) {
-        for (var name : plugin.getDependsOnNames()) {
-            if (!hasGrailsPlugin(name, plugin.getDependentVersion(name))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean hasGrailsPlugin(String name, String version) {
-        return findPlugin(name, version) != null;
     }
 
     /**

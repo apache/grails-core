@@ -34,7 +34,7 @@ import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
 @GrailsPluginDescriptor(
-        loadAfter = ['springSecurityRest'])
+        after = ['springSecurityRest'])
 class SpringSecurityRestMemcachedGrailsPlugin extends Plugin {
 
     /**

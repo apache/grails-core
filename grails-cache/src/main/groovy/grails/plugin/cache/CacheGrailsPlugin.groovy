@@ -58,7 +58,7 @@ import org.grails.plugin.cache.GrailsCacheManagerDependencyRegistrar
 @AutoConfiguration
 @ConditionalOnBooleanProperty(name = 'grails.cache.enabled', matchIfMissing = true)
 @GrailsPluginDescriptor(
-        loadAfter = ['controllers', 'services'],
+        after = ['controllers', 'services'],
         observe = ['controllers', 'services'])
 class CacheGrailsPlugin extends Plugin {
 

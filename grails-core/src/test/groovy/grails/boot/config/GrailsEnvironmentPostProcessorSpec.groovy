@@ -49,7 +49,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
-        discovery.getPluginsInLoadOrder() >> []
+        discovery.getPluginsInTopologicalOrder() >> []
         
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -106,6 +106,26 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         environment.propertySources.get('grailsBuildInfo').getProperty('grails.gorm.defaultIdType') == 'native'
     }
 
+    def "the plugin.yml of the later plugin in plugin order wins over an earlier plugin's, and the application wins over both"() {
+        given:
+        def earlier = createPluginInfo('earlierPlugin', yml('shared.value: earlier\nearlier.only: e\nboth.value: earlier'))
+        def later = createPluginInfo('laterPlugin', yml('shared.value: later\nboth.value: later'))
+        def bootstrapContext = Mock(ConfigurableBootstrapContext)
+        def discovery = Mock(PluginDiscovery)
+        bootstrapContext.get(PluginDiscovery.class) >> discovery
+        discovery.getPluginsInTopologicalOrder() >> [earlier, later]
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('applicationConfig', ['both.value': 'application']))
+
+        when:
+        new GrailsEnvironmentPostProcessor(bootstrapContext).postProcessEnvironment(environment, Mock(SpringApplication))
+
+        then:
+        environment.getProperty('shared.value') == 'later'
+        environment.getProperty('earlier.only') == 'e'
+        environment.getProperty('both.value') == 'application'
+    }
+
     def "postProcessEnvironment handles IOException from yml configuration gracefully"() {
         given:
         def ymlResource = Mock(Resource)
@@ -118,7 +138,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
-        discovery.getPluginsInLoadOrder() >> [ymlPlugin]
+        discovery.getPluginsInTopologicalOrder() >> [ymlPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -146,7 +166,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
-        discovery.getPluginsInLoadOrder() >> [groovyPlugin]
+        discovery.getPluginsInTopologicalOrder() >> [groovyPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -184,7 +204,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
-        discovery.getPluginsInLoadOrder() >> [groovyPlugin, ymlPlugin]
+        discovery.getPluginsInTopologicalOrder() >> [groovyPlugin, ymlPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -219,7 +239,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
         // [groovyPlugin, ymlPlugin] reversed = [ymlPlugin, groovyPlugin]
-        discovery.getPluginsInLoadOrder() >> [groovyPlugin, ymlPlugin]
+        discovery.getPluginsInTopologicalOrder() >> [groovyPlugin, ymlPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -258,7 +278,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         bootstrapContext.get(PluginDiscovery.class) >> discovery
         // [ymlPlugin, groovyPlugin] reversed = [groovyPlugin, ymlPlugin]
         // groovy is processed first, fails with RuntimeException, yml is never reached
-        discovery.getPluginsInLoadOrder() >> [ymlPlugin, groovyPlugin]
+        discovery.getPluginsInTopologicalOrder() >> [ymlPlugin, groovyPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -269,6 +289,15 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
 
         then:
         noExceptionThrown()
+    }
+
+    private static Resource yml(String text) {
+        new ByteArrayResource(text.getBytes('UTF-8')) {
+            @Override
+            String getFilename() {
+                'plugin.yml'
+            }
+        }
     }
 
     private static PluginInfo createPluginInfo(String name, Resource configResource) {

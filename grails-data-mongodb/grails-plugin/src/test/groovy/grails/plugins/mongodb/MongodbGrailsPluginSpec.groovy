@@ -51,7 +51,7 @@ class MongodbGrailsPluginSpec extends Specification {
 
         then:
         descriptor.observe() as List == ['services', 'domainClass']
-        descriptor.loadAfter() as List == ['domainClass', 'hibernate', 'hibernate5', 'hibernate7', 'services']
+        descriptor.after() as List == ['domainClass', 'hibernate', 'services']
     }
 
     void "the post-processor the registrar registers registers the core MongoDB datastore bean definitions"() {
@@ -84,7 +84,7 @@ class MongodbGrailsPluginSpec extends Specification {
     void "the domain mapping context alias is not registered when Hibernate is present"() {
         given:
         plugin.pluginManager = Stub(GrailsPluginManager) {
-            getAllPlugins() >> ([Stub(GrailsPlugin) { getName() >> 'hibernate' }] as GrailsPlugin[])
+            hasGrailsPlugin('hibernate') >> true
         }
 
         when:

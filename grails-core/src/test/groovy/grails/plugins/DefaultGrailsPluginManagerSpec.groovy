@@ -121,15 +121,15 @@ class DefaultGrailsPluginManagerSpec extends Specification {
         '7.0.0-M2'       | '7.0.0-M1'                 || false
     }
 
-    def "per-plugin loaded messages are DEBUG and a single INFO summary reports the load order"() {
-        given: 'a discovery bean with two plugins registered in reverse of their load order'
+    def "per-plugin loaded messages are DEBUG and a single INFO summary reports the plugin order"() {
+        given: 'a discovery bean with two plugins registered in reverse of their order'
         def gcl = PluginClassFixtures.versionedPluginLoader(temp, [AlphaProbeGrailsPlugin: '1.0.0', BetaProbeGrailsPlugin: '2.0.0'])
         def alphaClass = gcl.parseClass('''
             @grails.plugins.metadata.GrailsPluginDescriptor
             class AlphaProbeGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def betaClass = gcl.parseClass('''
-            @grails.plugins.metadata.GrailsPluginDescriptor(loadAfter = ['alphaProbe'])
+            @grails.plugins.metadata.GrailsPluginDescriptor(after = ['alphaProbe'])
             class BetaProbeGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def application = new DefaultGrailsApplication(mainContext: new GenericApplicationContext())
@@ -159,14 +159,14 @@ class DefaultGrailsPluginManagerSpec extends Specification {
         loadedEvents.size() == 2
         loadedEvents.every { it.level == Level.DEBUG }
 
-        and: 'a single INFO summary line reports the plugins in load order'
+        and: 'a single INFO summary line reports the plugins in order'
         def summaryLines = logCapture.events.findAll {
-            it.formattedMessage.contains('Grails plugins in load order')
+            it.formattedMessage.contains('Grails plugins in order')
         }
         summaryLines.size() == 1
         with(summaryLines[0]) {
             level == Level.INFO
-            formattedMessage.contains('Loaded 2 Grails plugins in load order: [alphaProbe (1.0.0), betaProbe (2.0.0)]')
+            formattedMessage.contains('Loaded 2 Grails plugins in order: [alphaProbe (1.0.0), betaProbe (2.0.0)]')
         }
 
         cleanup:

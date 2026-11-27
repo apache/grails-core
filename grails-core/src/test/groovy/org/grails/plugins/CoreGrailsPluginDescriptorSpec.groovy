@@ -43,8 +43,8 @@ class CoreGrailsPluginDescriptorSpec extends Specification {
         published.pluginClass == declared.pluginClass
         published.grailsVersionRange == declared.grailsVersionRange
         published.dependsOn == declared.dependsOn
-        published.loadAfter == declared.loadAfter
-        published.loadBefore == declared.loadBefore
+        published.after == declared.after
+        published.before == declared.before
         published.observe == declared.observe
         published.evict == declared.evict
         published.environmentsIncludes == declared.environmentsIncludes

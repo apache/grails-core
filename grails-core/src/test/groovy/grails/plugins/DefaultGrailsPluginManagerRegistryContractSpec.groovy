@@ -26,49 +26,27 @@ import spock.lang.Specification
 
 class DefaultGrailsPluginManagerRegistryContractSpec extends Specification {
 
-    void 'the discovery load order consumed by the manager is deterministic for a combined ordering graph'() {
+    void 'discovery and the loaded registry share one order, whatever order the plugin classes come in'() {
         given:
         def pluginClasses = orderingPluginClasses()
-        def expectedLoadOrder = [
-                'registryOrderingRoot',
+        def expectedOrder = [
                 'registryOrderingBefore',
-                'registryOrderingRight',
+                'registryOrderingRoot',
                 'registryOrderingLeft',
+                'registryOrderingRight',
                 'registryOrderingJoin',
                 'registryOrderingTail'
         ]
 
         when:
-        def loadOrders = (1..3).collect {
-            def discovery = createDiscovery(pluginClasses)
-            createManager(discovery)
-            discovery.getPluginsInLoadOrder()*.name
+        def orders = [pluginClasses, pluginClasses.reverse(), pluginClasses.sort(false) { it.name }].collect { List<Class<?>> classes ->
+            def discovery = createDiscovery(classes)
+            def manager = createManager(discovery)
+            [discovery.getPluginsInTopologicalOrder()*.name, manager.getAllPlugins()*.name]
         }
 
         then:
-        loadOrders == [expectedLoadOrder, expectedLoadOrder, expectedLoadOrder]
-    }
-
-    void 'the loaded registry exposes a deterministic topological order for a combined ordering graph'() {
-        given:
-        def pluginClasses = orderingPluginClasses()
-        def expectedTopologicalOrder = [
-                'registryOrderingBefore',
-                'registryOrderingRoot',
-                'registryOrderingRight',
-                'registryOrderingLeft',
-                'registryOrderingJoin',
-                'registryOrderingTail'
-        ]
-
-        when:
-        def topologicalOrders = (1..3).collect {
-            def discovery = createDiscovery(pluginClasses)
-            createManager(discovery).getAllPlugins()*.name
-        }
-
-        then:
-        topologicalOrders == [expectedTopologicalOrder, expectedTopologicalOrder, expectedTopologicalOrder]
+        orders.every { it == [expectedOrder, expectedOrder] }
     }
 
     void 'the loaded registry de-duplicates plugins and resolves each plugin consistently'() {
@@ -116,12 +94,12 @@ class DefaultGrailsPluginManagerRegistryContractSpec extends Specification {
      */
     private static List<Class<?>> orderingPluginClasses() {
         Map<String, String> annotations = [
-                RegistryOrderingTailGrailsPlugin  : "loadAfter = ['registryOrderingJoin']",
-                RegistryOrderingJoinGrailsPlugin  : "loadAfter = ['registryOrderingLeft', 'registryOrderingRight']",
-                RegistryOrderingRightGrailsPlugin : "loadAfter = ['registryOrderingRoot']",
-                RegistryOrderingLeftGrailsPlugin  : "loadAfter = ['registryOrderingRoot']",
+                RegistryOrderingTailGrailsPlugin  : "after = ['registryOrderingJoin']",
+                RegistryOrderingJoinGrailsPlugin  : "after = ['registryOrderingLeft', 'registryOrderingRight']",
+                RegistryOrderingRightGrailsPlugin : "after = ['registryOrderingRoot']",
+                RegistryOrderingLeftGrailsPlugin  : "after = ['registryOrderingRoot']",
                 RegistryOrderingRootGrailsPlugin  : '',
-                RegistryOrderingBeforeGrailsPlugin: "loadBefore = ['registryOrderingRoot']"
+                RegistryOrderingBeforeGrailsPlugin: "before = ['registryOrderingRoot']"
         ]
         File root = File.createTempDir()
         root.deleteOnExit()

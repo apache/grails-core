@@ -41,7 +41,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  * @author Burt Beckwith
  */
 @Slf4j
-@GrailsPluginDescriptor(loadAfter = ['springSecurityCore', 'springSecurityAcl'])
+@GrailsPluginDescriptor(after = ['springSecurityCore', 'springSecurityAcl'])
 class SpringSecurityUiGrailsPlugin extends Plugin {
 
     /**

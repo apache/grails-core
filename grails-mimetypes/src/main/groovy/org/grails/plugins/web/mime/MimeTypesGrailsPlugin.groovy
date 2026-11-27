@@ -28,5 +28,5 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  * @author Graeme Rocher
  * @since 1.0
  */
-@GrailsPluginDescriptor(dependsOn = ['core:${plugin.version}', 'controllers:${plugin.version}'], observe = ['controllers'])
+@GrailsPluginDescriptor(dependsOn = ['core:${plugin.version}'])
 class MimeTypesGrailsPlugin extends Plugin {}

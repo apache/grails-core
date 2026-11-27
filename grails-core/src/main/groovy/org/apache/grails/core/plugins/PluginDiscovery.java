@@ -51,7 +51,7 @@ public interface PluginDiscovery {
      *
      * @param environment the environment used to determine plugin filtering and ordering
      * @throws grails.plugins.exceptions.PluginException if a plugin cannot be loaded, including when a
-     *         {@code dependsOn} of a plugin is not met
+     *         {@code dependsOn} of a plugin is not met, or when the plugins' order is circular
      */
     void init(Environment environment);
 
@@ -73,18 +73,14 @@ public interface PluginDiscovery {
     PluginInfo findPlugin(String pluginName, Object version);
 
     /**
-     * Returns the discovered plugins in topological order.
+     * Returns the discovered plugins in their one order: a plugin comes after the plugins it depends on and those
+     * its {@code after} names, and before those its {@code before} names; plugins left unordered by these come in
+     * the order of their names. Configuration, bean registrars, hooks, artefacts, views and messages all follow
+     * this order, and where two plugins provide the same thing, the later one wins.
      *
-     * @return plugins ordered by dependency and declared load-before/load-after relationships
+     * @return the plugins in order
      */
     List<PluginInfo> getPluginsInTopologicalOrder();
-
-    /**
-     * Returns the discovered plugins in their effective load order.
-     *
-     * @return the order in which plugins should be loaded
-     */
-    List<PluginInfo> getPluginsInLoadOrder();
 
     /**
      * Determines whether a plugin with the given name has been discovered.

@@ -45,16 +45,16 @@ class PluginDependencySpec extends Specification {
 
     // ========== Plugin Dependency Declaration Tests ==========
 
-    def "exploded plugin declares loadAfter dependency"() {
+    def "exploded plugin declares after"() {
         when: "getting plugin"
         def plugin = pluginManager.getGrailsPlugin('exploded')
 
-        then: "loadAfter is declared"
+        then: "after is declared"
         plugin != null
-        plugin.loadAfterNames.toList() == ['springSecurityCore']
+        plugin.afterNames.toList() == ['springSecurityCore']
     }
 
-    def "plugin manager respects loadAfter declarations"() {
+    def "plugin manager respects after declarations"() {
         when: "getting all plugins"
         def plugins = pluginManager.allPlugins.toList()
         def pluginNames = plugins*.name

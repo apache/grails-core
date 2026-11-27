@@ -84,10 +84,9 @@ locales=fr
         PluginUtils.createPluginInfo(pluginClass)
     }
 
-    private I18nEnvironmentPostProcessor processor(List<PluginInfo> topological, List<PluginInfo> load) {
+    private I18nEnvironmentPostProcessor processor(List<PluginInfo> ordered) {
         PluginDiscovery discovery = Stub(PluginDiscovery) {
-            getPluginsInTopologicalOrder() >> topological
-            getPluginsInLoadOrder() >> load
+            getPluginsInTopologicalOrder() >> ordered
         }
         bootstrapContext.register(PluginDiscovery, { context -> discovery })
         new I18nEnvironmentPostProcessor(bootstrapContext)
@@ -183,19 +182,22 @@ locales=fr
                 'config/i18n/custom,config/i18n/other'
     }
 
-    void 'plugin base names follow reverse topological order, not load order'() {
-        given: 'topological and load order deliberately disagree'
-        List<PluginInfo> topological = [pluginInfo('AlphaPlugin'), pluginInfo('BetaPlugin')]
-        List<PluginInfo> load = topological.reverse()
+    void 'plugin base names follow reverse plugin order, so the later plugin wins: #order'() {
+        given:
+        List<PluginInfo> ordered = order.collect { pluginInfo(it) }
         MockEnvironment environment = new MockEnvironment()
         ClassLoader classLoader = classLoaderWithPluginDescriptors(['alpha-plugin', 'beta-plugin'])
 
         when:
-        processor(topological, load).postProcessEnvironment(environment, applicationUsing(classLoader))
+        processor(ordered).postProcessEnvironment(environment, applicationUsing(classLoader))
 
-        then: 'reading the load-order list instead would have produced alpha-plugin,beta-plugin'
-        environment.getProperty(I18nEnvironmentPostProcessor.BASENAME_PROPERTY) ==
-                'messages,beta-plugin,alpha-plugin'
+        then: 'the application comes first, then the plugins from the last one back'
+        environment.getProperty(I18nEnvironmentPostProcessor.BASENAME_PROPERTY) == expected
+
+        where:
+        order                          || expected
+        ['AlphaPlugin', 'BetaPlugin']  || 'messages,beta-plugin,alpha-plugin'
+        ['BetaPlugin', 'AlphaPlugin']  || 'messages,alpha-plugin,beta-plugin'
     }
 
     void 'include-plugin-bundles=false leaves plugin base names out entirely'() {

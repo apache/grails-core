@@ -213,6 +213,9 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
 
     public void onStartup(Map<String, Object> event) {
         for (GrailsPlugin plugin : getOrderedPlugins()) {
+            if (!plugin.supportsCurrentScopeAndEnvironment()) {
+                continue;
+            }
             Object instance = plugin.getPluginInstance();
             if (instance instanceof GrailsApplicationLifeCycle lifeCycle) {
                 lifeCycle.onStartup(event);
@@ -326,7 +329,9 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
     @Override
     public void informPluginsOfConfigChange() {
         for (GrailsPlugin plugin : getOrderedPlugins()) {
-            plugin.notifyOfEvent(GrailsPlugin.EVENT_ON_CONFIG_CHANGE, application.getConfig());
+            if (plugin.supportsCurrentScopeAndEnvironment()) {
+                plugin.notifyOfEvent(GrailsPlugin.EVENT_ON_CONFIG_CHANGE, application.getConfig());
+            }
         }
     }
 

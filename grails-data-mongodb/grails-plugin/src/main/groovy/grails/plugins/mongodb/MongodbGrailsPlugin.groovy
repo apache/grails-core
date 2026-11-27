@@ -33,7 +33,6 @@ import org.springframework.transaction.PlatformTransactionManager
 
 import grails.core.GrailsClass
 import grails.mongodb.bootstrap.MongoDbDataStoreSpringInitializer
-import grails.plugins.GrailsPlugin
 import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.Metadata
@@ -43,7 +42,7 @@ import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.spring.BeanBuilderRegistryPostProcessor
 
 @GrailsPluginDescriptor(
-        loadAfter = ['domainClass', 'hibernate', 'hibernate5', 'hibernate7', 'services'],
+        after = ['domainClass', 'hibernate', 'services'],
         observe = ['services', 'domainClass'])
 class MongodbGrailsPlugin extends Plugin {
 
@@ -89,7 +88,7 @@ class MongodbGrailsPlugin extends Plugin {
 
     @CompileStatic
     protected boolean hasHibernatePlugin() {
-        manager.allPlugins.any() { GrailsPlugin plugin -> plugin.name ==~ /hibernate\d*/ }
+        manager.hasGrailsPlugin('hibernate')
     }
 
     @Override

@@ -323,10 +323,11 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
  */
 /*
  * CLASS retention: the transform consumes this at canonicalization and it is not among the
- * annotations moved to the generated sibling, so it stays on the source class with nothing left to
- * read it. Keeping it out of the runtime image matters a little more than usual here, since
- * grails-core declares grails-beans-dsl api and so puts this module on every application's runtime
- * classpath.
+ * annotations moved to the generated sibling, so it stays on the source class, where only the
+ * compiler reads it again: on a plugin, the transform sets autoConfigurationName to the sibling's
+ * qualified name, and the plugin descriptor the compiler writes from the class files publishes it.
+ * Keeping it out of the runtime image matters a little more than usual here, since grails-core
+ * declares grails-beans-dsl api and so puts this module on every application's runtime classpath.
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)

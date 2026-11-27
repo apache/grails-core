@@ -315,8 +315,11 @@ class GrailsApplicationBuilder {
      */
     protected static Set<String> generatedAutoConfigurationNames(PluginDiscovery discovery) {
         Set<String> names = new LinkedHashSet<>()
-        for (PluginInfo plugin : discovery.pluginsInLoadOrder) {
-            if (plugin.pluginClass != null) {
+        for (PluginInfo plugin : discovery.pluginsInTopologicalOrder) {
+            if (plugin.definition.autoConfiguration) {
+                names << plugin.definition.autoConfiguration
+            }
+            else if (plugin.pluginClass != null) {
                 names << generatedAutoConfigurationName(plugin.pluginClass)
             }
         }

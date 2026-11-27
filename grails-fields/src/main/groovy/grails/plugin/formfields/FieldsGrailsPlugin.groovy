@@ -34,7 +34,7 @@ import org.grails.scaffolding.model.property.DomainPropertyFactory
 import org.grails.scaffolding.model.property.DomainPropertyFactoryImpl
 
 @CompileStatic
-@GrailsPluginDescriptor(loadAfter = ['domainClass'])
+@GrailsPluginDescriptor(after = ['domainClass'])
 class FieldsGrailsPlugin extends Plugin {
 
     static final String CONSTRAINTS_EVALULATOR_BEAN_NAME = 'validateableConstraintsEvaluator'

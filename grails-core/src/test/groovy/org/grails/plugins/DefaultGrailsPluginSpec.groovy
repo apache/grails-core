@@ -154,7 +154,7 @@ class DefaultGrailsPluginSpec extends Specification {
         def pluginClass = compilePlugin('AnnotatedStarterDescriptor', '''
             @grails.plugins.metadata.GrailsPluginDescriptor(
                     name = 'annotated-starter',
-                    loadAfter = ['core'],
+                    after = ['core'],
                     providedArtefacts = [org.grails.plugins.TestBinaryResource]
             )
             class AnnotatedStarterDescriptor extends grails.plugins.Plugin { }
@@ -166,7 +166,7 @@ class DefaultGrailsPluginSpec extends Specification {
 
         then:
         binaryPlugin.name == 'annotatedStarter'
-        binaryPlugin.loadAfterNames as List == ['core']
+        binaryPlugin.afterNames as List == ['core']
         binaryPlugin.providedArtefacts as List == [TestBinaryResource]
 
         and: 'a class registered directly, without a descriptor of its own on the class path, has no version'

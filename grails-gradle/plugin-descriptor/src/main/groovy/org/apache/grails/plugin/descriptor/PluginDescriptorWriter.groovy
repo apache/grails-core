@@ -37,7 +37,8 @@ import grails.plugins.metadata.PluginDefinition
  *
  * <p>A plugin is a concrete class annotated with {@code @GrailsPluginDescriptor}. Its descriptor, written
  * to {@code META-INF/grails/plugins/<name>/plugin.properties}, is the annotation together with the
- * plugin's version and the {@code @Artefact} classes compiled beside it; the names are listed in
+ * plugin's version, the {@code @Artefact} classes compiled beside it and the auto-configuration its
+ * {@code beans} block compiled onto, when it has one; the names are listed in
  * {@code META-INF/grails/plugins.imports}.</p>
  *
  * @since 9.0
@@ -53,6 +54,10 @@ final class PluginDescriptorWriter {
     private static final String CLASS_FILE_EXTENSION = '.class'
     private static final String PLUGIN_DESCRIPTOR_ANNOTATION = 'Lgrails/plugins/metadata/GrailsPluginDescriptor;'
     private static final String ARTEFACT_ANNOTATION = 'Lgrails/artefact/Artefact;'
+    // CLASS retention: in the class file, though not at runtime. On a plugin the compiler sets its
+    // autoConfigurationName to the qualified name of the auto-configuration the beans block compiled onto.
+    private static final String GRAILS_BEANS_ANNOTATION = 'Lgrails/compiler/beans/GrailsBeans;'
+    private static final String AUTO_CONFIGURATION_NAME = 'autoConfigurationName'
 
     private PluginDescriptorWriter() {
     }
@@ -113,6 +118,7 @@ final class PluginDescriptorWriter {
     static ScanResult scan(Set<File> classesDirs) {
         List<DeclaredPlugin> plugins = []
         Map<String, SortedSet<String>> artefactsByType = new TreeMap<>()
+        Set<String> classNames = new HashSet<>()
         classesDirs.each { File dir ->
             if (!dir.exists()) {
                 return
@@ -132,11 +138,15 @@ final class PluginDescriptorWriter {
                 }
                 ClassScanner scanner = new ClassScanner()
                 reader.accept(scanner, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+                String className = reader.className.replace('/' as char, '.' as char)
+                classNames.add(className)
                 if (!scanner.concrete) {
                     return
                 }
-                String className = reader.className.replace('/' as char, '.' as char)
                 if (scanner.declaration != null) {
+                    if (scanner.autoConfiguration) {
+                        scanner.declaration.put(PluginDefinition.AUTO_CONFIGURATION_ATTRIBUTE, scanner.autoConfiguration)
+                    }
                     plugins.add(new DeclaredPlugin(className, scanner.declaration))
                 }
                 else if (!nested && scanner.providedArtefact) {
@@ -144,8 +154,18 @@ final class PluginDescriptorWriter {
                 }
             }
         }
-        plugins.sort { DeclaredPlugin plugin -> plugin.className }
-        new ScanResult(plugins, artefactsByType)
+        // an autoConfigurationName names the generated auto-configuration only once the compiler generated it
+        List<DeclaredPlugin> declared = plugins.collect { DeclaredPlugin plugin ->
+            String autoConfiguration = (String) plugin.attributes.get(PluginDefinition.AUTO_CONFIGURATION_ATTRIBUTE)
+            if (!autoConfiguration || classNames.contains(autoConfiguration)) {
+                return plugin
+            }
+            Map<String, Object> attributes = new LinkedHashMap<>(plugin.attributes)
+            attributes.remove(PluginDefinition.AUTO_CONFIGURATION_ATTRIBUTE)
+            new DeclaredPlugin(plugin.className, attributes)
+        }
+        declared.sort { DeclaredPlugin plugin -> plugin.className }
+        new ScanResult(declared, artefactsByType)
     }
 
     /**
@@ -222,6 +242,7 @@ final class PluginDescriptorWriter {
         private boolean genericClass
         Map<String, Object> declaration
         String artefactType
+        String autoConfiguration
 
         ClassScanner() {
             super(Opcodes.ASM9)
@@ -265,6 +286,16 @@ final class PluginDescriptorWriter {
                                     values.add(text.trim())
                                 }
                             }
+                        }
+                    }
+                }
+            }
+            if (GRAILS_BEANS_ANNOTATION == descriptor) {
+                return new AnnotationVisitor(Opcodes.ASM9) {
+                    @Override
+                    void visit(String name, Object value) {
+                        if (AUTO_CONFIGURATION_NAME == name && value instanceof String) {
+                            autoConfiguration = (String) value
                         }
                     }
                 }

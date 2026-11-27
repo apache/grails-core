@@ -73,7 +73,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
 
 @Slf4j
 @GrailsPluginDescriptor(
-        loadAfter = ['springSecurityCore'])
+        after = ['springSecurityCore'])
 class SpringSecurityRestGrailsPlugin extends Plugin {
 
     GrailsApplication grailsApplication

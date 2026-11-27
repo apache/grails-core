@@ -43,19 +43,19 @@ class PluginLoadOrderTests {
 import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
-@GrailsPluginDescriptor(loadAfter = ['one'])
+@GrailsPluginDescriptor(after = ['one'])
 class FiveGrailsPlugin extends Plugin {
 }
 
-@GrailsPluginDescriptor(loadAfter = ['two'])
+@GrailsPluginDescriptor(after = ['two'])
 class FourGrailsPlugin extends Plugin {
 }
 
-@GrailsPluginDescriptor(loadBefore = ['two'])
+@GrailsPluginDescriptor(before = ['two'])
 class OneGrailsPlugin extends Plugin {
 }
 
-@GrailsPluginDescriptor(loadAfter = ['three'])
+@GrailsPluginDescriptor(after = ['three'])
 class TwoGrailsPlugin extends Plugin {
 }
 
@@ -80,10 +80,7 @@ class ThreeGrailsPlugin extends Plugin {
 
         GrailsPlugin[] plugins = pluginManager.allPlugins
 
-        assertEquals "one", plugins[0].name
-        assertEquals "three", plugins[1].name
-        assertEquals "five", plugins[2].name
-        assertEquals "two", plugins[3].name
-        assertEquals "four", plugins[4].name
+        // one before two, two after three, four after two, five after one; ties go by name
+        assertEquals(['one', 'five', 'three', 'two', 'four'], plugins*.name)
     }
 }

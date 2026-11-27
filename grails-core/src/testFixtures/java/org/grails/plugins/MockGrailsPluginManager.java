@@ -72,7 +72,7 @@ public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
             return;
         }
 
-        pluginDiscovery.getPluginsInLoadOrder().forEach(pluginInfo -> {
+        pluginDiscovery.getPluginsInTopologicalOrder().forEach(pluginInfo -> {
             GrailsPlugin plugin = new DefaultGrailsPlugin(pluginInfo, application);
 
             plugin.setApplicationContext(applicationContext);

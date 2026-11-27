@@ -44,7 +44,7 @@ import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
 @SuppressWarnings('GroovyUnusedDeclaration')
-@GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
+@GrailsPluginDescriptor(after = ['springSecurityCore'])
 class SpringSecurityLdapGrailsPlugin extends Plugin {
 
     /**

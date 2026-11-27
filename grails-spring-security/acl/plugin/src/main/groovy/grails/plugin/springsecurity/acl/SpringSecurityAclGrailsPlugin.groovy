@@ -77,7 +77,7 @@ import grails.util.GrailsClassUtils as GCU
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
-@GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
+@GrailsPluginDescriptor(after = ['springSecurityCore'])
 class SpringSecurityAclGrailsPlugin extends Plugin {
 
     public static final String ENCODING_ID_BCRYPT = 'bcrypt'

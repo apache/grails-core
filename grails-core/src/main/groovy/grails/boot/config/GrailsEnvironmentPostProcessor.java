@@ -90,7 +90,7 @@ public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor,
 
             pluginDiscovery.init(environment);
 
-            Collection<PluginInfo> plugins = pluginDiscovery.getPluginsInLoadOrder();
+            Collection<PluginInfo> plugins = pluginDiscovery.getPluginsInTopologicalOrder();
             loadPluginConfigurations(plugins, environment);
         } catch (Exception e) {
             LOG.error("Error loading Grails plugin configurations early: ", e);
@@ -112,12 +112,12 @@ public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor,
 
     /**
      * Loads plugin configuration files ({@code plugin.yml} or {@code plugin.groovy})
-     * in the topologically sorted order and adds them to the environment's property sources.
+     * in plugin order and adds them to the environment's property sources.
      *
-     * <p>The reverse iteration with {@code addLast} replicates the ordering behavior
-     * in the original {@code GrailsApplicationPostProcessor.loadApplicationConfig()},
-     * where plugins are iterated in reverse sorted order and added with {@code addLast}.
-     * This means earlier plugins (in sort order) get higher property precedence.</p>
+     * <p>The plugins are iterated in reverse order and each is added with {@code addLast}, so the
+     * last plugin's sources come first among the plugins' sources: a later plugin's configuration
+     * wins over an earlier plugin's, as everything else a later plugin provides does. Every plugin
+     * source comes after the application's own, so the application still wins.</p>
      *
      * <p>Property sources are added as
      * a {@link org.grails.config.NavigableMapPropertySource} with name
@@ -130,8 +130,7 @@ public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor,
         GroovyConfigPropertySourceLoader groovyLoader = new GroovyConfigPropertySourceLoader();
         int loadedCount = 0;
 
-        // Iterate in reverse order and use addLast, matching
-        // GrailsApplicationPostProcessor.loadApplicationConfig() behavior
+        // In reverse with addLast: the later plugin's sources come first, so its configuration wins
         List<PluginInfo> reversed = new ArrayList<>(sortedPlugins);
         Collections.reverse(reversed);
 

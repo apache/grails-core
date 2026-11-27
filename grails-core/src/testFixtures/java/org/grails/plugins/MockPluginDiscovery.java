@@ -49,7 +49,6 @@ public class MockPluginDiscovery extends DefaultPluginDiscovery {
         initPluginsIfNotDefined();
 
         plugins.put(pluginInfo.getName(), pluginInfo);
-        loadOrderedPlugins.add(pluginInfo);
         orderedPlugins.add(pluginInfo);
     }
 

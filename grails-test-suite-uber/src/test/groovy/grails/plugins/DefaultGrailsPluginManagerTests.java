@@ -84,7 +84,7 @@ public class DefaultGrailsPluginManagerTests {
      * Test the known 1.0.2 failure where:
      *
      * mail 0.3 = has no deps
-     * quartz 0.3-SNAPSHOT: loadAfter = ['core', 'hibernate']
+     * quartz 0.3-SNAPSHOT: after = ['core', 'hibernate']
      * emailconfirmation 0.4: dependsOn = [quartz:'0.3 > *', mail: '0.2 > *']
      *
      * ...and emailconfirmation is NOT loaded first.
@@ -98,7 +98,7 @@ public class DefaultGrailsPluginManagerTests {
         // is the first in the list, and its dependencies load after
         first = gcl.parseClass(plugin("First", "dependsOn = ['second:0.3 > *', 'third:0.2 > *']"));
         second = gcl.parseClass(plugin("Second", ""));
-        third = gcl.parseClass(plugin("Third", "loadAfter = ['core', 'hibernate']"));
+        third = gcl.parseClass(plugin("Third", "after = ['core', 'hibernate']"));
 
         GrailsApplication app = new DefaultGrailsApplication(new Class[]{}, gcl);
         var parent = new GenericApplicationContext();
@@ -132,7 +132,7 @@ public class DefaultGrailsPluginManagerTests {
         var manager = loadPlugins(plugin("First", ""),
                 plugin("Second", ""),
                 plugin("Third", ""),
-                plugin("Fourth", "loadBefore = ['first', 'second']"));
+                plugin("Fourth", "before = ['first', 'second']"));
 
         var plugins = manager.getAllPlugins();
         var pluginList = Arrays.asList(plugins);
@@ -186,11 +186,11 @@ public class DefaultGrailsPluginManagerTests {
     }
 
     @Test
-    public void testLoadingOrderLoadBeforeAndLoadAfter() {
-        var manager = loadPlugins(plugin("First", "loadAfter = ['second', 'third']"),
+    public void testOrderOfBeforeAndAfter() {
+        var manager = loadPlugins(plugin("First", "after = ['second', 'third']"),
                 plugin("Second", ""),
-                plugin("Third", "loadBefore = ['fourth']"),
-                plugin("Fourth", "loadBefore = ['first', 'second']"));
+                plugin("Third", "before = ['fourth']"),
+                plugin("Fourth", "before = ['first', 'second']"));
 
         var plugins = manager.getAllPlugins();
         var pluginList = Arrays.asList(plugins);

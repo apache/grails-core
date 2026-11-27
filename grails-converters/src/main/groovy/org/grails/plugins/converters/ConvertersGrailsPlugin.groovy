@@ -56,8 +56,8 @@ import org.grails.web.converters.marshaller.json.ValidationErrorsMarshaller as J
  */
 @CompileStatic
 @GrailsPluginDescriptor(
-        dependsOn = ['controllers:${plugin.version}', 'domainClass:${plugin.version}'],
-        observe = ['controllers'],
+        dependsOn = ['core:${plugin.version}'],
+        after = ['controllers', 'domainClass'],
         providedArtefacts = [
             JSONCodec,
             XMLCodec

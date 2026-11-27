@@ -57,7 +57,9 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     String BEAN_NAME = "pluginManager";
 
     /**
-     * Returns all loaded plugins.
+     * Returns all loaded plugins, in plugin order: a plugin comes after the plugins it depends on and those its
+     * descriptor's {@code after} names. Where two plugins provide the same thing, such as a view, a static
+     * resource or a message, the later one wins, so a lookup searches the plugins from the last one back.
      *
      * @return All loaded plugins
      */

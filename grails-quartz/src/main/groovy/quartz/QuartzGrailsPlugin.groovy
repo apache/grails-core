@@ -42,7 +42,7 @@ import org.springframework.core.env.Environment
 
 @Slf4j
 @GrailsPluginDescriptor(
-        loadAfter = ['hibernate', 'services'],
+        after = ['hibernate', 'services'],
         watchedResources = ['file:./grails-app/jobs/**/*Job.groovy'])
 class QuartzGrailsPlugin extends Plugin {
 
@@ -273,18 +273,14 @@ class QuartzGrailsPlugin extends Plugin {
 
     /**
      * Whether a Hibernate plugin is loaded, which binds a Hibernate session to the thread of each job.
-     * @return {@code true} when the {@code hibernate}, {@code hibernate3}, {@code hibernate4} or
-     * {@code hibernate5} plugin is loaded
+     * @return {@code true} when the {@code hibernate} plugin (of Hibernate 5 or 7) is loaded
      */
     boolean isHibernatePresent() {
         hasHibernate(manager)
     }
 
     private boolean hasHibernate(manager) {
-        manager?.hasGrailsPlugin('hibernate') ||
-                manager?.hasGrailsPlugin('hibernate3') ||
-                manager?.hasGrailsPlugin('hibernate4') ||
-                manager?.hasGrailsPlugin('hibernate5')
+        manager?.hasGrailsPlugin('hibernate')
     }
 
     void refreshJobs(boolean ignoreErrors = false) {

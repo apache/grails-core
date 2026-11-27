@@ -27,7 +27,7 @@ class PluginDefinitionSpec extends Specification {
         def definition = new PluginDefinition.Builder(
                 pluginName: 'data-source', pluginClass: 'example.DataSourceGrailsPlugin', pluginVersion: '9.0.1',
                 grailsVersionRange: '${plugin.version} > *',
-                dependsOn: [core: '${plugin.version}'], loadAfter: ['some-plugin']
+                dependsOn: [core: '${plugin.version}'], after: ['some-plugin']
         ).build()
         def output = new StringWriter()
 
@@ -39,7 +39,7 @@ class PluginDefinitionSpec extends Specification {
         published == definition
         published.dependsOn == [core: '9.0.1']
         published.grailsVersionRange == '9.0.1 > *'
-        published.loadAfter == ['somePlugin']
+        published.after == ['somePlugin']
 
         and: 'a plugin is never written as disabled: it is disabled by not shipping it or by grails.plugin.excludes'
         !output.toString().contains('enabled')
@@ -84,6 +84,8 @@ class PluginDefinitionSpec extends Specification {
         'format.version=2'        | 'format'
         'name=probe'              | 'names no plugin class'
         'name=mistake'            | 'name'
+        'loadAfter=other'         | "declares 'loadAfter', which Grails 9 no longer reads: rebuild the plugin with 'after'"
+        'loadBefore=other'        | "declares 'loadBefore', which Grails 9 no longer reads: rebuild the plugin with 'before'"
     }
 
     void 'pluginExcludes are patterns of artefact class names'() {

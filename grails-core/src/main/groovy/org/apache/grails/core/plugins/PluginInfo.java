@@ -110,14 +110,14 @@ public final class PluginInfo {
         return definition.getGrailsVersionRange();
     }
 
-    /** @return the names of the plugins this plugin loads after, when they are present */
-    public String[] getLoadAfterNames() {
-        return definition.getLoadAfter().toArray(String[]::new);
+    /** @return the names of the plugins this plugin comes after, when they are present */
+    public String[] getAfterNames() {
+        return definition.getAfter().toArray(String[]::new);
     }
 
-    /** @return the names of the plugins this plugin loads before, when they are present */
-    public String[] getLoadBeforeNames() {
-        return definition.getLoadBefore().toArray(String[]::new);
+    /** @return the names of the plugins this plugin comes before, when they are present */
+    public String[] getBeforeNames() {
+        return definition.getBefore().toArray(String[]::new);
     }
 
     /** @return the names of the plugins this plugin requires */

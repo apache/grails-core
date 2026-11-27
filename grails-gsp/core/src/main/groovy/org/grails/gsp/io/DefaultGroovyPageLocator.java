@@ -20,6 +20,7 @@ package org.grails.gsp.io;
 
 import java.io.File;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -229,10 +230,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
             return null;
         }
 
-        List<GrailsPlugin> allPlugins = Arrays.asList(pluginManager.getAllPlugins());
-        Collections.reverse(allPlugins);
-
-        for (GrailsPlugin plugin : allPlugins) {
+        for (GrailsPlugin plugin : pluginsLatestFirst()) {
             if (!(plugin instanceof DefaultGrailsPlugin binaryPlugin)) {
                 continue;
             }
@@ -258,6 +256,13 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
         return null;
     }
 
+    /** The plugins from the last one back: where two plugins have the same view, the later one wins. */
+    private List<GrailsPlugin> pluginsLatestFirst() {
+        List<GrailsPlugin> plugins = new ArrayList<>(Arrays.asList(pluginManager.getAllPlugins()));
+        Collections.reverse(plugins);
+        return plugins;
+    }
+
     private GroovyPageScriptSource resolveViewInPluginProjectDirectory(DefaultGrailsPlugin binaryPlugin, String uri) {
         File projectDirectory = binaryPlugin.getProjectDirectory();
         File f = new File(projectDirectory, "grails-app/views" + uri);
@@ -272,7 +277,8 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
             return null;
         }
 
-        for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
+        // the later plugin's view wins, as findBinaryScriptSource lets it for a precompiled view
+        for (GrailsPlugin plugin : pluginsLatestFirst()) {
             GroovyPageScriptSource scriptSource = findResourceScriptSource(resolvePluginViewPath(uri, plugin));
             if (scriptSource != null) {
                 return scriptSource;
@@ -287,7 +293,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
             return null;
         }
 
-        for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
+        for (GrailsPlugin plugin : pluginsLatestFirst()) {
             Resource resource = findResource(resolvePluginViewPath(uri, plugin));
             if (resource != null) {
                 return resource;

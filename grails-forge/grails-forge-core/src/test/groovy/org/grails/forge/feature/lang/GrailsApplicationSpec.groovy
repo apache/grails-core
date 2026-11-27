@@ -81,7 +81,7 @@ class GrailsApplicationSpec extends ApplicationContextSpec implements CommandOut
 
         and: 'the plugin is an annotated Plugin subclass whose metadata lives in the annotation'
         pluginGroovy.contains('import grails.plugins.metadata.GrailsPluginDescriptor')
-        pluginGroovy.contains("@GrailsPluginDescriptor(\n        // Plugins this one loads after, or needs: loadAfter = ['controllers'], dependsOn = ['core']\n")
+        pluginGroovy.contains("@GrailsPluginDescriptor(\n        // Plugins this one comes after, or needs: after = ['controllers'], dependsOn = ['core']\n")
         pluginGroovy.contains('class FooGrailsPlugin extends Plugin {')
         pluginGroovy.contains('BeanRegistrar beanRegistrar() {')
         pluginGroovy.contains('void onShutdown(Map<String, Object> event) {')

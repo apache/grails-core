@@ -63,7 +63,7 @@ class ExampleGrailsPlugin extends Plugin  {
 }
 ----
 
-A plugin whose own `doWithApplicationContext` calls methods another plugin adds declares that plugin in `loadAfter` or `dependsOn`, so the other plugin's hook runs first.
+A plugin whose own `doWithApplicationContext` calls methods another plugin adds declares that plugin in `after` or `dependsOn`, so the other plugin's hook runs first.
 
 
 ==== Interacting with the ApplicationContext

@@ -38,7 +38,7 @@ class PluginViewsControllerSpec extends ContainerGebSpec {
             $('div', 1).text() == "Template from plugin no plugin attribute: Hello from app"
     }
 
-    void "Test that views from a plugin loaded after another plugin override when using loadAfter"() {
+    void "Test that views from a plugin loaded after another plugin override when using after"() {
         when:"A view that renders plugin views"
         go('/pluginViews/testPluginViewOverrideInPlugin')
 

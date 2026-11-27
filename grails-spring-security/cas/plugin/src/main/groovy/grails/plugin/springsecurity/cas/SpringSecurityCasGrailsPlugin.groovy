@@ -48,7 +48,7 @@ import org.grails.web.config.http.GrailsFilters
 
 @Slf4j
 @CompileStatic
-@GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
+@GrailsPluginDescriptor(after = ['springSecurityCore'])
 class SpringSecurityCasGrailsPlugin extends Plugin {
 
     /**

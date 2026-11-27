@@ -51,8 +51,8 @@ import org.grails.web.pages.FilteringCodecsByContentTypeSettings
  * @since 1.1
  */
 @GrailsPluginDescriptor(
-        loadAfter = ['filters'],
-        dependsOn = ['core:${plugin.version}', 'i18n:${plugin.version}'],
+        dependsOn = ['core:${plugin.version}'],
+        after = ['i18n'],
         observe = ['controllers'],
         watchedResources = ['file:./plugins/*/grails-app/taglib/**/*TagLib.groovy',
                                 'file:./grails-app/taglib/**/*TagLib.groovy'],

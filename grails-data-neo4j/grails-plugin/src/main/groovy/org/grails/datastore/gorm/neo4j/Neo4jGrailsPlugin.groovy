@@ -54,7 +54,7 @@ import org.springframework.core.env.PropertyResolver
 import java.util.function.Supplier
 
 @GrailsPluginDescriptor(
-        loadAfter = ['domainClass', 'hibernate', 'services', 'converters'],
+        after = ['domainClass', 'hibernate', 'services', 'converters'],
         observe = ['services', 'domainClass'])
 class Neo4jGrailsPlugin extends Plugin {
 

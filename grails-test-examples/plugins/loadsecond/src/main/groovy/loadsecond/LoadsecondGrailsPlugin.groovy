@@ -24,6 +24,6 @@ import grails.plugins.*
 import grails.plugins.metadata.GrailsPluginDescriptor
 
 @GrailsPluginDescriptor(
-        loadAfter = ['loadfirst'],
+        after = ['loadfirst'],
         pluginExcludes = ['loadsecond/demo/**'])
 class LoadsecondGrailsPlugin extends Plugin {}

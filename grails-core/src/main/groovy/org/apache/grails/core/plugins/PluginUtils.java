@@ -242,8 +242,8 @@ public final class PluginUtils {
         Map<String, Object> attributes = new LinkedHashMap<>();
         attributes.put("name", annotation.name());
         attributes.put("grailsVersion", annotation.grailsVersion());
-        attributes.put("loadAfter", List.of(annotation.loadAfter()));
-        attributes.put("loadBefore", List.of(annotation.loadBefore()));
+        attributes.put("after", List.of(annotation.after()));
+        attributes.put("before", List.of(annotation.before()));
         attributes.put("dependsOn", List.of(annotation.dependsOn()));
         attributes.put("evict", List.of(annotation.evict()));
         attributes.put("observe", List.of(annotation.observe()));

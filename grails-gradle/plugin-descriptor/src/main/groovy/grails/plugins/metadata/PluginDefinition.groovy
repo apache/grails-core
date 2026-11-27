@@ -38,14 +38,28 @@ final class PluginDefinition {
     /** The {@code ${plugin.version}} placeholder a dependency range may use for the plugin's own version. */
     static final String PLUGIN_VERSION_PLACEHOLDER = '${plugin.version}'
 
+    /**
+     * The key of the generated auto-configuration in {@code plugin.properties}, and the attribute the compiler
+     * passes it under to {@link #fromDeclaration}: it is not an attribute of the annotation.
+     */
+    static final String AUTO_CONFIGURATION_ATTRIBUTE = 'autoConfiguration'
+
     private static final String GRAILS_PLUGIN_SUFFIX = 'GrailsPlugin'
+
+    /** The ordering keys of earlier descriptors, which are errors rather than aliases, with their replacements. */
+    private static final Map<String, String> REMOVED_ORDER_KEYS = [loadAfter: 'after', loadBefore: 'before']
 
     final String pluginName
     final String pluginVersion
     final String grailsVersionRange
     final String pluginClass
-    final List<String> loadAfter
-    final List<String> loadBefore
+    /**
+     * The generated auto-configuration that holds the plugin's {@code beans} block (its sibling), or
+     * {@code null} when the plugin has none. Another plugin's sibling is ordered against it.
+     */
+    final String autoConfiguration
+    final List<String> after
+    final List<String> before
     final List<String> evict
     final List<String> observe
     final List<String> environmentsIncludes
@@ -62,8 +76,9 @@ final class PluginDefinition {
         String pluginVersion
         String grailsVersionRange
         String pluginClass
-        List<String> loadAfter
-        List<String> loadBefore
+        String autoConfiguration
+        List<String> after
+        List<String> before
         List<String> evict
         List<String> observe
         List<String> environmentsIncludes
@@ -90,8 +105,9 @@ final class PluginDefinition {
         }
         pluginVersion = source.pluginVersion?.trim() ?: null
         grailsVersionRange = resolveVersion(source.grailsVersionRange?.trim())
-        loadAfter = names(source.loadAfter)
-        loadBefore = names(source.loadBefore)
+        autoConfiguration = source.autoConfiguration?.trim() ?: null
+        after = names(source.after)
+        before = names(source.before)
         observe = names(source.observe)
         evict = names(source.evict)
         environmentsIncludes = copyEntries(source.environmentsIncludes)
@@ -137,6 +153,16 @@ final class PluginDefinition {
         List.copyOf(classes)
     }
 
+    /**
+     * The plugins this plugin is ordered after, when they are present: those it depends on, then those its
+     * {@code after} names. A dependency is also an ordering: a plugin cannot build on one that comes later.
+     */
+    List<String> getOrderedAfter() {
+        Set<String> names = new LinkedHashSet<>(dependsOn.keySet())
+        names.addAll(after)
+        List.copyOf(names)
+    }
+
     private String resolveVersion(String value) {
         if (!value?.contains(PLUGIN_VERSION_PLACEHOLDER)) {
             return value ?: null
@@ -156,7 +182,8 @@ final class PluginDefinition {
      *
      * @param pluginClass the annotated class
      * @param attributes the annotation attributes that are set: {@code String} or a
-     *        {@code List<String>} of values (class names for {@code providedArtefacts})
+     *        {@code List<String>} of values (class names for {@code providedArtefacts}), and the
+     *        {@value #AUTO_CONFIGURATION_ATTRIBUTE} the compiler generated, when there is one
      * @param pluginVersion the plugin's version (the build's project version), or {@code null}
      * @param defaultGrailsVersion the Grails range used when the descriptor declares none, or {@code null}
      * @param artefactsByType the artefact classes compiled with the plugin, by artefact type
@@ -172,8 +199,9 @@ final class PluginDefinition {
         builder.pluginName = deriveName(pluginClass, (String) attributes.get('name'))
         builder.pluginVersion = pluginVersion
         builder.grailsVersionRange = ((String) attributes.get('grailsVersion'))?.trim() ?: defaultGrailsVersion
-        builder.loadAfter = list(attributes, 'loadAfter')
-        builder.loadBefore = list(attributes, 'loadBefore')
+        builder.autoConfiguration = (String) attributes.get(AUTO_CONFIGURATION_ATTRIBUTE)
+        builder.after = list(attributes, 'after')
+        builder.before = list(attributes, 'before')
         builder.evict = list(attributes, 'evict')
         builder.observe = list(attributes, 'observe')
         builder.environmentsIncludes = list(attributes, 'environmentsIncludes')
@@ -237,6 +265,12 @@ final class PluginDefinition {
         if (format != FORMAT_VERSION) {
             throw new IllegalArgumentException("Unsupported plugin descriptor format ${format} for ${importedName}")
         }
+        REMOVED_ORDER_KEYS.each { String removed, String replacement ->
+            if (values.getProperty(removed) != null) {
+                throw new IllegalArgumentException("The descriptor of Grails plugin ${importedName} declares '${removed}', " +
+                        "which Grails 9 no longer reads: rebuild the plugin with '${replacement}' on @GrailsPluginDescriptor")
+            }
+        }
         Builder builder = new Builder()
         builder.pluginName = values.getProperty('name')?.trim() ?: importedName
         if (importedName && normalizePluginName(builder.pluginName) != normalizePluginName(importedName)) {
@@ -245,8 +279,9 @@ final class PluginDefinition {
         builder.pluginClass = values.getProperty('class')
         builder.pluginVersion = values.getProperty('version')
         builder.grailsVersionRange = values.getProperty('grailsVersion')
-        builder.loadAfter = entries(values.getProperty('loadAfter'))
-        builder.loadBefore = entries(values.getProperty('loadBefore'))
+        builder.autoConfiguration = values.getProperty(AUTO_CONFIGURATION_ATTRIBUTE)
+        builder.after = entries(values.getProperty('after'))
+        builder.before = entries(values.getProperty('before'))
         builder.evict = entries(values.getProperty('evict'))
         builder.observe = entries(values.getProperty('observe'))
         builder.environmentsIncludes = entries(values.getProperty('environments.includes'))
@@ -278,8 +313,11 @@ final class PluginDefinition {
         if (grailsVersionRange) {
             entries.put('grailsVersion', grailsVersionRange)
         }
-        addList(entries, 'loadAfter', loadAfter)
-        addList(entries, 'loadBefore', loadBefore)
+        if (autoConfiguration) {
+            entries.put(AUTO_CONFIGURATION_ATTRIBUTE, autoConfiguration)
+        }
+        addList(entries, 'after', after)
+        addList(entries, 'before', before)
         addList(entries, 'evict', evict)
         addList(entries, 'observe', observe)
         addList(entries, 'environments.includes', environmentsIncludes)

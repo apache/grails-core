@@ -40,7 +40,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  */
 @CompileStatic
 @GrailsPluginDescriptor(
-        loadAfter = ['domainClass', 'hibernate'],
+        after = ['domainClass', 'hibernate'],
         dependsOn = ['controllers:${plugin.version}', 'urlMappings:${plugin.version}'],
         watchedResources = ['file:./grails-app/controllers/**/*Interceptor.groovy'])
 class InterceptorsGrailsPlugin extends Plugin {

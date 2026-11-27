@@ -121,20 +121,19 @@ public interface GrailsPlugin extends ApplicationContextAware {
     String[] getDependencyNames();
 
     /**
-     * Retrieves the names of plugins that this plugin should be loaded after. This differs
-     * from dependencies in that if that plugin doesn't exist, this plugin will still be loaded.
-     * It is a way of enforcing plugins are loaded before, but not necessarily needed
-     * @return The names of the plugins that this plugin should be loaded after
+     * The names of the plugins this plugin comes after, as its descriptor's {@code after} declares them.
+     * This differs from dependencies in that a named plugin that is absent is ignored.
+     * The plugin also comes after the plugins it depends on.
+     * @return The names of the plugins that this plugin comes after
      */
-    String[] getLoadAfterNames();
+    String[] getAfterNames();
 
     /**
-     * Retrieves the names of plugins that this plugin should be loaded before.
-     * As with getLoadAfterNames(), it is not a requirement that the specified
-     * plugins exist
-     * @return The names of the plugins that this plugin should load before
+     * The names of the plugins this plugin comes before, as its descriptor's {@code before} declares them.
+     * As with {@link #getAfterNames()}, a named plugin that is absent is ignored.
+     * @return The names of the plugins that this plugin comes before
      */
-    String[] getLoadBeforeNames();
+    String[] getBeforeNames();
 
     /**
      * The version of the specified dependency

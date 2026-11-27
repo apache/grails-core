@@ -38,7 +38,9 @@ import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
  * Writes the descriptors of the plugins a Groovy compilation produces, beside its classes, once the
  * compilation has written them. A plugin is a concrete {@code grails.plugins.Plugin} subclass annotated
  * with {@link GrailsPluginDescriptor}; an annotated class that is not one fails the compilation, as does a
- * plugin that declares {@code doWithSpring}, a hook plugins no longer have.
+ * plugin that declares {@code doWithSpring}, a hook plugins no longer have. The auto-configuration a
+ * plugin's {@code beans} block compiles onto is ordered as the plugins are, by
+ * {@link PluginAutoConfigurationOrder}.
  *
  * @see CompilerPluginDescriptors
  */
@@ -90,6 +92,13 @@ class PluginDescriptorTransformation implements ASTTransformation, CompilationUn
                 }
             }
             declaresPlugin = true
+            // once every source unit has created its siblings, so another plugin's is known by then
+            ClassNode plugin = type
+            compilationUnit.addPhaseOperation({ SourceUnit unit ->
+                if (unit.is(source)) {
+                    PluginAutoConfigurationOrder.apply(plugin, source, compilationUnit)
+                }
+            } as CompilationUnit.ISourceUnitOperation, Phases.INSTRUCTION_SELECTION)
         }
         if (target == null) {
             return

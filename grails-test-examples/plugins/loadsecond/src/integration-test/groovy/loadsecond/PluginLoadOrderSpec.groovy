@@ -29,8 +29,8 @@ import spock.lang.Specification
 
 /**
  * Integration tests for plugin loading order.
- * Tests that plugins are loaded in correct order based on
- * loadAfter and loadBefore declarations.
+ * Tests that plugins are put in one order by their after and before
+ * declarations.
  */
 @Integration(applicationClass = Application)
 class PluginLoadOrderSpec extends Specification {
@@ -76,13 +76,18 @@ class PluginLoadOrderSpec extends Specification {
         plugin.pluginInstance instanceof LoadsecondGrailsPlugin
     }
 
-    def "loadAfter is declared correctly"() {
+    def "after is declared correctly"() {
         when: "getting plugin"
         def plugin = pluginManager.getGrailsPlugin('loadsecond')
 
-        then: "loadAfter contains loadfirst"
+        then: "after contains loadfirst"
         plugin != null
-        plugin.loadAfterNames.toList() == ['loadfirst']
+        plugin.afterNames.toList() == ['loadfirst']
+    }
+
+    def "the plugin manager and discovery share one plugin order"() {
+        expect:
+        pluginDiscovery.pluginsInTopologicalOrder*.name == pluginManager.allPlugins*.name
     }
 
     // ========== All Plugins Tests ==========
@@ -130,10 +135,8 @@ class PluginLoadOrderSpec extends Specification {
         def config = grailsApplication.config
         def prop2 = config.getProperty('grails11951.prop2', String)
 
-        then: "plugin config is accessible"
-        // LoadSecond defines prop2, which should override LoadFirst's prop2
-        // if both plugins are loaded in correct order
-        prop2 != null
+        then: "the plugin's configuration is loaded (app1 checks that it wins over loadfirst's, which comes earlier)"
+        prop2 == 'Prop Two Defined By LoadSecond Plugin'
     }
 
     // ========== Plugin Exclusions Tests ==========

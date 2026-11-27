@@ -34,7 +34,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  * and developers, from the grailsPublish block in build.gradle.
  */
 @GrailsPluginDescriptor(
-        // Plugins this one loads after, or needs: loadAfter = ['controllers'], dependsOn = ['core']
+        // Plugins this one comes after, or needs: after = ['controllers'], dependsOn = ['core']
         // Artefact classes left out of the plugin's descriptor: pluginExcludes = ['com/example/demo/**']
 )
 class ${project.getClassName()}GrailsPlugin extends Plugin {

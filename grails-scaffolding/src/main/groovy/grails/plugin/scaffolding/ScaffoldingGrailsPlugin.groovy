@@ -37,7 +37,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  */
 @CompileStatic
 @GrailsPluginDescriptor(
-        loadAfter = ['groovyPages'])
+        after = ['groovyPages'])
 class ScaffoldingGrailsPlugin extends Plugin {
 
     // Extra (optional) plugin metadata

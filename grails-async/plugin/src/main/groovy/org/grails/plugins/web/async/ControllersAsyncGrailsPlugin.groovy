@@ -58,7 +58,7 @@ import org.grails.plugins.web.async.mvc.PublisherActionResultTransformer
  */
 @CompileStatic
 @Slf4j
-@GrailsPluginDescriptor(loadAfter = ['controllers'])
+@GrailsPluginDescriptor(after = ['controllers'])
 class ControllersAsyncGrailsPlugin extends Plugin {
 
     public static final String STREAMING_ENABLED = 'grails.async.streaming.enabled'

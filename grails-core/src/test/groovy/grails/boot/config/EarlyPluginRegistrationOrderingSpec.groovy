@@ -257,6 +257,28 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             Environment.setInitializing(false)
     }
 
+    void 'a plugin beanRegistrar bean replaces a bean of the same name another plugin\'s generated auto-configuration declares unconditionally'() {
+        given: 'a configuration standing in for the auto-configuration a beans block compiles to, its myResolver unconditional'
+            def ctx = new AnnotationConfigApplicationContext()
+            ctx.register(EarlyOrderingSiblingLikeConfig)
+
+        and: 'a plugin whose registrar registers myResolver'
+            registerDiscovery(ctx, registrarPluginClass)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'the registrar bean was there first, so the auto-configuration bean method is skipped'
+            ctx.getBean('myResolver') instanceof EarlyOrderingPluginResolver
+            ctx.getBeansOfType(EarlyOrderingBootDefaultResolver).isEmpty()
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
     void 'a registrar registers beans directly and through a post-processor at once'() {
         given:
             def ctx = new AnnotationConfigApplicationContext()
@@ -567,7 +589,7 @@ class EarlyOrderingOverrideGrailsPlugin extends grails.plugins.Plugin {
     private static Map<String, Class<?>> sharedProbePluginClasses(boolean secondLoadsAfterFirst) {
         def loader = new GroovyClassLoader(EarlyPluginRegistrationOrderingSpec.classLoader)
         String template = '''
-@grails.plugins.metadata.GrailsPluginDescriptor(loadAfter = LOAD_AFTER)
+@grails.plugins.metadata.GrailsPluginDescriptor(after = LOAD_AFTER)
 class EarlyOrderingSharedNAMEGrailsPlugin extends grails.plugins.Plugin {
     org.springframework.beans.factory.BeanRegistrar beanRegistrar() {
         new grails.boot.config.EarlyOrderingPostProcessorRegistrar('earlyOrderingSharedNAMEPostProcessor', 'sharedProbe',
@@ -592,6 +614,16 @@ class EarlyOrderingSharedNAMEGrailsPlugin extends grails.plugins.Plugin {
         EarlyOrderingBootDefaultResolver myResolver() {
             new EarlyOrderingBootDefaultResolver()
         }
+    }
+}
+
+/** Stands in for the auto-configuration a plugin's beans block compiles to: a bean without a condition. */
+@Configuration
+class EarlyOrderingSiblingLikeConfig {
+
+    @Bean
+    EarlyOrderingBootDefaultResolver myResolver() {
+        new EarlyOrderingBootDefaultResolver()
     }
 }
 

@@ -42,7 +42,7 @@ import org.grails.core.exceptions.GrailsConfigurationException
  */
 @CompileStatic
 @GrailsPluginDescriptor(
-        loadAfter = ['hibernate'],
+        after = ['hibernate'],
         watchedResources = ['file:./grails-app/services/**/*Service.groovy',
                                 'file:./plugins/*/grails-app/services/**/*Service.groovy'])
 class ServicesGrailsPlugin extends Plugin  {

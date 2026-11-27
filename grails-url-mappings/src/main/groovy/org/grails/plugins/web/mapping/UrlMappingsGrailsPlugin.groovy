@@ -66,8 +66,7 @@ import org.grails.web.util.HiddenHttpMethod
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableConfigurationProperties([GrailsCorsConfiguration])
 @GrailsPluginDescriptor(
-        loadAfter = ['controllers'],
-        dependsOn = ['core:${plugin.version}'],
+        dependsOn = ['core:${plugin.version}', 'controllers:${plugin.version}'],
         watchedResources = ['file:./grails-app/controllers/*UrlMappings.groovy'])
 class UrlMappingsGrailsPlugin extends Plugin {
 

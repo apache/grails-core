@@ -32,6 +32,7 @@ import org.springframework.context.ApplicationContext;
 
 import grails.core.GrailsApplication;
 import grails.plugins.exceptions.PluginException;
+import org.apache.grails.core.aot.PluginOrderBeanFactoryInitializationAotProcessor;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.grails.plugins.AbstractGrailsPluginManager;
@@ -82,8 +83,9 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         }
 
         List<String> loadedPlugins = new ArrayList<>();
+        List<String> pluginNames = new ArrayList<>();
         // Note: the environment is null here since the plugins should have always been populated in the bootstrap phase
-        pluginDiscovery.getPluginsInLoadOrder().forEach(pluginInfo -> {
+        pluginDiscovery.getPluginsInTopologicalOrder().forEach(pluginInfo -> {
             GrailsPlugin plugin = createGrailsPlugin(pluginInfo);
 
             if (LOG.isDebugEnabled()) {
@@ -95,10 +97,13 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
             plugin.setManager(this);
             plugins.put(plugin.getName(), plugin);
             loadedPlugins.add(plugin.getName() + " (" + plugin.getVersion() + ")");
+            pluginNames.add(plugin.getName());
         });
+        PluginOrderBeanFactoryInitializationAotProcessor.verifyOrder(pluginNames,
+                application != null ? application.getClassLoader() : null);
 
         if (LOG.isInfoEnabled()) {
-            LOG.info("Loaded " + loadedPlugins.size() + " Grails plugins in load order: [" +
+            LOG.info("Loaded " + loadedPlugins.size() + " Grails plugins in order: [" +
                     String.join(", ", loadedPlugins) + "]");
         }
 

@@ -398,13 +398,13 @@ public class DefaultGrailsPlugin implements GrailsPlugin {
     }
 
     @Override
-    public String[] getLoadAfterNames() {
-        return pluginInfo.getLoadAfterNames();
+    public String[] getAfterNames() {
+        return pluginInfo.getAfterNames();
     }
 
     @Override
-    public String[] getLoadBeforeNames() {
-        return pluginInfo.getLoadBeforeNames();
+    public String[] getBeforeNames() {
+        return pluginInfo.getBeforeNames();
     }
 
     @Override

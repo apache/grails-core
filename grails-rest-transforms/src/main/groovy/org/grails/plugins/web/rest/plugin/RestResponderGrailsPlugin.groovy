@@ -46,7 +46,7 @@ import org.grails.plugins.web.rest.render.SpringMessageConverters
  */
 @CompileStatic
 @GrailsPluginDescriptor(
-        loadBefore = ['controllers'],
+        before = ['controllers'],
         observe = ['domainClass'])
 class RestResponderGrailsPlugin extends Plugin {
 

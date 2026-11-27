@@ -37,8 +37,8 @@ import org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib
  */
 @CompileStatic
 @GrailsPluginDescriptor(
-        loadAfter = ['groovyPages'],
-        dependsOn = ['core:${plugin.version}', 'i18n:${plugin.version}'],
+        after = ['groovyPages', 'i18n'],
+        dependsOn = ['core:${plugin.version}'],
         observe = ['controllers'],
         providedArtefacts = [
                 RenderGrailsLayoutTagLib,

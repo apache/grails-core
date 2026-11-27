@@ -82,7 +82,7 @@ import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
 @GrailsPluginDescriptor(
-        loadAfter = ['controllers', 'services'],
+        after = ['controllers', 'services'],
         dependsOn = ['core'],
         observe = ['controllers'],
         watchedResources = ['file:./grails-app/jobs/**/*Job.groovy'],
@@ -114,10 +114,14 @@ plugin is compiled against and any later version.
 |`dependsOn`
 |Plugins that must be present, as `'name'` or `'name:range'`. `${plugin.version}` stands for the plugin's own version,
 so `'core:${plugin.version}'` requires the version of `core` the plugin is released with. A dependency that is not met
-stops the application from starting: see <<unmetPluginDependencies,Unmet Dependencies>>.
+stops the application from starting: see <<unmetPluginDependencies,Unmet Dependencies>>. The plugin also comes after the
+plugins it depends on, and a dependency of its project must provide each of them, which the Grails Gradle plugin checks
+when the plugin is built.
 
-|`loadAfter`, `loadBefore`
-|Plugins this one is loaded after or before, when they are present.
+|`after`, `before`
+|Plugins this one comes after or before, when they are present. Grails puts all the plugins in one order, and where two
+plugins provide the same thing, the later one wins: see <<understandingPluginLoadOrder,Understanding Plugin Load
+Order>>.
 
 |`observe`
 |Plugins whose change events this plugin receives in its `onChange` method, or `'*'` for all plugins.

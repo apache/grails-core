@@ -48,7 +48,7 @@ import org.grails.spring.BeanBuilderRegistryPostProcessor
  */
 @CompileStatic
 @GrailsPluginDescriptor(
-        loadAfter = ['controllers', 'domainClass'],
+        after = ['controllers', 'domainClass'],
         observe = ['domainClass'],
         watchedResources = ['file:./grails-app/conf/hibernate/**.xml'])
 class HibernateGrailsPlugin extends Plugin {

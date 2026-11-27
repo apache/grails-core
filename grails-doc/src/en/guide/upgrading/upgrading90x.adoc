@@ -1661,9 +1661,10 @@ and nothing else is:
   (`def onChange = { event -> ... }`) override the `Plugin` methods instead; beans move to `beanRegistrar()` (see
   <<pluginBeanRegistrar,below>>).
 * Every piece of metadata Grails needs before it creates the plugin is an attribute of the annotation, as a constant:
-  `name`, `grailsVersion`, `dependsOn`, `loadAfter`, `loadBefore`, `observe`, `evict`, `environmentsIncludes`,
+  `name`, `grailsVersion`, `dependsOn`, `after`, `before`, `observe`, `evict`, `environmentsIncludes`,
   `environmentsExcludes`, `watchedResources`, `providedArtefacts` and `pluginExcludes`. The plugin class's
-  properties of those names are no longer read.
+  properties of those names are no longer read. `loadAfter` and `loadBefore` are now `after` and `before` (see
+  <<pluginOrder,below>>).
 * A plugin can no longer be declared disabled. The `enabled` property is not read and the annotation has no `enabled`
   attribute: an application leaves a plugin out by not depending on it or with `grails.plugin.excludes`.
 * The version is the project version. A plugin no longer declares one, and a dependency range may name it as
@@ -1700,7 +1701,7 @@ class AuditGrailsPlugin extends Plugin {
 .Grails 9
 ----
 @GrailsPluginDescriptor(
-        loadAfter = ['controllers', 'services'],
+        after = ['controllers', 'services'],
         dependsOn = ['core:9.0.0 > *'],
         watchedResources = ['file:./grails-app/audits/**/*Audit.groovy'])
 class AuditGrailsPlugin extends Plugin {
@@ -1739,6 +1740,44 @@ out by `grails.plugin.excludes` or `grails.plugin.includes`, or does not support
 * `PluginDiscovery.hasFailedPlugin`, `getFailedPlugin` and `getFailedPlugins`, and `GrailsPluginManager.getFailedPlugin`
   and `getFailedLoadPlugins`, are removed: discovery never finishes with a plugin that failed to load.
 
+[[pluginOrder]]
+===== One Plugin Order: `after`, `before` and `dependsOn`
+
+`loadAfter` and `loadBefore` are renamed `after` and `before`, on `@GrailsPluginDescriptor` and in the published
+descriptor, with no alias: a descriptor of an earlier build that still has `loadAfter` or `loadBefore` stops the
+application with a message asking to rebuild the plugin. `GrailsPlugin.getLoadAfterNames()` and
+`getLoadBeforeNames()` are now `getAfterNames()` and `getBeforeNames()`.
+
+Grails 8 kept two orders, one to load the plugins in and one sorted from `loadAfter` and `loadBefore`, and used each
+for different things. Grails 9 has one, which configuration, bean registrars, hooks, artefacts, views, static resources
+and messages all follow. `PluginDiscovery.getPluginsInLoadOrder()` is removed; `getPluginsInTopologicalOrder()` returns
+the one order. In it:
+
+* A plugin comes after the plugins it depends on. `dependsOn` used to check only that the other plugin was there; it
+  now orders as `after` does.
+* Plugins the declarations leave unordered relative to each other come in the order of their names, not in the order
+  the class path happens to list them in, so two machines put them in the same order.
+* A circular order, such as two plugins that each come after the other, stops the application with a
+  `PluginException` naming the plugins of the circle. Grails 8 broke the circle silently, somewhere.
+* Where two plugins provide the same thing, the later one wins: configuration, beans, messages, views, static
+  resources and URL mappings. Grails 8 let the earlier plugin win for a view that is not precompiled, for a static
+  resource and for a view the `GroovyPagesServlet` serves, and the later plugin for the others; these now follow the
+  rule too. The application still wins over every plugin.
+* The auto-configuration a plugin's `beans` block compiles to is ordered by the compiler, after those of the plugins the
+  plugin depends on or names in `after` and before those it names in `before`. Ordering it against another Grails
+  plugin's with `@AutoConfigureAfter`, `@AutoConfigureBefore` or the ordering attributes of `@AutoConfiguration` is a
+  compilation error; ordering against a Spring Boot auto-configuration that is not a Grails plugin's stays allowed.
+
+`dependsOn` means the plugin cannot work without the other one, so a dependency of the plugin's project must provide
+it. The Grails Gradle plugin adds `verifyPluginDependencies` to `check`, which fails the build of a plugin that depends
+on a plugin none of its project's dependencies provides. A plugin that depends on another only to come after it, when it
+is there, names it in `after` instead.
+
+Some framework plugins changed their declarations accordingly: `mimeTypes` and `converters` no longer depend on
+`controllers` (and `converters` not on `domainClass`; it comes after both), `groovyPages` and `layout` no longer depend
+on `i18n` (they come after it), `controllers` no longer depends on `urlMappings`, and `urlMappings` depends on
+`controllers`.
+
 [[pluginBeanRegistrar]]
 ===== Plugins Register Beans with `beanRegistrar()`
 
@@ -1754,14 +1793,17 @@ implement; `grails-app/conf/spring/resources.groovy` works as before. A class th
 `GrailsApplicationLifeCycle` directly, without being the application class, no longer declares `doWithSpring`, and
 `GrailsApplicationLifeCycleAdapter` no longer implements it.
 
-The beans are registered at the same point as before: the registrars, in plugin load order, before Spring Boot reads
+The beans are registered at the same point as before: the registrars, in plugin order, before Spring Boot reads
 the configuration classes, so an auto-configuration's `@ConditionalOnMissingBean` still backs off from a plugin's
 bean. Two rules change with it:
 
-* A plugin that loads later replaces a bean of the same name an earlier plugin registered, whichever way either of
+* A plugin that comes later replaces a bean of the same name an earlier plugin registered, whichever way either of
   them registers it. Grails 8 registered every plugin's `doWithSpring` beans before any plugin's registrar beans, so a
   registrar bean of an earlier plugin won over a `doWithSpring` bean of a later one. A plugin that replaces another
-  plugin's bean declares `loadAfter` or `dependsOn` on it.
+  plugin's bean declares `after` or `dependsOn` on it.
+* A plugin registrar bean also replaces a bean of the same name that another plugin's `beans` block declares, since
+  the registrars run before Spring reads the auto-configurations a `beans` block compiles to. To replace such a bean,
+  register it from `beanRegistrar()`.
 * The beans of the application's `resources.groovy` and `doWithSpring` still replace a plugin bean of the same name.
 
 Move a plugin's beans as follows:
@@ -1893,8 +1935,8 @@ loaded from. The public APIs that described the old model are removed:
   `GrailsAutoConfiguration` and `GrailsApplicationLifeCycleAdapter`), `GrailsPlugin`, and the plugin manager
   (`doDynamicMethods`). It ran in the same phase as `doWithApplicationContext`, just before it, once the application
   context was refreshed: move its code into `doWithApplicationContext`. That hook runs for one plugin after another in
-  load order, so a plugin whose `doWithApplicationContext` calls methods another plugin adds declares that plugin in
-  `loadAfter` or `dependsOn`. The manager no longer removes the metaclasses of `String`, `Integer` and the other common
+  plugin order, so a plugin whose `doWithApplicationContext` calls methods another plugin adds declares that plugin in
+  `after` or `dependsOn`. The manager no longer removes the metaclasses of `String`, `Integer` and the other common
   JDK types before the hook, so a metaclass change made to them while the context starts is kept.
 * The `artefacts` list of `Plugin`, `GrailsPlugin.doArtefactConfiguration()` and
   `GrailsPluginManager.doArtefactConfiguration()` are removed. Artefact handlers are registered in
@@ -1925,6 +1967,11 @@ loaded from. The public APIs that described the old model are removed:
 * Replace closure-valued hooks with the `Plugin` methods they stand for.
 * Move the beans of `doWithSpring` to `beanRegistrar()`, to a post-processor it registers, or to a `beans` block.
 * Write `dependsOn` as a list of `'name'` or `'name:range'` strings rather than a map.
+* Rename `loadAfter` and `loadBefore` to `after` and `before`. Move a `dependsOn` entry that no dependency of the
+  plugin's project provides to `after`, and remove a circle from the plugins' order.
+* Replace `@AutoConfigureAfter`, `@AutoConfigureBefore` and the ordering attributes of `@AutoConfiguration` that name
+  another Grails plugin's auto-configuration with `after` or `before` on `@GrailsPluginDescriptor`.
+* Check views, static resources and configuration two plugins both provide: the later plugin's now wins.
 * Move the code of `doWithDynamicMethods` into `doWithApplicationContext`, delete a `def artefacts = [...]` list (the
   compiler registers the plugin's artefact handlers) and an `enabled` property.
 * Where `grails.plugin.excludes` names a plugin others depend on, name its dependents too.

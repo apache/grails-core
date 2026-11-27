@@ -30,7 +30,7 @@ import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
 @Slf4j
-@GrailsPluginDescriptor(loadAfter = ['spring-security-core'])
+@GrailsPluginDescriptor(after = ['spring-security-core'])
 class SpringSecurityOauth2GrailsPlugin extends Plugin {
 
     /**

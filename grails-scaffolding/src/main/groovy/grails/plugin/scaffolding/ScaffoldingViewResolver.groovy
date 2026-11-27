@@ -69,7 +69,7 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
      *
      * <pre>
      * {@code
-     * @GrailsPluginDescriptor(loadAfter = ['scaffolding'])
+     * @GrailsPluginDescriptor(after = ['scaffolding'])
      * class MyTemplatesGrailsPlugin extends Plugin {
      *     BeanRegistrar beanRegistrar() {
      *         { BeanRegistry registry, Environment environment ->

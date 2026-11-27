@@ -46,7 +46,7 @@ import org.grails.web.servlet.view.CompositeViewResolver
 @Slf4j
 @CompileStatic
 @GrailsPluginDescriptor(
-        dependsOn = ['core:${plugin.version}', 'i18n:${plugin.version}', 'urlMappings:${plugin.version}'],
+        dependsOn = ['core:${plugin.version}', 'i18n:${plugin.version}'],
         observe = ['domainClass'],
         watchedResources = [
                 'file:./grails-app/controllers/**/*Controller.groovy',

@@ -44,7 +44,7 @@ class GrailsPluginConfigurationClass extends GrailsAutoConfiguration {
         def gcl = new GroovyClassLoader()
 
         def plugin = new DefaultGrailsPlugin(gcl.parseClass("""
-@grails.plugins.metadata.GrailsPluginDescriptor(grailsVersion = '$grailsVersion', loadAfter = ['testTwo'])
+@grails.plugins.metadata.GrailsPluginDescriptor(grailsVersion = '$grailsVersion', after = ['testTwo'])
 class TestGrailsPlugin extends grails.plugins.Plugin {
 }"""), grailsApplication)
 

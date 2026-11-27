@@ -19,197 +19,154 @@
 package grails.plugins;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Function;
 
+import grails.plugins.exceptions.PluginException;
+
 /**
- * Canonical topological sort for Grails plugins based on {@code loadAfter}
- * and {@code loadBefore} declarations.
+ * Puts Grails plugins in their one order.
  *
- * <p>This class provides the single shared implementation of plugin ordering that
- * is used by both {@link grails.plugins.DefaultGrailsPluginManager} (at runtime, operating on
- * {@link grails.plugins.GrailsPlugin} instances) and
- * {@link grails.boot.config.GrailsEnvironmentPostProcessor} (early in the
- * lifecycle, operating on lightweight {@code PluginInfo} records before the
- * ApplicationContext is available).</p>
+ * <p>A plugin comes after every plugin it depends on and every plugin its {@code after} names, and before
+ * every plugin its {@code before} names. A named plugin that is absent is ignored. Plugins the declarations
+ * leave unordered relative to each other come in the order of their names, so the order never depends on
+ * the order of the class path. A circular order cannot be met, and fails with a {@link PluginException}
+ * that names the plugins of the circle.</p>
  *
- * <p>The algorithm is a DFS-based topological sort:</p>
- * <ol>
- *   <li>{@code loadAfter} creates edges from a plugin to its
- *       dependencies (the plugin must load <em>after</em> the named plugins).</li>
- *   <li>{@code loadBefore} creates reverse edges (the <em>named</em> plugin must
- *       load after <em>this</em> plugin).</li>
- *   <li>A recursive DFS visits dependencies first, then adds the current node,
- *       producing a valid topological order.</li>
- * </ol>
- *
- * <p><strong>Note:</strong> {@code dependsOn} is intentionally <em>not</em> used
- * for ordering. In the original {@link grails.plugins.DefaultGrailsPluginManager}, {@code dependsOn}
- * is only used for dependency <em>resolution</em> (checking that required plugins
- * are present), not for determining load order. Load order is controlled exclusively
- * by {@code loadAfter} and {@code loadBefore}.</p>
- *
- * <p>The sort is generic: callers provide accessor functions so the same algorithm
- * works with any plugin representation (full {@link grails.plugins.GrailsPlugin} objects, lightweight
- * metadata records, etc.).</p>
+ * <p>Every part of Grails follows this order: the plugins' configuration, bean registrars and hooks, their
+ * artefacts, views, static resources and messages. Where two plugins provide the same thing, the later one
+ * wins.</p>
  *
  * @since 7.1
  */
 public final class GrailsPluginSorter {
 
     private GrailsPluginSorter() {
-        // utility class
     }
 
     /**
-     * Performs a topological sort of the given plugins.
+     * Sorts plugins topologically (Kahn's algorithm), taking the plugin with the lowest name whenever more
+     * than one may come next.
      *
-     * <p>This is the single canonical sort algorithm used across the framework to
-     * ensure that plugin load order is identical whether plugins are loaded early
-     * (by the {@code grails.boot.config.GrailsEnvironmentPostProcessor} for configuration)
-     * or later (by the {@code grails.plugins.DefaultGrailsPluginManager} for full lifecycle).</p>
-     *
-     * @param <T>               the plugin type
-     * @param plugins           the plugins to sort
-     * @param loadAfterExtractor extracts the {@code loadAfter} names from a plugin
-     * @param loadBeforeExtractor extracts the {@code loadBefore} names from a plugin
-     * @param pluginLookup      resolves a plugin by its logical name (returns {@code null}
-     *                          if the named plugin is not present)
-     * @return a new list with the plugins in topological order
+     * @param <T> the plugin type
+     * @param plugins the plugins to sort, each with a distinct name
+     * @param name the logical name of a plugin
+     * @param after the names of the plugins a plugin comes after: those it depends on and those its
+     *        {@code after} names
+     * @param before the names of the plugins a plugin comes before
+     * @return a new list with the plugins in their order
+     * @throws PluginException if the declarations are circular, or two plugins share a name
      */
-    static <T> List<T> sortPlugins(
-            List<T> plugins,
-            Function<T, String[]> loadAfterExtractor,
-            Function<T, String[]> loadBeforeExtractor,
-            Function<String, T> pluginLookup) {
-
-        Map<T, List<T>> loadOrderDependencies = resolveLoadDependencies(
-                plugins, loadAfterExtractor, loadBeforeExtractor, pluginLookup);
-
-        List<T> sorted = new ArrayList<>(plugins.size());
-        Set<T> visited = new HashSet<>();
-
+    public static <T> List<T> sort(Collection<T> plugins, Function<T, String> name,
+            Function<T, ? extends Collection<String>> after, Function<T, ? extends Collection<String>> before) {
+        Map<String, T> byName = new TreeMap<>();
         for (T plugin : plugins) {
-            visitTopologicalSort(plugin, sorted, visited, loadOrderDependencies);
+            T previous = byName.put(name.apply(plugin), plugin);
+            if (previous != null) {
+                throw new PluginException("Two Grails plugins are named [" + name.apply(plugin) + "]: " + previous +
+                        " and " + plugin);
+            }
         }
 
+        // successors.get(a) holds the plugins that come after a, and why
+        Map<String, Map<String, String>> successors = new HashMap<>();
+        Map<String, Integer> predecessorCounts = new HashMap<>();
+        byName.keySet().forEach(pluginName -> {
+            successors.put(pluginName, new TreeMap<>());
+            predecessorCounts.put(pluginName, 0);
+        });
+        byName.forEach((pluginName, plugin) -> {
+            for (String other : after.apply(plugin)) {
+                addEdge(successors, predecessorCounts, other, pluginName, pluginName + " comes after " + other);
+            }
+            for (String other : before.apply(plugin)) {
+                addEdge(successors, predecessorCounts, pluginName, other, pluginName + " comes before " + other);
+            }
+        });
+
+        PriorityQueue<String> ready = new PriorityQueue<>(Comparator.naturalOrder());
+        predecessorCounts.forEach((pluginName, count) -> {
+            if (count == 0) {
+                ready.add(pluginName);
+            }
+        });
+        List<T> sorted = new ArrayList<>(byName.size());
+        while (!ready.isEmpty()) {
+            String next = ready.poll();
+            sorted.add(byName.get(next));
+            for (String successor : successors.get(next).keySet()) {
+                if (predecessorCounts.merge(successor, -1, Integer::sum) == 0) {
+                    ready.add(successor);
+                }
+            }
+        }
+        if (sorted.size() < byName.size()) {
+            throw new PluginException(circleMessage(successors, predecessorCounts));
+        }
         return sorted;
     }
 
-    /**
-     * Overload that builds the lookup function from the plugin list itself.
-     *
-     * <p>This is convenient when there is no external registry (e.g., in the
-     * {@code EnvironmentPostProcessor} where plugins are represented as lightweight
-     * records rather than managed by a plugin manager).</p>
-     *
-     * @param <T>               the plugin type
-     * @param plugins           the plugins to sort
-     * @param nameExtractor     extracts the logical plugin name from a plugin
-     * @param loadAfterExtractor extracts the {@code loadAfter} names
-     * @param loadBeforeExtractor extracts the {@code loadBefore} names
-     * @return a new list with the plugins in topological order
-     */
-    public static <T> List<T> sort(
-            List<T> plugins,
-            Function<T, String> nameExtractor,
-            Function<T, String[]> loadAfterExtractor,
-            Function<T, String[]> loadBeforeExtractor) {
-
-        Map<String, T> pluginsByName = new HashMap<>();
-        for (T plugin : plugins) {
-            pluginsByName.putIfAbsent(nameExtractor.apply(plugin), plugin);
+    private static void addEdge(Map<String, Map<String, String>> successors, Map<String, Integer> predecessorCounts,
+            String from, String to, String reason) {
+        if (from.equals(to)) {
+            throw new PluginException("Grails plugin [" + from + "] cannot be ordered: " + reason);
         }
-
-        return sortPlugins(plugins, loadAfterExtractor, loadBeforeExtractor, pluginsByName::get);
+        Map<String, String> edges = successors.get(from);
+        // a plugin that is absent is ignored, and a second declaration of an edge adds nothing
+        if (edges != null && successors.containsKey(to) && edges.putIfAbsent(to, reason) == null) {
+            predecessorCounts.merge(to, 1, Integer::sum);
+        }
     }
 
     /**
-     * Resolves load-order dependencies for all plugins, building an adjacency map
-     * for the topological sort.
-     *
-     * <p>Two types of ordering declarations are handled:</p>
-     * <ul>
-     *   <li>{@code loadAfter}: this plugin should load after the named plugins</li>
-     *   <li>{@code loadBefore}: the named plugins should load after this plugin
-     *       (creates reverse edges)</li>
-     * </ul>
-     *
-     * <p>{@code dependsOn} is intentionally not included here. It is used for
-     * dependency resolution (ensuring required plugins are present) but does not
-     * affect load ordering. This matches the original behavior in
-     * {@link grails.plugins.DefaultGrailsPluginManager}.</p>
+     * Describes one circle among the plugins Kahn's algorithm could not place: each of them still has a
+     * predecessor among them, so walking back from any one of them returns to a plugin already seen.
      */
-    private static <T> Map<T, List<T>> resolveLoadDependencies(
-            List<T> plugins,
-            Function<T, String[]> loadAfterExtractor,
-            Function<T, String[]> loadBeforeExtractor,
-            Function<String, T> pluginLookup) {
-
-        Map<T, List<T>> loadOrderDependencies = new HashMap<>();
-
-        for (T plugin : plugins) {
-            // loadAfter: this plugin should load after the named plugins
-            addEdges(loadOrderDependencies, loadAfterExtractor, plugin, pluginLookup, true);
-            // loadBefore: the named plugins should load after this plugin
-            addEdges(loadOrderDependencies, loadBeforeExtractor, plugin, pluginLookup, false);
+    private static String circleMessage(Map<String, Map<String, String>> successors, Map<String, Integer> predecessorCounts) {
+        Map<String, String> predecessorOf = new TreeMap<>();
+        successors.forEach((from, edges) -> {
+            if (predecessorCounts.get(from) > 0) {
+                edges.keySet().forEach(to -> {
+                    if (predecessorCounts.get(to) > 0) {
+                        predecessorOf.putIfAbsent(to, from);
+                    }
+                });
+            }
+        });
+        Set<String> walked = new LinkedHashSet<>();
+        String current = predecessorOf.keySet().iterator().next();
+        while (walked.add(current)) {
+            current = predecessorOf.get(current);
         }
-
-        return loadOrderDependencies;
-    }
-
-    /**
-     * Adds dependency edges for a single plugin based on an extractor function.
-     *
-     * <p>When {@code forwardEdge} is {@code true} (loadAfter), the edge points from
-     * {@code plugin} to the looked-up plugin (this plugin depends on the named one).
-     * When {@code false} (loadBefore), the edge points from the looked-up plugin to
-     * {@code plugin} (the named plugin depends on this one).</p>
-     */
-    private static <T> void addEdges(
-            Map<T, List<T>> loadOrderDependencies,
-            Function<T, String[]> extractor,
-            T plugin,
-            Function<String, T> pluginLookup,
-            boolean forwardEdge) {
-
-        String[] names = extractor.apply(plugin);
-        if (names != null) {
-            for (String name : names) {
-                T other = pluginLookup.apply(name);
-                if (other != null) {
-                    T dependent = forwardEdge ? plugin : other;
-                    T dependency = forwardEdge ? other : plugin;
-                    loadOrderDependencies.computeIfAbsent(dependent, k -> new ArrayList<>()).add(dependency);
-                }
+        List<String> circle = new ArrayList<>();
+        boolean inCircle = false;
+        for (String pluginName : walked) {
+            inCircle = inCircle || pluginName.equals(current);
+            if (inCircle) {
+                circle.add(pluginName);
             }
         }
-    }
-
-    /**
-     * Recursive DFS visit for topological sort.
-     *
-     * <p>Visits all dependencies of the given plugin first, then adds the plugin
-     * itself to the sorted list. This produces a valid topological ordering where
-     * dependencies appear before the plugins that depend on them.</p>
-     */
-    private static <T> void visitTopologicalSort(
-            T plugin, List<T> sorted, Set<T> visited,
-            Map<T, List<T>> loadOrderDependencies) {
-
-        if (plugin != null && !visited.contains(plugin)) {
-            visited.add(plugin);
-            List<T> deps = loadOrderDependencies.get(plugin);
-            if (deps != null) {
-                for (T dep : deps) {
-                    visitTopologicalSort(dep, sorted, visited, loadOrderDependencies);
-                }
-            }
-            sorted.add(plugin);
+        // walked follows predecessors; the circle reads in plugin order the other way round
+        Collections.reverse(circle);
+        Map<String, String> reasons = new LinkedHashMap<>();
+        for (int i = 0; i < circle.size(); i++) {
+            String from = circle.get(i);
+            String to = circle.get((i + 1) % circle.size());
+            reasons.put(from + " -> " + to, successors.get(from).get(to));
         }
+        StringBuilder message = new StringBuilder("Grails plugins cannot be ordered, because their order is circular: ")
+                .append(String.join(" -> ", circle)).append(" -> ").append(circle.get(0)).append(" (")
+                .append(String.join("; ", reasons.values())).append(')');
+        return message.toString();
     }
 }

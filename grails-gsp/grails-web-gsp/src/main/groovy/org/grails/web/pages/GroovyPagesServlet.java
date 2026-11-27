@@ -186,8 +186,10 @@ public class GroovyPagesServlet extends FrameworkServlet implements PluginManage
         if (pageName != null) {
             Class<?> pageClass = binaryPluginViewsMap.get(pageName);
             if (pageClass == null && pluginManager != null) {
+                // the later plugin's view wins, as it does for everything else a plugin provides
                 final GrailsPlugin[] allPlugins = pluginManager.getAllPlugins();
-                for (GrailsPlugin plugin : allPlugins) {
+                for (int i = allPlugins.length - 1; i >= 0; i--) {
+                    GrailsPlugin plugin = allPlugins[i];
                     if (plugin instanceof DefaultGrailsPlugin) {
                         DefaultGrailsPlugin binaryPlugin = (DefaultGrailsPlugin) plugin;
 

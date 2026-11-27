@@ -312,7 +312,7 @@ class PluginDiscoverySpec extends Specification {
         given: 'a plugin class whose annotation and descriptor disagree'
         def gcl = new GroovyClassLoader()
         def pluginClass = gcl.parseClass('''
-            @grails.plugins.metadata.GrailsPluginDescriptor(loadAfter = ['fromAnnotation'])
+            @grails.plugins.metadata.GrailsPluginDescriptor(after = ['fromAnnotation'])
             class DescribedGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def props = new Properties()
@@ -322,7 +322,7 @@ class PluginDiscoverySpec extends Specification {
             version=1.0.0
             grailsVersion=9.0.0 > *
             class=DescribedGrailsPlugin
-            loadAfter=fromDescriptor
+            after=fromDescriptor
         '''.stripIndent()))
         def definition = PluginDefinition.fromProperties('described', props)
 
@@ -332,7 +332,7 @@ class PluginDiscoverySpec extends Specification {
         then: 'the compiled descriptor is the single source of the metadata'
         metadata.pluginVersion == '1.0.0'
         metadata.grailsVersionRange == '9.0.0 > *'
-        metadata.loadAfterNames as List == ['fromDescriptor']
+        metadata.afterNames as List == ['fromDescriptor']
     }
 
     def 'a plugin with a descriptor for another class is rejected'() {
@@ -474,8 +474,8 @@ class PluginDiscoverySpec extends Specification {
             @grails.plugins.metadata.GrailsPluginDescriptor(
                     name = 'annotated-plugin',
                     grailsVersion = '9.0.0 > *',
-                    loadAfter = ['core', 'spring-security-core'],
-                    loadBefore = ['controllers'],
+                    after = ['core', 'spring-security-core'],
+                    before = ['controllers'],
                     dependsOn = ['i18n:9.0.0 > *'],
                     evict = ['legacy-plugin'],
                     observe = ['services']
@@ -493,8 +493,8 @@ class PluginDiscoverySpec extends Specification {
         then: 'all metadata is extracted from the annotation without calling the constructor'
         metadata.name == 'annotatedPlugin'
         metadata.grailsVersionRange == '9.0.0 > *'
-        metadata.loadAfterNames as List == ['core', 'springSecurityCore']
-        metadata.loadBeforeNames as List == ['controllers']
+        metadata.afterNames as List == ['core', 'springSecurityCore']
+        metadata.beforeNames as List == ['controllers']
         metadata.dependsOnNames as List == ['i18n']
         metadata.getDependentVersion('i18n') == '9.0.0 > *'
         metadata.evictions as List == ['legacyPlugin']
@@ -575,7 +575,7 @@ class PluginDiscoverySpec extends Specification {
         def loader = new GroovyClassLoader()
         def first = loader.parseClass('package a; class TestGrailsPlugin extends grails.plugins.Plugin { }')
         def second = loader.parseClass('package b; class TestGrailsPlugin extends grails.plugins.Plugin { }')
-        def info1 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'a.TestGrailsPlugin', pluginVersion: '1.0', loadAfter: ['a']).build(), first, null, null)
+        def info1 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'a.TestGrailsPlugin', pluginVersion: '1.0', after: ['a']).build(), first, null, null)
         def info2 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'b.TestGrailsPlugin', pluginVersion: '2.0', dependsOn: [dep: '1.0'], observe: ['other']).build(), second, null, null)
 
         expect: 'equality is based on name only, not other attributes'
@@ -671,7 +671,7 @@ class PluginDiscoverySpec extends Specification {
         discovery.hasPlugin('duplicateDescriptorProbe')
 
         and: 'only one registration appears in the load order'
-        discovery.pluginsInLoadOrder.count { it.name == 'duplicateDescriptorProbe' } == 1
+        discovery.pluginsInTopologicalOrder.count { it.name == 'duplicateDescriptorProbe' } == 1
 
         cleanup:
         Thread.currentThread().contextClassLoader = originalContextClassLoader
@@ -698,7 +698,7 @@ class PluginDiscoverySpec extends Specification {
         then: 'only one registration appears in the load order'
         with(discovery) {
             hasPlugin('repeatedProbe')
-            pluginsInLoadOrder.count { it.name == 'repeatedProbe' } == 1
+            pluginsInTopologicalOrder.count { it.name == 'repeatedProbe' } == 1
         }
 
         and: 'the skipped duplicate is reported at WARN'
@@ -748,7 +748,7 @@ class PluginDiscoverySpec extends Specification {
         discovery.init(new StandardEnvironment())
 
         then: 'the dependency is satisfied and loaded first'
-        discovery.pluginsInLoadOrder*.name == ['unknownVersionDependency', 'needsVersionedDependency']
+        discovery.pluginsInTopologicalOrder*.name == ['unknownVersionDependency', 'needsVersionedDependency']
     }
 
     def 'stops discovery with one exception naming every missing or incompatible plugin dependency'() {
@@ -775,7 +775,7 @@ class PluginDiscoverySpec extends Specification {
         e.message.contains('dependency [availableDependency] has version [1.0.0] but requires [2.0.0]')
 
         when: 'the discovery is asked for its plugins afterwards'
-        discovery.pluginsInLoadOrder
+        discovery.pluginsInTopologicalOrder
 
         then: 'it is not left initialized with a partial plugin set'
         thrown(IllegalStateException)
@@ -816,7 +816,7 @@ class PluginDiscoverySpec extends Specification {
         !dependent.contains('is missing')
     }
 
-    def 'reports a dependency that is still pending load together with the version that was found'() {
+    def 'reports a dependency with the wrong version that cannot load itself either by the version that was found, whatever order the plugins are found in'() {
         given: 'a plugin that requires a newer version of a dependency which is itself still waiting on a missing plugin'
         def root = File.createTempDir()
         def gcl = PluginClassFixtures.versionedPluginLoader(root.toPath(), [NeedsNewerPendingGrailsPlugin: '1.0.0', PendingDependencyGrailsPlugin: '1.0.0'])
@@ -829,8 +829,8 @@ class PluginDiscoverySpec extends Specification {
             class PendingDependencyGrailsPlugin extends grails.plugins.Plugin { }
         ''')
 
-        and: 'the dependent plugin is processed before the pending dependency gives up'
-        def discovery = directDiscovery(dependentClass, pendingDependencyClass)
+        and:
+        def discovery = directDiscovery(classes(dependentClass, pendingDependencyClass) as List<Class<?>>)
 
         when:
         discovery.init(new StandardEnvironment())
@@ -840,17 +840,17 @@ class PluginDiscoverySpec extends Specification {
         e.message.contains('Grails plug-in [pendingDependency] with version [1.0.0] cannot be loaded: ' +
                 'dependency [reallyMissing] with required version [1.0.0] is missing')
 
-        and: 'the dependent plugin reports the pending dependency with the version it found'
+        and: 'the dependent plugin reports the version it found'
         def dependent = e.message.readLines().find { it.contains('[needsNewerPending]') }
-        dependent.contains(
-                'dependency [pendingDependency] with required version [2.0.0] is still pending load ' +
-                        'and only version [1.0.0] was found'
-        )
+        dependent.contains('dependency [pendingDependency] has version [1.0.0] but requires [2.0.0]')
         !dependent.contains('is missing')
 
         cleanup:
         gcl?.close()
         root.deleteDir()
+
+        where:
+        classes << [{ Class a, Class b -> [a, b] }, { Class a, Class b -> [b, a] }]
     }
 
     def 'a dependency excluded by grails.plugin.excludes stops discovery, naming the dependent to exclude too'() {
@@ -880,7 +880,7 @@ class PluginDiscoverySpec extends Specification {
         discovery.init(new StandardEnvironment())
 
         then:
-        discovery.pluginsInLoadOrder.empty
+        discovery.pluginsInTopologicalOrder.empty
     }
 
     def 'including a plugin includes its dependencies, so a test application that names a few plugins starts'() {
@@ -896,7 +896,7 @@ class PluginDiscoverySpec extends Specification {
         discovery.init(new StandardEnvironment())
 
         then: 'its dependency is included with it, and loaded first'
-        discovery.pluginsInLoadOrder*.name == ['includedDependency', 'includedDependent']
+        discovery.pluginsInTopologicalOrder*.name == ['includedDependency', 'includedDependent']
     }
 
     def 'including a plugin whose dependency is not on the class path reports the dependency as missing'() {
@@ -951,7 +951,7 @@ class PluginDiscoverySpec extends Specification {
         discovery.init(new StandardEnvironment())
 
         then:
-        discovery.pluginsInLoadOrder.empty
+        discovery.pluginsInTopologicalOrder.empty
     }
 
     def 'a plugin depending on an evicted plugin still loads, the evicting plugin standing in for it'() {
@@ -967,8 +967,73 @@ class PluginDiscoverySpec extends Specification {
         discovery.init(new StandardEnvironment())
 
         then: 'the evicted plugin is gone, and the plugin that needed it is loaded with its replacement'
-        discovery.pluginsInLoadOrder*.name as Set == ['needsReplaced', 'replacement'] as Set
+        discovery.pluginsInTopologicalOrder*.name as Set == ['needsReplaced', 'replacement'] as Set
         !discovery.hasPlugin('replaced')
+    }
+
+    def 'discovery puts the plugins in one order, a plugin after the plugins it depends on and those its after names'() {
+        given: 'plugins found in an order their declarations contradict'
+        def gcl = new GroovyClassLoader()
+        def classes = [
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(after = ['orderedMiddle']) class OrderedAaaGrailsPlugin extends grails.plugins.Plugin { }"),
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['orderedFirst']) class OrderedMiddleGrailsPlugin extends grails.plugins.Plugin { }"),
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(before = ['orderedFirst']) class OrderedZzzGrailsPlugin extends grails.plugins.Plugin { }"),
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor class OrderedFirstGrailsPlugin extends grails.plugins.Plugin { }"),
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor class OrderedFreeGrailsPlugin extends grails.plugins.Plugin { }")
+        ] as List<Class<?>>
+
+        when:
+        def orders = [classes, classes.reverse()].collect { List<Class<?>> found ->
+            directDiscovery(found).tap { init(new StandardEnvironment()) }.pluginsInTopologicalOrder*.name
+        }
+
+        then: 'the order follows the declarations, and the plugin names where they leave it open'
+        orders == [['orderedFree', 'orderedZzz', 'orderedFirst', 'orderedMiddle', 'orderedAaa']] * 2
+    }
+
+    def 'a circular plugin order stops discovery with a message naming the circle'() {
+        given:
+        def gcl = new GroovyClassLoader()
+        def discovery = directDiscovery(
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['circleTwo']) class CircleOneGrailsPlugin extends grails.plugins.Plugin { }"),
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(after = ['circleOne']) class CircleTwoGrailsPlugin extends grails.plugins.Plugin { }"))
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then:
+        PluginException e = thrown()
+        e.message.contains('circular')
+        e.message.contains('circleOne comes after circleTwo')
+        e.message.contains('circleTwo comes after circleOne')
+
+        when: 'nothing is left half initialized'
+        discovery.pluginsInTopologicalOrder
+
+        then:
+        thrown(IllegalStateException)
+    }
+
+    def 'the observers of a plugin come in plugin order, and finding them changes nothing'() {
+        given:
+        def gcl = new GroovyClassLoader()
+        def discovery = directDiscovery(
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(observe = ['*']) class WatchAllGrailsPlugin extends grails.plugins.Plugin { }"),
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(observe = ['watched']) class WatchOneGrailsPlugin extends grails.plugins.Plugin { }"),
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(before = ['watchOne']) class WatchedGrailsPlugin extends grails.plugins.Plugin { }"),
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(observe = ['watched'], before = ['watchAll']) class WatchEarlyGrailsPlugin extends grails.plugins.Plugin { }"))
+        discovery.init(new StandardEnvironment())
+        def watched = discovery.findPlugin('watched')
+
+        when:
+        def first = discovery.findPluginObservers(watched)*.name
+        def second = discovery.findPluginObservers(watched)*.name
+
+        then:
+        first == ['watchEarly', 'watchAll', 'watchOne']
+        second == first
+        discovery.findPluginObservers(discovery.findPlugin('watchOne'))*.name == ['watchAll']
+        discovery.findPluginObservers(discovery.findPlugin('watchAll')).empty
     }
 
     private static DefaultPluginDiscovery directDiscovery(Class<?>... pluginClasses) {

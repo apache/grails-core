@@ -77,7 +77,7 @@ A Grails plugin now has one way to say what it is: a `Plugin` subclass annotated
 [source,groovy]
 ----
 @GrailsPluginDescriptor(
-        loadAfter = ['controllers', 'services'],
+        after = ['controllers', 'services'],
         dependsOn = ['core:${plugin.version}'],
         watchedResources = ['file:./grails-app/jobs/**/*Job.groovy'])
 class QuartzGrailsPlugin extends Plugin {
@@ -94,6 +94,12 @@ class QuartzGrailsPlugin extends Plugin {
   gets the same from the Grails annotation processor.
 * **Discovery without creating plugins.** Grails filters and orders plugins from their descriptors, without loading or
   instantiating a plugin class to find out what it is, and stops at a broken descriptor instead of skipping the plugin.
+* **One plugin order.** A plugin comes after the plugins it depends on and those its `after` names, and before those its
+  `before` names; plugins left unordered come in the order of their names, never in the order of the class path, and a
+  circular order stops the application with a message naming the circle. Configuration, bean registrars, hooks, the
+  auto-configurations of `beans` blocks, views, static resources, messages and URL mappings all follow it, and where two
+  plugins provide the same thing, the later one wins. The build checks that a dependency of a plugin's project provides
+  each plugin it depends on.
 * **Unmet dependencies stop the application.** A plugin whose `dependsOn` is not met no longer leaves the application
   running without it: startup fails with one exception that names every such plugin, every dependency it lacks and why.
 * **One way to register beans.** A plugin registers its beans with `beanRegistrar()` and with a `beans` block, and

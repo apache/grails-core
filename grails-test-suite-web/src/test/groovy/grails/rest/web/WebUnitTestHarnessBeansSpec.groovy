@@ -80,7 +80,7 @@ class WebUnitTestDefaultLocaleResolverSpec extends Specification implements Cont
 class WebUnitTestUrlMappingsPluginSpec extends Specification implements ControllerUnitTest<HarnessBeansController> {
 
     Set<String> getIncludePlugins() {
-        ['controllers'] as Set<String>
+        ['urlMappings'] as Set<String>
     }
 
     void 'absolute links start with the server URL of the web test traits where the spec includes the URL mappings plugin'() {
@@ -92,7 +92,7 @@ class WebUnitTestUrlMappingsPluginSpec extends Specification implements Controll
 class WebUnitTestDeclaredLinkGeneratorSpec extends Specification implements ControllerUnitTest<HarnessBeansController> {
 
     Set<String> getIncludePlugins() {
-        ['controllers'] as Set<String>
+        ['urlMappings'] as Set<String>
     }
 
     @Configuration
@@ -113,7 +113,7 @@ class WebUnitTestDeclaredLinkGeneratorSpec extends Specification implements Cont
 class WebUnitTestInheritedLinkGeneratorSpec extends Specification implements ControllerUnitTest<HarnessBeansController> {
 
     Set<String> getIncludePlugins() {
-        ['controllers'] as Set<String>
+        ['urlMappings'] as Set<String>
     }
 
     @Configuration
@@ -129,7 +129,7 @@ class WebUnitTestInheritedLinkGeneratorSpec extends Specification implements Con
 class WebUnitTestInheritedStaticLinkGeneratorSpec extends Specification implements ControllerUnitTest<HarnessBeansController> {
 
     Set<String> getIncludePlugins() {
-        ['controllers'] as Set<String>
+        ['urlMappings'] as Set<String>
     }
 
     @Configuration
@@ -145,7 +145,7 @@ class WebUnitTestInheritedStaticLinkGeneratorSpec extends Specification implemen
 class WebUnitTestRegisteredUrlMappingsHolderSpec extends Specification implements ControllerUnitTest<HarnessBeansController> {
 
     Set<String> getIncludePlugins() {
-        ['controllers'] as Set<String>
+        ['urlMappings'] as Set<String>
     }
 
     BeanRegistrar beanRegistrar() {
@@ -163,7 +163,7 @@ class WebUnitTestRegisteredUrlMappingsHolderSpec extends Specification implement
 class WebUnitTestDefinedUrlMappingsHolderSpec extends Specification implements ControllerUnitTest<HarnessBeansController> {
 
     Set<String> getIncludePlugins() {
-        ['controllers'] as Set<String>
+        ['urlMappings'] as Set<String>
     }
 
     Closure doWithSpring() {
@@ -181,7 +181,7 @@ class WebUnitTestDefinedUrlMappingsHolderSpec extends Specification implements C
 class WebUnitTestAliasedLinkGeneratorSpec extends Specification implements ControllerUnitTest<HarnessBeansController> {
 
     Set<String> getIncludePlugins() {
-        ['controllers'] as Set<String>
+        ['urlMappings'] as Set<String>
     }
 
     @Configuration
