@@ -44,6 +44,11 @@ import picocli.CommandLine
  * application, under {@code src/standalone/groovy}. Nothing is written to {@code grails-app/commands},
  * where tools were before and which is deprecated, and no class of a deprecated type is written.
  *
+ * <p>As the templates write it, a tool is complete as it is generated: it has a description of one line,
+ * hints that are explicit and the most cautious ones ({@code @ToolHints}), and one declared parameter, so
+ * that the compiler has nothing to warn about, the catalog lists nothing it lacks, and help, completion and
+ * agents have all they read of a tool.</p>
+ *
  * <p>The template is {@code artifacts/Tool.groovy}, or {@code artifacts/StandaloneTool.groovy} with
  * {@code --standalone}, of the project when it has one under {@code src/main/templates}. A project
  * that has {@code artifacts/Command.groovy} there, the template of {@code create-command} of earlier

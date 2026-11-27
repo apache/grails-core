@@ -86,6 +86,33 @@ class CreateToolSpec extends CommandSpec implements CommandFixture {
     }
 
     @Unroll
+    void "create-tool #options writes a tool that is complete as it is generated: a description, explicit and cautious hints, and a declared parameter"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, (['create-tool'] + options + ['data-import']) as String[])
+        String written = new File(dir, "${folder}/example/grails/DataImportTool.groovy").text
+
+        then: 'the hints are those a tool has without them, written out, so that a tool that is edited claims no less than it does'
+        exit == 0
+        written.contains('import org.apache.grails.core.cli.ToolHints\n')
+        written.contains('import org.apache.grails.core.cli.ToolParameter\n')
+        written.contains('@ToolHints(readOnlyHint = false, destructiveHint = true)')
+
+        and: 'a description that is a constant of one line, which the compiler reads without running the tool'
+        written.contains("    String description = 'DataImport'")
+
+        and: 'a parameter, which the tool reads from its field and not from its arguments'
+        written.contains("    @ToolParameter(index = 0, label = 'NAME', description = 'What the tool is run for', required = false)\n    String target\n")
+        written.contains('println "Ran ${name} for ${target ?: \'nothing\'}"')
+        !written.contains('args')
+        !written.contains('executionContext.commandLine')
+
+        where:
+        options          | folder
+        []               | 'src/cli/groovy'
+        ['--standalone'] | 'src/standalone/groovy'
+    }
+
+    @Unroll
     void "create-tool #given is the tool #name in #file"() {
         when:
         int exit = ForgeCli.execute(beanContext, 'create-tool', given)

@@ -67,7 +67,7 @@ class ProjectHealthCommandSpec extends CommandSpec {
             'grails-wrapper.version', 'grails-wrapper.outdated', 'grails-wrapper.leftover',
             'git-files.record-ignored', 'git-files.state-ignored', 'git-files.wrapper-line-endings',
             'tool-catalog.missing', 'tool-catalog.refused', 'tool-catalog.stale', 'tool-catalog.incomplete',
-            'tools.grails7-imports', 'tools.legacy-folder', 'tools.legacy-type',
+            'tools.grails7-imports', 'tools.legacy-folder', 'tools.legacy-type', 'tools.description-missing', 'tools.arguments-undeclared', 'tools.hints-missing',
             'leftover.settings-groovy', 'leftover.earlier-record', 'leftover.earlier-record-differs', 'leftover.profile-config', 'leftover.preferred-shell',
             'agent-skills.upgrade-skill', 'agent-skills.not-extracted'].asImmutable()
 
@@ -271,6 +271,9 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'tools.grails7-imports'                | 'error'   | 'a tool imports a type of the commands of Grails 7'    | { File p, File h -> source(p, 'src/cli/groovy/example/OldCommand.groovy', 'import grails.dev.commands.ApplicationCommand\nclass OldCommand { }\n') }
         'tools.legacy-folder'                  | 'advice'  | 'a tool is in the deprecated grails-app/commands'      | { File p, File h -> source(p, 'grails-app/commands/example/GreetCommand.groovy', 'class GreetCommand { }\n') }
         'tools.legacy-type'                    | 'advice'  | 'a tool of the application is of a deprecated type'    | { File p, File h -> catalog(p, true, [], [name: 'old', origin: 'application', target: 'application', registration: 'descriptor', deprecated: ['type']]) }
+        'tools.description-missing'            | 'advice'  | 'a tool of the application has no description'         | { File p, File h -> catalog(p, true, [], [name: 'bare', origin: 'application', target: 'application', registration: 'descriptor', incomplete: ['description']]) }
+        'tools.arguments-undeclared'           | 'advice'  | 'a tool of the application reads arguments undeclared' | { File p, File h -> catalog(p, true, [], [name: 'bare', origin: 'application', target: 'application', registration: 'descriptor', incomplete: ['arguments']]) }
+        'tools.hints-missing'                  | 'advice'  | 'a tool of the application declares no hints'          | { File p, File h -> catalog(p, true, [], [name: 'bare', origin: 'application', target: 'application', registration: 'descriptor', incomplete: ['hints']]) }
         'tools.ok'                             | 'ok'      | 'the tools are in src/cli and src/standalone'          | { File p, File h -> source(p, 'src/cli/groovy/example/GreetTool.groovy', 'class GreetTool { }\n'); source(p, 'src/standalone/groovy/example/RenderTool.groovy', 'class RenderTool { }\n') }
         'leftover.settings-groovy'             | 'warning' | '~/.grails/settings.groovy is there'                   | { File p, File h -> new File(h, '.grails').mkdirs(); new File(h, '.grails/settings.groovy').text = 'grails { }\n' }
         'leftover.earlier-record'              | 'advice'  | 'grails-forge-cli.yml is beside .grails'               | { File p, File h -> new File(p, 'grails-forge-cli.yml').text = 'applicationType: web\n' }

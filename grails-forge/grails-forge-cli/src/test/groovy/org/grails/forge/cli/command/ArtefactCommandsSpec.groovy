@@ -72,7 +72,8 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
             'grails.testing.mixin.integration.Integration', 'grails.testing.services.ServiceUnitTest', 'grails.testing.web.controllers.ControllerUnitTest',
             'grails.testing.web.interceptor.InterceptorUnitTest', 'grails.testing.web.taglib.TagLibUnitTest', 'groovy.transform.CompileStatic',
             'java.net.http.HttpClient', 'java.net.http.HttpRequest', 'java.net.http.HttpResponse', 'org.apache.grails.core.cli.ApplicationTool',
-            'org.apache.grails.core.cli.StandaloneTool', 'org.apache.grails.core.cli.ToolSupport',
+            'org.apache.grails.core.cli.StandaloneTool', 'org.apache.grails.core.cli.ToolHints', 'org.apache.grails.core.cli.ToolParameter',
+            'org.apache.grails.core.cli.ToolSupport',
             'org.grails.testing.GrailsUnitTest', 'spock.lang.Specification']
     static final String NO_EXPRESSION = 'between ${ and } there can only be one of the names className, fullName, propertyName, modelName, packageName, packagePath, ' +
             'simpleName, lowerCaseName; a $ that is to be written is \\$. Templates are not run'

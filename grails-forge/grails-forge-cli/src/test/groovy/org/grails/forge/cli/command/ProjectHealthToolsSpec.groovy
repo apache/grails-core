@@ -75,7 +75,8 @@ class ProjectHealthToolsSpec extends CommandSpec {
 
         then:
         exit == 0
-        findings['tools.ok'].message == 'No source imports grails.dev.commands, grails-app/commands has no source, and no tool of the application implements a deprecated type'
+        findings['tools.ok'].message == 'No source imports grails.dev.commands, grails-app/commands has no source, and no tool of the application implements a deprecated type ' +
+                'or lacks a description, the declarations of its arguments or its hints'
         findings['tool-catalog.missing'].level == 'advice'
         findings['tool-catalog.missing'].message == 'The tools of the application and its plugins are not listed: there is no .grails/cache/tool-catalog.json, ' +
                 'so the grails command does not have them by their names'
@@ -192,6 +193,53 @@ class ProjectHealthToolsSpec extends CommandSpec {
         findings['tools.legacy-type'].files == ['.grails/cache/tool-catalog.json']
         findings['tools.legacy-type'].upgradeNote == NOTES + 'upgradingToolsRenamed'
         findings['tool-catalog.ok'].message == 'The tools of the application and its plugins are listed (.grails/cache/tool-catalog.json): 5 tools'
+    }
+
+    void "tools of the application that lack a description, declarations or hints are advice that names them, and those of plugins are not"() {
+        given: 'what the compiler found of each tool, as the catalog lists it'
+        catalog([
+                [name: 'import-orders', origin: 'application', target: 'application', registration: 'descriptor', incomplete: ['description', 'arguments', 'hints']],
+                [name: 'export-orders', origin: 'application', target: 'application', registration: 'descriptor', incomplete: ['arguments']],
+                [name: 'archive', origin: 'application', target: 'standalone', registration: 'descriptor', incomplete: ['hints']],
+                [name: 'complete', origin: 'application', target: 'application', registration: 'descriptor', description: 'Is complete',
+                 hints: [readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false]],
+                [name: 'of-a-plugin', origin: 'org.example:tools-cli:1.0', target: 'application', registration: 'descriptor', incomplete: ['description', 'arguments', 'hints']]])
+
+        when:
+        int exit = run(project, 'project', 'health', '--json', '--strict')
+        Map<String, Map> findings = findings()
+
+        then: 'advice, which fails nothing, also with --strict'
+        exit == 0
+        ['tools.description-missing', 'tools.arguments-undeclared', 'tools.hints-missing'].every { findings[it].level == 'advice' }
+        !findings.containsKey('tools.ok')
+
+        and: 'each names the tools of the application that lack it, by their names, and says what to do'
+        findings['tools.description-missing'].message == 'The tool import-orders of the application has no description, so help and agents show only its name'
+        findings['tools.description-missing'].fix == "Give it a description of one line that says what the tool does: set description = '...' in its class"
+        findings['tools.arguments-undeclared'].message == 'The tools export-orders, import-orders of the application read their arguments without declaring them, ' +
+                'so the command line cannot check them, and help, completion and agents do not know them'
+        findings['tools.arguments-undeclared'].fix == 'Declare the options and parameters each reads with @ToolOption and @ToolParameter'
+        findings['tools.hints-missing'].message == 'The tools archive, import-orders of the application do not say what they do, ' +
+                'so the clients of grails mcp take them to change and destroy files, and ask before every call'
+        findings['tools.hints-missing'].fix == 'Declare @ToolHints on each: readOnlyHint = true for a tool that changes nothing, destructiveHint = false for one that only adds'
+        ['tools.description-missing', 'tools.arguments-undeclared', 'tools.hints-missing'].every {
+            findings[it].files == ['.grails/cache/tool-catalog.json'] && findings[it].upgradeNote == null && findings[it].command == null
+        }
+    }
+
+    void "a tool of the application that lacks nothing leaves the tools as they are to be"() {
+        given:
+        catalog([[name: 'complete', origin: 'application', target: 'application', registration: 'descriptor', description: 'Is complete',
+                  options: [[names: ['--force'], arity: '0', type: 'boolean']], hints: [readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true]]])
+
+        when:
+        run(project, 'project', 'health', '--json')
+        Map<String, Map> findings = findings()
+
+        then:
+        findings.containsKey('tools.ok')
+        !findings.keySet().any { String id -> id in ['tools.description-missing', 'tools.arguments-undeclared', 'tools.hints-missing'] }
     }
 
     @Unroll

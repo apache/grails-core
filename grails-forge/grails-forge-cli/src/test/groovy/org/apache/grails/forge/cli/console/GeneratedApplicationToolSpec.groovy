@@ -23,6 +23,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.ForgeContext
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
@@ -50,6 +51,28 @@ class GeneratedApplicationToolSpec extends CommandSpec implements CommandFixture
     /** What the build says, as a warning, each time it compiles grails-app/commands. */
     static final String LEGACY_FOLDER_COMPILED = 'grails-app/commands is deprecated: the classes in it are compiled and run as before, ' +
             'and are no longer packaged with the application. Move them to src/cli/groovy, as they are; a new tool is written there by: grails create-tool'
+
+    /**
+     * What has the builds of a generated application compile what they compile: a compilation that is taken from the
+     * build cache, as one of an earlier run of the specification is, says none of the warnings it said then.
+     */
+    static final String WITHOUT_BUILD_CACHE = 'org.gradle.caching=false\n'
+
+    /** A tool written by hand that lacks everything the compiler warns of: no description, and arguments it reads undeclared. */
+    static final String BARE_TOOL = '''\
+        package example.grails
+
+        import org.apache.grails.core.cli.ApplicationTool
+        import org.apache.grails.core.cli.ToolSupport
+
+        class BareTool implements ApplicationTool, ToolSupport {
+
+            boolean handle() {
+                println "Bare ${args}"
+                return true
+            }
+        }
+        '''.stripIndent()
 
     // the Gradle daemon of the builds of the application is one of this specification, which ends it
     @Shared
@@ -98,7 +121,7 @@ class GeneratedApplicationToolSpec extends CommandSpec implements CommandFixture
         exit == 0
         err.toString().readLines()[0] == '| Listing the tools of the application and its plugins, of which data-import may be one, with the Gradle task grailsToolCatalog'
         err.toString().contains('| Running the tool data-import of the application, with the Gradle task runTool')
-        out.toString().readLines().contains('Ran data-import with the arguments [orders.csv]')
+        out.toString().readLines().contains('Ran data-import for orders.csv')
         catalog().tools.find { it.name == 'data-import' }.origin == 'application'
 
         when: 'a second tool, one that runs as a process of its own, and a build that compiles the project'
@@ -129,7 +152,8 @@ class GeneratedApplicationToolSpec extends CommandSpec implements CommandFixture
         given: 'a generated application with a tool in the deprecated folder that has a name of its own, over the name the tool it extends has'
         generateProject(ApplicationType.WEB)
         new File(dir, 'settings.gradle') << '\n' + gradle.recording
-        new File(dir, 'gradle.properties') << gradle.ofAGeneratedApplication
+        // the warning is said by the compilation, which is to run and not be taken from the build cache
+        new File(dir, 'gradle.properties') << gradle.ofAGeneratedApplication + WITHOUT_BUILD_CACHE
         File commands = new File(dir, 'grails-app/commands/example/grails')
         commands.mkdirs()
         new File(commands, 'OldNameCommand.groovy').text = '''\
@@ -168,6 +192,79 @@ class GeneratedApplicationToolSpec extends CommandSpec implements CommandFixture
         'its constructor sets the name'                          | "    LegacyImportCommand() {\n        name = 'import-data'\n    }"                                                 || 'import-data'   | 'descriptor' | true
         'its constructor calls a helper that sets the name'      | "    LegacyImportCommand() {\n        rename()\n    }\n\n    private void rename() {\n        name = 'import-data'\n    }" || 'import-data' | 'descriptor' | true
         'its name is worked out, and it is listed by its class'  | "    LegacyImportCommand() {\n        name = System.getProperty('import.name', 'import-data')\n    }"             || 'legacy-import' | 'factories'  | false
+    }
+
+    void "a tool create-tool writes compiles without a warning and lacks nothing; a declared option reaches it, a mistyped one is refused before Gradle starts, and its result is read"() {
+        given: 'a generated application whose builds compile what they compile, the two tools create-tool writes, and one written by hand that lacks everything'
+        generateProject(ApplicationType.WEB)
+        new File(dir, 'settings.gradle') << '\n' + gradle.recording
+        new File(dir, 'gradle.properties') << gradle.ofAGeneratedApplication + WITHOUT_BUILD_CACHE
+        assert ForgeCli.execute(beanContext, 'create-tool', 'data-import') == 0
+        assert ForgeCli.execute(beanContext, 'create-tool', '--standalone', 'wave') == 0
+        new File(dir, 'src/cli/groovy/example/grails/BareTool.groovy').text = BARE_TOOL
+        out.reset()
+        err.reset()
+
+        when: 'the project is compiled'
+        int compiled = ForgeCli.execute(beanContext, 'compile')
+        String said = out.toString() + err.toString()
+        Map<String, Map> tools = ((List<Map>) catalog().tools).collectEntries { [(it.name): it] }
+
+        then: 'the compiler warned of the tool written by hand, and of nothing create-tool wrote'
+        compiled == 0
+        said.contains('BareTool has no description: help and agents show only its name')
+        said.contains('BareTool reads its arguments without declaring them')
+        !said.contains('DataImportTool')
+        !said.contains('WaveTool')
+
+        and: 'the tools create-tool wrote lack nothing, and declare their description, their parameter and their hints'
+        !tools['data-import'].containsKey('incomplete')
+        !tools.wave.containsKey('incomplete')
+        tools.bare.incomplete == ['description', 'arguments', 'hints']
+        [tools['data-import'], tools.wave].every { Map tool ->
+            tool.parameters == [[label: 'NAME', arity: '0..1', type: 'string', description: 'What the tool is run for']] &&
+                    tool.hints == [readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true]
+        }
+        tools['data-import'].description == 'DataImport'
+        tools.wave.target == 'standalone'
+
+        when: 'project health is asked what the tools lack'
+        out.reset()
+        ForgeCli.execute(beanContext, 'project', 'health', '--json')
+        Map<String, Map> findings = ((List<Map>) new JsonSlurper().parseText(out.toString()).findings).collectEntries { [(it.id): it] }
+
+        then: 'the tool written by hand is named, and those create-tool wrote are not'
+        ['tools.description-missing', 'tools.arguments-undeclared', 'tools.hints-missing'].every { String id -> findings[id].message.startsWith('The tool bare of the application ') }
+
+        when: 'the tool declares an option and sets a result, and is run with the option'
+        File source = new File(dir, 'src/cli/groovy/example/grails/DataImportTool.groovy')
+        source.text = source.text
+                .replace('import org.apache.grails.core.cli.ToolHints\n', 'import org.apache.grails.core.cli.ToolHints\nimport org.apache.grails.core.cli.ToolOption\n')
+                .replace('    String target\n', "    String target\n\n    @ToolOption(names = ['--times'], description = 'How often')\n    int times = 1\n")
+                .replace('        println "Ran ${name} for ${target ?: \'nothing\'}"\n',
+                        '        times.times { println "Ran ${name} for ${target ?: \'nothing\'}" }\n        executionContext.result = [target: target, times: times]\n')
+        CommandStreams streams = CommandStreams.capture()
+        int exit = ForgeCli.execute(ForgeContext.of(beanContext), streams, '--plain-output', 'data-import', '--times', '3', 'orders.csv')
+        ToolResult result = ToolResult.take(streams)
+
+        then: 'the option reached the tool, its result was read, and the file of the result is gone'
+        exit == 0
+        streams.standardOutput().readLines().count { it == 'Ran data-import for orders.csv' } == 3
+        result.value == [target: 'orders.csv', times: 3L]
+        result.json == '{"target":"orders.csv","times":3}'
+        !new File(dir, RunDirectory.LOCATION).list().any { String name -> name.startsWith('tool-result-') || name.startsWith('command-args-') }
+
+        when: 'the option is mistyped, now that the build has listed it'
+        assert ToolCatalogFile.read(dir.toPath()).state == ToolCatalogFile.State.CURRENT
+        assert ((List<Map>) catalog().tools).find { it.name == 'data-import' }.options*.names == [['--times']]
+        out.reset()
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'data-import', '--tiems', '3')
+
+        then: 'it is refused with one line, and nothing was started: Gradle wrote nothing'
+        exit == 2
+        err.toString().readLines() == ['| Error data-import: --tiems is not one of its options. grails-forge-cli help data-import shows its options']
+        out.toString().isEmpty()
     }
 
     private Map catalog() {
