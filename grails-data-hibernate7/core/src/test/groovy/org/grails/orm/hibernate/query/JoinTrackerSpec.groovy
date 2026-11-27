@@ -134,4 +134,23 @@ class JoinTrackerSpec extends Specification {
         expect:
         new JoinTracker(Mock(From)).plannedType('team') == null
     }
+
+    def 'the owner of a path is read from the plan through the prefix of a block'() {
+        given:
+        def query = new JoinTracker(Mock(From))
+        def block = JoinTracker.forBlock(query, Mock(From), 'team')
+        def plan = new JoinPlan()
+        plan.own('team.likes', 'l1')
+        query.setPlan(plan)
+
+        expect:
+        query.plannedOwner('team.likes') == 'l1'
+        block.plannedOwner('likes') == 'l1'
+        block.plannedOwner('tag') == null
+    }
+
+    def 'a tracker without a plan has no planned owner'() {
+        expect:
+        new JoinTracker(Mock(From)).plannedOwner('team') == null
+    }
 }

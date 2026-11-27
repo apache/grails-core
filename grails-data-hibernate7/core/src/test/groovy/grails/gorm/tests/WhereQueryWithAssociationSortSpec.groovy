@@ -27,6 +27,8 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 import spock.lang.Issue
 
+import jakarta.persistence.criteria.JoinType
+
 class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
@@ -39,6 +41,13 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
             final team = new Team(club: club, name: "${clubName} First Team").save()
             new Player(name: playerName, team: team, contract: new Contract(salary: 1)).save()
         }
+        manager.session.flush()
+        manager.session.clear()
+    }
+
+    private void saveTeamWithoutClub() {
+        final team = new Team(name: 'Unattached First Team').save(failOnError: true)
+        new Player(name: 'Unattached Player', team: team, contract: new Contract(salary: 1)).save(failOnError: true)
         manager.session.flush()
         manager.session.clear()
     }
@@ -168,5 +177,134 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
         then:
         results*.name == ['Bukayo', 'Cole', 'Bruno']
+    }
+
+    void 'sort by #sort keeps a team without a club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: sort)
+
+        then: 'the association is joined with a left join'
+        'Unattached First Team' in results*.name
+
+        and: 'the other teams are sorted by their club'
+        results*.name - 'Unattached First Team' == expected
+
+        where:
+        sort        || expected
+        'club.name' || ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
+        'club.id'   || ['Manchester United First Team', 'Arsenal First Team', 'Chelsea First Team']
+    }
+
+    void 'sort by an association property joins the association with the join type that fetch requests'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'club.name', fetch: [club: joinType])
+
+        then:
+        ('Unattached First Team' in results*.name) == kept
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
+
+        where:
+        joinType       || kept
+        JoinType.LEFT  || true
+        JoinType.INNER || false
+    }
+
+    void 'sort by an association property leaves out a team without a club when a criterion requires a club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            club != null
+        }.list(sort: 'club.name')
+
+        then:
+        results*.name == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
+    }
+
+    void 'a paged list sorted by an association property returns the rows that it counts'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name ==~ '%First%'
+        }.list(sort: 'club.name', max: 10)
+
+        then:
+        results.size() == 4
+        results.totalCount == 4
+    }
+
+    void 'sort by #sort #direction keeps a player whose team has no club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            name ==~ '%'
+        }.list(sort: sort, order: direction)
+
+        then:
+        'Unattached Player' in results*.name
+
+        and: 'the other players are sorted by the club of their team'
+        results*.name - 'Unattached Player' == expected
+
+        where:
+        sort             | direction || expected
+        'team.club.id'   | 'asc'     || ['Bruno', 'Bukayo', 'Cole']
+        'team.club.id'   | 'desc'    || ['Cole', 'Bukayo', 'Bruno']
+        'team.club.name' | 'asc'     || ['Bukayo', 'Cole', 'Bruno']
+        'team.club.name' | 'desc'    || ['Bruno', 'Cole', 'Bukayo']
+    }
+
+    void 'sort by a nested association property through an explicit alias keeps a player whose team has no club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            final t = team
+            t.name ==~ '%First%'
+        }.list(sort: 't.club.name')
+
+        then:
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['Bukayo', 'Cole', 'Bruno']
+    }
+
+    void 'sort by a nested association property keeps a player whose team has no club when the where query uses the first association'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            team.name ==~ '%First%'
+        }.list(sort: 'team.club.name')
+
+        then:
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['Bukayo', 'Cole', 'Bruno']
+    }
+
+    void 'sort by the id of a nested hasOne association'() {
+        when:
+        final results = Contract.where {
+            salary > 0
+        }.list(sort: 'player.contract.id', order: 'desc')
+
+        then:
+        results*.player*.name == ['Cole', 'Bukayo', 'Bruno']
     }
 }

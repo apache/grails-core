@@ -733,6 +733,37 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
         reverseOrder << [false, true]
     }
 
+    void 'an order by a path that starts with an alias named like another association sorts by that alias'() {
+        given: 'one team whose favorite sorts last and whose like sorts first, and one the other way round'
+        def zed = new CreateAliasLike(label: 'z').save(failOnError: true)
+        def aye = new CreateAliasLike(label: 'a').save(failOnError: true)
+        def bee = new CreateAliasLike(label: 'b').save(failOnError: true)
+        new CreateAliasTeam(name: 'like first', favorite: zed).addToLikes(aye).save(failOnError: true)
+        new CreateAliasTeam(name: 'favorite first', favorite: aye).addToLikes(bee).save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        expect: 'favorite names the alias of the likes, so the order is the label of the like and not of the favorite f'
+        CreateAliasTeam.withCriteria {
+            createAlias('favorite', 'f')
+            createAlias('likes', 'favorite')
+            order('favorite.label', 'asc')
+        }*.name == ['like first', 'favorite first']
+
+        and: 'f names the favorite'
+        CreateAliasTeam.withCriteria {
+            createAlias('favorite', 'f')
+            createAlias('likes', 'favorite')
+            order('f.label', 'asc')
+        }*.name == ['favorite first', 'like first']
+
+        and: 'a restriction by the same name reaches the same alias'
+        CreateAliasTeam.withCriteria {
+            createAlias('favorite', 'f')
+            createAlias('likes', 'favorite')
+            eq('favorite.label', 'a')
+        }*.name == ['like first']
+    }
+
     void 'an alias colliding with a path works with only a projection or order: #projection'() {
         given:
         def x = new CreateAliasLike(label: 'x').save(failOnError: true)

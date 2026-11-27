@@ -25,6 +25,7 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 
 import grails.gorm.DetachedCriteria;
+import grails.orm.HibernateCriteriaBuilder;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
@@ -150,7 +151,11 @@ final class QueryAliasRegistrar {
                 String associationPath = block.getAssociationPath();
                 if (block.getAlias() != null) {
                     JoinType joinType = detachedCriteria.getJoinTypes().getOrDefault(associationPath, JoinType.INNER);
-                    context.registerAlias(block.getAlias(), new HibernateAlias(associationPath, block.getAlias(), joinType));
+                    // an alias whose path starts with another alias joins from the join of that alias
+                    String fromAlias = block.getPathFromAlias();
+                    String aliasPath = fromAlias == null ? associationPath :
+                            fromAlias.replaceFirst("\\.", HibernateCriteriaBuilder.ALIAS_SEPARATOR);
+                    context.registerAlias(block.getAlias(), new HibernateAlias(aliasPath, block.getAlias(), joinType));
                 }
                 else if (!(block.getAssociation() instanceof Embedded)) {
                     // The block joins its association with an inner join, whichever part of the query

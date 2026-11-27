@@ -73,6 +73,7 @@ final class JoinPlanner {
             }
             scan(criteria.getCriteria(), "", criteria.getJoinTypes());
         }
+        pathOwners.forEach(plan::own);
         // createAlias configures the join type of its path as well, so a join type that is the type of the last
         // alias of the path is that alias again, and any other one was configured after the aliases
         plan.configuredTypes().forEach((path, joinType) -> {

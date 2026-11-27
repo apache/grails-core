@@ -45,9 +45,11 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.gorm.DetachedCriteria;
 import grails.gorm.MultiTenant;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -242,18 +244,25 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     public Criteria createAlias(
             String associationPath, String alias, int joinType) {
         var criteria = hibernateQuery.getDetachedCriteria();
+        // the block of an embedded component has the entity of the component, while its criteria have none:
+        // the class of a component is not a domain class
+        boolean embeddedBlock = criteria instanceof DetachedAssociationCriteria<?> block && block.getAssociation() instanceof Embedded;
+        var entity = criteria instanceof DetachedAssociationCriteria<?> block ?
+                block.getAssociation().getAssociatedEntity() : criteria.getPersistentEntity();
         JoinType convertedJoinType = convertFromInt(joinType);
         String path = pathFromDeclaredAlias(criteria, associationPath, alias);
         if (path.contains(ALIAS_SEPARATOR)) {
             criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
             return this;
         }
-        var prop = criteria.getPersistentEntity().getPropertyByName(path);
+        var prop = entity.getPropertyByName(path);
         criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
         if (prop instanceof Basic) {
             return this;
         }
-        criteria.createAlias(path, alias);
+        if (!embeddedBlock) {
+            criteria.createAlias(path, alias);
+        }
         criteria.join(path, convertedJoinType);
         return this;
     }
@@ -331,9 +340,39 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      *
      * @param propertyName The name of the property
      */
+    private final java.util.ArrayDeque<String> projectionPath = new java.util.ArrayDeque<>();
+    private boolean inProjections;
+
+    boolean isInProjections() {
+        return inProjections;
+    }
+
+    void setInProjections(boolean inProjections) {
+        this.inProjections = inProjections;
+    }
+
+    /**
+     * Opens an association block inside {@code projections { }}: a projection declared in the block is a projection
+     * of a property of that association, reached through the path of the blocks that enclose it.
+     */
+    void pushProjectionPath(String association) {
+        projectionPath.addLast(association);
+    }
+
+    void popProjectionPath() {
+        projectionPath.removeLast();
+    }
+
+    private String projectionProperty(String propertyName) {
+        if (propertyName == null || projectionPath.isEmpty()) {
+            return propertyName;
+        }
+        return String.join(".", projectionPath) + "." + propertyName;
+    }
+
     @Override
     public ProjectionList property(String propertyName) {
-        hibernateQuery.projections().property(propertyName);
+        hibernateQuery.projections().property(projectionProperty(propertyName));
         return this;
     }
 
@@ -348,7 +387,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      */
     @Override
     public ProjectionList distinct(String propertyName) {
-        hibernateQuery.projections().distinct(propertyName);
+        hibernateQuery.projections().distinct(projectionProperty(propertyName));
         return this;
     }
 
@@ -359,7 +398,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      */
     @Override
     public ProjectionList avg(String propertyName) {
-        hibernateQuery.projections().avg(propertyName);
+        hibernateQuery.projections().avg(projectionProperty(propertyName));
         return this;
     }
 
@@ -452,7 +491,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public void count(String propertyName, String alias) {
-        hibernateQuery.projections().add(new Hibernate7CountProjection(getFullyQualifiedColumn(propertyName, alias)));
+        hibernateQuery.projections().add(new Hibernate7CountProjection(getFullyQualifiedColumn(projectionProperty(propertyName), alias)));
     }
 
     @Override
@@ -499,7 +538,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public ProjectionList countDistinct(String propertyName, String alias) {
-        hibernateQuery.projections().countDistinct(getFullyQualifiedColumn(propertyName, alias));
+        hibernateQuery.projections().countDistinct(getFullyQualifiedColumn(projectionProperty(propertyName), alias));
         return this;
     }
 
@@ -510,7 +549,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public ProjectionList groupProperty(String propertyName, String alias) {
-        hibernateQuery.projections().groupProperty(getFullyQualifiedColumn(propertyName, alias));
+        hibernateQuery.projections().groupProperty(getFullyQualifiedColumn(projectionProperty(propertyName), alias));
         return this;
     }
 
@@ -531,7 +570,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public ProjectionList max(String propertyName, String alias) {
-        hibernateQuery.projections().max(getFullyQualifiedColumn(propertyName, alias));
+        hibernateQuery.projections().max(getFullyQualifiedColumn(projectionProperty(propertyName), alias));
         return this;
     }
 
@@ -551,7 +590,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public ProjectionList min(String propertyName, String alias) {
-        hibernateQuery.projections().min(getFullyQualifiedColumn(propertyName, alias));
+        hibernateQuery.projections().min(getFullyQualifiedColumn(projectionProperty(propertyName), alias));
         return this;
     }
 
@@ -578,7 +617,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public ProjectionList sum(String propertyName, String alias) {
-        hibernateQuery.projections().sum(getFullyQualifiedColumn(propertyName, alias));
+        hibernateQuery.projections().sum(getFullyQualifiedColumn(projectionProperty(propertyName), alias));
         return this;
     }
 
@@ -998,19 +1037,19 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @Override
     public Criteria and(Closure<?> callable) {
-        hibernateQuery.and(callable);
+        hibernateQuery.and(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
     @Override
     public Criteria or(Closure<?> callable) {
-        hibernateQuery.or(callable);
+        hibernateQuery.or(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
     @Override
     public Criteria not(Closure<?> callable) {
-        hibernateQuery.not(callable);
+        hibernateQuery.not(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
