@@ -492,6 +492,19 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         page.totalCount == 4
     }
 
+    void 'a page of a where query that fetches the collection it is sorted by counts the owners that it returns'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final page = AssociationSortOwner.where { name ==~ '%' }.list(max: 10, sort: 'scores.score', fetch: [scores: 'join'])
+
+        then: 'a list that fetches a collection has each instance once, so the total counts instances'
+        page*.name.sort() == ['Ann', 'Bob', 'Empty']
+        page.totalCount == 3
+    }
+
     void 'every row of #api sorted by a collection is on a page that its total reaches'() {
         given:
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
