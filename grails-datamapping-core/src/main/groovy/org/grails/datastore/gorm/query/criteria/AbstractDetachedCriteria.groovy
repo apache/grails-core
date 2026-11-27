@@ -21,6 +21,7 @@ package org.grails.datastore.gorm.query.criteria
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.Internal
 import groovy.transform.TypeCheckingMode
 
 import jakarta.persistence.FetchType
@@ -95,9 +96,11 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      * The join types that were requested for an association before a fetch mode was requested for it
      * with {@link #join(String)} or {@link #select(String)}. The fetch mode replaces the join type,
      * but a datastore can still use the join type for the join that criteria on the association make.
+     * The datastore implementations read it; it is not meant to be called by applications.
      *
      * @return The join types that a later fetch mode replaced
      */
+    @Internal
     Map<String, JoinType> getSupersededJoinTypes() {
         return Collections.unmodifiableMap(supersededJoinTypes)
     }
