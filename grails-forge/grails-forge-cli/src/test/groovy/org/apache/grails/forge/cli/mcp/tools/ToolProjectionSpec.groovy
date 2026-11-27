@@ -21,6 +21,7 @@ package org.apache.grails.forge.cli.mcp.tools
 import java.nio.charset.StandardCharsets
 
 import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import org.apache.grails.forge.cli.console.CommandCatalog
 import org.apache.grails.forge.cli.mcp.Lane
 import org.apache.grails.forge.cli.mcp.McpNames
@@ -384,7 +385,8 @@ class ToolProjectionSpec extends Specification {
                                        commands: []]
 
         when:
-        McpTool tool = ToolProjection.of(document, false, 'fingerprint').tools.find { it.name == 'count-changes' }
+        McpToolSet tools = ToolProjection.of(document, false, 'fingerprint')
+        McpTool tool = tools.tools.find { it.name == 'count-changes' }
         Map<String, Object> properties = (Map<String, Object>) tool.inputSchema.get('properties')
 
         then:
@@ -396,8 +398,11 @@ class ToolProjectionSpec extends Specification {
         tool.inputSchema.required == ['number']
         tool.commandLine([skip: 2, verbose: 'false', number: 3, more: [4, 5]]) == ['count-changes', '--skip=2', '--verbose=false', '3', '4', '5']
 
-        and: 'the whole entry is in _meta, with the choices it takes in any case'
-        ((List<Map>) ((Map) tool.meta[McpNames.META_COMMAND]).options)[1].caseInsensitive == true
+        and: 'the whole entry, which a client reads as the resource of the tool and not in the list of the tools, says that it takes the choices in any case'
+        Map<String, Object> described = (Map<String, Object>) new JsonSlurper().parseText(
+                (String) ((List<Map>) McpResources.read(tools, 'grails://tools/count-changes', null).contents)[0].text)
+        ((List<Map>) ((Map) described.command).options)[1].caseInsensitive == true
+        !((Map) tool.meta[McpNames.META_COMMAND]).containsKey('options')
     }
 
     // what the golden file holds of the tools of a sample
