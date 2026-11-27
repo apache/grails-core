@@ -44,7 +44,10 @@ final class EarlierApplication {
     }
 
     /**
-     * Copies an application into a directory, as it was created.
+     * Copies an application into a directory, as it was created: with LF at the end of every line, as
+     * the released versions wrote it on every system. The {@code .gitattributes} of the repository keeps
+     * the files so on a checkout for Windows; a file with CR LF is refused, since the specs change and
+     * compare its lines as the version wrote them.
      */
     static void copy(String name, File directory) {
         Path source = Path.of(EarlierApplication.getResource("/earlier-applications/${name}/build.gradle").toURI()).getParent()
@@ -52,6 +55,10 @@ final class EarlierApplication {
         try {
             files.filter { Path each -> Files.isRegularFile(each) }.forEach { Path each ->
                 String path = source.relativize(each).join('/')
+                if (Files.readAllBytes(each).contains((byte) 13)) {
+                    throw new IllegalStateException("${name}/${path} has CR LF, which the version that created the application did not write: " +
+                            'the .gitattributes of the repository keeps the files of earlier-applications with LF, also on a checkout for Windows')
+                }
                 Path target = directory.toPath().resolve(path == 'gitignore' ? '.gitignore' : path)
                 Files.createDirectories(target.getParent())
                 Files.copy(each, target, StandardCopyOption.REPLACE_EXISTING)

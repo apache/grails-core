@@ -43,6 +43,10 @@ grails-forge/grails-forge-core/src/main/resources/META-INF/grails-forge-bundled/
 # written with the files under golden as text.
 grails-forge/grails-forge-cli/src/main/resources/META-INF/grails-forge-cli/templates/** text eol=lf
 grails-forge/grails-forge-cli/src/test/resources/golden/** text eol=lf
+# The applications that released versions of Grails created, which the specs of project migrate copy as those
+# versions wrote them, with LF on every system, and whose lines they change and compare. With CRLF they are not
+# what those versions wrote; the specs make a copy with CRLF where that is what they test.
+grails-forge/grails-forge-cli/src/test/resources/earlier-applications/** eol=lf
 # The lists the command line reads from its jar are written by hand or by a spec and go into the jar as they
 # are checked out: the classes it loads ahead and the plugins of the release. With CRLF a jar built on
 # Windows differs from one built elsewhere.
