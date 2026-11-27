@@ -59,7 +59,6 @@ class QueryEntryPointScenariosSpec extends Specification {
         new QsClub(name: 'c4').save(flush: true, failOnError: true)
     }
 
-    @PendingFeature(reason = 'Hibernate 5 throws "duplicate association path: team.likes" when a where query goes through one path twice (#16905)')
     void "a where query joins an association path once, so one element satisfies both restrictions"() {
         when:
         List<QsClub> clubs = QsClub.where {
