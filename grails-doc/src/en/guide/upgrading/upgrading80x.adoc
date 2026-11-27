@@ -4985,6 +4985,15 @@ As of Grails 8.0.1, an exception an action throws is recorded as an error on the
 
 See the `rlike` entry of the criteria reference for the databases that match with a regular expression.
 
+==== A `unique` Constraint Checks the Connection It Runs On
+
+For a domain class mapped to several data sources, `validate()` and `save()` inside a connection block, such as `Book.second.withTransaction { }` or a method annotated `@Transactional(connection = 'second')`, checked the `unique` constraint against the *default* data source, whichever connection the block named.
+
+* A value that existed only on the default data source was reported as a duplicate while saving to the second, and one that existed only on the second was not found.
+* With a session bound for the second data source and none for the default, the check failed with `No Session found for current thread`.
+
+The check now runs on the connection of the block, as the other calls in the block do, on the connection a `save()` names, such as `book.third.save()` or `Book.second.save(book)`, even inside a block for another, and on the default connection outside any block. The connection is looked up for the class of the instance that is saved, so a subclass is checked where it is saved, and for every class mapped to that connection, so that a cascaded instance is checked where it is saved. If you relied on one value being unique across every data source, enforce that yourself, for example with a check in a service that queries each connection.
+
 ==== The OAuth `callback` parameter of the Spring Security REST plugin needs allowed origins
 
 The Spring Security REST plugin redirects to the URL in the `callback` parameter of `/oauth/authenticate/<provider>`, with the token appended, only when the URL's origin, that is its scheme, host and port, is listed in the new setting `grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins`, and the URL has a path, a query or a fragment after the host. It ignores any other `callback` URL, and every `callback` URL when the setting is missing, and redirects to the `frontendCallbackUrl` instead, as it does without the parameter. It checks the URL when the login starts and again when it completes, and a new login drops the `callback` URL of an earlier login that was not completed. An application that passes the `callback` parameter lists the origins of its frontend:
