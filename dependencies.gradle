@@ -157,8 +157,10 @@ ext {
             // redirect); 6.5.9 includes the follow-up logout redirect and direct-client CSRF fixes on the same line.
             'pac4j.version'                 : '6.5.9',
             // Security: overrides spring-boot-dependencies (42.7.11). 42.7.12 and later fix CVE-2026-54291, a silent
-            // channel-binding authentication downgrade. Forge's PostgreSQL feature adds the driver without a version.
-            'postgresql.version'            : '42.7.14',
+            // channel-binding authentication downgrade. 42.7.15 fixes CVE-2026-134841 to CVE-2026-134848, among them
+            // wrong parameter quoting in simple query mode, quoted text parsed as SQL in JDBC escapes, and TLS not
+            // enforced for some ssl settings. Forge's PostgreSQL feature adds the driver without a version.
+            'postgresql.version'            : '42.7.15',
             'rxjava.version'                : '1.3.8',
             'rxjava2.version'               : '2.2.21',
             'rxjava3.version'               : '3.1.12',
