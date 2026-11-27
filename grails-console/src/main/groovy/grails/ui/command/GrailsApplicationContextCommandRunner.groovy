@@ -55,6 +55,9 @@ import org.grails.build.parsing.CommandLineParser
  * the arguments were given in a file {@code command-args-<n>.json}, what the tool sets as its result is
  * written beside it, to {@code tool-result-<n>.json}, once the tool has returned.</p>
  *
+ * <p>What the runner says, each one line, goes to the standard error the process was started with, also
+ * when making a tool replaced {@code System.err}, as the console of Grails does.</p>
+ *
  * @since 3.0
  */
 @CompileStatic
@@ -75,6 +78,10 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
 
     @Override
     ConfigurableApplicationContext run(String... args) {
+        // The standard error of the process, as it is before any tool is made: making the tools can replace
+        // System.err, as a tool with a GrailsConsole in a field does with a stream that writes to the standard
+        // output, and what the runner says has to reach the standard error, one line each.
+        PrintStream err = System.err
         ApplicationContextCommandRegistry commandRegistry = ApplicationContextCommandRegistry.instance
         GrailsTool command = commandRegistry.findCommand(commandName)
         if (command) {
@@ -83,7 +90,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             // a tool that declares its arguments is held to them before anything is started for it
             ToolArguments declared = ToolArguments.of(autowireTarget.getClass())
             if (declared.broken != null) {
-                System.err.println("| Error ${commandName}: ${declared.broken}.")
+                err.println("| Error ${commandName}: ${declared.broken}.")
                 System.exit(1)
                 return null
             }
@@ -92,7 +99,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
                 try {
                     bound = declared.bind(args)
                 } catch (ToolArguments.Refused refused) {
-                    System.err.println(ToolArguments.refusal(commandName, refused.message))
+                    err.println(ToolArguments.refusal(commandName, refused.message))
                     System.exit(ToolArguments.REFUSED)
                     return null
                 }
@@ -106,10 +113,10 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
                     bound?.applyTo(autowireTarget)
                     def result = command.handle(context)
                     System.out.flush()
-                    ToolResults.give(commandName, resultFile, context.result)
+                    ToolResults.give(commandName, resultFile, context.result, err)
                     result ? System.exit(0) : System.exit(1)
                 } catch (Throwable e) {
-                    System.err.println("Command execution error: $e.message")
+                    err.println("Command execution error: $e.message")
                     System.exit(1)
                 }
                 return null
@@ -135,7 +142,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             try {
                 ctx = super.run(springBootArgs)
             } catch (Throwable e) {
-                System.err.println("Context failed to load: $e.message")
+                err.println("Context failed to load: $e.message")
                 System.exit(1)
             }
 
@@ -149,10 +156,10 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
                 ExecutionContext context = new ExecutionContext(commandLine)
                 def result = command.handle(context)
                 System.out.flush()
-                ToolResults.give(commandName, resultFile, context.result)
+                ToolResults.give(commandName, resultFile, context.result, err)
                 result ? System.exit(0) : System.exit(1)
             } catch (Throwable e) {
-                System.err.println("Command execution error: $e.message")
+                err.println("Command execution error: $e.message")
                 System.exit(1)
             }
             finally {
@@ -163,7 +170,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             }
         }
         else {
-            System.err.println(unknownCommandMessage(commandName, commandRegistry.missingCommandHint))
+            err.println(unknownCommandMessage(commandName, commandRegistry.missingCommandHint))
             System.exit(1)
         }
         return null

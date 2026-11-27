@@ -47,6 +47,9 @@ import org.grails.build.parsing.CommandLineParser
  * {@code command-args-<n>.json}, what the tool sets as {@link ExecutionContext#getResult() its result}
  * is written beside it, to {@code tool-result-<n>.json}, once the tool has returned.</p>
  *
+ * <p>What the runner says, each one line, goes to the standard error the process was started with, also
+ * when making a tool replaced {@code System.err}, as the console of Grails does.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -64,15 +67,27 @@ final class StandaloneToolRunner {
      * arguments and was given others
      */
     static int run(String... args) {
+        // The standard error of the process, as it is before any tool is made: making the tools can replace
+        // System.err, as a tool with a GrailsConsole in a field does with a stream that writes to the standard
+        // output, and what the runner says has to reach the standard error, one line each.
+        PrintStream err = System.err
+        try {
+            return run(err, args)
+        } finally {
+            err.flush()
+        }
+    }
+
+    private static int run(PrintStream err, String[] args) {
         List<String> given
         try {
             given = arguments(args)
         } catch (CommandArgumentsFile.Refused refused) {
-            System.err.println("The file of arguments ${refused.message}")
+            err.println("The file of arguments ${refused.message}")
             return 1
         }
         if (given.isEmpty()) {
-            System.err.println('Missing the name of the command')
+            err.println('Missing the name of the command')
             return 1
         }
         String name = given[0]
@@ -80,19 +95,19 @@ final class StandaloneToolRunner {
         GrailsTool command = registry.findCommand(name)
         if (command == null) {
             String hint = registry.missingCommandHint
-            System.err.println(hint ? "Command not found for name: ${name}\n${hint}" : "Command not found for name: ${name}")
+            err.println(hint ? "Command not found for name: ${name}\n${hint}" : "Command not found for name: ${name}")
             return 1
         }
         Object target = command instanceof ApplicationCommandTargetAware ? ((ApplicationCommandTargetAware) command).target : command
         if (!(target instanceof StandaloneTool) || target instanceof ApplicationTool) {
-            System.err.println("The tool ${name} is not a StandaloneTool, so it is not run as a process of its own. " +
+            err.println("The tool ${name} is not a StandaloneTool, so it is not run as a process of its own. " +
                     "The build of the project runs it: grails run-tool ${name}")
             return 1
         }
         // a tool that declares its arguments is held to them before it runs; one that declares none is given them as it always was
         ToolArguments declared = ToolArguments.of(target.getClass())
         if (declared.broken != null) {
-            System.err.println("| Error ${name}: ${declared.broken}.")
+            err.println("| Error ${name}: ${declared.broken}.")
             return 1
         }
         ToolArguments.Bound bound = null
@@ -100,7 +115,7 @@ final class StandaloneToolRunner {
             try {
                 bound = declared.bind(given as String[])
             } catch (ToolArguments.Refused refused) {
-                System.err.println(ToolArguments.refusal(name, refused.message))
+                err.println(ToolArguments.refusal(name, refused.message))
                 return ToolArguments.REFUSED
             }
         }
@@ -110,13 +125,13 @@ final class StandaloneToolRunner {
             bound?.applyTo(target)
             boolean succeeded = command.handle(context)
             System.out.flush()
-            ToolResults.give(name, resultFile, context.result)
+            ToolResults.give(name, resultFile, context.result, err)
             return succeeded ? 0 : 1
         } catch (Throwable e) {
             System.out.flush()
-            System.err.println("Command execution error: ${e.message}")
+            err.println("Command execution error: ${e.message}")
             if (Boolean.getBoolean('grails.full.stacktrace')) {
-                e.printStackTrace()
+                e.printStackTrace(err)
             }
             return 1
         }

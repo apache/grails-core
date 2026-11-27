@@ -26,6 +26,8 @@ import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
 
+import grails.build.logging.ConsoleLogger
+import grails.build.logging.GrailsConsole
 import grails.util.Environment
 
 /**
@@ -176,16 +178,47 @@ class StandaloneToolRunnerSpec extends Specification {
         none.err.readLines() == ['Missing the name of the command']
     }
 
+    def "what the runner says reaches the standard error also when a tool has made the console of Grails, which writes System.err to the output"() {
+        when: 'the tools are made, and one makes the console in a field, as the tools of scaffolding and Spring Security do'
+        Map ran = runWithTools([RunnerSpecConsoleTool], [], 'runner-spec-console', 'ran')
+        Map refused = runWithTools([RunnerSpecConsoleTool], [], 'runner-spec-console', '--nope', 'ran')
+        Map thrown = runWithTools([RunnerSpecConsoleTool], [], 'runner-spec-console', 'fail')
+        Map unknown = runWithTools([RunnerSpecConsoleTool], [], 'runner-spec-no-such-command')
+
+        then: 'what the tool prints to System.err goes to the output: the console is there'
+        ran.exit == 0
+        ran.out.contains('PRINTED TO SYSTEM.ERR BY ran')
+        !ran.err.contains('PRINTED TO SYSTEM.ERR')
+
+        and: 'the refusal is one line on the standard error, and nothing of it is in the output'
+        refused.exit == 2
+        refused.err.readLines() == ['| Error runner-spec-console: --nope is not one of its options. grails help runner-spec-console shows its options']
+        !refused.out.contains('--nope')
+        !refused.out.contains('Error |')
+
+        and: 'so is what the runner says of a tool that throws, and of a name no tool has'
+        thrown.exit == 1
+        thrown.err.readLines() == ['Command execution error: this tool fails on purpose']
+        !thrown.out.contains('fails on purpose')
+        unknown.exit == 1
+        unknown.err.readLines()[0] == 'Command not found for name: runner-spec-no-such-command'
+        !unknown.out.contains('Command not found')
+    }
+
     private Map run(String... arguments) {
         return runWith([], arguments)
     }
 
     private Map runWith(List<String> jvmArguments, String... arguments) {
+        runWithTools([RunnerSpecSucceedsCommand, RunnerSpecReturnsFalseCommand, RunnerSpecThrowsCommand, RunnerSpecGradleCommand, RunnerSpecApplicationCommand,
+                      RunnerSpecOldCommand, RunnerSpecEnvironmentCommand, RunnerSpecDeclaringTool, RunnerSpecBrokenTool], jvmArguments, arguments)
+    }
+
+    // the tools of the class path are these, which are all made when the registry is
+    private Map runWithTools(List<Class> tools, List<String> jvmArguments, String... arguments) {
         File registrations = new File(dir, 'registrations')
         new File(registrations, 'META-INF').mkdirs()
-        new File(registrations, 'META-INF/grails-cli.factories').text = "${GrailsTool.name}=" +
-                [RunnerSpecSucceedsCommand, RunnerSpecReturnsFalseCommand, RunnerSpecThrowsCommand, RunnerSpecGradleCommand, RunnerSpecApplicationCommand,
-                 RunnerSpecOldCommand, RunnerSpecEnvironmentCommand, RunnerSpecDeclaringTool, RunnerSpecBrokenTool]*.name.join(',') + '\n'
+        new File(registrations, 'META-INF/grails-cli.factories').text = "${GrailsTool.name}=" + tools*.name.join(',') + '\n'
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', registrations.path + File.pathSeparator + System.getProperty('java.class.path'),
                                 "-Dbase.dir=${dir.path}".toString()]
@@ -276,6 +309,26 @@ class RunnerSpecDeclaringTool implements StandaloneTool {
     boolean handle(ExecutionContext executionContext) {
         println "DECLARED count=${count} verbose=${verbose} output=${output} remaining=${executionContext.commandLine.remainingArgs} " +
                 "v=${executionContext.commandLine.optionValue('v')} verbose-option=${executionContext.commandLine.optionValue('verbose')}"
+        true
+    }
+}
+
+class RunnerSpecConsoleTool implements StandaloneTool {
+
+    ConsoleLogger consoleLogger = GrailsConsole.getInstance()
+
+    @ToolOption(names = ['--force'], description = 'Writes over')
+    boolean force
+
+    @ToolParameter(index = 0, label = 'NAME')
+    String target
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        if (target == 'fail') {
+            throw new IllegalStateException('this tool fails on purpose')
+        }
+        System.err.println("PRINTED TO SYSTEM.ERR BY ${target}")
         true
     }
 }

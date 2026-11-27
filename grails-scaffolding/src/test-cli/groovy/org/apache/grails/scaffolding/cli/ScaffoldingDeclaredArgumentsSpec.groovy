@@ -58,9 +58,11 @@ class ScaffoldingDeclaredArgumentsSpec extends Specification {
         when:
         Started started = start(arguments as String[])
 
-        then: 'the line is in what the tool printed: the tools make the console of Grails when they are made, which writes what is printed to System.err to the output'
+        then: 'the line is on the standard error the process was started with, and not in its output: the tools make the console of Grails when they are made, which writes what is printed to System.err to the output'
         started.exit == 2
-        (started.out + started.err).readLines().contains("| Error ${arguments[0]}: ${what}. grails help ${arguments[0]} shows its options".toString())
+        started.err.readLines().contains("| Error ${arguments[0]}: ${what}. grails help ${arguments[0]} shows its options".toString())
+        !started.out.contains("| Error ${arguments[0]}: ${what}. grails help ${arguments[0]} shows its options".toString())
+        !started.out.contains('Error |')
         generatedViews() == []
         !new File(project, 'grails-app/controllers').exists()
 

@@ -57,17 +57,18 @@ final class ToolResults {
      * @param name the name of the tool
      * @param resultFile where the result goes ({@link #prepare}), or {@code null}
      * @param result what the tool set as its result, or {@code null} for none
+     * @param err the standard error of the process, as it was before the tool was made, which the line goes to
      */
-    static void give(String name, File resultFile, Object result) {
+    static void give(String name, File resultFile, Object result, PrintStream err) {
         if (resultFile == null || result == null) {
             return
         }
         try {
             ToolResultFile.write(resultFile, result)
         } catch (ToolResultFile.Refused refused) {
-            System.err.println("| Warning ${name}: the result it set is not given, since it ${refused.message}")
+            err.println("| Warning ${name}: the result it set is not given, since it ${refused.message}")
         } catch (IOException ignored) {
-            System.err.println("| Warning ${name}: the result it set is not given, since ${resultFile.name} cannot be written")
+            err.println("| Warning ${name}: the result it set is not given, since ${resultFile.name} cannot be written")
         }
     }
 }

@@ -57,9 +57,11 @@ class InitOAuth2DeclaredArgumentsSpec extends Specification {
         when:
         Map run = start(arguments as String[])
 
-        then: 'the line is in what the tool printed: the tool makes the console of Grails when it is made, which writes what is printed to System.err to the output'
+        then: 'the line is on the standard error the process was started with, and not in its output: the tool makes the console of Grails when it is made, which writes what is printed to System.err to the output'
         run.exit == 2
-        (run.out + run.err).readLines().contains("| Error init-oauth2: ${what}. grails help init-oauth2 shows its options".toString())
+        run.err.readLines().contains("| Error init-oauth2: ${what}. grails help init-oauth2 shows its options".toString())
+        !run.out.contains("| Error init-oauth2: ${what}. grails help init-oauth2 shows its options".toString())
+        !run.out.contains('Error |')
         project.list().toList() == []
 
         where:
