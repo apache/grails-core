@@ -20,6 +20,7 @@ package org.grails.datastore.gorm.mongo
 
 import com.mongodb.MongoBulkWriteException
 import grails.persistence.Entity
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
@@ -94,6 +95,127 @@ class AssignedIdentifierSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager
 
         then: "It is possible to save new instances"
         totalRivers == 2
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14511')
+    void "Test that an instance loaded in one session and saved after that session was cleared is updated"() {
+        given:
+        new River(name: "Amazon", country: "Brazil").save flush: true
+        manager.session.clear()
+        def r = River.get("Amazon")
+        manager.session.clear()
+
+        when: "the detached instance is changed and saved"
+        r.country = "Argentina"
+        r.save flush: true
+        manager.session.clear()
+
+        then: "the row is updated rather than inserted again"
+        River.count() == 1
+        River.get("Amazon").country == "Argentina"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14511')
+    void "Test that a detached instance saved without a change is not inserted again"() {
+        given:
+        new River(name: "Amazon", country: "Brazil").save flush: true
+        manager.session.clear()
+        def r = River.get("Amazon")
+        manager.session.clear()
+
+        when: "the detached instance is saved as it is"
+        r.save flush: true
+        manager.session.clear()
+
+        then: "there is still one row, unchanged"
+        River.count() == 1
+        River.get("Amazon").country == "Brazil"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14511')
+    void "Test that a detached instance whose field was set directly is updated"() {
+        given:
+        new River(name: "Amazon", country: "Brazil").save flush: true
+        manager.session.clear()
+        def r = River.get("Amazon")
+        manager.session.clear()
+
+        when: "the field is set without the setter and the instance is saved"
+        r.@country = "Peru"
+        r.save flush: true
+        manager.session.clear()
+
+        then: "the row is updated"
+        River.count() == 1
+        River.get("Amazon").country == "Peru"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14511')
+    void "Test that an instance that was inserted is updated after the session was cleared"() {
+        given:
+        def r = new River(name: "Amazon", country: "Brazil")
+        r.save flush: true
+        manager.session.clear()
+
+        when: "the instance that was inserted is changed and saved"
+        r.country = "Colombia"
+        r.save flush: true
+        manager.session.clear()
+
+        then: "the row is updated"
+        River.count() == 1
+        River.get("Amazon").country == "Colombia"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14511')
+    void "Test that a new instance that tracks changes is inserted, not treated as saved"() {
+        given:
+        new River(name: "Amazon", country: "Brazil").save flush: true
+        manager.session.clear()
+
+        when: "a new instance with the same id tracks a change and is saved"
+        def r = new River(name: "Amazon", country: "Brazil")
+        ((DirtyCheckable) r).trackChanges()
+        r.country = "Peru"
+        r.save flush: true
+
+        then: "it is an insert, which the duplicate id rejects"
+        thrown MongoBulkWriteException
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14511')
+    void "Test that an explicit insert of a detached instance is an insert"() {
+        given:
+        new River(name: "Amazon", country: "Brazil").save flush: true
+        manager.session.clear()
+        def r = River.get("Amazon")
+        manager.session.clear()
+        r.country = "Peru"
+
+        when: "the detached instance is inserted"
+        r.insert flush: true
+
+        then: "the duplicate id is rejected"
+        thrown MongoBulkWriteException
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14511')
+    void "Test that an instance that was deleted is inserted again when it is saved"() {
+        given:
+        def r = new River(name: "Amazon", country: "Brazil")
+        r.save flush: true
+        manager.session.clear()
+        r = River.get("Amazon")
+        r.delete flush: true
+        manager.session.clear()
+
+        when: "the deleted instance is saved"
+        r.save flush: true
+        manager.session.clear()
+
+        then: "the row exists again"
+        River.count() == 1
+        River.get("Amazon").country == "Brazil"
     }
 
     @Issue("GPMONGODB-170")
