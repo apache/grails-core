@@ -985,23 +985,6 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         expect:
         AssociationSortBook.list(sort: 'details.isbn', order: 'desc')*.title == ['Anonymous', 'Guide', 'It']
     }
-
-    protected static List<AssociationSortBook> booksSortedByAuthor(String api) {
-        switch (api) {
-            case 'where query':
-                return AssociationSortBook.where {
-                    title ==~ '%'
-                }.list(sort: 'details.author.name')
-            case 'list':
-                return AssociationSortBook.list(sort: 'details.author.name')
-            case 'criteria query':
-                return AssociationSortBook.withCriteria {
-                    order('details.author.name')
-                }
-            default:
-                return AssociationSortBook.findAllByTitleLike('%', [sort: 'details.author.name'])
-        }
-    }
 }
 
 @Entity
@@ -1022,10 +1005,6 @@ class AssociationSortBookDetails {
 @Entity
 class AssociationSortAuthor {
     String name
-    AssociationSortAuthor mentor
-    static constraints = {
-        mentor nullable: true
-    }
 }
 
 @Entity
