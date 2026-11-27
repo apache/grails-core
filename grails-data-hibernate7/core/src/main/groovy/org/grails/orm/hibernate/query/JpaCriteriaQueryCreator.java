@@ -27,9 +27,12 @@ import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.metamodel.Attribute;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
@@ -63,6 +66,7 @@ public class JpaCriteriaQueryCreator<T> {
     private JpaQueryContext parentContext;
     private JpaQueryContext context;
     private boolean distinctInMemory;
+    private boolean sortedByCollection;
 
     public JpaCriteriaQueryCreator(
             Query.ProjectionList projections,
@@ -115,8 +119,19 @@ public class JpaCriteriaQueryCreator<T> {
         return distinctInMemory;
     }
 
+    /**
+     * Whether the query last built by {@link #createQuery()} lists entities sorted by a property of a
+     * collection, so that it has a row for each element of the collection.
+     *
+     * @return whether an order of the query reads a collection
+     */
+    public boolean isSortedByCollection() {
+        return sortedByCollection;
+    }
+
     public JpaCriteriaQuery<?> createQuery() {
         distinctInMemory = false;
+        sortedByCollection = false;
         var projectionList = collectProjections();
         var cq = createCriteriaQuery(projectionList);
         Class<?> javaClass = entity.getJavaClass();
@@ -340,6 +355,7 @@ public class JpaCriteriaQueryCreator<T> {
             if (distinctEntities && !context.isColumnOfRoot(expression)) {
                 distinctInMemory = true;
             }
+            sortedByCollection |= projections.getProjectionList().isEmpty() && readsCollection(expression);
             boolean ascending = order.getDirection().equals(Query.Order.Direction.ASC);
             if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
                 Expression<String> lower = criteriaBuilder.lower((Expression<String>) expression);
@@ -356,6 +372,20 @@ public class JpaCriteriaQueryCreator<T> {
         if (!jpaOrders.isEmpty()) {
             cq.orderBy(jpaOrders);
         }
+    }
+
+    /**
+     * Whether an expression is read from a collection, through a join of the collection or through its path.
+     */
+    private static boolean readsCollection(Expression<?> expression) {
+        Path<?> path = expression instanceof Path<?> p ? p : null;
+        while (path != null) {
+            if (path.getModel() instanceof Attribute<?, ?> attribute && attribute.isCollection()) {
+                return true;
+            }
+            path = path instanceof Join<?, ?> join ? join.getParent() : path.getParentPath();
+        }
+        return false;
     }
 
     /**

@@ -54,6 +54,8 @@ public class HqlListQueryBuilder {
     private final Map<String, String> fetchJoins = new LinkedHashMap<>();
     // the sort joins that join a collection, which has a row for each element
     private final Set<String> collectionSortJoins = new HashSet<>();
+    // whether the query being built is the count, which joins a collection that the list reads by its elements
+    private boolean counting;
 
     public HqlListQueryBuilder(GrailsHibernatePersistentEntity entity, Map<String, Object> params) {
         this.entity = entity;
@@ -72,6 +74,7 @@ public class HqlListQueryBuilder {
         sortJoins.clear();
         fetchJoins.clear();
         collectionSortJoins.clear();
+        counting = count;
         StringBuilder hql = new StringBuilder("from ");
         hql.append(entity.getName()).append(" e");
 
@@ -192,6 +195,12 @@ public class HqlListQueryBuilder {
                     alias = "f" + fetchJoins.values().stream().filter(fetchAlias -> !fetchAlias.isEmpty()).count();
                     fetchJoins.put(joined, alias);
                 }
+            } else if (association instanceof ToMany<?> && !counting) {
+                // The elements of a collection are read without a join of the query: Hibernate joins them with
+                // an inner join and lists an instance once for each element, as list does with Hibernate 5,
+                // where a join of the query would make it list the instance once
+                collectionSortJoins.add(joined);
+                alias = "element(" + joined + ")";
             } else {
                 alias = sortJoins.computeIfAbsent(joined, path -> "s" + sortJoins.size());
                 if (association instanceof ToMany<?>) {

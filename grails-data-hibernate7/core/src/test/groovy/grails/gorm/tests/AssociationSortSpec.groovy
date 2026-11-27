@@ -447,21 +447,33 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         query.call()*.name.sort() == ['Ann', 'Ann', 'Bob', 'Bob']
 
         where:
-        api                  | query
-        'a where query'      | { AssociationSortOwner.where { name ==~ '%' }.list(sort: 'scores.score') }
-        'a criteria query'   | { AssociationSortOwner.withCriteria { order('scores.score') } }
-        'a paged criteria'   | { AssociationSortOwner.createCriteria().list(sort: 'scores.score', max: 10) {} }
-        'a dynamic finder'   | { AssociationSortOwner.findAllByNameLike('%', [sort: 'scores.score']) }
-        'a detached criteria'| { new DetachedCriteria(AssociationSortOwner).list(sort: 'scores.score') }
+        api                | query
+        'list'             | { AssociationSortOwner.list(sort: 'scores.score') }
+        'a paged list'     | { AssociationSortOwner.list(sort: 'scores.score', max: 10) }
+        'a criteria query' | { AssociationSortOwner.withCriteria { order('scores.score') } }
+        'a paged criteria' | { AssociationSortOwner.createCriteria().list(sort: 'scores.score', max: 10) {} }
     }
 
-    void 'list sorted by a collection leaves out an owner without a score in either mode of the setting'() {
+    void '#api sorted by a collection returns an owner once and leaves out an owner without a score'() {
         given:
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
         manager.session.clear()
 
-        expect:
-        AssociationSortOwner.list(sort: 'scores.score')*.name as Set == ['Ann', 'Bob'] as Set
+        expect: 'an instance once from the rows of the inner join, as with Hibernate 5, in either mode of the setting'
+        query.call()*.name.sort() == ['Ann', 'Bob']
+
+        where:
+        api                   | query
+        'a where query'       | { AssociationSortOwner.where { name ==~ '%' }.list(sort: 'scores.score') }
+        'a dynamic finder'    | { AssociationSortOwner.findAllByNameLike('%', [sort: 'scores.score']) }
+        'a detached criteria' | { new DetachedCriteria(AssociationSortOwner).list(sort: 'scores.score') }
+    }
+
+    void 'a page of a where query sorted by a collection has an owner once from the rows of the page'() {
+        expect: 'the first two of the four rows are the scores of 1, one of each owner, and the total counts the rows'
+        final page = AssociationSortOwner.where { name ==~ '%' }.list(sort: 'scores.score', max: 3)
+        page*.name.sort() == ['Ann', 'Bob']
+        page.totalCount == 4
     }
 
     void 'every row of #api sorted by a collection is on a page that its total reaches'() {
