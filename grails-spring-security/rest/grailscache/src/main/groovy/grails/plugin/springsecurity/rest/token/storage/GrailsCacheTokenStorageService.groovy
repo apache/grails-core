@@ -42,18 +42,21 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
 
     private boolean cacheReportsEviction
 
+    private final Object lookUpAndEvictLock = new Object()
+
     /**
      * Sets the cache that holds the tokens. A cache that does not implement {@link Cache#evictIfPresent}, whose
      * default evicts the key and reports that the cache did not hold it, is asked for the token before the token is
-     * removed, and a warning says so.
+     * removed, one removal at a time, and a warning says so.
      */
     void setCache(Cache cache) {
         this.cache = cache
         cacheReportsEviction = cache == null || reportsEviction(cache)
         if (!cacheReportsEviction) {
             log.warn("The cache '${cache.name}' (${cache.getClass().name}) does not implement Cache.evictIfPresent, " +
-                    'so a token is looked up before it is removed, and two logouts of the same token at the same ' +
-                    'time can both succeed')
+                    'so a token is looked up before it is removed, one removal at a time in this application. ' +
+                    'Two instances of the application that share the cache can both succeed in logging out the ' +
+                    'same token at the same time')
         }
     }
 
@@ -78,8 +81,10 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
     /**
      * Removes the token in one step with {@link Cache#evictIfPresent}, so of two removals of the same token only the
      * one that removed it returns, and the other throws {@link TokenNotFoundException}. Both caches of the Grails
-     * cache plugin implement it. With a cache that does not, the token is looked up and then evicted, so two removals
-     * of the same token at the same time can both return.
+     * cache plugin implement it. With a cache that does not, the token is looked up and then evicted, one removal at
+     * a time, so the same holds for removals through this service. Two instances of the application that share such
+     * a cache do not wait for each other, so removals of the same token at the same time in each of them can both
+     * return.
      */
     @Override
     void removeToken(String tokenValue) throws TokenNotFoundException {
@@ -93,11 +98,13 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
     }
 
     private boolean lookUpAndEvict(String tokenValue) {
-        if (cache.get(tokenValue) == null) {
-            return false
+        synchronized (lookUpAndEvictLock) {
+            if (cache.get(tokenValue) == null) {
+                return false
+            }
+            cache.evict(tokenValue)
+            return true
         }
-        cache.evict(tokenValue)
-        return true
     }
 
     private static boolean reportsEviction(Cache cache) {

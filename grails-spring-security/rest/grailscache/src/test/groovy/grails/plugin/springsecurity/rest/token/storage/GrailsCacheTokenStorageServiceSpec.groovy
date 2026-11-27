@@ -24,6 +24,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
@@ -32,6 +35,7 @@ import ch.qos.logback.core.read.ListAppender
 import org.slf4j.LoggerFactory
 import spock.lang.Specification
 import spock.lang.Unroll
+import spock.util.concurrent.PollingConditions
 
 import org.springframework.cache.Cache
 import org.springframework.cache.support.SimpleValueWrapper
@@ -217,12 +221,7 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
             List<Future<Boolean>> results = (1..removals).collect {
                 executor.submit({
                     start.await()
-                    try {
-                        storage.removeToken(token)
-                        return true
-                    } catch (TokenNotFoundException ignored) {
-                        return false
-                    }
+                    removal(storage, token).call()
                 } as Callable<Boolean>)
             }
             start.countDown()
@@ -237,6 +236,40 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
 
         where:
         cacheManager << [new GrailsConcurrentMapCacheManager(), new GrailsConcurrentLinkedMapCacheManager()]
+    }
+
+    void "of two concurrent removals of one token from a cache that does not implement evictIfPresent, one removes it"() {
+        given: 'a cache that holds its first look-up of the token, after the look-up, until it is released'
+        def cache = new HoldingMapCache()
+        def storage = newService(cacheManagerOf(cache))
+        storage.storeToken('12345', new User('foo', 'bar', []))
+        FutureTask<Boolean> first = new FutureTask<>(removal(storage, '12345'))
+        FutureTask<Boolean> second = new FutureTask<>(removal(storage, '12345'))
+        Thread secondThread = new Thread(second)
+
+        when: 'the first removal starts'
+        new Thread(first).start()
+
+        then: 'it has looked the token up'
+        cache.firstLookUp.await(30, TimeUnit.SECONDS)
+
+        when: 'the second removal starts'
+        secondThread.start()
+
+        then: 'it looks the token up as well, or waits to'
+        new PollingConditions(timeout: 30).eventually {
+            assert cache.lookUps.get() == 2 || secondThread.state in [Thread.State.BLOCKED, Thread.State.WAITING]
+        }
+
+        when: 'the first look-up is released'
+        cache.release.countDown()
+
+        then: 'the first removal removed the token, and the second did not find it'
+        first.get(30, TimeUnit.SECONDS)
+        !second.get(30, TimeUnit.SECONDS)
+
+        cleanup:
+        cache.release.countDown()
     }
 
     void "throw illegal state exeption if grails cache manager was not injected"() {
@@ -277,6 +310,17 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
         def storage = new GrailsCacheTokenStorageService(grailsCacheManager: cacheManager, cacheName: 'tokenStorage')
         storage.init()
         storage
+    }
+
+    private static Callable<Boolean> removal(GrailsCacheTokenStorageService storage, String token) {
+        { ->
+            try {
+                storage.removeToken(token)
+                return true
+            } catch (TokenNotFoundException ignored) {
+                return false
+            }
+        } as Callable<Boolean>
     }
 
     private GrailsCacheManager cacheManagerOf(Cache cache) {
@@ -340,6 +384,27 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
         @Override
         boolean evictIfPresent(Object key) {
             store.remove(key) != null
+        }
+    }
+
+    /**
+     * A cache that leaves {@link Cache#evictIfPresent} to its default, and holds its first look-up, after the key has
+     * been looked up, until it is released.
+     */
+    private static class HoldingMapCache extends MapCache {
+
+        final AtomicInteger lookUps = new AtomicInteger()
+        final CountDownLatch firstLookUp = new CountDownLatch(1)
+        final CountDownLatch release = new CountDownLatch(1)
+
+        @Override
+        Cache.ValueWrapper get(Object key) {
+            Cache.ValueWrapper value = super.get(key)
+            if (lookUps.incrementAndGet() == 1) {
+                firstLookUp.countDown()
+                release.await(30, TimeUnit.SECONDS)
+            }
+            value
         }
     }
 }
