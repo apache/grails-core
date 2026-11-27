@@ -29,6 +29,9 @@ group = 'examples.spring.security.rest'
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    implementation 'org.apache.grails:grails-spring-security', {
+        // @Secured, SpringSecurityService: the token storage plugin does not give the classes of the core plugin to compile against
+    }
     implementation 'org.apache.grails:grails-spring-security-rest-grailscache'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-web-boot'
