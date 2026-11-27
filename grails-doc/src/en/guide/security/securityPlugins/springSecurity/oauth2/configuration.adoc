@@ -21,6 +21,8 @@ under the License.
 
 You can configure the following parameters in your application.yml.
 
+Linking an OAuth2 identity to the currently logged-in account requires explicit confirmation using the POST form on `/oauth2/ask`; custom views must use `useToken="true"` for the `linkCurrentAccount` form.
+
 .Plugin Configuration Options
 [cols="3,1,1,10"]
 |===
@@ -56,6 +58,14 @@ grails:
           askToLinkOrCreateAccountUri: /oauth2/ask
           roleNames: ['ROLE_USER']
 ----
+
+### Custom authorization URLs
+
+`SpringSecurityOauth2BaseService.getAuthorizationUrl(String providerName, String state)` replaces the old one-argument `getAuthorizationUrl(String providerName)` method.
+Provider implementations must override `getAuthUrl(String state, Map<String, String> params)` instead of the old one-argument `getAuthUrl(Map params)` method.
+The controller generates and stores the state in the initiating HTTP session and supplies it to these methods.
+An override must accept and include that supplied state in the authorization URL; it must not generate its own state.
+The callback compares the returned state with the stored value and consumes a match before exchanging the authorization code.
 
 ### Initializing
 

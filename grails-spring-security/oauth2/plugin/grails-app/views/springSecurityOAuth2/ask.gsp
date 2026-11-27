@@ -31,6 +31,13 @@
             <div class="alert alert-danger" role="alert">${flash.error}</div>
         </g:if>
 
+        <g:if test="${linkCurrentAccount}">
+            <g:form action="linkCurrentAccount" method="post" useToken="true">
+                <g:submitButton name="linkCurrentAccount" class="btn btn-primary w-100 mb-4"
+                                value="${message(code: 'springSecurity.oauth.registration.current.button', default: 'Link this identity to my current account')}"/>
+            </g:form>
+        </g:if>
+
         <div class="card shadow-sm mb-4">
             <div class="card-header">
                 <h1 class="h5 mb-0"><g:message code="springSecurity.oauth.registration.create.legend"
