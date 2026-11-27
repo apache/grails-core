@@ -419,6 +419,22 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         [property, joinType, request] << [['name', 'id'], [JoinType.LEFT, JoinType.INNER], ['before', 'after']].combinations()
     }
 
+    void 'findAllWhere and findWhere sort by a property of an association'() {
+        expect: 'the sort argument is applied, as with Hibernate 5'
+        Contract.findAllWhere([salary: 1G], [sort: 'player.name', order: 'desc'])*.player*.name ==
+                ['Unattached Player', 'Cole', 'Bukayo', 'Bruno']
+        Contract.findWhere([salary: 1G], [sort: 'player.name', order: 'desc']).player.name == 'Unattached Player'
+        Contract.findWhere([salary: 1G], [sort: 'player.name']).player.name == 'Bruno'
+    }
+
+    void 'findAllWhere and findWhere sorted by an association property find a team without a club only with the setting'() {
+        expect: 'the join of the sort is the join of the setting, as with Hibernate 5'
+        Team.findAllWhere([name: 'Unattached First Team'], [sort: 'club.name'])*.name ==
+                (leftJoinSort ? ['Unattached First Team'] : [])
+        Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name'])?.name ==
+                (leftJoinSort ? 'Unattached First Team' : null)
+    }
+
     void 'the total of #api sorted by a collection counts the rows that it pages through'() {
         given: 'two owners with two scores each, and one without a score, which the inner join of a collection has no row for'
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)

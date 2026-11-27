@@ -59,6 +59,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import grails.orm.HibernateCriteriaBuilder
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -430,13 +431,37 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
+        if (requestsSort(args)) {
+            return whereCriteria(queryMap).find(buildFindWhereArgs(args))
+        }
         executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
     }
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
         if (!queryMap) return null
+        if (requestsSort(args)) {
+            return whereCriteria(queryMap).list(buildQuerySettings(args))
+        }
         executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
+    }
+
+    /**
+     * Whether the arguments sort the query. The HQL of {@code findWhere} and {@code findAllWhere} has no order, so
+     * a sorted query is run as a criteria query, which sorts it and joins the associations of the sort as the
+     * {@code grails.gorm.leftJoinAssociationSort} setting says, as GORM for Hibernate 5 does.
+     */
+    private static boolean requestsSort(Map args) {
+        args?.get(DynamicFinder.ARGUMENT_SORT) != null
+    }
+
+    private DetachedCriteria<D> whereCriteria(Map queryMap) {
+        DetachedCriteria<D> criteria = new DetachedCriteria<D>(persistentClass).withConnection(getQualifier())
+        queryMap?.each { Object key, Object value ->
+            String propertyName = validateWherePropertyName(key.toString())
+            criteria = value == null ? criteria.isNull(propertyName) : criteria.eq(propertyName, value)
+        }
+        criteria
     }
 
     private GormQuery prepareWhereHqlQuery(Map queryMap, Map<String, Object> querySettings) {
