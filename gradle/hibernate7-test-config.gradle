@@ -49,15 +49,17 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
 
-    // Opt-in: -Pgrails.test.generatedDomainClasses=true runs the suite with every manager-built datastore booted through the
-    // generated-domain-class path (hibernate.generatedDomainClasses). Binder mode stays the default. Specs that exercise the
-    // domain binder's internals do not apply to that path and are listed, one class name per line, in the module's
-    // generated-mode-exclusions.txt.
-    if (providers.gradleProperty('grails.test.generatedDomainClasses').map { it.toBoolean() }.getOrElse(false)) {
-        systemProperty('grails.hibernate.generatedDomainClasses', 'true')
-        File exclusions = project.file('generated-mode-exclusions.txt')
-        if (exclusions.exists()) {
-            exclusions.readLines().collect { it.trim() }.findAll { it && !it.startsWith('#') }.each { String pattern ->
+    // Native domain binding (hibernate.generatedDomainClasses, on by default) is what the suite runs by default.
+    // -Pgrails.test.classicDomainBinding=true boots every datastore that does not set the key itself through the classic
+    // domain binder instead (system property grails.hibernate.classicDomainBinding, read by the settings default and by the
+    // TCK manager). Specs that exercise the classic binder's internals only make sense in that run and are listed, one
+    // class name per line, in the module's classic-only-specs.txt: the default run excludes them, the classic run runs them.
+    if (providers.gradleProperty('grails.test.classicDomainBinding').map { it.toBoolean() }.getOrElse(false)) {
+        systemProperty('grails.hibernate.classicDomainBinding', 'true')
+    } else {
+        File classicOnly = project.file('classic-only-specs.txt')
+        if (classicOnly.exists()) {
+            classicOnly.readLines().collect { it.trim() }.findAll { it && !it.startsWith('#') }.each { String pattern ->
                 filter.excludeTestsMatching(pattern)
             }
         }

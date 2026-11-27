@@ -49,6 +49,8 @@ import org.hibernate.internal.util.config.ConfigurationHelper
 import org.hibernate.persister.internal.PersisterClassResolverInitiator
 import org.hibernate.service.ServiceRegistry
 import org.hibernate.service.spi.SessionFactoryServiceContributor
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.BeansException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
@@ -94,6 +96,17 @@ class HibernateMappingContextConfiguration extends Configuration
 
     private static final long serialVersionUID = -7115087342689305517L
 
+    private static final Logger LOG = LoggerFactory.getLogger(HibernateMappingContextConfiguration)
+
+    /**
+     * The warning logged once per session factory when the classic domain binding is selected.
+     */
+    static final String CLASSIC_DOMAIN_BINDING_DEPRECATED =
+            'Classic domain binding is deprecated and will be removed: hibernate.generatedDomainClasses is false ' +
+            'for data source [%s]. Native domain binding, the default, binds the domain classes with Hibernate\'s own ' +
+            'annotation binder; remove the setting, or set it to true, after reviewing the Native Domain Binding chapter ' +
+            'of the GORM for Hibernate 7 manual.'
+
     private static final String RESOURCE_PATTERN = '/**/*.class'
 
     private static final TypeFilter[] ENTITY_TYPE_FILTERS = [
@@ -118,16 +131,18 @@ class HibernateMappingContextConfiguration extends Configuration
     private transient NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider()
     protected GrailsBytecodeProvider bytecodeProvider
     private transient File queryTailFile
-    private boolean generatedDomainClasses
+    private boolean generatedDomainClasses = true
 
     /**
-     * Whether Hibernate's annotation binder binds classes generated from the GORM mapping instead of the domain binder
-     * building Hibernate's boot model by hand. The real domain classes are still what is persisted and loaded.
+     * Whether Hibernate's annotation binder binds classes generated from the GORM mapping (native domain binding, the
+     * default) instead of the classic domain binder building Hibernate's boot model by hand. The real domain classes are
+     * still what is persisted and loaded.
      *
      * <p>Set it before the annotated classes are added: with the switch on, {@link #addAnnotatedClass} keeps the GORM entities
      * that are not JPA entities away from Hibernate's own sources (see there).</p>
      *
-     * @param generatedDomainClasses {@code true} to bind generated classes; {@code false} (the default) for the domain binder
+     * @param generatedDomainClasses {@code true} (the default) to bind generated classes; {@code false} for the classic
+     * domain binder, which is deprecated and will be removed
      */
     void setGeneratedDomainClasses(boolean generatedDomainClasses) {
         this.generatedDomainClasses = generatedDomainClasses
@@ -357,6 +372,9 @@ class HibernateMappingContextConfiguration extends Configuration
             persistentEntity.setDataSourceName(dataSourceName)
         }
 
+        if (!generatedDomainClasses) {
+            LOG.warn(String.format(CLASSIC_DOMAIN_BINDING_DEPRECATED, dataSourceName))
+        }
         final GeneratedDomainClassBinder generatedBinder =
                 generatedDomainClasses ? new GeneratedDomainClassBinder(dataSourceName, appClassLoader) : null
         final GrailsDomainBinder domainBinder = new GrailsDomainBinder(

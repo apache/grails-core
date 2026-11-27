@@ -113,9 +113,9 @@ If you are migrating an application from Hibernate 5 or the Grails Hibernate 5 p
 | `insertable: false` and `updatable: false` are honored, enum columns receive the `comment`, `defaultValue`, `read` and `write` of their column mapping, the elements of basic-value collections of an owner with several unidirectional collections are stored, and the inverse side of a many-to-many reads the join table that its owner writes.
 | Review domain classes that use `insertable: false` or `updatable: false`, because values that used to be written are no longer written. Compare the generated schema of enum properties with your database before using `dbCreate=update`. See <<nativeDomainBinding,Native Domain Binding>> for the related schema differences.
 
-| Native domain binding (opt-in)
-| `hibernate.generatedDomainClasses: true` makes Hibernate's own annotation binder bind the domain classes. It is off by default and is intended to become the default. A few mapping options are refused at startup and the generated schema differs from classic binding in documented cases.
-| Before enabling it, fix the mappings listed in <<nativeDomainBinding-refused,Mappings Native Binding Refuses>> and run `dbm-gorm-diff` against a copy of the existing database. See <<nativeDomainBinding-schema,Differences in the Schema>>.
+| Native domain binding (the default)
+| Hibernate's own annotation binder binds the domain classes; `hibernate.generatedDomainClasses` defaults to `true`. A few mapping options that classic binding could not use either are refused at startup, and the generated schema differs from classic binding in documented cases. `hibernate.generatedDomainClasses: false` selects the classic binding, which is deprecated, logs a warning at startup and will be removed.
+| Before upgrading an existing database, fix the mappings listed in <<nativeDomainBinding-refused,Mappings Native Binding Refuses>> and run `dbm-gorm-diff` against a copy of the database with the upgraded application. See <<nativeDomainBinding-schema,Differences in the Schema>> and <<nativeDomainBinding-enabling,Enabling Native Binding>> for the temporary fallback.
 
 | Query locks and query cache
 | Locked queries are not query-cacheable.

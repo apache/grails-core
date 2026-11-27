@@ -51,6 +51,9 @@ import spock.lang.Specification
  */
 class CompositeUserTypeMappingSpec extends Specification {
 
+    /** The domain binder shares the column objects of the table with its key; Hibernate's annotation binder creates the key's own. */
+    private static final boolean CLASSIC_SUITE = Boolean.getBoolean('grails.hibernate.classicDomainBinding')
+
     void "a composite user type binds one column per embeddable attribute in alphabetical order"() {
         given: 'a datastore with an entity that maps two properties with the composite user type'
         HibernateDatastore datastore = createDatastore('compositeUserTypeExplicit', {}, CompositeUserTypePayment)
@@ -308,12 +311,12 @@ class CompositeUserTypeMappingSpec extends Specification {
         given: 'a unique composite user type property whose columns are quoted: one mixed-case, one a reserved word'
         HibernateDatastore datastore = createDatastore('compositeUserTypeUniqueQuoted', {}, CompositeUserTypeUniqueQuoted)
 
-        expect: 'the key holds the bound columns themselves, quoted, rather than copies named after them'
+        expect: 'the key is over quoted columns; the domain binder also holds the bound columns themselves, rather than copies named after them'
         Table table = datastore.metadata.getEntityBinding(CompositeUserTypeUniqueQuoted.name).table
         table.uniqueKeys.size() == 1
         List<Column> keyColumns = table.uniqueKeys.values().first().columns
         keyColumns*.name.toSet() == ['Amount', 'order'] as Set
-        keyColumns.every { Column column -> column.quoted && table.getColumn(column).is(column) }
+        keyColumns.every { Column column -> column.quoted && (!CLASSIC_SUITE || table.getColumn(column).is(column)) }
 
         and: 'the schema has the key on those names'
         schemaUniqueKeyColumns(datastore, 'COMPOSITE_USER_TYPE_UNIQUE_QUOTED') == [['Amount', 'order'] as Set]
@@ -391,9 +394,11 @@ class CompositeUserTypeMappingSpec extends Specification {
         given: 'a composite user type whose embeddable class is a record describing the value class'
         HibernateDatastore datastore = createDatastore('compositeUserTypeTemplate', {}, CompositeUserTypeTemplated)
 
-        expect: 'the attributes are those of the embeddable class'
+        expect: 'the component has the attributes of the embeddable class, not of the value class'
         CompositeMoneyTemplate.isRecord()
         Component amount = componentOf(datastore, CompositeUserTypeTemplated, 'amount')
+        // the domain binder names the component after the embeddable class, Hibernate's annotation binder (hibernate.generatedDomainClasses)
+        // after the value class the property holds; the attributes and columns are the same under both
         amount.properties*.name == ['amount', 'currency']
         columnNamesOf(amount) == ['amount_amount', 'amount_currency']
 
@@ -460,7 +465,6 @@ class CompositeUserTypeMappingSpec extends Specification {
 
         and: 'the private fields of an embeddable class without accessors are its attributes'
         Component amount = componentOf(datastore, CompositeUserTypeFieldsTemplated, 'amount')
-        amount.componentClassName == CompositeMoney.name
         amount.properties*.name == ['amount', 'currency']
         columnNamesOf(amount) == ['amount_amount', 'amount_currency']
 
@@ -607,7 +611,8 @@ class CompositeUserTypeMappingSpec extends Specification {
 
         then:
         Throwable thrown = thrown()
-        MappingException cause = causeChain(thrown).find { it instanceof MappingException } as MappingException
+        // the domain binder refuses with a MappingException, the generated binding (hibernate.generatedDomainClasses) with an UnsupportedOperationException
+        Throwable cause = causeChain(thrown).find { it instanceof MappingException || it instanceof UnsupportedOperationException }
         cause.message.contains(CompositeUserTypeTooManyColumns.name)
         cause.message.contains('amount')
         cause.message.contains('3')
