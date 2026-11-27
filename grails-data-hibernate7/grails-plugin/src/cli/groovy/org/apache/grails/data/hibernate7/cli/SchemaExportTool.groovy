@@ -29,6 +29,9 @@ import org.slf4j.LoggerFactory
 
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
 import grails.util.Environment
 import org.grails.build.parsing.CommandLine
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -39,6 +42,15 @@ import org.grails.orm.hibernate.HibernateDatastore
  *
  * @since 4.0
  */
+@ToolHints(readOnlyHint = false, destructiveHint = true)
+@ToolOption(names = ['--datasource'], arity = '1',
+        description = 'The data source whose schema is written, by its name under dataSources in the configuration; the default data source when not given')
+@ToolParameter(index = 0, label = 'ACTION', arity = '1', required = false,
+        description = 'generate, the default, or export; either writes the DDL to the file, and neither runs it against the database')
+@ToolParameter(index = 1, label = 'STDOUT', arity = '1', required = false,
+        description = 'stdout writes the DDL to the standard output as well; the parameters can be given in any order')
+@ToolParameter(index = 2, label = 'FILE', arity = '1', required = false,
+        description = 'The file the DDL is added to; ddl.sql in the build directory when not given')
 @CompileStatic
 class SchemaExportTool implements ApplicationTool {
 

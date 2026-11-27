@@ -67,10 +67,12 @@ grails run-tool [-Dgrails.env=<<environment>>] schema-export <<action>> ['stdout
 Arguments:
 
 * `environment` - The environment containing the database configuration to use (`development`, `production`, etc...), given as `-Dgrails.env` before the name of the tool. `schema-export` is a tool of the Hibernate plugin, which `grails schema-export` runs in the application; an environment is named in front of the name with link:run-tool.html[run-tool].
-* `action` - Either 'generate' or 'export'.  The default is 'generate'. Specifying 'export' will execute the script against the specified environment's database instead of just generating the ddl file.
+* `action` - Either 'generate' or 'export'.  The default is 'generate'. Both write the DDL to the file; 'export' does not run it against the database.
 * `stdout` - Passing 'stdout' will cause the script to dump the ddl to stdout.
-* `filename` - The name of the file to write the ddl to.  The default is ddl.sql in the project's 'target' directory.
+* `filename` - The name of the file to write the ddl to.  The default is ddl.sql in the project's 'build' directory. The DDL is added to the end of a file that is there.
 * `datasource` - The `DataSource` name suffix; defaults to the default `DataSource` if not specified
+
+The action, `stdout` and the file name can be given in any order, at most one of each.
 
 
 
@@ -117,7 +119,7 @@ $ ./gradlew -Dgrails.env=<<environment>> runTool -Pargs="schema-export <<action>
 Arguments:
 
 * `environment` - The environment containing the database configuration to use (e.g., dev, prod).
-* `action` - Can be either 'generate' or 'export', with the default being 'generate'. Specifying 'export' will execute the script against the specified environment's database instead of just generating the DDL file.
+* `action` - Can be either 'generate' or 'export', with the default being 'generate'. Both write the DDL to the file; 'export' does not run it against the database.
 * `stdout` - Including 'stdout' will cause the script to output the DDL to the standard output (stdout).
-* `filename` - Specifies the name of the file to write the DDL to, with the default being 'ddl.sql' in the project's 'build' directory.
+* `filename` - Specifies the name of the file to write the DDL to, with the default being 'ddl.sql' in the project's 'build' directory. The DDL is added to the end of a file that is there.
 * `datasource` - The `DataSource` name suffix; defaults to the default `DataSource` if not specified.

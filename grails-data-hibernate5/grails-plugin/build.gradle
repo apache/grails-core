@@ -107,6 +107,8 @@ dependencies {
     testRuntimeOnly 'org.springframework:spring-expression'
     testRuntimeOnly 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'org.yaml:snakeyaml'
+    // runs schema-export the way the build of an application does, with the class its runTool task starts
+    testCliRuntimeOnly project(':grails-console')
 }
 
 apply {
