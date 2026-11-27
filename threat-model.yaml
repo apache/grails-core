@@ -82,10 +82,11 @@ components:
       - grails-views-core/src/main/groovy/grails/views/compiler/ViewsTransform.groovy
   - name: cli_grails_forge_cli
     in_model: true
-    notes: "Developer surface; see §7 supply-chain caveats."
+    notes: "Developer surface; see §7 supply-chain caveats. grails mcp touches the standard input and output of the MCP client that started it, and binds no socket."
     representative_files:
       - grails-forge/grails-forge-cli/src/main/groovy/org/apache/grails/forge/cli/GrailsCli.groovy
       - grails-forge/grails-forge-cli/src/main/groovy/org/apache/grails/forge/cli/pack/PackArtifacts.groovy
+      - grails-forge/grails-forge-cli/src/main/groovy/org/apache/grails/forge/cli/mcp/McpCommand.groovy
   - name: interactive_consoles_grails_console
     in_model: false
     out_of_model_reason: "Developer-only tools providing unrestricted Groovy execution by design (§3)."
@@ -235,6 +236,11 @@ entry_points:
     attacker_controllable: false
     trusted_role: developer
     notes: "CLI-only (commands of a project); a project or Gradle wrapper outside the current directory is used only when the user owns it and others cannot write it (on Windows the owner alone is checked, by security identifier, without reading access control lists; what the Administrators group S-1-5-32-544 owns counts as the user's own only in an elevated process of an administrator), a linked wrapper must name its file directly, a gradle or gradle/wrapper directory that is a link is held to the rule at the directory it leads to (within the directory of the wrapper, named directly) and every directory on the way, GRAILS_SAFE_DIRECTORY opts a directory in; code of the project runs only as a build of the Gradle its wrapper names, by starting the wrapper script (the default for a command line) or through the Gradle Tooling API (the distribution named by gradle/wrapper/gradle-wrapper.properties; the default in the interactive console), after the same checks, and never with a Gradle the command line chose."
+  - surface: McpServer
+    parameter: json_rpc_messages_on_standard_input
+    attacker_controllable: false
+    trusted_role: developer
+    notes: "grails mcp, started by the user's MCP client; commands the user's agent sends, approved in the client as the user configures it. Each call is one grails --plain-output --non-interactive command line run in the server's process as the interactive console runs a line, under every rule of the CLI rows; no code of the project runs in its JVM, only the protocol reaches its standard output, and no socket is bound. Arguments are a list from the input schema, never a shell string; a leading @ is escaped; no new source of code can be named (feature pack directories and repositories, catalogs, plugin indexes and presets not offered, plugin coordinates refused, project regenerate writes no directory); commands and tools that read what is typed and the gradle passthrough are not offered; hints are passed on only for the commands of Grails, the tools of the project and those of Grails' own plugins; --read-only offers only what changes nothing. The server cannot tell an agent that follows the user from one that follows text it read: approval is the client's."
 
 # §7 - adversary model summary.
 adversaries:
@@ -454,6 +460,9 @@ known_non_findings:
     discharged_by: "§6 (the string is a line the developer typed after ! in the interactive console of their own grails command, or piped into it, and runs with their rights in their shell; nothing of a project, build, pack or the network becomes such a line, and a command line of its own runs nothing for it)"
     disposition: "OUT-OF-MODEL: trusted-input"
     file: grails-forge/grails-forge-cli/src/main/groovy/org/apache/grails/forge/cli/console/ConsoleProgram.groovy
+  - pattern: "grails mcp executes the builds and tools that an MCP client asks for"
+    discharged_by: "§6 (the row MCP server: each call is a command line the user could type, with the user's rights, from the client the user registered and approves calls in)"
+    disposition: "OUT-OF-MODEL: trusted-input"
 
 # §13 - closed set of triage dispositions.
 dispositions:
