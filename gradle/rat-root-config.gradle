@@ -127,9 +127,6 @@ tasks.named('rat') {
             'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/snapshot/HibernateTableSnapshotGenerator.groovy',
             'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/snapshot/HibernateUniqueConstraintSnapshotGenerator.groovy',
             'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/snapshot/HibernateViewSnapshotGenerator.groovy',
-            // Derived from liquibase-hibernate (Apache 2.0): fixes ported after v4.27.0
-            'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/diff/HibernateChangedIndexChangeGenerator.groovy',
-            'grails-data-hibernate7/dbmigration-core/src/main/groovy/liquibase/ext/hibernate/snapshot/IdentifierGeneratorSupport.groovy',
             // Third-party test fixtures from liquibase-hibernate v4.27.0
             'grails-data-hibernate7/dbmigration-core/src/testFixtures/groovy/com/example/columnremarks/**',
             'grails-data-hibernate7/dbmigration-core/src/testFixtures/groovy/com/example/customconfig/**',
