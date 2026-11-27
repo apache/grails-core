@@ -66,13 +66,20 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
     public Object intercept(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
 
-        // Only the mapped getter can return the identifier without invoking the entity.
+        // Reading the identifier never initializes the proxy. The identifier is therefore always read with
+        // getInternalIdentifier(), never with Hibernate's getIdentifier(), which loads the entity when
+        // hibernate.jpa.compliance.proxy is enabled.
         if (getIdentifierMethod != null && getIdentifierMethod.equals(method)) {
-            return getIdentifier();
+            return getInternalIdentifier();
         }
 
         GroovyProxyInterceptorLogic.InterceptorState state = new GroovyProxyInterceptorLogic.InterceptorState(
-                getEntityName(), getPersistentClass(), getIdentifier(), lazyToString);
+                getEntityName(), getPersistentClass(), getInternalIdentifier(), lazyToString);
+
+        Object metaClass = GroovyProxyInterceptorLogic.handleMetaClass(state, methodName, args);
+        if (metaClass != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) { // NOPMD: sentinel comparison
+            return metaClass;
+        }
 
         if (isUninitialized()) {
             Object result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args);

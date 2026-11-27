@@ -148,7 +148,7 @@ class SimpleHibernateProxyHandlerSpec extends Specification {
         def proxy = Mock(HibernateProxy)
         def li = Mock(LazyInitializer)
         proxy.getHibernateLazyInitializer() >> li
-        li.getIdentifier() >> 42L
+        li.getInternalIdentifier() >> 42L
 
         expect:
         ph.getIdentifier(proxy) == 42L

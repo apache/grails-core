@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.proxy
 
+import org.codehaus.groovy.runtime.InvokerHelper
 import spock.lang.Specification
 import spock.lang.Unroll
 import org.grails.orm.hibernate.proxy.GroovyProxyInterceptorLogic.InterceptorState
@@ -37,14 +38,45 @@ class GroovyProxyInterceptorLogicSpec extends Specification {
         def state = new InterceptorState("TestEntity", String, 123L)
 
         when:
-        def result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, [] as Object[])
+        def result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args)
 
         then:
         result != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION
         result != null
 
         where:
-        methodName << ["getMetaClass", "getStaticMetaClass"]
+        methodName           | args
+        'getMetaClass'       | [] as Object[]
+        'getStaticMetaClass' | [] as Object[]
+        'getProperty'        | ['metaClass'] as Object[]
+    }
+
+    def "handleMetaClass answers the metaclass of the persistent class for #methodName"() {
+        given:
+        def state = new InterceptorState("TestEntity", String, 123L)
+
+        expect:
+        GroovyProxyInterceptorLogic.handleMetaClass(state, methodName, args).is(InvokerHelper.getMetaClass(String))
+
+        where:
+        methodName           | args
+        'getMetaClass'       | [] as Object[]
+        'getStaticMetaClass' | [] as Object[]
+        'getProperty'        | ['metaClass'] as Object[]
+    }
+
+    def "handleMetaClass leaves #methodName to the implementation"() {
+        given:
+        def state = new InterceptorState("TestEntity", String, 123L)
+
+        expect:
+        GroovyProxyInterceptorLogic.handleMetaClass(state, methodName, args) == GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION
+
+        where:
+        methodName     | args
+        "getName"      | [] as Object[]
+        "getProperty"  | ["name"] as Object[]
+        "getMetaClass" | ["unexpected"] as Object[]
     }
 
     def "handleUninitialized handles identifier access"() {
