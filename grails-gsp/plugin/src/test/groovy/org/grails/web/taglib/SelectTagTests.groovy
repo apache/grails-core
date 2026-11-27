@@ -122,6 +122,42 @@ class SelectTagTests extends AbstractGrailsTagTests {
         assertOutputContains('<option value="1" >FOO</option>', template,[objList:list])
     }
 
+    @Test
+    void testSelectWithOptionDisabledAsPropertyName() {
+        final list = [new SelectTestObject(id: 1L, name: 'Foo'), new SelectTestObject(id: 2L, name: 'Bar', retired: true)]
+        final template = '<g:select optionKey="id" optionValue="name" optionDisabled="retired" name="foo" from="${objList}" />'
+
+        assertOutputContains('<option value="1" >Foo</option>', template, [objList: list])
+        assertOutputContains('<option value="2" disabled="disabled" >Bar</option>', template, [objList: list])
+    }
+
+    @Test
+    void testSelectWithOptionDisabledAsClosure() {
+        final list = [new SelectTestObject(id: 1L, name: 'Foo'), new SelectTestObject(id: 2L, name: 'Bar')]
+        final template = '<g:select optionKey="id" optionValue="name" optionDisabled="${{ it.id == 2 }}" name="foo" from="${objList}" />'
+
+        assertOutputContains('<option value="1" >Foo</option>', template, [objList: list])
+        assertOutputContains('<option value="2" disabled="disabled" >Bar</option>', template, [objList: list])
+    }
+
+    @Test
+    void testSelectWithOptionDisabledKeepsSelectedOptionEnabled() {
+        final list = [new SelectTestObject(id: 1L, name: 'Foo', retired: true), new SelectTestObject(id: 2L, name: 'Bar', retired: true)]
+        final template = '<g:select optionKey="id" optionValue="name" optionDisabled="retired" name="foo" from="${objList}" value="2" />'
+
+        assertOutputContains('<option value="1" disabled="disabled" >Foo</option>', template, [objList: list])
+        assertOutputContains('<option value="2" selected="selected" >Bar</option>', template, [objList: list])
+    }
+
+    @Test
+    void testSelectIgnoresOptionDisabledWithoutOptionKey() {
+        assertOutputNotContains('disabled', '<g:select optionDisabled="${{ true }}" name="foo" from="[1, 2]" />')
+        assertOutputNotContains(
+                'disabled',
+                '<g:select optionDisabled="${{ true }}" name="foo" keys="[1, 2]" from="${names}" />',
+                [names: ['Foo', 'Bar']])
+    }
+
     /**
      * Test case for GRAILS-3596: GString keys and string selected values
      * should match if they resolve to the same text.
@@ -424,6 +460,7 @@ class SelectTagTests extends AbstractGrailsTagTests {
 class SelectTestObject {
     Long id
     String name
+    boolean retired
 }
 
 enum Title implements MessageSourceResolvable {
