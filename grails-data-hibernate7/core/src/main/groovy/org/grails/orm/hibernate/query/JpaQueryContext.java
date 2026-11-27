@@ -266,10 +266,20 @@ public class JpaQueryContext implements Cloneable {
      * @return the expression to sort by
      */
     public Expression<?> getSortExpression(String path, boolean endsWithForeignKey) {
+        return getSortExpression(path, endsWithForeignKey, false);
+    }
+
+    /**
+     * Returns the expression that an order of this query sorts by, as
+     * {@link #getSortExpression(String, boolean)} does.
+     *
+     * @param joinCollections whether a collection that only the sort uses is joined, as a count needs it
+     */
+    public Expression<?> getSortExpression(String path, boolean endsWithForeignKey, boolean joinCollections) {
         if (parent != null && path != null && path.startsWith("{alias}")) {
             return getFullyQualifiedExpression(path);
         }
-        return resolver.resolveSort(path, endsWithForeignKey);
+        return resolver.resolveSort(path, endsWithForeignKey, joinCollections);
     }
 
     /**
@@ -317,6 +327,10 @@ public class JpaQueryContext implements Cloneable {
                 }
                 parent = join.getParent();
             } else {
+                // the path of a collection is joined when it is read, although it is no join of the query
+                if (parent.getModel() instanceof Attribute<?, ?> attribute && attribute.isCollection()) {
+                    return false;
+                }
                 parent = parent.getParentPath();
             }
         }

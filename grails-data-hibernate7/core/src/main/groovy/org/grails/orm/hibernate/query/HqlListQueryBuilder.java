@@ -20,15 +20,18 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Mapping;
@@ -49,6 +52,10 @@ public class HqlListQueryBuilder {
     private final Map<String, String> sortJoins = new LinkedHashMap<>();
     // the paths that the query fetches, with the alias of a fetch that the query also sorts through
     private final Map<String, String> fetchJoins = new LinkedHashMap<>();
+    // the sort joins that join a collection, which has a row for each element
+    private final Set<String> collectionSortJoins = new HashSet<>();
+    // whether the query being built is the count, which joins a collection that the list reads by its elements
+    private boolean counting;
 
     public HqlListQueryBuilder(GrailsHibernatePersistentEntity entity, Map<String, Object> params) {
         this.entity = entity;
@@ -66,7 +73,9 @@ public class HqlListQueryBuilder {
     private String buildHql(boolean count) {
         sortJoins.clear();
         fetchJoins.clear();
-        StringBuilder hql = new StringBuilder(count ? "select count(distinct e) from " : "from ");
+        collectionSortJoins.clear();
+        counting = count;
+        StringBuilder hql = new StringBuilder("from ");
         hql.append(entity.getName()).append(" e");
 
         Object fetchObj = params.get(HibernateQueryArgument.FETCH.value());
@@ -90,10 +99,16 @@ public class HqlListQueryBuilder {
                 hql.append(' ').append(alias);
             }
         });
-        // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null
+        // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null.
+        // A collection is always joined with an inner join, as with Hibernate 5
         String sortJoin = ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort() ? " left join " : " join ";
-        sortJoins.forEach((path, alias) -> hql.append(sortJoin).append(path).append(' ').append(alias));
-        if (!count && !sortHql.isEmpty()) {
+        sortJoins.forEach((path, alias) ->
+                hql.append(collectionSortJoins.contains(path) ? " join " : sortJoin).append(path).append(' ').append(alias));
+        if (count) {
+            // The list has a row for each element of a collection that it sorts by, and max and offset page
+            // through those rows, so the total counts them. A fetch only loads what the instances hold.
+            hql.insert(0, !collectionSortJoins.isEmpty() && fetchJoins.isEmpty() ? "select count(e) " : "select count(distinct e) ");
+        } else if (!sortHql.isEmpty()) {
             hql.append(" order by ").append(sortHql);
         }
 
@@ -180,8 +195,17 @@ public class HqlListQueryBuilder {
                     alias = "f" + fetchJoins.values().stream().filter(fetchAlias -> !fetchAlias.isEmpty()).count();
                     fetchJoins.put(joined, alias);
                 }
+            } else if (association instanceof ToMany<?> && !counting) {
+                // The elements of a collection are read without a join of the query: Hibernate joins them with
+                // an inner join and lists an instance once for each element, as list does with Hibernate 5,
+                // where a join of the query would make it list the instance once
+                collectionSortJoins.add(joined);
+                alias = "element(" + joined + ")";
             } else {
                 alias = sortJoins.computeIfAbsent(joined, path -> "s" + sortJoins.size());
+                if (association instanceof ToMany<?>) {
+                    collectionSortJoins.add(joined);
+                }
             }
             current = association.getAssociatedEntity();
         }

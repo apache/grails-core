@@ -419,16 +419,32 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         [property, joinType, request] << [['name', 'id'], [JoinType.LEFT, JoinType.INNER], ['before', 'after']].combinations()
     }
 
-    void 'a collection sort counts roots once through #api'() {
-        given:
+    void 'findAllWhere and findWhere sort by a property of an association'() {
+        expect: 'the sort argument is applied, as with Hibernate 5'
+        Contract.findAllWhere([salary: 1G], [sort: 'player.name', order: 'desc'])*.player*.name ==
+                ['Unattached Player', 'Cole', 'Bukayo', 'Bruno']
+        Contract.findWhere([salary: 1G], [sort: 'player.name', order: 'desc']).player.name == 'Unattached Player'
+        Contract.findWhere([salary: 1G], [sort: 'player.name']).player.name == 'Bruno'
+    }
+
+    void 'findAllWhere and findWhere sorted by an association property find a team without a club only with the setting'() {
+        expect: 'the join of the sort is the join of the setting, as with Hibernate 5'
+        Team.findAllWhere([name: 'Unattached First Team'], [sort: 'club.name'])*.name ==
+                (leftJoinSort ? ['Unattached First Team'] : [])
+        Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name'])?.name ==
+                (leftJoinSort ? 'Unattached First Team' : null)
+    }
+
+    void 'the total of #api sorted by a collection counts the rows that it pages through'() {
+        given: 'two owners with two scores each, and one without a score, which the inner join of a collection has no row for'
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
         manager.session.clear()
 
         when:
         final result = query.call()
 
-        then:
-        result == (leftJoinSort ? 3 : 2)
+        then: 'as with Hibernate 5, max and offset page through the rows of the join, so the total counts them'
+        result == 4
 
         where:
         api               | query
@@ -455,6 +471,67 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'fetch argument' | { AssociationSortOwner.createCriteria().list(max: 10, sort: 'scores.score', fetch: [scores: JoinType.LEFT]) {} }
         'join call'      | { AssociationSortOwner.createCriteria().list(max: 10, sort: 'scores.score') { join('scores', JoinType.LEFT) } }
         'order call'     | { AssociationSortOwner.createCriteria().list(max: 10, fetch: [scores: JoinType.LEFT]) { order('scores.score') } }
+    }
+
+    void '#api sorted by a collection returns an owner once for each score and leaves out an owner without a score'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect: 'the inner join of the collection in either mode of the setting, as before the setting and as with Hibernate 5'
+        query.call()*.name.sort() == ['Ann', 'Ann', 'Bob', 'Bob']
+
+        where:
+        api                | query
+        'list'             | { AssociationSortOwner.list(sort: 'scores.score') }
+        'a paged list'     | { AssociationSortOwner.list(sort: 'scores.score', max: 10) }
+        'a criteria query' | { AssociationSortOwner.withCriteria { order('scores.score') } }
+        'a paged criteria' | { AssociationSortOwner.createCriteria().list(sort: 'scores.score', max: 10) {} }
+    }
+
+    void '#api sorted by a collection returns an owner once and leaves out an owner without a score'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect: 'an instance once from the rows of the inner join, as with Hibernate 5, in either mode of the setting'
+        query.call()*.name.sort() == ['Ann', 'Bob']
+
+        where:
+        api                   | query
+        'a where query'       | { AssociationSortOwner.where { name ==~ '%' }.list(sort: 'scores.score') }
+        'a dynamic finder'    | { AssociationSortOwner.findAllByNameLike('%', [sort: 'scores.score']) }
+        'a detached criteria' | { new DetachedCriteria(AssociationSortOwner).list(sort: 'scores.score') }
+    }
+
+    void 'a page of a where query sorted by a collection has an owner once from the rows of the page'() {
+        expect: 'the first two of the four rows are the scores of 1, one of each owner, and the total counts the rows'
+        final page = AssociationSortOwner.where { name ==~ '%' }.list(sort: 'scores.score', max: 3)
+        page*.name.sort() == ['Ann', 'Bob']
+        page.totalCount == 4
+    }
+
+    void 'every row of #api sorted by a collection is on a page that its total reaches'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when: 'the pages that a pager asks for, which stops at the total'
+        final first = query.call(0)
+        final names = [] as Set
+        for (int offset = 0; offset < first.totalCount; offset += 2) {
+            names.addAll(query.call(offset)*.name)
+        }
+
+        then: 'no owner is on a page beyond the total'
+        names == ['Ann', 'Bob'] as Set
+
+        where:
+        api             | query
+        'a where query' | { int offset -> AssociationSortOwner.where { name ==~ '%' }.list(max: 2, offset: offset, sort: 'scores.score') }
+        'a criteria'    | { int offset -> AssociationSortOwner.createCriteria().list(max: 2, offset: offset, sort: 'scores.score') {} }
+        'a detached'    | { int offset -> new DetachedCriteria(AssociationSortOwner).list(max: 2, offset: offset, sort: 'scores.score') }
+        'a list'        | { int offset -> AssociationSortOwner.list(max: 2, offset: offset, sort: 'scores.score') }
     }
 
     void 'a detached page retains its sort restriction when counting at offset #offset'() {

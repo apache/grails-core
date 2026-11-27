@@ -81,6 +81,7 @@ public class HibernateQuery extends Query {
     private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
     private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
     private final Set<String> fetchJoinPaths = new LinkedHashSet<>();
+    private boolean rowForEachElement;
     protected String alias;
     protected int aliasCount;
     protected Deque<GrailsHibernatePersistentEntity> entityStack = new LinkedList<>();
@@ -487,15 +488,28 @@ public class HibernateQuery extends Query {
         return list(getCurrentSession());
     }
 
+    /**
+     * Sets whether a list sorted by a property of a collection has an instance once for each element of the
+     * collection, as a criteria query has, and not once, as a where query, a detached criteria and a dynamic
+     * finder have. {@code max} and {@code offset} page through the rows of the elements in both.
+     *
+     * @param rowForEachElement whether an instance is listed once for each element
+     */
+    public void setRowForEachElement(boolean rowForEachElement) {
+        this.rowForEachElement = rowForEachElement;
+    }
+
     public List list(Session session) {
         var creator = createJpaCriteriaQueryCreator();
         List results = getHibernateQueryExecutor().list(session, creator.createQuery(), creator.getParameterValues());
         initializeDeferredCollections(results, creator.getDeferredCollectionFetches());
-        if (!creator.isDistinctInMemory()) {
+        if (!creator.isDistinctInMemory() && (rowForEachElement || !creator.isSortedByCollection())) {
             return results;
         }
         // the query could not select distinct entities for the order it has, so an entity that a join of a
-        // collection repeats is listed where it comes first, as a distinct list was with Hibernate 5
+        // collection repeats is listed where it comes first, as a distinct list was with Hibernate 5. A where
+        // query, a detached criteria and a dynamic finder sorted by a collection list an instance once from
+        // the rows that they read as well, as they do with Hibernate 5
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         List distinct = new ArrayList<>(results.size());
         for (Object result : results) {
@@ -925,6 +939,7 @@ public class HibernateQuery extends Query {
                     }
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
                     hibernateQuery.aliases.addAll(this.aliases);
+                    hibernateQuery.rowForEachElement = this.rowForEachElement;
 
                     return hibernateQuery;
                 });

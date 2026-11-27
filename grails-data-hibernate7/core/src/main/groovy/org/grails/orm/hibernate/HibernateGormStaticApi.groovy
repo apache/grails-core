@@ -438,6 +438,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             return whereCriteria(queryMap).find(args)
         }
         if (!queryMap) return null
+        if (requestsSort(args)) {
+            return whereCriteria(queryMap).find(buildFindWhereArgs(args))
+        }
         executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
     }
 
@@ -447,6 +450,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             return whereCriteria(queryMap).list(args)
         }
         if (!queryMap) return null
+        if (requestsSort(args)) {
+            return whereCriteria(queryMap).list(buildQuerySettings(args))
+        }
         executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
     }
 
@@ -458,6 +464,15 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     private static boolean requestsJoinType(Map args) {
         Object fetch = args?.get(DynamicFinder.ARGUMENT_FETCH)
         fetch instanceof Map && ((Map) fetch).values().any { Object value -> value instanceof JoinType }
+    }
+
+    /**
+     * Whether the arguments sort the query. The HQL of {@code findWhere} and {@code findAllWhere} has no order, so
+     * a sorted query is run as a criteria query, which sorts it and joins the associations of the sort as the
+     * {@code grails.gorm.leftJoinAssociationSort} setting says, as GORM for Hibernate 5 does.
+     */
+    private static boolean requestsSort(Map args) {
+        args?.get(DynamicFinder.ARGUMENT_SORT) != null
     }
 
     private DetachedCriteria<D> whereCriteria(Map queryMap) {
