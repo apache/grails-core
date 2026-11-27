@@ -22,7 +22,9 @@ import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.usertype.UserCollectionType;
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 /**
@@ -63,8 +65,20 @@ public abstract class CollectionType {
         return clazz.getName();
     }
 
-    /** Gets the type name. */
+    /**
+     * Gets the type name of the collection: the user collection type the mapping names. On a collection of basic
+     * values or components the mapped {@code type} names the type of the elements, so it is not a collection type,
+     * unless it names a {@link UserCollectionType}: that one is the collection type of the property.
+     */
     public String getTypeName(HibernateToManyProperty property) {
+        if (property instanceof HibernateToManyCollectionProperty && !namesUserCollectionType(property)) {
+            return null;
+        }
         return property.getTypeName();
+    }
+
+    private static boolean namesUserCollectionType(HibernateToManyProperty property) {
+        Class<?> userType = property.getUserType();
+        return userType != null && UserCollectionType.class.isAssignableFrom(userType);
     }
 }

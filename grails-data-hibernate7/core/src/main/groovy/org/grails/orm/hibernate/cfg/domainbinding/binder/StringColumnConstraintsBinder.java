@@ -50,6 +50,21 @@ public class StringColumnConstraintsBinder {
         }
     }
 
+    /**
+     * Leaves a column unbounded for a mapped type of {@code text}, and does nothing for any other type. It is what the
+     * column of the elements of a collection takes from the mapping of the property: the {@code maxSize} of a
+     * collection bounds its number of elements, and its {@code inList} lists whole collections, so neither is the
+     * length of an element.
+     *
+     * @param column the column to bind the length onto
+     * @param typeName the resolved Hibernate type name, or {@code null} if not relevant
+     */
+    public void bindTextType(Column column, String typeName) {
+        if (isUnboundedTextType(typeName)) {
+            column.setLength(Length.LONG32);
+        }
+    }
+
     private static boolean isUnboundedTextType(String typeName) {
         return "text".equalsIgnoreCase(typeName);
     }

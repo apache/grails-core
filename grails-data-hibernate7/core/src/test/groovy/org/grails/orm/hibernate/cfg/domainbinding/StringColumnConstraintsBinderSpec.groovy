@@ -101,6 +101,28 @@ class StringColumnConstraintsBinderSpec extends Specification {
     }
 
 
+    def "bindTextType leaves the column unbounded for the type text"() {
+        when:
+        binder.bindTextType(column, 'text')
+
+        then:
+        column.length == Length.LONG32 as Long
+    }
+
+    def "bindTextType leaves the length alone for any other type"() {
+        given:
+        def originalLength = column.length
+
+        when:
+        binder.bindTextType(column, typeName)
+
+        then:
+        column.length == originalLength
+
+        where:
+        typeName << [null, 'string', 'java.lang.String']
+    }
+
     def "should prioritize maxSize over inList when both are present"() {
         given:
         mappedForm.getMaxSize() >> 1
