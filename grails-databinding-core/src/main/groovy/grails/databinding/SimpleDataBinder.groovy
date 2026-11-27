@@ -94,6 +94,9 @@ class SimpleDataBinder implements DataBinder {
 
     static final INDEXED_PROPERTY_REGEX = /(.*)\[\s*([^\s]*)\s*\]\s*$/
 
+    /** A name with more than one indexer, split after the first one: {@code columns[0]} and {@code [data]}. */
+    static final MULTIPLE_INDEXERS_REGEX = /^([^\[\]]+\[[^\[\]]*\])(\[[^\[\]]*\].*)$/
+
     int autoGrowCollectionLimit = 256
 
     SimpleDataBinder() {
@@ -221,6 +224,8 @@ class SimpleDataBinder implements DataBinder {
 
     protected void doBind(obj, DataBindingSource source, String filter, List whiteList, List blackList, DataBindingListener listener, errors) {
 
+        Map<Object, Map<String, Object>> deferred = new IdentityHashMap<Object, Map<String, Object>>()
+        source = groupMultipleIndexers(obj, source, filter, whiteList, blackList, deferred)
         def keys = source.getPropertyNames()
         for (String key in keys) {
             if (!filter || key.startsWith(filter + '.')) {
@@ -264,6 +269,171 @@ class SimpleDataBinder implements DataBinder {
                         }
                     }
                 }
+            }
+        }
+
+        deferred.each { Object target, Map<String, Object> entries ->
+            SimpleMapDataBindingSource deferredSource = new SimpleMapDataBindingSource(entries)
+            deferredSource.dataSourceAware = source.dataSourceAware
+            // the entry point a nested object is bound through, so the include list and the constraints of the
+            // supplied object apply to its properties as they do when it is bound directly
+            bind(target, deferredSource, listener)
+        }
+    }
+
+    /**
+     * Binds the first indexer of a name that has several, so {@code columns[0][data]} sets the
+     * {@code data} entry of the element at {@code columns[0]}, the same as {@code columns[0].data}
+     * does. The entries of one element are gathered into a map under {@code columns[0]}. When that element
+     * is a map that the object already holds, the entries are written into it, and when the source supplies
+     * the element as an object that is not a map, the entries are put in {@code deferred}, to be bound as its properties.
+     *
+     * @return the source itself when no name has more than one indexer, else a copy where those names are grouped
+     */
+    protected DataBindingSource groupMultipleIndexers(obj, DataBindingSource source, String filter, List whiteList, List blackList, Map<Object, Map<String, Object>> deferred) {
+        Set<String> names = source.getPropertyNames()
+        String prefix = filter ? filter + '.' : ''
+        // the indexers are counted in the name that is left once the filter is taken off, a filter such as
+        // selected[0] has an indexer of its own
+        if (!names.any { String name -> name.startsWith(prefix) && name.substring(prefix.size()) =~ MULTIPLE_INDEXERS_REGEX }) {
+            return source
+        }
+        Map<String, Object> grouped = new LinkedHashMap<String, Object>()
+        Map<String, Map<String, Object>> elements = new LinkedHashMap<String, Map<String, Object>>()
+        for (String name in names) {
+            def matcher = name.startsWith(prefix) ? (name.substring(prefix.size()) =~ MULTIPLE_INDEXERS_REGEX) : null
+            def rest = matcher ? (matcher.group(2) =~ /^\[\s*([^\s\]]*)\s*\](.*)$/) : null
+            if (rest != null && rest.matches()) {
+                String key = rest.group(1)
+                if (key.size() > 2 && ((key.startsWith("'") && key.endsWith("'")) || (key.startsWith('"') && key.endsWith('"')))) {
+                    key = key[1..-2]
+                }
+                elements.computeIfAbsent(prefix + matcher.group(1)) { new LinkedHashMap<String, Object>() }.put(key + rest.group(2), source.getPropertyValue(name))
+            } else {
+                grouped.put(name, source.getPropertyValue(name))
+            }
+        }
+        elements.each { String element, Map<String, Object> entries ->
+            def supplied = grouped.get(element)
+            MetaProperty owner = indexedOwner(obj, element, filter)
+            boolean okToBind = owner != null && isOkToBind(owner, whiteList, blackList)
+            if (supplied != null && !(supplied instanceof Map)) {
+                // only an element that the bind accepts, of a property the object has, in a list or map that takes the index, is bound at all
+                if (okToBind && indexAccepted(obj, owner, element, filter)) {
+                    deferred.computeIfAbsent(supplied) { new LinkedHashMap<String, Object>() }.putAll(entries)
+                }
+                return
+            }
+            if (supplied instanceof Map) {
+                entries.putAll((Map) supplied)
+            }
+            def held = okToBind ? findHeld(obj, owner, element, filter) : null
+            if (held instanceof Map) {
+                writeIntoHeldMap((Map) held, entries)
+                grouped.remove(element)
+            } else if (held instanceof List && writeIntoHeldList((List) held, entries)) {
+                grouped.remove(element)
+            } else {
+                grouped.put(element, entries)
+            }
+        }
+        SimpleMapDataBindingSource result = new SimpleMapDataBindingSource(grouped)
+        result.dataSourceAware = source.dataSourceAware
+        result
+    }
+
+    private static String elementPath(String element, String filter) {
+        if (filter) {
+            return element.startsWith(filter + '.') ? element[(1 + filter.size())..-1] : element
+        }
+        element
+    }
+
+    /**
+     * The property that owns the element named by {@code element}, {@code columns} for {@code columns[0]}, or null
+     * when the name is outside the filter, is no indexed name, or the object has no such property.
+     */
+    private MetaProperty indexedOwner(obj, String element, String filter) {
+        if (filter && !element.startsWith(filter + '.')) {
+            return null
+        }
+        def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
+        descriptor ? obj.metaClass.getMetaProperty(descriptor.propertyName) : null
+    }
+
+    /**
+     * Whether the list or map that the object holds in the property takes the element's index: a position inside the list or
+     * below the growth limit, a key the map has or a map below the growth limit. Any other kind of property takes it.
+     */
+    private boolean indexAccepted(obj, MetaProperty owner, String element, String filter) {
+        def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
+        def held
+        try {
+            held = owner.getProperty(obj)
+        } catch (Exception ignored) {
+            held = null
+        }
+        String index = descriptor.index
+        if (held instanceof Map || (held == null && Map.isAssignableFrom(owner.type))) {
+            return held == null || ((Map) held).containsKey(index) || ((Map) held).size() < autoGrowCollectionLimit
+        }
+        if ((held instanceof List || (held == null && List.isAssignableFrom(owner.type))) && index ==~ /\d+/) {
+            int position = index.toInteger()
+            return position < autoGrowCollectionLimit || (held != null && position < ((List) held).size())
+        }
+        true
+    }
+
+    /**
+     * The map or list that the object already holds at the element, or null.
+     */
+    private Object findHeld(obj, MetaProperty metaProperty, String element, String filter) {
+        def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
+        def held
+        try {
+            held = metaProperty.getProperty(obj)
+        } catch (Exception ignored) {
+            return null
+        }
+        def index = descriptor.index
+        def selected = null
+        if (held instanceof Map) {
+            selected = ((Map) held).get(index)
+        } else if (held instanceof List && index ==~ /\d+/ && index.toInteger() < ((List) held).size()) {
+            selected = ((List) held).get(index.toInteger())
+        }
+        (selected instanceof Map || selected instanceof List) ? selected : null
+    }
+
+    /**
+     * Writes the entries whose keys are all positions into a list that the object holds, {@code rows[0][1]} for
+     * {@code rows} holding a list of lists, and leaves the list as it is, returning false, when a key is anything else.
+     */
+    private boolean writeIntoHeldList(List held, Map<String, Object> entries) {
+        if (!entries.keySet().every { String key -> key ==~ /\d+/ }) {
+            return false
+        }
+        entries.each { String key, Object value ->
+            int position = key.toInteger()
+            // the list grows only as far as it does for an index of its own: below the growth limit, or inside the list
+            if (position < autoGrowCollectionLimit || position < held.size()) {
+                while (held.size() <= position) {
+                    held.add(null)
+                }
+                held.set(position, value)
+            }
+        }
+        true
+    }
+
+    /**
+     * Writes the entries into a map that the object already holds. A key the map does not have is added while the map is
+     * below the growth limit, as for a map entry of its own.
+     */
+    private void writeIntoHeldMap(Map held, Map<String, Object> entries) {
+        entries.each { String key, Object value ->
+            if (held.containsKey(key) || held.size() < autoGrowCollectionLimit) {
+                held.put(key, value)
             }
         }
     }

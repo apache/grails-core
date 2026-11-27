@@ -20,7 +20,9 @@ package grails.databinding
 
 import grails.databinding.converters.ValueConverter
 import grails.databinding.errors.BindingError
+import grails.databinding.events.DataBindingListener
 import grails.databinding.events.DataBindingListenerAdapter
+import org.grails.databinding.IndexedPropertyReferenceDescriptor
 import org.grails.databinding.converters.DateConversionHelper
 import org.grails.databinding.converters.LocalDateTimeConverter
 import spock.lang.Issue
@@ -587,6 +589,302 @@ class SimpleDataBinderSpec extends Specification {
         widget.factories.find { it.name == 'Tres' }
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers binds the first as the index and the second as a key of that element'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource([
+                'columns[0][data]': 'id', 'columns[0][name]': 'Id', 'columns[1][data]': 'title',
+                'columns[1][search][value]': 'x'
+        ])
+
+        then:
+        table.columns.size() == 2
+        table.columns[0] == [data: 'id', name: 'Id']
+        table.columns[1].data == 'title'
+        table.columns[1]['search[value]'] == 'x'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers binds the properties of a typed element'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['factories[1][name]': 'Dos', 'factories[0][name]': 'Uno'])
+
+        then:
+        table.factories*.name == ['Uno', 'Dos']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers adds to an element given as a map and quoted keys work'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['columns[0]': [data: 'id'], "columns[0]['name']": 'Id'])
+
+        then:
+        table.columns == [[data: 'id', name: 'Id']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers writes into a map the object already holds'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable(columns: [[data: 'old', keep: 'me']])
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['columns[0][data]': 'new'])
+
+        then: 'the entry is replaced and the others stay'
+        table.columns == [[data: 'new', keep: 'me']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers keeps the data source setting of the caller'() {
+        given:
+        def binder = new RecordingBinder()
+        def table = new IndexedTable()
+        def source = new SimpleMapDataBindingSource(['ignored[0][name]': 'x', 'columns[0][data]': 'id'])
+        source.dataSourceAware = aware
+
+        when:
+        binder.bind table, source
+
+        then:
+        binder.seenDataSourceAware.every { it == aware }
+        !binder.seenDataSourceAware.isEmpty()
+
+        where:
+        aware << [false, true]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with a space in the second index is skipped and does not stop the bind'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['ignored[0][first name]': 'x', 'columns[0][data]': 'id'])
+
+        then:
+        table.columns == [[data: 'id']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers applies to an object that the source supplies for the element'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+        def factory = new Factory(name: 'Uno')
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['factories[0]': factory, 'factories[0][isActive]': true])
+
+        then: 'the supplied factory keeps its identity and its other fields'
+        table.factories.size() == 1
+        table.factories[0].is(factory)
+        factory.name == 'Uno'
+        factory.isActive
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers does not write into a held map of a property the bind may not change'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable(columns: [[data: 'old']])
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['columns[0][data]': 'new']), whiteList, blackList
+
+        then:
+        table.columns == [[data: expected]]
+
+        where:
+        whiteList         | blackList     || expected
+        null              | null          || 'new'
+        ['columns']       | null          || 'new'
+        ['factories']     | null          || 'old'
+        null              | ['columns']   || 'old'
+        ['columns']       | ['columns']   || 'old'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A filter that has an indexer of its own does not stop the held map from being written'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable(columns: [[data: 'old', keep: 'me']])
+
+        when:
+        binder.bind(table, new SimpleMapDataBindingSource([(name): 'new']), filter, null, null)
+
+        then:
+        table.columns == expected
+
+        where:
+        name                        | filter         || expected
+        'selected[0].columns[0][data]' | 'selected[0]' || [[data: 'new', keep: 'me']]
+        'selected.columns[0][data]'    | 'selected'    || [[data: 'new', keep: 'me']]
+        'other[0].columns[0][data]'    | 'selected[0]' || [[data: 'old', keep: 'me']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'a nested index or key past the growth limit does not grow what the object already holds'() {
+        given:
+        def binder = new SimpleDataBinder(autoGrowCollectionLimit: 3)
+        def table = new IndexedTable(rows: [['a']], columns: [[data: 'old']])
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(source)
+
+        then:
+        table.rows == expectedRows
+        table.columns == expectedColumns
+
+        where:
+        source                                                       || expectedRows              | expectedColumns
+        ['rows[0][2]': 'in']                                         || [['a', null, 'in']]       | [[data: 'old']]
+        ['rows[0][1000]': 'far']                                     || [['a']]                   | [[data: 'old']]
+        ['rows[0][3]': 'at the limit']                               || [['a']]                   | [[data: 'old']]
+        ['columns[0][data]': 'new']                                  || [['a']]                   | [[data: 'new']]
+        ['columns[0][one]': '1', 'columns[0][two]': '2']             || [['a']]                   | [[data: 'old', one: '1', two: '2']]
+        ['columns[0][one]': '1', 'columns[0][two]': '2', 'columns[0][three]': '3'] || [['a']]    | [[data: 'old', one: '1', two: '2']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A supplied object is bound only when its indexed name is accepted by the bind'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+        def factory = new Factory(name: 'Uno')
+
+        when:
+        String prefix = prefixed ? 'selected.' : ''
+        binder.bind(table, new SimpleMapDataBindingSource([(prefix + 'factories[0]'): factory, (prefix + 'factories[0][name]'): 'new']),
+                filter, null, null)
+
+        then:
+        factory.name == expected
+
+        where:
+        prefixed | filter     || expected
+        true     | 'selected' || 'new'
+        false    | 'selected' || 'Uno'
+        false    | null       || 'new'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A supplied object is changed only when the list or map it is named in accepts it'() {
+        given:
+        def binder = new SimpleDataBinder(autoGrowCollectionLimit: 3)
+        def supplied = new Factory(name: 'Uno')
+        def holder = new IndexedHolder(factories: heldList.collect { new Factory(name: it) }, byName: heldMap.collectEntries { k, v -> [(k): new Factory(name: v)] })
+
+        when:
+        binder.bind holder, new SimpleMapDataBindingSource([(property + '[' + index + ']'): supplied, (property + '[' + index + '][name]'): 'new'])
+
+        then:
+        supplied.name == (accepted ? 'new' : 'Uno')
+
+        where:
+        property    | index   | heldList    | heldMap                    || accepted
+        'factories' | '0'     | []          | [:]                        || true
+        'factories' | '2'     | []          | [:]                        || true
+        'factories' | '3'     | []          | [:]                        || false
+        'factories' | '1000'  | []          | [:]                        || false
+        'factories' | '1'     | ['a']       | [:]                        || true
+        'factories' | '2'     | ['a']       | [:]                        || true
+        'factories' | '3'     | ['a']       | [:]                        || false
+        'factories' | '1'     | ['a', 'b', 'c', 'd'] | [:]               || true
+        'factories' | '5'     | ['a', 'b', 'c', 'd'] | [:]               || false
+        'byName'    | 'x'     | []          | [:]                        || true
+        'byName'    | 'x'     | []          | [a: '1', b: '2']           || true
+        'byName'    | 'x'     | []          | [a: '1', b: '2', c: '3']   || false
+        'byName'    | 'a'     | []          | [a: '1', b: '2', c: '3']   || true
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'The include and exclude lists and the filter decide whether a supplied object or a held map is changed'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def supplied = new Factory(name: 'Uno')
+        def table = new IndexedTable(columns: [[data: 'old']])
+        Map entries = [:]
+        entries[prefix + 'factories[0]'] = supplied
+        entries[prefix + 'factories[0][name]'] = 'new'
+        entries[prefix + 'columns[0][data]'] = 'new'
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(entries), filter, whiteList, blackList
+
+        then:
+        supplied.name == (objectChanged ? 'new' : 'Uno')
+        table.columns == [[data: mapChanged ? 'new' : 'old']]
+
+        where:
+        prefix      | filter      | whiteList                 | blackList                 || objectChanged | mapChanged
+        ''          | null        | null                      | null                      || true          | true
+        ''          | null        | ['factories']             | null                      || true          | false
+        ''          | null        | ['columns']               | null                      || false         | true
+        ''          | null        | ['factories.name']        | null                      || true          | false
+        ''          | null        | null                      | ['factories']             || false         | true
+        ''          | null        | null                      | ['columns']               || true          | false
+        ''          | null        | ['factories', 'columns']  | ['columns']               || true          | false
+        'selected.' | 'selected'  | null                      | null                      || true          | true
+        ''          | 'selected'  | null                      | null                      || false         | false
+        'selected.' | 'selected'  | ['factories']             | null                      || true          | false
+        'selected.' | 'selected'  | null                      | ['columns']               || true          | false
+        'other.'    | 'selected'  | null                      | null                      || false         | false
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A supplied object under an indexed name the object has no property for is not changed'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+        def factory = new Factory(name: 'Uno')
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['missing[0]': factory, 'missing[0][name]': 'new'])
+
+        then:
+        factory.name == 'Uno'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers writes into a list that the object holds at the first index'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable(rows: [['old']])
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['rows[0][0]': 'new', 'rows[0][2]': 'added'])
+
+        then: 'the position is replaced, and a position past the end extends the list'
+        table.rows == [['new', null, 'added']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'names with one indexer are bound as before'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def widget = new Widget()
+
+        when:
+        binder.bind widget, new SimpleMapDataBindingSource(['integers[1]': 2, 'integers[0]': 1])
+
+        then:
+        widget.integers == [1, 2]
+    }
+
     @Issue('GRAILS-10865')
     void 'Test binding to an inherited typed collection'() {
         given:
@@ -776,6 +1074,27 @@ class ClassWithInheritedTypedCollection extends AbstractClassWithTypedCollection
 
 class DateCollection {
     List<Date> dates
+}
+
+class IndexedHolder {
+    List<Factory> factories
+    Map<String, Factory> byName
+}
+
+class IndexedTable {
+    List<Map> columns
+    List<Factory> factories
+    List<List> rows
+}
+
+class RecordingBinder extends SimpleDataBinder {
+    List<Boolean> seenDataSourceAware = []
+
+    @Override
+    protected processIndexedProperty(obj, MetaProperty metaProperty, IndexedPropertyReferenceDescriptor descriptor, val, DataBindingSource source, DataBindingListener listener, errors) {
+        seenDataSourceAware << source.dataSourceAware
+        super.processIndexedProperty(obj, metaProperty, descriptor, val, source, listener, errors)
+    }
 }
 
 class Comment {

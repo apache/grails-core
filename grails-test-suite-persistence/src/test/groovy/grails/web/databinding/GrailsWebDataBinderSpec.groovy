@@ -523,6 +523,35 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         book.pages.find { it.number == 2112 && it.id == p2.id }
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers does not write into a held map of a property that is not bindable'() {
+        given:
+        def holder = new IndexerColumnsHolder(columns: [[data: 'old']], name: 'n')
+
+        when:
+        binder.bind(holder, new SimpleMapDataBindingSource(['columns[0][data]': 'new', name: 'changed']))
+
+        then:
+        holder.columns == [[data: 'old']]
+        holder.name == 'changed'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A supplied object keeps the binding constraints of its own class when its entries are bound'() {
+        given:
+        def entry = new IndexerEntry(name: 'Uno')
+        def holder = new IndexerEntries()
+
+        when:
+        binder.bind(holder, new SimpleMapDataBindingSource([
+            'entries[0]': entry, 'entries[0][name]': 'Dos', 'entries[0][verified]': true]))
+
+        then: 'the bindable property is bound, and the one the class keeps out of binding is not'
+        holder.entries[0].is(entry)
+        entry.name == 'Dos'
+        !entry.verified
+    }
+
     void 'Test bindable'() {
 
         given:
@@ -2120,4 +2149,26 @@ class AlbumHolder {
 @SuppressWarnings('unused')
 class ListCommand implements Validateable {
     List<Long> myLongList
+}
+
+class IndexerColumnsHolder implements Validateable {
+    List<Map> columns
+    String name
+
+    static constraints = {
+        columns(nullable: true, bindable: false)
+    }
+}
+
+class IndexerEntry implements Validateable {
+    String name
+    boolean verified
+
+    static constraints = {
+        verified(bindable: false)
+    }
+}
+
+class IndexerEntries implements Validateable {
+    List<IndexerEntry> entries
 }
