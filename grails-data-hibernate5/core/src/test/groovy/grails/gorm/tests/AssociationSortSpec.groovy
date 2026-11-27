@@ -612,7 +612,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         then:
         results*.name == ['Full squad']
-        results.totalCount == 1
+        results.totalCount == 4
         Hibernate.isInitialized(results.first().regulars)
         results.first().regulars*.name == ['Member A', 'Member B']
     }
