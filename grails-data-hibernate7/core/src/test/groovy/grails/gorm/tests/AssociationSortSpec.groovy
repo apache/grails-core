@@ -504,7 +504,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
     }
 
     void 'the total of #api sorted by a collection counts the rows that it pages through'() {
-        given: 'two owners with two scores each, and one without a score, which the inner join of a collection has no row for'
+        given: 'two owners with two scores each, and one without a score, which only the left join of the setting has a row for'
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
         manager.session.clear()
 
@@ -512,7 +512,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         final result = query.call()
 
         then: 'as with Hibernate 5, max and offset page through the rows of the join, so the total counts them'
-        result == 4
+        result == (leftJoinSort ? 5 : 4)
 
         where:
         api               | query
@@ -522,13 +522,13 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'static page'     | { AssociationSortOwner.list(max: 10, sort: 'scores.score').totalCount }
     }
 
-    void '#api sorted by a collection returns an owner once for each score and leaves out an owner without a score'() {
+    void '#api sorted by a collection returns an owner once for each score without the setting, and every owner once with it'() {
         given:
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
         manager.session.clear()
 
-        expect: 'the inner join of the collection in either mode of the setting, as before the setting and as with Hibernate 5'
-        query.call()*.name.sort() == ['Ann', 'Ann', 'Bob', 'Bob']
+        expect: 'without the setting as with Hibernate 5; with it the left join keeps the owner without a score, and Hibernate lists each owner once'
+        query.call()*.name.sort() == (leftJoinSort ? ['Ann', 'Bob', 'Empty'] : ['Ann', 'Ann', 'Bob', 'Bob'])
 
         where:
         api                | query
@@ -538,13 +538,13 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'a paged criteria' | { AssociationSortOwner.createCriteria().list(sort: 'scores.score', max: 10) {} }
     }
 
-    void '#api sorted by a collection returns an owner once and leaves out an owner without a score'() {
+    void '#api sorted by a collection returns an owner once, and an owner without a score only with the setting'() {
         given:
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
         manager.session.clear()
 
-        expect: 'an instance once from the rows of the inner join, as with Hibernate 5, in either mode of the setting'
-        query.call()*.name.sort() == ['Ann', 'Bob']
+        expect: 'an instance once from the rows of the join, which is a left join with the setting, as with Hibernate 5'
+        query.call()*.name.sort() == (leftJoinSort ? ['Ann', 'Bob', 'Empty'] : ['Ann', 'Bob'])
 
         where:
         api                   | query
@@ -586,7 +586,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         }
 
         then: 'no owner is on a page beyond the total'
-        names == ['Ann', 'Bob'] as Set
+        names == (leftJoinSort ? ['Ann', 'Bob', 'Empty'] : ['Ann', 'Bob']) as Set
 
         where:
         api             | query

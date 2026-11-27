@@ -266,11 +266,12 @@ public class ExpressionResolver {
         if (foreignKey) {
             return null;
         }
-        if (model.isCollection()) {
-            // the leftJoinAssociationSort setting is for an association to a single instance: a sort by a
-            // collection leaves out the instances whose collection is empty, as with Hibernate 5
+        if (model.isCollection() && !leftJoinSort) {
+            // without the leftJoinAssociationSort setting, a sort by a collection leaves out the instances whose
+            // collection is empty, as with Hibernate 5
             return joinCollections ? from.join(attributeName, JoinType.INNER) : null;
         }
+        // with the setting, a left join keeps the instances whose association is null or whose collection is empty
         return from.join(attributeName, leftJoinSort ? JoinType.LEFT : JoinType.INNER);
     }
 

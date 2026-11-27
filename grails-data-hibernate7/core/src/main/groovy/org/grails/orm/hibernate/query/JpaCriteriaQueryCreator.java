@@ -330,6 +330,12 @@ public class JpaCriteriaQueryCreator<T> {
         // A count joins a collection that only the sort uses, to count the rows that the list pages through. A
         // list that fetches a collection returns each instance once, so its count has no such rows
         boolean joinCollections = countOnly && !fetchesCollection();
+        if (countOnly && !joinCollections && entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
+                mappingContext.isLeftJoinAssociationSort()) {
+            // With the leftJoinAssociationSort setting a sort joins with left joins, which leave out no instance, and
+            // a list that fetches a collection returns each instance once, so its count needs none of those joins
+            return;
+        }
         // the orders that are still in an association block come after the orders of the criteria
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
         orders.addAll(AssociationOrders.inBlocks(detachedCriteria.getCriteria()));

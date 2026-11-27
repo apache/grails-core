@@ -99,11 +99,10 @@ public class HqlListQueryBuilder {
                 hql.append(' ').append(alias);
             }
         });
-        // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null.
-        // A collection is always joined with an inner join, as with Hibernate 5
+        // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null
+        // or the collection is empty, as with Hibernate 5
         String sortJoin = ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort() ? " left join " : " join ";
-        sortJoins.forEach((path, alias) ->
-                hql.append(collectionSortJoins.contains(path) ? " join " : sortJoin).append(path).append(' ').append(alias));
+        sortJoins.forEach((path, alias) -> hql.append(sortJoin).append(path).append(' ').append(alias));
         if (count) {
             // The list has a row for each element of a collection that it sorts by, and max and offset page
             // through those rows, so the total counts them. A list that fetches a collection has each instance
@@ -214,10 +213,12 @@ public class HqlListQueryBuilder {
                     alias = "f" + fetchJoins.values().stream().filter(fetchAlias -> !fetchAlias.isEmpty()).count();
                     fetchJoins.put(joined, alias);
                 }
-            } else if (association instanceof ToMany<?> && !counting) {
-                // The elements of a collection are read without a join of the query: Hibernate joins them with
-                // an inner join and lists an instance once for each element, as list does with Hibernate 5,
-                // where a join of the query would make it list the instance once
+            } else if (association instanceof ToMany<?> && !counting &&
+                    !((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort()) {
+                // Without the leftJoinAssociationSort setting, the elements of a collection are read without a
+                // join of the query: Hibernate joins them with an inner join and lists an instance once for each
+                // element, as list does with Hibernate 5, where a join of the query would make it list the
+                // instance once. With the setting, the left join keeps the instances whose collection is empty
                 collectionSortJoins.add(joined);
                 alias = "element(" + joined + ")";
             } else {
