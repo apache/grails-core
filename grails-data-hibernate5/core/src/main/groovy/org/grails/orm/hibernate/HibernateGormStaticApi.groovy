@@ -27,10 +27,12 @@ import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Root
 
 import org.hibernate.Criteria
+import org.hibernate.criterion.CriteriaSpecification
 import org.hibernate.FlushMode
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.hibernate.jpa.QueryHints
 import org.hibernate.query.Query
 
 import org.springframework.core.convert.ConversionService
@@ -46,6 +48,7 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteri
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
 import org.grails.orm.hibernate.exceptions.GrailsQueryException
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.query.HibernateQuery
@@ -90,7 +93,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
             CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
             Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
-            GrailsHibernateQueryUtils.populateArgumentsForCriteria(
+            List<String> deferred = GrailsHibernateQueryUtils.populateArgumentsForListQuery(
                     persistentEntity,
                     criteriaQuery,
                     queryRoot,
@@ -100,6 +103,15 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                     true
             )
             Query query = session.createQuery(criteriaQuery)
+            if (criteriaQuery.isDistinct()) {
+                // a query that fetches a collection returns each instance once, without a distinct in the SQL,
+                // which would compare every fetched column and reject an order by a column that it does not select
+                query.setHint(QueryHints.HINT_PASS_DISTINCT_THROUGH, false)
+                if (!deferred.isEmpty()) {
+                    // Without a collection fetch Hibernate no longer deduplicates the joined rows.
+                    query.setResultTransformer(CriteriaSpecification.DISTINCT_ROOT_ENTITY)
+                }
+            }
 
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(
                     persistentEntity,
@@ -117,8 +129,9 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             hibernateTemplate.applySettings(query)
 
             params = params ? new HashMap(params) : Collections.emptyMap()
+            List<D> results
             if (params.containsKey(DynamicFinder.ARGUMENT_MAX)) {
-                return new PagedResultList(
+                results = new PagedResultList(
                         hibernateTemplate,
                         persistentEntity,
                         hibernateQuery,
@@ -128,8 +141,10 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                 )
             }
             else {
-                return hibernateQuery.list()
+                results = hibernateQuery.list()
             }
+            GrailsHibernateUtil.initializeCollections(persistentEntity, results, deferred)
+            return results
         }
     }
 

@@ -47,6 +47,8 @@ class MultiTenancyRequestedJoinSpec extends Specification {
                 'dataSource.dialect'                          : H2Dialect.name,
                 'hibernate.flush.mode'                        : 'COMMIT',
                 'hibernate.hbm2ddl.auto'                      : 'create',
+                // a sort by a collection joins it with a left join, which the tenant filter has to reach, with this setting
+                'grails.gorm.leftJoinAssociationSort'         : 'true',
         ]
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), RequestedJoinShelf, RequestedJoinBook, RequestedJoinCase, RequestedJoinItem)
 
@@ -146,6 +148,22 @@ class MultiTenancyRequestedJoinSpec extends Specification {
 
         then:
         results*.name == ['Shared shelf', 'Travel shelf']
+    }
+
+    void '#api sorted by a collection that has a join table applies the tenant filter to the join'() {
+        when:
+        final List<RequestedJoinCase> results = RequestedJoinCase.withTransaction { query.call() }
+
+        then: 'a sort by a collection returns an instance once for each row of the join'
+        results*.name.unique().sort() == ['Empty case', 'Shared case']
+
+        where:
+        api                         | query
+        'a where query'             | { RequestedJoinCase.where { name ==~ '%case' }.list(sort: 'items.title') }
+        'a paged criteria query'    | { RequestedJoinCase.createCriteria().list(sort: 'items.title', max: 10) { like('name', '%case') } }
+        'order in a criteria query' | { RequestedJoinCase.createCriteria().list { like('name', '%case'); order('items.title') } }
+        'findAll by example'        | { RequestedJoinCase.findAll(new RequestedJoinCase(), [sort: 'items.title']) }
+        'list'                      | { RequestedJoinCase.list(sort: 'items.title') }
     }
 
     void 'criteria on a collection that has a join table apply the tenant filter with a requested left join to #title'() {
