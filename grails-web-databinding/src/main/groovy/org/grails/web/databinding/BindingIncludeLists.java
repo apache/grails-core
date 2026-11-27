@@ -34,6 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
+import groovy.lang.MetaMethod;
+import groovy.lang.MetaProperty;
 import org.codehaus.groovy.transform.trait.Traits;
 
 import org.slf4j.Logger;
@@ -65,6 +67,10 @@ public final class BindingIncludeLists {
     private static final Map<Class, List> CLASS_TO_LEGACY_BINDING_INCLUDE_LIST = new ConcurrentHashMap<>();
     private static final String CONSTRAINTS_MAP_ACCESSOR = "getConstraintsMap";
     private static final String VALIDATEABLE_TRAIT = "grails.validation.Validateable";
+    private static final String META_CONSTRAINT_VALUE_ACCESSOR = "getMetaConstraintValue";
+    private static final Object[] META_CONSTRAINT_VALUE_ARGUMENT_TYPES = { String.class };
+    private static final String META_CONSTRAINTS_PROPERTY = "metaConstraints";
+    private static final String WRAPPED_CONSTRAINED_PROPERTY = "property";
     // Asked on every bind, so it is answered once for each class; a ClassValue does not keep a reloaded class reachable.
     private static final ClassValue<Boolean> INHERITS_CONSTRAINTS_MAP = new ClassValue<>() {
         @Override
@@ -358,26 +364,57 @@ public final class BindingIncludeLists {
         return Collections.emptyMap();
     }
 
+    /**
+     * The {@code bindable} constraint of a constrained property, read from the property itself, from its meta
+     * constraints, or from the property it wraps.
+     * <p>
+     * A constrained property backed by a map holds those as keys, which the metaclass lookups below do not see,
+     * so a map is read by key. For any other property, each accessor is looked up before it is called. A wrapped
+     * property, such as the ones a validateable class holds, has neither of the first two, and throwing and
+     * catching a missing method or property exception for each of them made reading the constraint cost more
+     * than the rest of a bind.
+     */
     public static Object bindableConstraintValue(final Object constrainedProperty) {
-        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(constrainedProperty.getClass());
-        try {
-            Object value = metaClass.invokeMethod(constrainedProperty, "getMetaConstraintValue", new Object[] { DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME });
-            if (value != null) {
-                return value;
-            }
-        } catch (Exception ignored) {
-        }
-        try {
-            Object metaConstraints = metaClass.getProperty(constrainedProperty, "metaConstraints");
+        if (constrainedProperty instanceof Map) {
+            final Map constrainedPropertyMap = (Map) constrainedProperty;
+            Object metaConstraints = constrainedPropertyMap.get(META_CONSTRAINTS_PROPERTY);
             if (metaConstraints instanceof Map) {
                 return ((Map) metaConstraints).get(DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME);
             }
+            Object delegate = constrainedPropertyMap.get(WRAPPED_CONSTRAINED_PROPERTY);
+            if (delegate != null && delegate != constrainedProperty) {
+                return bindableConstraintValue(delegate);
+            }
+            return null;
+        }
+        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(constrainedProperty.getClass());
+        try {
+            MetaMethod metaConstraintValue = metaClass.getMetaMethod(META_CONSTRAINT_VALUE_ACCESSOR, META_CONSTRAINT_VALUE_ARGUMENT_TYPES);
+            if (metaConstraintValue != null) {
+                Object value = metaConstraintValue.invoke(constrainedProperty, new Object[] { DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME });
+                if (value != null) {
+                    return value;
+                }
+            }
         } catch (Exception ignored) {
         }
         try {
-            Object delegate = metaClass.getProperty(constrainedProperty, "property");
-            if (delegate != null && delegate != constrainedProperty) {
-                return bindableConstraintValue(delegate);
+            MetaProperty metaConstraintsProperty = metaClass.hasProperty(constrainedProperty, META_CONSTRAINTS_PROPERTY);
+            if (metaConstraintsProperty != null) {
+                Object metaConstraints = metaConstraintsProperty.getProperty(constrainedProperty);
+                if (metaConstraints instanceof Map) {
+                    return ((Map) metaConstraints).get(DefaultASTDatabindingHelper.BINDABLE_CONSTRAINT_NAME);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            MetaProperty wrappedProperty = metaClass.hasProperty(constrainedProperty, WRAPPED_CONSTRAINED_PROPERTY);
+            if (wrappedProperty != null) {
+                Object delegate = wrappedProperty.getProperty(constrainedProperty);
+                if (delegate != null && delegate != constrainedProperty) {
+                    return bindableConstraintValue(delegate);
+                }
             }
         } catch (Exception ignored) {
         }
