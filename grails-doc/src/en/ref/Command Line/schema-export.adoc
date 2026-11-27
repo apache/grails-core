@@ -17,96 +17,22 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == schema-export
 
-
-
 === Purpose
 
-
-Uses Hibernate's SchemaExport tool to generate DDL or export the schema.
-NOTE: As of Grails 3, the Hibernate plugin is not by default on the build classpath. You need to add it to the build classpath to get the tool working.
-
+Writes the DDL script that creates the schema of the database of a data source, as Hibernate's `SchemaExport` makes it from the domain classes of the application, to a file and, with `stdout`, to the standard output. Nothing is executed against the database. It is a tool of the Hibernate plugin, of both lines of GORM for Hibernate, which an application with the plugin has without another line in its build.
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
-//Add Hibernate to the build classpath
-buildscript {
-    dependencies {
-        classpath "org.grails.plugins:hibernate:4.3.8.0"
-    }
-}
-----
-
-
-[source,groovy]
-----
-grails run-tool schema-export
-grails run-tool schema-export --datasource=lookup
+grails schema-export
+grails schema-export --datasource=lookup
+grails schema-export stdout
+grails schema-export build/schema.sql
 grails run-tool -Dgrails.env=production schema-export
-grails run-tool -Dgrails.env=development schema-export
-grails run-tool -Dgrails.env=production schema-export export
-grails run-tool -Dgrails.env=production schema-export export --datasource=auditing
-grails run-tool -Dgrails.env=production schema-export stdout
-----
-
-
-=== Description
-
-
-Usage:
-[source,groovy]
-----
-grails run-tool [-Dgrails.env=<<environment>>] schema-export <<action>> ['stdout'] <<filename>> [--datasource]
-----
-
-Arguments:
-
-* `environment` - The environment containing the database configuration to use (`development`, `production`, etc...), given as `-Dgrails.env` before the name of the tool. `schema-export` is a tool of the Hibernate plugin, which `grails schema-export` runs in the application; an environment is named in front of the name with link:run-tool.html[run-tool].
-* `action` - Either 'generate' or 'export'.  The default is 'generate'. Both write the DDL to the file; 'export' does not run it against the database.
-* `stdout` - Passing 'stdout' will cause the script to dump the ddl to stdout.
-* `filename` - The name of the file to write the ddl to.  The default is ddl.sql in the project's 'build' directory. The DDL is added to the end of a file that is there.
-* `datasource` - The `DataSource` name suffix; defaults to the default `DataSource` if not specified
-
-The action, `stdout` and the file name can be given in any order, at most one of each.
-
-
-
-
-== Gradle runTool `schema-export` Tool
-
-=== Purpose
-
-The `schema-export` tool uses Hibernate's SchemaExport tool to generate Data Definition Language (DDL) or export the schema. You need to add it to the build classpath for this tool to work properly.
-
-=== Examples
-
-[source,groovy,subs="attributes+"]
-build.gradle
-----
-repositories {
-    mavenCentral()
-    maven { url = "https://repo.grails.org/grails/restricted/" }
-}
-dependencies {
-    classpath 'org.apache.grails:grails-bom-hibernate5'
-    classpath 'org.apache.grails:grails-hibernate5'
-}
-----
-
-[source,console]
-----
-$ ./gradlew runTool -Pargs="schema-export"
-$ ./gradlew runTool -Pargs="schema-export --datasource=lookup"
-$ ./gradlew -Dgrails.env=prod runTool -Pargs="schema-export"
-$ ./gradlew -Dgrails.env=dev runTool -Pargs="schema-export"
-$ ./gradlew -Dgrails.env=prod runTool -Pargs="schema-export export"
-$ ./gradlew -Dgrails.env=prod runTool -Pargs="schema-export export --datasource=auditing"
-$ ./gradlew -Dgrails.env=prod runTool -Pargs="schema-export stdout"
+grails run-tool -Dgrails.env=production schema-export --datasource=auditing build/auditing.sql
 ----
 
 === Description
@@ -114,12 +40,28 @@ $ ./gradlew -Dgrails.env=prod runTool -Pargs="schema-export stdout"
 Usage:
 
 [source,console]
-$ ./gradlew -Dgrails.env=<<environment>> runTool -Pargs="schema-export <<action>> ['stdout'] <<filename>> [--datasource]"
+----
+grails schema-export [--datasource=DATASOURCE] [ACTION] [STDOUT] [FILE]
+grails run-tool -Dgrails.env=ENVIRONMENT schema-export [--datasource=DATASOURCE] [ACTION] [STDOUT] [FILE]
+----
 
 Arguments:
 
-* `environment` - The environment containing the database configuration to use (e.g., dev, prod).
-* `action` - Can be either 'generate' or 'export', with the default being 'generate'. Both write the DDL to the file; 'export' does not run it against the database.
-* `stdout` - Including 'stdout' will cause the script to output the DDL to the standard output (stdout).
-* `filename` - Specifies the name of the file to write the DDL to, with the default being 'ddl.sql' in the project's 'build' directory. The DDL is added to the end of a file that is there.
-* `datasource` - The `DataSource` name suffix; defaults to the default `DataSource` if not specified.
+* `ACTION` - `generate`, the default, or `export`, which is accepted and does the same as `generate`: both write the DDL script to the file, and to the standard output with `stdout`. Nothing is executed against the database.
+* `STDOUT` - `stdout` writes the DDL to the standard output as well.
+* `FILE` - The file to write the DDL to, relative to the directory of the project; `ddl.sql` in the build directory of the project, `build/ddl.sql`, when not given. The DDL is added to the end of a file that is there.
+* `--datasource` - The data source whose schema is written, by its name under `dataSources` in `application.[yml|groovy]`, as `--datasource=lookup`; the default data source when not given. The option is written in lower case, unlike the `--dataSource` of the `dbm-*` tools.
+
+The action, `stdout` and the file name can be given in any order, at most one of each: a word that is neither `generate`, `export` nor `stdout` is the file.
+
+The tool runs in the application, which the build of the project starts around it, for the `development` environment; `-Dgrails.env` in front of its name, with `run-tool`, gives it another one, whose data source configuration it reads. After the name of the tool, `-Dgrails.env` is an argument of the tool and selects no environment. `grails help schema-export` lists the option and the parameters, and an option the tool does not take, or a fourth argument, is refused before the application is started, with exit code 2.
+
+The tool runs with the Gradle task `runTool` as every tool of the application does, so a build script or a continuous integration job runs it with Gradle alone:
+
+[source,console]
+----
+./gradlew runTool --arg=schema-export
+./gradlew runTool --arg=schema-export --arg=--datasource=lookup
+./gradlew -Dgrails.env=production runTool --arg=schema-export --arg=stdout
+./gradlew -Dgrails.env=production runTool -Pargs="schema-export --datasource=auditing build/auditing.sql"
+----
