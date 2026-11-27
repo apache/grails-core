@@ -333,7 +333,8 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         }
         Object cascadeVal = namedArgs.cascade
         if (cascadeVal != null) property.cascade = cascadeVal.toString()
-        if (namedArgs.cascadeValidate instanceof Boolean) property.cascadeValidate = (Boolean) namedArgs.cascadeValidate
+        Object cascadeValidateVal = namedArgs.cascadeValidate
+        if (cascadeValidateVal != null) property.cascadeValidate = cascadeValidateVal.toString()
         Object sortVal = namedArgs.sort
         if (sortVal != null) property.sort = sortVal.toString()
         Object orderVal = namedArgs.order
