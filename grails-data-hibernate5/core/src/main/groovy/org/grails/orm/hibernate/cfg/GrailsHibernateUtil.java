@@ -385,8 +385,10 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
-     * Defers collection fetches that a collection sort would multiply into a bag. Call after the
-     * orders and joins have been built, and initialize the returned paths after executing the query.
+     * Defers collection fetches that a collection sort would multiply into a bag. On a page, it also
+     * defers the fetch of another collection of the same class as a collection that a sort joins with a
+     * left join, which would otherwise fetch the sorted collection from the rows of the page only. Call
+     * after the orders and joins have been built, and initialize the returned paths after executing the query.
      * Projections load no collections. The sort joins and their join types are kept.
      *
      * @param criteria The completed criteria
@@ -426,8 +428,14 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             if (getCollectionRole(factory, persister, sorted) == null) {
                 continue;
             }
+            CriteriaImpl.Subcriteria join = findCriteria(root, sorted);
+            // on a page, Hibernate would fill a collection that it fetches through the left join of the
+            // sort from the rows of the page only, so the other collection is loaded after the query
+            boolean pagedLeftJoin = join != null && join.getJoinType() == JoinType.LEFT_OUTER_JOIN &&
+                    !isFetchRequested(root, sorted) && isPaged(root);
             String fetched;
-            while ((fetched = findOtherFetchedCollection(root, sorted, true)) != null) {
+            while ((fetched = findOtherFetchedCollection(root, sorted, true)) != null ||
+                    pagedLeftJoin && (fetched = findOtherFetchedCollection(root, sorted, false)) != null) {
                 for (String path : fetchedPaths) {
                     if ((path.equals(fetched) || path.startsWith(fetched + '.')) && !deferred.contains(path)) {
                         deferred.add(path);
@@ -439,12 +447,25 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                     keepCollectionUnfetched(joined);
                 }
             }
-            CriteriaImpl.Subcriteria join = findCriteria(root, sorted);
             if (join != null && join.getJoinType() == JoinType.LEFT_OUTER_JOIN && keepsSortedCollectionUnfetched(root, sorted)) {
                 keepCollectionUnfetched(join);
             }
         }
         return deferred;
+    }
+
+    /**
+     * Whether the query returns a page of its rows, with a row limit below the largest one or a positive
+     * offset. The criteria query of a {@code list} with arguments and without {@code max} sets the largest
+     * row limit.
+     *
+     * @param root The root criteria
+     * @return Whether the query is paged
+     */
+    private static boolean isPaged(CriteriaImpl root) {
+        Integer maxResults = root.getMaxResults();
+        Integer firstResult = root.getFirstResult();
+        return maxResults != null && maxResults < Integer.MAX_VALUE || firstResult != null && firstResult > 0;
     }
 
     /**

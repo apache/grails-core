@@ -661,6 +661,38 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'a dynamic finder'          | { AssociationSortSquad.findAllByName('Squad', [sort: 'players.name', fetch: [reserves: 'join']]) }
     }
 
+    void '#api sorted by a collection on a page keeps that collection complete when the query fetches another collection of the same class'() {
+        given:
+        final first = new AssociationSortSquad(name: 'S1').save(failOnError: true)
+        final second = new AssociationSortSquad(name: 'S2').save(failOnError: true)
+        new AssociationSortSquad(name: 'S3').save(failOnError: true)
+        ['p1', 'p2'].each { new AssociationSortMember(name: it, squad: first).save(failOnError: true) }
+        ['r1', 'r2'].each { new AssociationSortMember(name: it, reserveSquad: first).save(failOnError: true) }
+        new AssociationSortMember(name: 'p3', squad: second).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final List<AssociationSortSquad> results = query.call()
+        final squad = results.find { it.name == 'S1' }
+
+        then:
+        results*.name == names
+        squad.players*.name.sort() == ['p1', 'p2']
+
+        and: 'with the setting, the fetch of the other collection is loaded after the query, with all of its elements'
+        !leftJoinSort || squad.reserves*.name.sort() == ['r1', 'r2']
+
+        where:
+        api                                       | names        | query
+        'a where query with the fetch argument'   | ['S1']       | { AssociationSortSquad.where { name ==~ 'S%' }.list(max: 1, offset: 1, sort: 'players.name', fetch: [reserves: 'join']) }
+        'a where query with join'                 | ['S1']       | { AssociationSortSquad.where { name ==~ 'S%' }.join('reserves').list(max: 1, offset: 1, sort: 'players.name') }
+        'a descending where query'                | ['S2', 'S1'] | { AssociationSortSquad.where { name ==~ 'S%' }.list(max: 2, sort: 'players.name', order: 'desc', fetch: [reserves: 'join']) }
+        'a dynamic finder'                        | ['S1']       | { AssociationSortSquad.findAllByNameLike('S%', [max: 1, offset: 1, sort: 'players.name', fetch: [reserves: 'join']]) }
+        'findAll by example'                      | ['S1']       | { AssociationSortSquad.findAll(new AssociationSortSquad(), [max: 1, offset: 1, sort: 'players.name', fetch: [reserves: 'join']]) }
+        'a criteria query with the sort argument' | ['S1']       | { AssociationSortSquad.createCriteria().list(max: 1, offset: 1, sort: 'players.name') { join('reserves') } }
+        'a criteria query with order'             | ['S1']       | { AssociationSortSquad.createCriteria().list { join('reserves'); order('players.name'); maxResults(1); firstResult(1) } }
+    }
+
     @Requires({ instance.leftJoinSort })
     void '#api sorted by a bag initializes the other fetched bag after the query'() {
         given:
