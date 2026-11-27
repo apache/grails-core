@@ -20,6 +20,8 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 This skill is about using AI *from* an application. It is not about AI coding agents working *on* a Grails application; that is the `grails-developer` skill.
 
+There are two MCP servers, not to be confused: an MCP endpoint *of the application*, its `@McpTool` beans served by Spring AI's MCP server support while it runs, is this skill's; `grails mcp`, the `grails` command line serving a coding agent the commands and tools of a project on the developer's computer, is the `grails-developer` skill's and is never deployed.
+
 ## When to Use Me
 
 Activate this skill when:
