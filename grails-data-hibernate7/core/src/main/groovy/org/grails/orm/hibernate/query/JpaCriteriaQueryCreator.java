@@ -304,9 +304,16 @@ public class JpaCriteriaQueryCreator<T> {
         PersistentEntity current = entity;
         int collection = -1;
         for (int i = 0; i < tokens.length; i++) {
-            if (current == null || !(current.getPropertyByName(tokens[i]) instanceof Association<?> association) ||
-                    association instanceof Embedded) {
+            if (current == null || !(current.getPropertyByName(tokens[i]) instanceof Association<?> association)) {
                 return NOT_AN_ASSOCIATION_PATH;
+            }
+            if (association instanceof Embedded) {
+                // a component has no join of its own; a path goes through it to an association that it holds
+                if (i == tokens.length - 1) {
+                    return NOT_AN_ASSOCIATION_PATH;
+                }
+                current = association.getAssociatedEntity();
+                continue;
             }
             if (association instanceof ToMany && collection < 0) {
                 collection = i;
@@ -485,6 +492,7 @@ public class JpaCriteriaQueryCreator<T> {
         // A count joins a collection that only the sort uses, to count the rows that the list pages through. A
         // list that fetches a collection returns each instance once, so its count has no such rows
         boolean joinCollections = countOnly && !fetchesCollection();
+        boolean fetchedCollectionSort = false;
         // the orders that are still in an association block come after the orders of the criteria
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
         orders.addAll(AssociationOrders.inBlocks(detachedCriteria.getCriteria()));
@@ -534,6 +542,7 @@ public class JpaCriteriaQueryCreator<T> {
             if (countOnly) {
                 // Keep the joins of the sort without ordering the aggregate: they decide the rows that the
                 // list pages through, so the count has a row for each element of a collection that it sorts by
+                fetchedCollectionSort |= !joinCollections && expression != null && readsCollection(expression);
                 continue;
             }
             if (expression == null) {
@@ -551,6 +560,12 @@ public class JpaCriteriaQueryCreator<T> {
             } else {
                 jpaOrders.add(ascending ? criteriaBuilder.asc(expression) : criteriaBuilder.desc(expression));
             }
+        }
+        if (fetchedCollectionSort && projections.getProjectionList().size() == 1 &&
+                projections.getProjectionList().get(0).getClass() == Query.CountProjection.class) {
+            // The sort reads the join of a collection that the query fetches or requests a join type for. The
+            // list returns each instance once, so its total counts instances and not the rows of that join
+            ((CriteriaQuery<Long>) cq).select(criteriaBuilder.countDistinct(context.getRoot()));
         }
         if (distinctInMemory) {
             // SQL only orders a distinct query by what it selects, and an order through a join is not among

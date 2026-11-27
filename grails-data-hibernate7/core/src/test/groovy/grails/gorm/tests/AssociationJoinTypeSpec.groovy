@@ -41,7 +41,31 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
                                       AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
                                       AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal,
                                        AssociationJoinTypePrize, AssociationJoinTypeRibbon,
-                                       RequestedJoinBagTeam, RequestedJoinBagMember, RequestedJoinBagTrophy)
+                                       RequestedJoinBagTeam, RequestedJoinBagMember, RequestedJoinBagTrophy,
+                                       AssociationSortBook, AssociationSortAuthor)
+    }
+
+    void 'a join type requested for a path through an embedded component is applied by #description'() {
+        given: 'a book with an author, and one whose component has none'
+        final king = new AssociationSortAuthor(name: 'King').save(failOnError: true)
+        new AssociationSortBook(title: 'It', details: new AssociationSortBookDetails(isbn: '1', author: king)).save(failOnError: true)
+        new AssociationSortBook(title: 'Anonymous', details: new AssociationSortBookDetails(isbn: '3')).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        query.call() == expected
+
+        where:
+        description                              | query                                                                                                                                                 || expected
+        'a where query'                          | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER).list()*.title }                                                || ['It']
+        'the count of a where query'             | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER).count() }                                                      || 1
+        'a criteria query'                       | { AssociationSortBook.createCriteria().list { join('details.author', JoinType.INNER) }*.title }                                                     || ['It']
+        'list'                                   | { AssociationSortBook.list(fetch: ['details.author': JoinType.INNER])*.title }                                                                      || ['It']
+        'a paged list'                           | { AssociationSortBook.list(fetch: ['details.author': JoinType.INNER], max: 10).totalCount }                                                         || 1
+        'list after a left join of a longer path' | { AssociationSortBook.list(fetch: ['details.author.mentor': JoinType.LEFT, 'details.author': JoinType.INNER])*.title }                             || ['It']
+        'list before a left join of a longer path' | { AssociationSortBook.list(fetch: ['details.author': JoinType.INNER, 'details.author.mentor': JoinType.LEFT])*.title }                            || ['It']
+        'a where query with a left join'         | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.LEFT).list(sort: 'title')*.title }                                    || ['Anonymous', 'It']
+        'a left join of a longer path alone'     | { AssociationSortBook.list(fetch: ['details.author.mentor': JoinType.LEFT], sort: 'title')*.title }                                                 || ['Anonymous', 'It']
     }
 
     void setup() {
