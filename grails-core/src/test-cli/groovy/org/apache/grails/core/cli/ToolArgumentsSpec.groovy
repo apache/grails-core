@@ -105,6 +105,18 @@ class CleanCacheTool implements StandaloneTool {
     boolean handle(ExecutionContext executionContext) { ToolArgumentsReport.report(this, executionContext) }
 }
 
+@ToolOption(names = ['--skip'], arity = '1', type = 'integer', label = 'NUMBER', defaultValue = '0', description = 'How many of the last change sets to leave out')
+@ToolOption(names = ['--verbose'], arity = '1', choices = ['true', 'false'], caseInsensitive = true, defaultValue = 'true',
+        description = 'Lists the change sets when true')
+@ToolParameter(index = 0, label = 'NUMBER', arity = '1', type = 'integer', description = 'How many change sets')
+@ToolParameter(index = 1, label = 'MORE', arity = '1..*', type = 'integer', required = false, description = 'More numbers')
+@ToolHints(readOnlyHint = true)
+class CountChangesTool implements StandaloneTool {
+    String description = 'Counts change sets'
+    @ToolOption(names = ['--views'], choices = ['gsp', 'json'], description = 'The kind of views') String views
+    boolean handle(ExecutionContext executionContext) { ToolArgumentsReport.report(this, executionContext) }
+}
+
 @ToolHints
 class FreeFormTool implements StandaloneTool {
     String description = 'Takes anything'
@@ -154,6 +166,7 @@ class FreeFormTool implements StandaloneTool {
         'greet-people'    | 'GreetPeopleTool'
         'update-database' | 'UpdateDatabaseTool'
         'clean-cache'     | 'CleanCacheTool'
+        'count-changes'   | 'CountChangesTool'
         'free-form'       | 'FreeFormTool'
     }
 

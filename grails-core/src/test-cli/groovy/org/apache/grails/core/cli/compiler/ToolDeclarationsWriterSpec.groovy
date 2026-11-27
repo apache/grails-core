@@ -208,6 +208,40 @@ class ReportTool implements org.apache.grails.core.cli.ApplicationTool {
         !(described.incomplete ?: []).contains('arguments')
     }
 
+    def "on the class a declaration says that its value is a whole number or one of choices, taken in any case or not, and on a field of the type String it gives choices"() {
+        when:
+        ToolCompilation compiled = ToolCompilation.compile(dir, CLI, IMPORTS + """
+@ToolOption(names = ['--skip'], arity = '1', type = 'integer', label = 'NUMBER', defaultValue = '0', description = 'How many to leave out')
+@ToolOption(names = ['--verbose'], arity = '1', choices = ['true', 'false'], caseInsensitive = true, defaultValue = 'true')
+@ToolOption(names = ['--format'], arity = '1', type = 'string', choices = ['yaml', 'json'])
+@ToolParameter(index = 0, label = 'NUMBER', arity = '1', type = 'integer')
+@ToolParameter(index = 1, label = 'ACTION', arity = '1', required = false, choices = ['generate', 'export'], caseInsensitive = true)
+@ToolParameter(index = 2, label = 'MORE', arity = '1..*', required = false, type = 'integer')
+class ReportTool implements ${APPLICATION} {
+    String description = 'Reports'
+    @ToolOption(names = ['--views'], choices = ['gsp', 'json'], caseInsensitive = true) String views = 'gsp'
+    ${HANDLE}
+}
+""")
+
+        then:
+        compiled.errors.isEmpty()
+        Map described = compiled.descriptor('example.ReportTool')
+        described.options == [
+                [names: ['--skip'], arity: '1', type: 'integer', label: 'NUMBER', description: 'How many to leave out', default: '0'],
+                [names: ['--verbose'], arity: '1', type: 'string', label: 'VERBOSE', choices: ['true', 'false'], caseInsensitive: true, default: 'true'],
+                [names: ['--format'], arity: '1', type: 'string', label: 'FORMAT', choices: ['yaml', 'json']],
+                [names: ['--views'], arity: '1', type: 'string', label: 'VIEWS', choices: ['gsp', 'json'], caseInsensitive: true, default: 'gsp'],
+        ]
+        described.parameters == [[label: 'NUMBER', arity: '1', type: 'integer'],
+                                 [label: 'ACTION', arity: '0..1', type: 'string', choices: ['generate', 'export'], caseInsensitive: true],
+                                 [label: 'MORE', arity: '0..*', type: 'integer', repeatable: true]]
+
+        and: 'the members are written in the order of the form of help --json'
+        compiled.descriptorFile('example.ReportTool').getText('US-ASCII').contains(
+                '{"names":["--verbose"],"arity":"1","type":"string","label":"VERBOSE","choices":["true","false"],"caseInsensitive":true,"default":"true"}')
+    }
+
     def "the options of a container written by hand are those of the class"() {
         when:
         ToolCompilation compiled = ToolCompilation.compile(dir, CLI, IMPORTS + """
@@ -328,6 +362,23 @@ class ReportTool extends BaseTool {
         'more than 16 parameters'              | ''                                                          | (0..16).collect { "@ToolParameter(index = ${it}, label = 'P${it}') String p${it}" }.join('\n')          || 'ReportTool declares more than 16 parameters.'
         'an enum of 65 constants'              | ''                                                          | "@ToolOption(names = ['--kind']) Many kind\nenum Many { ${(0..64).collect { "C${it}" }.join(', ')} }"    || '@ToolOption on ReportTool.kind has choices that are not 1 to 64 different names of at most 64 characters, each an ASCII letter, _ or $ followed by ASCII letters, digits, _ and $.'
         'an enum with a constant outside ASCII' | ''                                                         | "@ToolOption(names = ['--kind']) Odd kind\nenum Odd { GROSS, GRÖSSER }"                                 || '@ToolOption on ReportTool.kind has choices that are not 1 to 64 different names of at most 64 characters, each an ASCII letter, _ or $ followed by ASCII letters, digits, _ and $.'
+        'a type on a field'                    | ''                                                          | "@ToolOption(names = ['--since'], type = 'integer') String since"                                        || '@ToolOption on ReportTool.since gives a type, which on a field the type of the field says: leave it out.'
+        'a type on a field of a parameter'     | ''                                                          | "@ToolParameter(index = 0, label = 'A', type = 'string') String a"                                       || '@ToolParameter on ReportTool.a gives a type, which on a field the type of the field says: leave it out.'
+        'choices on a field of a number'       | ''                                                          | "@ToolOption(names = ['--count'], choices = ['one']) int count"                                         || '@ToolOption on ReportTool.count gives choices, which only a field of the type String takes: the type of any other field says what it takes, and an enum has its constants for choices.'
+        'choices on a field of an enum'        | ''                                                          | "@ToolOption(names = ['--kind'], choices = ['SMALL']) Kind kind\nenum Kind { SMALL, LARGE }"            || '@ToolOption on ReportTool.kind gives choices, which only a field of the type String takes: the type of any other field says what it takes, and an enum has its constants for choices.'
+        'choices on a list of texts'           | ''                                                          | "@ToolParameter(index = 0, label = 'A', choices = ['x']) List<String> a"                                || '@ToolParameter on ReportTool.a gives choices, which only a field of the type String takes: the type of any other field says what it takes, and an enum has its constants for choices.'
+        'case-insensitive without choices'     | ''                                                          | "@ToolOption(names = ['--since'], caseInsensitive = true) String since"                                 || '@ToolOption on ReportTool.since is case-insensitive without choices of its own: only the choices it gives are taken in any case.'
+        'an enum field taken in any case'      | ''                                                          | "@ToolOption(names = ['--kind'], caseInsensitive = true) Kind kind\nenum Kind { SMALL, LARGE }"         || '@ToolOption on ReportTool.kind is case-insensitive without choices of its own: only the choices it gives are taken in any case.'
+        'a switch on the class with a type'    | "@ToolOption(names = ['--force'], arity = '0', type = 'integer')" | ''                                                                                                   || '@ToolOption --force on the class ReportTool has a type its arity does not take: a switch is boolean, and an option that takes a value is string or integer.'
+        'a type on the class that is none'     | "@ToolOption(names = ['--count'], arity = '1', type = 'number')" | ''                                                                                                    || '@ToolOption --count on the class ReportTool has a type its arity does not take: a switch is boolean, and an option that takes a value is string or integer.'
+        'choices of a whole number'            | "@ToolOption(names = ['--count'], arity = '1', type = 'integer', choices = ['one'])" | ''                                                                                || '@ToolOption --count on the class ReportTool has choices and takes no text.'
+        'choices of a switch'                  | "@ToolOption(names = ['--force'], arity = '0', choices = ['yes'])" | ''                                                                                                  || '@ToolOption --force on the class ReportTool has choices and takes no text.'
+        'in any case on the class, no choices' | "@ToolOption(names = ['--views'], arity = '1', caseInsensitive = true)" | ''                                                                                              || '@ToolOption --views on the class ReportTool is case-insensitive and has no choices, which are what it would take in any case.'
+        'choices that differ only in case'     | "@ToolOption(names = ['--views'], arity = '1', choices = ['json', 'JSON'], caseInsensitive = true)" | ''                                                                  || '@ToolOption --views on the class ReportTool is case-insensitive and has choices that differ only in case, which it cannot tell apart.'
+        'a default on the class of no choice'  | "@ToolOption(names = ['--views'], arity = '1', choices = ['gsp', 'json'], defaultValue = 'xml')" | ''                                                                     || '@ToolOption --views on the class ReportTool has a default that is not one of its choices.'
+        'a whole number on the class by default' | "@ToolOption(names = ['--count'], arity = '1', type = 'integer', defaultValue = 'many')" | ''                                                                           || '@ToolOption --count on the class ReportTool has a default that is not a whole number.'
+        'a parameter on the class of a switch' | "@ToolParameter(index = 0, label = 'A', arity = '1', type = 'boolean')" | ''                                                                                              || 'The 1st @ToolParameter on the class ReportTool has a type that is neither string nor integer.'
+        'choices of a parameter of a number'   | "@ToolParameter(index = 0, label = 'A', arity = '1', type = 'integer', choices = ['one'])" | ''                                                                          || 'The 1st @ToolParameter on the class ReportTool has choices and takes no text.'
     }
 
     def "declarations that do not fit in a descriptor do not compile"() {

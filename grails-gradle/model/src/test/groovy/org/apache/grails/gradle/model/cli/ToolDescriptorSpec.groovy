@@ -281,6 +281,36 @@ class ToolDescriptorSpec extends Specification {
         'have three hints'                      | '"hints":{"readOnlyHint":true,"destructiveHint":true,"idempotentHint":true}'         || 'has hints that are not an object with readOnlyHint, destructiveHint, idempotentHint, openWorldHint, each true or false'
         'read input as text'                    | '"readsInput":"yes"'                                                                 || 'has a readsInput that is neither true nor false'
         'lack something else'                   | '"incomplete":["everything"]'                                                        || 'has an incomplete that is not a list of description, arguments, hints'
+        'take no choices in any case'           | '"options":[{"names":["--a"],"arity":"1","caseInsensitive":true}]'                   || 'has declarations that have an option, the 1st, that is case-insensitive and has no choices, which are what it would take in any case'
+        'take choices of one case in any case'  | '"options":[{"names":["--a"],"arity":"1","choices":["x","X"],"caseInsensitive":true}]' || 'has declarations that have an option, the 1st, that is case-insensitive and has choices that differ only in case, which it cannot tell apart'
+        'say in any case with text'             | '"parameters":[{"label":"A","arity":"1","choices":["x"],"caseInsensitive":"yes"}]'    || 'has declarations that have a parameter, the 1st, that has a caseInsensitive that is neither true nor false'
+        'have choices of a whole number'        | '"parameters":[{"label":"A","arity":"1","type":"integer","choices":["x"]}]'          || 'has declarations that have a parameter, the 1st, that has choices and takes no text'
+    }
+
+    def "an option or a parameter that takes its choices in any case says so after its choices, and only then"() {
+        given:
+        ToolDescriptor.Declarations declarations = new ToolDescriptor.Declarations(
+                [[names: ['--views'], arity: '1', choices: ['gsp', 'json'], caseInsensitive: true, default: 'gsp'],
+                 [names: ['--format'], arity: '1', choices: ['yaml', 'json'], caseInsensitive: false],
+                 [names: ['--top'], arity: '1', type: 'integer', default: '30']],
+                [[label: 'ACTION', arity: '0..1', choices: ['generate', 'export'], caseInsensitive: true]], null, false, null)
+
+        when:
+        String json = ToolDescriptor.describe(CLASS, 'greet', 'Greets someone', 'application', true, [], declarations)
+        ToolDescriptor.Described read = ToolDescriptor.read(CLASS, json.getBytes('US-ASCII'))
+
+        then:
+        json.contains('"options":[{"names":["--views"],"arity":"1","type":"string","choices":["gsp","json"],"caseInsensitive":true,"default":"gsp"},' +
+                '{"names":["--format"],"arity":"1","type":"string","choices":["yaml","json"]},{"names":["--top"],"arity":"1","type":"integer","default":"30"}]')
+        json.contains('"parameters":[{"label":"ACTION","arity":"0..1","type":"string","choices":["generate","export"],"caseInsensitive":true}]')
+        read.declarations.options == declarations.options
+        read.declarations.parameters == declarations.parameters
+
+        and: 'a value is one of them as it is written, or in any case where they are taken so'
+        ToolDescriptor.isChoice('json', ['gsp', 'json'], false)
+        !ToolDescriptor.isChoice('JSON', ['gsp', 'json'], false)
+        ToolDescriptor.isChoice('JSON', ['gsp', 'json'], true)
+        !ToolDescriptor.isChoice('xml', ['gsp', 'json'], true)
     }
 
     def "no descriptor is written whose declarations do not fit in one, nor for declarations that break a rule"() {

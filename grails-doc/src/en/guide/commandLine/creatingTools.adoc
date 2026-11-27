@@ -264,9 +264,18 @@ enum ReportFormat {
 
 | `arity`
 | Only for an option declared on the class (below): `'0'` for an option that takes no value, `'1'` for one that takes a value. On a field the type of the field decides.
+
+| `type`
+| Only for an option declared on the class that takes a value: `'string'`, which it is without this member, or `'integer'` for a whole number. On a field the type of the field decides.
+
+| `choices`
+| The values the option takes, and no other, as `['gsp', 'json']`, which the help and completion offer: on the class, or on a field of the type `String`. A field of any other type takes what its type says, and an enum has its constants for choices.
+
+| `caseInsensitive`
+| With `choices`, `true` takes a value whatever its case, as `JSON` for `json`. The tool is given the value as it was given; `false` by default.
 |===
 
-`@ToolParameter` has the members `index`, the place of the parameter, from 0 and without gaps; `label`, which is required and which no other parameter of the tool has; `description`; `required`, which is `true` by default; and, only for a parameter declared on the class, `arity`, `'1'` for one value or `'1..*'` for the rest of the arguments, with `required = false` for a parameter that can be left out. An option or a parameter that is not given leaves its field as the tool declares it, `null`, `false`, or the value it is declared with, unless the option has a `defaultValue`.
+`@ToolParameter` has the members `index`, the place of the parameter, from 0 and without gaps; `label`, which is required and which no other parameter of the tool has; `description`; `required`, which is `true` by default; `choices` and `caseInsensitive`, as those of `@ToolOption`; and, only for a parameter declared on the class, `arity`, `'1'` for one value or `'1..*'` for the rest of the arguments, with `required = false` for a parameter that can be left out, and `type`, `'string'` or `'integer'`. An option or a parameter that is not given leaves its field as the tool declares it, `null`, `false`, or the value it is declared with, unless the option has a `defaultValue`.
 
 The type of the field decides what the option or the parameter takes:
 
@@ -302,7 +311,8 @@ The type of the field decides what the option or the parameter takes:
 The other rules:
 
 * A tool declares at most 32 options and 16 parameters, and no name of an option twice.
-* An enum has 1 to 64 constants, each of at most 64 letters, digits, `_` and `$` of ASCII.
+* An enum has, and `choices` are, 1 to 64 different values, each an ASCII letter, `_` or `$` followed by ASCII letters, digits, `_` and `$`, at most 64 characters. Choices that are taken in any case differ in more than their case.
+* A value that is a whole number has no choices. On a field, `type` is left out, `choices` are given only on a field of the type `String`, and `caseInsensitive` only with `choices`.
 * A parameter that has to be given comes before those that can be left out, and only the last parameter takes any number of values.
 * The field of an option or a parameter is neither `static` nor `final`, and is one option or one parameter, not both.
 * Every member of the annotations is a constant, since the compiler reads them without running the tool.
@@ -313,7 +323,7 @@ A declaration that breaks one of these rules, or one of the members above, does 
 [[toolOptionsOnTheClass]]
 ==== Options a Tool Reads Itself, and Options Several Tools Share
 
-A tool that reads an option itself, through `executionContext.commandLine`, declares it on the class, with its `arity`, and `@ToolOption` can be given more than once there; so does a tool that reads a parameter itself, with `@ToolParameter` and its `arity`. An option or a parameter declared on the class takes text or nothing: a value it is given is a string, which the tool converts itself, and it has no choices. The class of the tool itself is read for these declarations, not a class it extends or a trait it implements. A set of options that several tools share is a Groovy `@AnnotationCollector`, which each of them carries in the place of the options:
+A tool that reads an option itself, through `executionContext.commandLine`, declares it on the class, with its `arity`, and `@ToolOption` can be given more than once there; so does a tool that reads a parameter itself, with `@ToolParameter` and its `arity`. The tool reads the value of an option or a parameter declared on the class as the text it was given, and converts it itself. The class of the tool itself is read for these declarations, not a class it extends or a trait it implements. A set of options that several tools share is a Groovy `@AnnotationCollector`, which each of them carries in the place of the options:
 
 [source,groovy]
 .src/cli/groovy/com/example/ArchiveOrdersTool.groovy
@@ -349,6 +359,42 @@ class ArchiveOrdersTool implements ApplicationTool, ToolSupport {
 ----
 
 The `dbm-*` tools of the Database Migration plugin share `--dataSource`, `--defaultSchema` and `--contexts` this way.
+
+A declaration on the class says what its value is with `type = 'integer'`, for a whole number, and with `choices`, for the values it takes, which `caseInsensitive = true` takes in any case. A value that is not one of them is refused before `handle()` runs, as a value of a field is, and the help, completion, `help --json` and agents know them. The tool is still given the text it was given, as `optionValue` and `args` read it:
+
+[source,groovy]
+.src/cli/groovy/com/example/ListOrdersTool.groovy
+----
+package com.example
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
+import org.apache.grails.core.cli.ToolSupport
+
+@ToolOption(names = ['--limit'], arity = '1', type = 'integer', label = 'ROWS', defaultValue = '20', description = 'How many orders to list')
+@ToolOption(names = ['--status'], arity = '1', choices = ['open', 'shipped', 'delivered'], caseInsensitive = true,
+        description = 'Lists the orders of one status only')
+@ToolParameter(index = 0, label = 'FORMAT', arity = '1', required = false, choices = ['text', 'csv'], description = 'How the list is written')
+@ToolHints(readOnlyHint = true, openWorldHint = false)
+class ListOrdersTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Lists the orders of the application'
+
+    boolean startsApplication = false
+
+    boolean handle() {
+        int limit = (executionContext.commandLine.optionValue('limit') ?: '20').toString().toInteger()
+        String status = executionContext.commandLine.optionValue('status')?.toString()?.toLowerCase(Locale.ROOT)
+        String format = args ? args[0] : 'text'
+        println "Would list ${limit} ${status ?: 'all'} orders as ${format}"
+        return true
+    }
+}
+----
+
+`grails list-orders --limit 5 --status SHIPPED csv` runs it, and `--limit five`, `--status lost` and `xml` are refused, each with the line that says what the option or the parameter takes.
 
 [[toolArgumentsHeld]]
 ==== How the Arguments Reach the Tool
@@ -982,7 +1028,7 @@ When a tool is compiled, the compiler writes a descriptor of it beside its regis
 * A method that is given the tool may stop holding it on one way through its code (`tool = null` in one branch of an `if`). Each way is read with what holds the tool on that way, and where the ways meet again and it is no longer certain what holds the tool, a name that is set from there on is not described.
 * The name a tool is listed by is the name that runs it: the name of its descriptor, or the name its class name gives when it has none. Another tool that gives itself that name when it is made, in a way the compiler does not read, does not take it over: of an `AlphaTool` and a `BetaTool` that have no descriptors, `beta` runs `BetaTool`, whatever `AlphaTool.getName()` returns. A name that no tool is listed by, or that more than one is, which is then not listed, runs the tool that has that name when it is made.
 * `target` is `application` for a tool of `src/cli` and `standalone` for one of `src/standalone`, and `startsApplication` says, for the first, whether the application is started around it. `deprecated` lists `type` for a class that implements `ApplicationCommand` or `GrailsApplicationCommand` and `folder` for a source in `grails-app/commands`.
-* `options` and `parameters` are what `@ToolOption` and `@ToolParameter` declare, with the members `help --json` describes the options and parameters of a command with (see "Help" in xref:commandLine[The Command Line]), each only where it says something: an option has `names`, `arity` and `type`, and `label`, `required`, `description`, `repeatable`, `choices` and `default` where it has them; a parameter has `label`, `arity` and `type`, and `description`, `repeatable` and `choices` where it has them. `hints` are the four members of `@ToolHints`, where the tool has it; `readsInput` is `true` where the tool declares it; and `incomplete` lists what the compiler found that the tool does not declare, of `description`, `arguments` and `hints`. Each of these members is there only where it says something.
+* `options` and `parameters` are what `@ToolOption` and `@ToolParameter` declare, with the members `help --json` describes the options and parameters of a command with (see "Help" in xref:commandLine[The Command Line]), each only where it says something: an option has `names`, `arity` and `type`, and `label`, `required`, `description`, `repeatable`, `choices`, `caseInsensitive` and `default` where it has them; a parameter has `label`, `arity` and `type`, and `description`, `repeatable`, `choices` and `caseInsensitive` where it has them. `hints` are the four members of `@ToolHints`, where the tool has it; `readsInput` is `true` where the tool declares it; and `incomplete` lists what the compiler found that the tool does not declare, of `description`, `arguments` and `hints`. Each of these members is there only where it says something.
 
 Write the name in lower case letters and digits, in words joined by single hyphens, with at most 64 characters, and the description on one line of at most 512 characters; a tool whose descriptor has anything else is left out of the list, with the reason. A tool whose name or description is not written that way gets a descriptor without the description, or none when it is the name. A tool written in Java, or registered by hand in `META-INF/grails-cli.factories`, has no generated descriptor. Add the file to the resources next to the registration:
 

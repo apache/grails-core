@@ -264,10 +264,17 @@ final class ToolDescriptor {
 
     /** The members of an option, in the order they are written. */
     public static final List<String> OPTION_MEMBERS = ['names', 'arity', 'type', 'label', 'required', 'description', 'repeatable', 'choices',
-                                                       'default'].asImmutable()
+                                                       'caseInsensitive', 'default'].asImmutable()
 
     /** The members of a parameter, in the order they are written. */
-    public static final List<String> PARAMETER_MEMBERS = ['label', 'arity', 'type', 'description', 'repeatable', 'choices'].asImmutable()
+    public static final List<String> PARAMETER_MEMBERS = ['label', 'arity', 'type', 'description', 'repeatable', 'choices', 'caseInsensitive'].asImmutable()
+
+    /**
+     * The member of an option or a parameter with {@code choices} that says that a value is one of them
+     * whatever its case, as {@code JSON} for {@code json}: {@code true}, and there only where it is so. The
+     * tool is given the value as it was given.
+     */
+    public static final String MEMBER_CASE_INSENSITIVE = 'caseInsensitive'
 
     /** The most characters the name of a tool has. */
     public static final int MAX_NAME_LENGTH = 64
@@ -537,8 +544,12 @@ final class ToolDescriptor {
             return "has a description that is not one line of at most ${MAX_DECLARATION_DESCRIPTION_LENGTH} characters that can be shown".toString()
         }
         Object choices = declared.get('choices')
+        Object caseInsensitive = declared.get(MEMBER_CASE_INSENSITIVE)
+        if (caseInsensitive != null && !(caseInsensitive instanceof Boolean)) {
+            return "has a ${MEMBER_CASE_INSENSITIVE} that is neither true nor false".toString()
+        }
         if (choices == null) {
-            return null
+            return caseInsensitive == Boolean.TRUE ? 'is case-insensitive and has no choices, which are what it would take in any case' : null
         }
         if (type != TYPE_STRING) {
             return 'has choices and takes no text'
@@ -549,7 +560,25 @@ final class ToolDescriptor {
             return "has choices that are not 1 to ${MAX_CHOICES} different names of at most ${MAX_CHOICE_LENGTH} characters, " +
                     'each an ASCII letter, _ or $ followed by ASCII letters, digits, _ and $'
         }
+        if (caseInsensitive == Boolean.TRUE &&
+                ((List) choices).collect { Object choice -> ((String) choice).toLowerCase(Locale.ROOT) }.toSet().size() < ((List) choices).size()) {
+            return 'is case-insensitive and has choices that differ only in case, which it cannot tell apart'
+        }
         null
+    }
+
+    /**
+     * Says whether a value is one of the choices of an option or a parameter, as the runners of tools and
+     * the command line check it: as it is written, or whatever the case of its ASCII letters where the
+     * declaration is {@link #MEMBER_CASE_INSENSITIVE}.
+     *
+     * @param value the value given
+     * @param choices the choices
+     * @param caseInsensitive whether the case of the value does not matter
+     * @return whether the value is one of them
+     */
+    static boolean isChoice(String value, List<String> choices, boolean caseInsensitive) {
+        caseInsensitive ? choices.any { String choice -> choice.equalsIgnoreCase(value) } : choices.contains(value)
     }
 
     /**
@@ -615,6 +644,7 @@ final class ToolDescriptor {
         putSaying(normal, 'description', option.get('description'))
         putSaying(normal, 'repeatable', option.get('repeatable'))
         putSaying(normal, 'choices', option.get('choices'))
+        putSaying(normal, MEMBER_CASE_INSENSITIVE, option.get(MEMBER_CASE_INSENSITIVE))
         putSaying(normal, 'default', option.get('default'))
         normal.asImmutable()
     }
@@ -636,6 +666,7 @@ final class ToolDescriptor {
         putSaying(normal, 'description', parameter.get('description'))
         putSaying(normal, 'repeatable', arity.endsWith('*') ? Boolean.TRUE : null)
         putSaying(normal, 'choices', parameter.get('choices'))
+        putSaying(normal, MEMBER_CASE_INSENSITIVE, parameter.get(MEMBER_CASE_INSENSITIVE))
         normal.asImmutable()
     }
 

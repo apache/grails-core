@@ -370,6 +370,36 @@ class ToolProjectionSpec extends Specification {
         tool.commandLine([target: 'a', 'target-argument': 'b']) == ['clash', '--target=a', 'b']
     }
 
+    void "a tool that declares on its class a whole number and choices has an integer and an enum in its schema, and its entry says what it takes in any case"() {
+        given:
+        Map<String, Object> document = McpToolSamples.sample('application-with-tools')
+        ((List) document.commands) << [name: 'count-changes', aliases: [], description: 'Counts the change sets', project: true, origin: 'application',
+                                       target: 'application', startsApplication: false, registration: 'descriptor',
+                                       options: [[names: ['--skip'], arity: '1', type: 'integer', label: 'NUMBER', required: false, description: 'How many to leave out',
+                                                  repeatable: false, split: null, choices: null, default: '0'],
+                                                 [names: ['--verbose'], arity: '1', type: 'string', label: 'VERBOSE', required: false, description: 'Lists them',
+                                                  repeatable: false, split: null, choices: ['true', 'false'], caseInsensitive: true, default: 'true']],
+                                       parameters: [[label: 'NUMBER', arity: '1', type: 'integer', description: 'How many', repeatable: false, split: null, choices: null],
+                                                    [label: 'MORE', arity: '0..*', type: 'integer', description: 'More numbers', repeatable: true, split: null, choices: null]],
+                                       commands: []]
+
+        when:
+        McpTool tool = ToolProjection.of(document, false, 'fingerprint').tools.find { it.name == 'count-changes' }
+        Map<String, Object> properties = (Map<String, Object>) tool.inputSchema.get('properties')
+
+        then:
+        properties.skip == [type: 'integer', default: 0, description: 'How many to leave out']
+        properties.verbose == [type: 'string', enum: ['true', 'false'], default: 'true', description: 'Lists them']
+        properties.number == [type: 'integer', description: 'How many']
+        ((Map) properties.more).type == 'array'
+        ((Map) properties.more).items == [type: 'integer']
+        tool.inputSchema.required == ['number']
+        tool.commandLine([skip: 2, verbose: 'false', number: 3, more: [4, 5]]) == ['count-changes', '--skip=2', '--verbose=false', '3', '4', '5']
+
+        and: 'the whole entry is in _meta, with the choices it takes in any case'
+        ((List<Map>) ((Map) tool.meta[McpNames.META_COMMAND]).options)[1].caseInsensitive == true
+    }
+
     // what the golden file holds of the tools of a sample
     private static Map<String, Object> golden(String sample, McpToolSet tools) {
         return [

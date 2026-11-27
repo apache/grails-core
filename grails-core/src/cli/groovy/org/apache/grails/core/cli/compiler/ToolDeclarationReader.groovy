@@ -290,7 +290,7 @@ final class ToolDeclarationReader {
     }
 
     private static Map<String, Object> classOption(AnnotationNode annotation, String what, Read read) {
-        Map<String, Object> option = common(annotation, what, read, ['names', 'description', 'required', 'label', 'defaultValue', 'arity'])
+        Map<String, Object> option = common(annotation, what, read, ['names', 'description', 'required', 'label', 'defaultValue', 'arity', 'type', 'choices', 'caseInsensitive'])
         if (option == null) {
             return null
         }
@@ -300,13 +300,15 @@ final class ToolDeclarationReader {
             return null
         }
         option.put('arity', arity)
-        option.put('type', arity == ToolDescriptor.ARITY_SWITCH ? ToolDescriptor.TYPE_BOOLEAN : ToolDescriptor.TYPE_STRING)
+        String type = (String) option.remove('type')
+        option.put('type', type ?: (arity == ToolDescriptor.ARITY_SWITCH ? ToolDescriptor.TYPE_BOOLEAN : ToolDescriptor.TYPE_STRING))
+        valueSet(option, (List<String>) option.remove('choices'), (Boolean) option.remove('caseInsensitive'))
         valueMembers(option)
         option
     }
 
     private static Map<String, Object> fieldOption(AnnotationNode annotation, FieldNode field, String what, Read read) {
-        Map<String, Object> option = common(annotation, what, read, ['names', 'description', 'required', 'label', 'defaultValue', 'arity'])
+        Map<String, Object> option = common(annotation, what, read, ['names', 'description', 'required', 'label', 'defaultValue', 'arity', 'type', 'choices', 'caseInsensitive'])
         if (option == null) {
             return null
         }
@@ -315,6 +317,10 @@ final class ToolDeclarationReader {
             return null
         }
         ClassNode type = field.type
+        List<String> choices = fieldChoices(annotation, field, option, what, read)
+        if (choices == null) {
+            return null
+        }
         if (SWITCHES.contains(type.name)) {
             option.put('arity', ToolDescriptor.ARITY_SWITCH)
             option.put('type', ToolDescriptor.TYPE_BOOLEAN)
@@ -335,12 +341,13 @@ final class ToolDeclarationReader {
             read.breaches << new Breach(field, "${what} is on a field of the type ${typeName(type)}, which no option takes: ${OPTION_TYPES}.".toString())
             return null
         }
+        valueSet(option, choices, (Boolean) option.remove('caseInsensitive'))
         valueMembers(option)
         option
     }
 
     private static Map<String, Object> classParameter(AnnotationNode annotation, String what, Read read) {
-        Map<String, Object> parameter = common(annotation, what, read, ['label', 'description', 'required', 'arity'])
+        Map<String, Object> parameter = common(annotation, what, read, ['label', 'description', 'required', 'arity', 'type', 'choices', 'caseInsensitive'])
         if (parameter == null) {
             return null
         }
@@ -356,12 +363,14 @@ final class ToolDeclarationReader {
         }
         parameter.put('arity', required ? arity : (arity == ToolDescriptor.ARITY_ONE ? ToolDescriptor.ARITY_OPTIONAL :
                 arity == ToolDescriptor.ARITY_SOME ? ToolDescriptor.ARITY_ANY : arity))
-        parameter.put('type', ToolDescriptor.TYPE_STRING)
+        String type = (String) parameter.remove('type')
+        parameter.put('type', type ?: ToolDescriptor.TYPE_STRING)
+        valueSet(parameter, (List<String>) parameter.remove('choices'), (Boolean) parameter.remove('caseInsensitive'))
         parameter
     }
 
     private static Map<String, Object> fieldParameter(AnnotationNode annotation, FieldNode field, String what, Read read) {
-        Map<String, Object> parameter = common(annotation, what, read, ['label', 'description', 'required', 'arity'])
+        Map<String, Object> parameter = common(annotation, what, read, ['label', 'description', 'required', 'arity', 'type', 'choices', 'caseInsensitive'])
         if (parameter == null) {
             return null
         }
@@ -371,6 +380,10 @@ final class ToolDeclarationReader {
             return null
         }
         ClassNode type = field.type
+        List<String> choices = fieldChoices(annotation, field, parameter, what, read)
+        if (choices == null) {
+            return null
+        }
         if (type.name == 'java.lang.String' || WHOLE_NUMBERS.contains(type.name) || type.isEnum()) {
             parameter.put('arity', required ? ToolDescriptor.ARITY_ONE : ToolDescriptor.ARITY_OPTIONAL)
             parameter.put('type', WHOLE_NUMBERS.contains(type.name) ? ToolDescriptor.TYPE_INTEGER : ToolDescriptor.TYPE_STRING)
@@ -384,7 +397,38 @@ final class ToolDeclarationReader {
             read.breaches << new Breach(field, "${what} is on a field of the type ${typeName(type)}, which no parameter takes: ${PARAMETER_TYPES}.".toString())
             return null
         }
+        valueSet(parameter, choices, (Boolean) parameter.remove('caseInsensitive'))
         parameter
+    }
+
+    // The choices a declaration on a field gives itself: on a field of the type String alone, since the type of any other
+    // field says what it takes, the constants of an enum included; the type is the field's. An empty list for none, and
+    // null when the declaration breaks one of these rules.
+    private static List<String> fieldChoices(AnnotationNode annotation, FieldNode field, Map<String, Object> declared, String what, Read read) {
+        if (declared.remove('type')) {
+            read.breaches << new Breach(annotation, "${what} gives a type, which on a field the type of the field says: leave it out.".toString())
+            return null
+        }
+        List<String> choices = (List<String>) declared.remove('choices') ?: []
+        if (!choices.isEmpty() && field.type.name != 'java.lang.String') {
+            read.breaches << new Breach(annotation, "${what} gives choices, which only a field of the type String takes: the type of any other field says what it takes, and an enum has its constants for choices.".toString())
+            return null
+        }
+        if (declared.get('caseInsensitive') == Boolean.TRUE && choices.isEmpty()) {
+            read.breaches << new Breach(annotation, "${what} is case-insensitive without choices of its own: only the choices it gives are taken in any case.".toString())
+            return null
+        }
+        choices
+    }
+
+    // the choices a declaration gives, and whether they are taken in any case, as a descriptor has them
+    private static void valueSet(Map<String, Object> declared, List<String> choices, Boolean caseInsensitive) {
+        if (choices) {
+            declared.put('choices', choices)
+        }
+        if (caseInsensitive) {
+            declared.put(ToolDescriptor.MEMBER_CASE_INSENSITIVE, Boolean.TRUE)
+        }
     }
 
     // the members of an annotation as constants, or null when one is not a constant
@@ -395,7 +439,7 @@ final class ToolDeclarationReader {
             if (expression == null) {
                 continue
             }
-            Object value = member == 'names' ? names(expression) : constant(expression)
+            Object value = member == 'names' || member == 'choices' ? names(expression) : constant(expression)
             if (value == null) {
                 read.breaches << new Breach(annotation, "${what} has a ${member} that is not a constant: it is read without running the tool.".toString())
                 return null

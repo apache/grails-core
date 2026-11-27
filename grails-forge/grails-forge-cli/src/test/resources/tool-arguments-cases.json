@@ -23,7 +23,7 @@
     "tools: the declarations of each tool, exactly as its descriptor and the catalog have them (options and parameters in the shape of help --json). A tool with neither takes whatever it is given.",
     "cases: the arguments a tool is given after its name; either refused, the <what> of the line '| Error NAME: <what>. grails help NAME shows its options', after which the tool ends with the exit code 2, or accepted: bound is what the fields of the declarations hold then, by the first long name of an option or the label of a parameter (a field that holds null is left out); remaining is what the command line of the tool says are its parameters; options, where given, is every option of the command line of the tool by its names without the hyphens.",
     "The arguments are read from left to right, and the first that is wrong is the refusal: an option that is not declared (by its name before any '='; a name that is not one or two hyphens, a letter or digit and at most 62 letters, digits, dots, hyphens and underscores is said as 'an option it was given'), a value given to a switch, an option that is given again and is not repeatable, an option that needs a value and is last or is followed by '--' or by a declared option (with or without '=value'), and a value of the wrong type for an option. Then each required option that is missing, in the order they are declared; then the parameters in their order, each value of the wrong type and each required one that is missing; then the arguments more than the parameters take.",
-    "The forms: --name value, --name=value, -x value, -x=value, a switch alone, and '--', after which every argument is a parameter. An argument that does not start with '-', the argument '-' alone, and a negative number (-5, -1.5) that no option has as its name are parameters. An argument -Dname=value, with a name, is a system property of the tool's command line and is never refused. Names and choices are matched as they are written, upper and lower case apart. An integer is an optional sign and digits within the range of a long; a field of the type int takes one within the range of an int, which only the runner knows."
+    "The forms: --name value, --name=value, -x value, -x=value, a switch alone, and '--', after which every argument is a parameter. An argument that does not start with '-', the argument '-' alone, and a negative number (-5, -1.5) that no option has as its name are parameters. An argument -Dname=value, with a name, is a system property of the tool's command line and is never refused. Names are matched as they are written, upper and lower case apart, and so are choices, unless the declaration says caseInsensitive, when a value is one of them whatever its case. A value of an option or a parameter declared on the class is given to the tool as the text it was given, also when it is checked as a whole number or as one of choices; a value of a field is converted to the type of the field. An integer is an optional sign and digits within the range of a long; a field of the type int takes one within the range of an int, which only the runner knows."
   ],
   "tools": {
     "audit-report": {
@@ -71,6 +71,17 @@
     "clean-cache": {
       "options": [
         {"names": ["--level"], "arity": "1", "type": "integer", "label": "LEVEL", "description": "How much to clean"}
+      ]
+    },
+    "count-changes": {
+      "options": [
+        {"names": ["--skip"], "arity": "1", "type": "integer", "label": "NUMBER", "description": "How many of the last change sets to leave out", "default": "0"},
+        {"names": ["--verbose"], "arity": "1", "type": "string", "label": "VERBOSE", "description": "Lists the change sets when true", "choices": ["true", "false"], "caseInsensitive": true, "default": "true"},
+        {"names": ["--views"], "arity": "1", "type": "string", "label": "VIEWS", "description": "The kind of views", "choices": ["gsp", "json"]}
+      ],
+      "parameters": [
+        {"label": "NUMBER", "arity": "1", "type": "integer", "description": "How many change sets"},
+        {"label": "MORE", "arity": "0..*", "type": "integer", "description": "More numbers", "repeatable": true}
       ]
     },
     "free-form": {
@@ -233,6 +244,30 @@
      "tool": "clean-cache", "arguments": ["extra"], "refused": "it takes no parameters, and was given 1"},
     {"title": "a negative number to a tool that declares no parameters",
      "tool": "clean-cache", "arguments": ["-5", "-6"], "refused": "it takes no parameters, and was given 2"},
+    {"title": "a whole number and choices declared on the class, given to the tool as the text they were given",
+     "tool": "count-changes", "arguments": ["--skip", "2", "--verbose=TRUE", "--views", "json", "3", "4", "-5"],
+     "bound": {"--views": "json"},
+     "remaining": ["3", "4", "-5"],
+     "options": {"skip": "2", "verbose": "TRUE", "views": "json"}},
+    {"title": "choices declared case-insensitive take a value in any case",
+     "tool": "count-changes", "arguments": ["--verbose", "False", "+7"],
+     "bound": {},
+     "remaining": ["+7"],
+     "options": {"verbose": "False"}},
+    {"title": "a value of an option on the class that is not a whole number",
+     "tool": "count-changes", "arguments": ["--skip=two", "3"], "refused": "--skip takes a whole number"},
+    {"title": "a number with a fraction for an option on the class",
+     "tool": "count-changes", "arguments": ["--skip", "1.5", "3"], "refused": "--skip takes a whole number"},
+    {"title": "a value of an option on the class that is not one of its choices",
+     "tool": "count-changes", "arguments": ["--verbose=maybe", "3"], "refused": "--verbose takes one of true, false"},
+    {"title": "choices of a field of the type String, in another case",
+     "tool": "count-changes", "arguments": ["--views=JSON", "3"], "refused": "--views takes one of gsp, json"},
+    {"title": "a parameter on the class that is not a whole number",
+     "tool": "count-changes", "arguments": ["three"], "refused": "NUMBER takes a whole number"},
+    {"title": "a value of the rest that is not a whole number",
+     "tool": "count-changes", "arguments": ["3", "4", "x"], "refused": "MORE takes a whole number"},
+    {"title": "a whole number on the class that is missing",
+     "tool": "count-changes", "arguments": ["--skip", "1"], "refused": "NUMBER is required"},
     {"title": "a tool that declares nothing takes anything, as it always did",
      "tool": "free-form", "arguments": ["one", "--flag=value", "two", "-x"],
      "bound": {},

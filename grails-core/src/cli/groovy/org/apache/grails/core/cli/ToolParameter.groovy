@@ -38,8 +38,10 @@ import java.lang.annotation.Target
  *
  * <p>On a field the type of the field says what the parameter takes: a {@code String}, a whole number
  * or an enum takes one value, and a {@code List<String>}, which only the last parameter can be, takes
- * the rest. On the class, {@link #arity()} says it, and the annotation can be given more than once
- * there.</p>
+ * the rest. On the class, {@link #arity()} says it, {@link #type()} whether a value is a whole number,
+ * and the annotation can be given more than once there. {@link #choices()} are the values a parameter
+ * on the class, or on a field of the type {@code String}, takes, and {@link #caseInsensitive()} takes
+ * them in any case.</p>
  *
  * <p>The members have to be constants: the compiler reads them from the source, without running the
  * tool.</p>
@@ -52,7 +54,9 @@ import java.lang.annotation.Target
  * tool has; a description of one line of at most 512 characters; indexes from 0 without gaps; only the
  * last parameter takes any number of values; a parameter that has to be given comes before those that
  * can be left out; on the class, an arity of {@code '1'} or {@code '1..*'}, and {@code '0..1'} or
- * {@code '0..*'} only with {@code required = false}; at most 16 parameters.</p>
+ * {@code '0..*'} only with {@code required = false}; choices as those of {@link ToolOption}, given only
+ * on the class or on a field of the type {@code String}, of a parameter of the type {@code string}; on a
+ * field no {@code type}; at most 16 parameters.</p>
  *
  * @since 9.0
  */
@@ -87,5 +91,29 @@ import java.lang.annotation.Target
      * field the type of the field says it, and this is left out
      */
     String arity() default ''
+
+    /**
+     * @return on the class, what each value of the parameter is: {@code 'string'}, which a parameter without
+     * this is, or {@code 'integer'}, a whole number, which the tool still reads as the text it was given
+     * ({@code ToolDescriptor.TYPE_STRING} and {@code ToolDescriptor.TYPE_INTEGER} of
+     * {@code grails-gradle-model}). On a field the type of the field says it, and this is left out.
+     * @since 9.0
+     */
+    String type() default ''
+
+    /**
+     * @return the values the parameter takes, and no other, as {@code ['generate', 'export']}: on the class,
+     * or on a field of the type {@code String}; on a field of any other type its type says what it takes,
+     * and an enum has its constants for choices. None when empty.
+     * @since 9.0
+     */
+    String[] choices() default []
+
+    /**
+     * @return whether a value is one of the {@link #choices()} whatever its case; the tool is given the
+     * value as it was given. Only with choices
+     * @since 9.0
+     */
+    boolean caseInsensitive() default false
 
 }

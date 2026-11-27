@@ -113,6 +113,9 @@ final class ToolDeclarations {
     static final String TYPE_STRING = 'string'
     static final String TYPE_INTEGER = 'integer'
 
+    /** The member of an option or a parameter that says that it takes its choices in any case. */
+    static final String CASE_INSENSITIVE = 'caseInsensitive'
+
     private static final String SWITCH = '0'
     private static final String ONE = '1'
     private static final List<String> OPTION_ARITIES = [SWITCH, ONE].asImmutable()
@@ -242,6 +245,7 @@ final class ToolDeclarations {
         }
         String description = description(declared, what)
         List<String> choices = choices(declared, type, what)
+        boolean caseInsensitive = caseInsensitive(declared, choices, what)
         Object label = declared.get('label')
         if (label != null && !(label instanceof String && LABEL.matcher((String) label).matches())) {
             throw new Refused("${what} has a label that is not an upper-case letter followed by at most ${MAX_LABEL - 1} upper-case letters, digits and hyphens")
@@ -268,7 +272,7 @@ final class ToolDeclarations {
         }
         String shownLabel = isSwitch ? null : (label != null ? (String) label : named.find { String name -> isLongName(name) }.substring(2).toUpperCase(Locale.ROOT))
         return new Option(named, isSwitch, (String) type, shownLabel, required == Boolean.TRUE, description, repeatable == Boolean.TRUE, choices,
-                (String) defaultValue)
+                caseInsensitive, (String) defaultValue)
     }
 
     private static Parameter parameter(Map declared, int place) throws Refused {
@@ -287,11 +291,12 @@ final class ToolDeclarations {
         }
         String description = description(declared, what)
         List<String> choices = choices(declared, type, what)
+        boolean caseInsensitive = caseInsensitive(declared, choices, what)
         Object repeatable = declared.get('repeatable')
         if (repeatable != null && repeatable != Boolean.valueOf(((String) arity).endsWith('*'))) {
             throw new Refused("${what} has a repeatable that its arity does not say")
         }
-        return new Parameter((String) label, (String) arity, (String) type, description, choices)
+        return new Parameter((String) label, (String) arity, (String) type, description, choices, caseInsensitive)
     }
 
     private static String description(Map declared, String what) throws Refused {
@@ -313,6 +318,20 @@ final class ToolDeclarations {
             throw new Refused("${what} has choices that are not 1 to ${MAX_CHOICES} different names of at most ${MAX_CHOICE} characters, of a value that is text")
         }
         return ((List<String>) choices).asImmutable()
+    }
+
+    // whether a declaration with choices takes them in any case; only one with choices that differ in more than their case can
+    private static boolean caseInsensitive(Map declared, List<String> choices, String what) throws Refused {
+        Object caseInsensitive = declared.get(CASE_INSENSITIVE)
+        if (caseInsensitive == null || caseInsensitive == Boolean.FALSE) {
+            return false
+        }
+        if (!(caseInsensitive instanceof Boolean) || choices == null ||
+                choices.collect { String choice -> choice.toLowerCase(Locale.ROOT) }.toSet().size() < choices.size()) {
+            throw new Refused("${what} does not say with true or false whether it takes its choices in any case, or takes in any case choices " +
+                    'it has none of or that differ only in case')
+        }
+        return true
     }
 
     // the rules the options and the parameters of a tool keep together
@@ -476,7 +495,7 @@ final class ToolDeclarations {
                 }
                 value = given.get(++index)
             }
-            String wrong = wrongValue(name, value, option.type, option.choices)
+            String wrong = wrongValue(name, value, option.type, option.choices, option.caseInsensitive)
             if (wrong != null) {
                 return wrong
             }
@@ -492,15 +511,15 @@ final class ToolDeclarations {
                 if (at >= positional.size() && parameter.isRequired()) {
                     return "${parameter.label} is required".toString()
                 }
-                // what the class that runs the tool gives a parameter of the rest is text
+                // each value of the rest is checked as the parameter declares it, and given to the tool as text
                 while (at < positional.size()) {
-                    String wrong = wrongValue(parameter.label, positional.get(at++), TYPE_STRING, parameter.choices)
+                    String wrong = wrongValue(parameter.label, positional.get(at++), parameter.type, parameter.choices, parameter.caseInsensitive)
                     if (wrong != null) {
                         return wrong
                     }
                 }
             } else if (at < positional.size()) {
-                String wrong = wrongValue(parameter.label, positional.get(at++), parameter.type, parameter.choices)
+                String wrong = wrongValue(parameter.label, positional.get(at++), parameter.type, parameter.choices, parameter.caseInsensitive)
                 if (wrong != null) {
                     return wrong
                 }
@@ -564,11 +583,11 @@ final class ToolDeclarations {
         return byName.containsKey(equals < 0 ? argument : argument.substring(0, equals))
     }
 
-    private static String wrongValue(String name, String value, String type, List<String> choices) {
+    private static String wrongValue(String name, String value, String type, List<String> choices, boolean caseInsensitive) {
         if (type == TYPE_INTEGER) {
             return isWholeNumber(value) ? null : "${name} takes a whole number".toString()
         }
-        if (choices != null && !choices.contains(value)) {
+        if (choices != null && !(caseInsensitive ? choices.any { String choice -> choice.equalsIgnoreCase(value) } : choices.contains(value))) {
             return "${name} takes one of ${choices.join(', ')}".toString()
         }
         return null
@@ -650,6 +669,11 @@ final class ToolDeclarations {
         return text.replace('@|', '@ |')
     }
 
+    // what the help says of the choices of an option or a parameter
+    private static String possibleValues(List<String> choices, boolean caseInsensitive) {
+        return choices == null ? null : "Possible values${caseInsensitive ? ', in any case' : ''}: ${choices.join(', ')}".toString()
+    }
+
     // one sentence after another, each with a full stop
     private static String sentences(List<String> parts) {
         return parts.findAll { String part -> part }.collect { String part -> part.endsWith('.') || part.endsWith('?') || part.endsWith('!') ? part : part + '.' }
@@ -683,11 +707,14 @@ final class ToolDeclarations {
         /** Every value the option takes, or {@code null} where it takes any. */
         final List<String> choices
 
+        /** Whether the option takes its choices whatever their case. */
+        final boolean caseInsensitive
+
         /** The value the option has when it is not given, as the tool declares it, or {@code null}. */
         final String defaultValue
 
         private Option(List<String> names, boolean isSwitch, String type, String label, boolean required, String description, boolean repeatable,
-                       List<String> choices, String defaultValue) {
+                       List<String> choices, boolean caseInsensitive, String defaultValue) {
             this.names = new ArrayList<String>(names).asImmutable()
             this.isSwitch = isSwitch
             this.type = type
@@ -696,6 +723,7 @@ final class ToolDeclarations {
             this.description = description
             this.repeatable = repeatable
             this.choices = choices
+            this.caseInsensitive = caseInsensitive
             this.defaultValue = defaultValue
         }
 
@@ -720,7 +748,8 @@ final class ToolDeclarations {
         }
 
         /**
-         * @return the option as {@code help --json} describes an option, with every member
+         * @return the option as {@code help --json} describes an option, with every member, and
+         * {@code caseInsensitive} after the choices where it takes them in any case
          */
         Map<String, Object> describe() {
             Map<String, Object> described = new LinkedHashMap<>()
@@ -733,13 +762,16 @@ final class ToolDeclarations {
             described.put('repeatable', repeatable)
             described.put('split', null)
             described.put('choices', choices)
+            if (caseInsensitive) {
+                described.put(CASE_INSENSITIVE, true)
+            }
             described.put('default', defaultValue)
             return described
         }
 
         // what the help says of the option
         private String shownDescription() {
-            return sentences([description, choices == null ? null : "Possible values: ${choices.join(', ')}".toString(),
+            return sentences([description, possibleValues(choices, caseInsensitive),
                               defaultValue == null ? null : "Default: ${defaultValue}".toString(), required ? 'Required' : null,
                               repeatable ? 'Can be given more than once' : null])
         }
@@ -763,12 +795,16 @@ final class ToolDeclarations {
         /** Every value it takes, or {@code null} where it takes any. */
         final List<String> choices
 
-        private Parameter(String label, String arity, String type, String description, List<String> choices) {
+        /** Whether it takes its choices whatever their case. */
+        final boolean caseInsensitive
+
+        private Parameter(String label, String arity, String type, String description, List<String> choices, boolean caseInsensitive) {
             this.label = label
             this.arity = arity
             this.type = type
             this.description = description
             this.choices = choices
+            this.caseInsensitive = caseInsensitive
         }
 
         /**
@@ -786,7 +822,8 @@ final class ToolDeclarations {
         }
 
         /**
-         * @return the parameter as {@code help --json} describes a parameter, with every member
+         * @return the parameter as {@code help --json} describes a parameter, with every member, and
+         * {@code caseInsensitive} after the choices where it takes them in any case
          */
         Map<String, Object> describe() {
             Map<String, Object> described = new LinkedHashMap<>()
@@ -797,11 +834,14 @@ final class ToolDeclarations {
             described.put('repeatable', isMany())
             described.put('split', null)
             described.put('choices', choices)
+            if (caseInsensitive) {
+                described.put(CASE_INSENSITIVE, true)
+            }
             return described
         }
 
         private String shownDescription() {
-            return sentences([description, choices == null ? null : "Possible values: ${choices.join(', ')}".toString()])
+            return sentences([description, possibleValues(choices, caseInsensitive)])
         }
     }
 }

@@ -263,6 +263,7 @@ class ToolCatalogFileSpec extends CommandSpec implements CommandFixture {
         'have hints that are not booleans'       | [hints: [readOnlyHint: 'yes', destructiveHint: true, idempotentHint: false, openWorldHint: true]] | 'its hints are not an object with readOnlyHint, destructiveHint, idempotentHint, openWorldHint, each true or false'
         'say in a word that it reads input'      | [readsInput: 'true']                                                                        | 'it does not say with true or false whether it reads what is typed'
         'lack what there is not'                 | [incomplete: ['tests']]                                                                     | 'what it says it lacks is not a list of description, arguments, hints'
+        'take no choices in any case'            | [options: [[names: ['--x'], arity: '1', caseInsensitive: true]]]                            | 'its option 1 does not say with true or false whether it takes its choices in any case, or takes in any case choices it has none of or that differ only in case'
     }
 
     @Unroll
@@ -308,7 +309,16 @@ class ToolCatalogFileSpec extends CommandSpec implements CommandFixture {
                 [parameters: [[label: 'A', arity: '0..*', repeatable: false]]],
                 [parameters: [[label: 'A', arity: '1', type: 'boolean']]],
                 [parameters: (1..17).collect { int each -> [label: "P${each}".toString(), arity: '0..1'] }],
-                [parameters: [[label: 'A', arity: '1', choices: ['X', 'Y'], description: 'Chosen']]]
+                [parameters: [[label: 'A', arity: '1', choices: ['X', 'Y'], description: 'Chosen']]],
+                [options: [[names: ['--x'], arity: '1', choices: ['gsp', 'json'], caseInsensitive: true]]],
+                [options: [[names: ['--x'], arity: '1', choices: ['gsp', 'json'], caseInsensitive: false]]],
+                [options: [[names: ['--x'], arity: '1', caseInsensitive: true]]],
+                [options: [[names: ['--x'], arity: '1', choices: ['json', 'JSON'], caseInsensitive: true]]],
+                [options: [[names: ['--x'], arity: '1', choices: ['json'], caseInsensitive: 'yes']]],
+                [options: [[names: ['--x'], arity: '1', type: 'integer', default: '30']]],
+                [parameters: [[label: 'A', arity: '0..*', type: 'integer']]],
+                [parameters: [[label: 'A', arity: '1', choices: ['generate', 'export'], caseInsensitive: true]]],
+                [parameters: [[label: 'A', arity: '1', type: 'integer', caseInsensitive: true]]]
         ]
     }
 

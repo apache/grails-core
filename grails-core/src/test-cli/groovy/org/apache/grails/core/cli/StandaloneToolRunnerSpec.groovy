@@ -154,6 +154,32 @@ class StandaloneToolRunnerSpec extends Specification {
         'a count that is none'   | ['--count', 'three', 'a.txt']  || '--count takes a whole number'
     }
 
+    def "a tool the compiler did not see is held to a whole number and to choices it declares on its class, and given them as it was given them"() {
+        when:
+        Map given = runWithTools([RunnerSpecClassTypesTool], [], 'runner-spec-class-types', '--top', '5', 'JSON')
+        Map notWhole = runWithTools([RunnerSpecClassTypesTool], [], 'runner-spec-class-types', '--top=five', 'gsp')
+        Map noChoice = runWithTools([RunnerSpecClassTypesTool], [], 'runner-spec-class-types', 'xml')
+
+        then:
+        given.exit == 0
+        given.out.readLines() == ['TOP=5 VIEWS=[JSON]']
+        notWhole.exit == 2
+        notWhole.err.readLines() == ['| Error runner-spec-class-types: --top takes a whole number. grails help runner-spec-class-types shows its options']
+        noChoice.exit == 2
+        noChoice.err.readLines() == ['| Error runner-spec-class-types: VIEWS takes one of gsp, json. grails help runner-spec-class-types shows its options']
+    }
+
+    def "a tool the compiler did not see that gives choices to a field that is no text is not run, and the JVM ends with 1 and the rule"() {
+        when:
+        Map result = runWithTools([RunnerSpecFieldChoicesTool], [], 'runner-spec-field-choices', '--count=one')
+
+        then:
+        result.exit == 1
+        result.out.isEmpty()
+        result.err.readLines() == ['| Error runner-spec-field-choices: @ToolOption on RunnerSpecFieldChoicesTool.count gives choices, which only a field of the type String ' +
+                                           'takes: the type of any other field says what it takes, and an enum has its constants for choices.']
+    }
+
     def "a tool whose declarations break a rule is not run, and the JVM ends with 1 and the rule"() {
         when:
         Map result = run('runner-spec-broken', 'anything')
@@ -329,6 +355,29 @@ class RunnerSpecConsoleTool implements StandaloneTool {
             throw new IllegalStateException('this tool fails on purpose')
         }
         System.err.println("PRINTED TO SYSTEM.ERR BY ${target}")
+        true
+    }
+}
+
+@ToolOption(names = ['--top'], arity = '1', type = 'integer', defaultValue = '30')
+@ToolParameter(index = 0, label = 'VIEWS', arity = '1', choices = ['gsp', 'json'], caseInsensitive = true)
+class RunnerSpecClassTypesTool implements StandaloneTool {
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println "TOP=${executionContext.commandLine.optionValue('top')} VIEWS=${executionContext.commandLine.remainingArgs}"
+        true
+    }
+}
+
+class RunnerSpecFieldChoicesTool implements StandaloneTool {
+
+    @ToolOption(names = ['--count'], choices = ['one'])
+    int count
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println 'FIELD CHOICES RAN'
         true
     }
 }

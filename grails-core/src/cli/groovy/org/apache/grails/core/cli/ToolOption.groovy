@@ -38,9 +38,11 @@ import java.lang.annotation.Target
  *
  * <p>On a field the type of the field says what the option takes: a {@code boolean} is a switch, a
  * {@code String}, a whole number or an enum takes one value, and a {@code List<String>} can be given
- * more than once. On the class, {@link #arity()} says it, and the annotation can be given more than
- * once there; a set of options that several tools share is a Groovy {@code @AnnotationCollector} of
- * these annotations.</p>
+ * more than once. On the class, {@link #arity()} says it, {@link #type()} whether a value is a whole
+ * number, and the annotation can be given more than once there; a set of options that several tools
+ * share is a Groovy {@code @AnnotationCollector} of these annotations. {@link #choices()} are the values
+ * an option on the class, or on a field of the type {@code String}, takes, and
+ * {@link #caseInsensitive()} takes them in any case.</p>
  *
  * <p>The members have to be constants: the compiler reads them from the source, without running the
  * tool.</p>
@@ -62,7 +64,12 @@ import java.lang.annotation.Target
  *   <li>a switch is neither required nor has it a label or a default; a default is one line of at most
  *       128 characters, a whole number for a whole number and one of the choices for an enum, and an
  *       option that is required or can be given more than once has none;</li>
- *   <li>an enum has 1 to 64 constants, each of at most 64 ASCII letters, digits, {@code _} and {@code $};</li>
+ *   <li>an enum has, and {@code choices} are, 1 to 64 different values, each of at most 64 ASCII letters,
+ *       digits, {@code _} and {@code $}, which do not start with a digit; case-insensitive choices also
+ *       differ in more than their case;</li>
+ *   <li>on the class, a switch has no {@code type} and no {@code choices}, and an option with choices is
+ *       of the type {@code string}; on a field, {@code type} is left out, {@code choices} are given only on
+ *       a field of the type {@code String}, and {@code caseInsensitive} only with choices;</li>
  *   <li>the field is neither static nor final, and is not a parameter as well;</li>
  *   <li>a tool declares at most 32 options.</li>
  * </ul>
@@ -106,5 +113,29 @@ import java.lang.annotation.Target
      * on a field the type of the field says it, and this is left out
      */
     String arity() default ''
+
+    /**
+     * @return on the class, what each value of an option that takes a value is: {@code 'string'}, which an
+     * option without this is, or {@code 'integer'}, a whole number, which the tool still reads as the text
+     * it was given ({@code ToolDescriptor.TYPE_STRING} and {@code ToolDescriptor.TYPE_INTEGER} of
+     * {@code grails-gradle-model}). On a field the type of the field says it, and this is left out.
+     * @since 9.0
+     */
+    String type() default ''
+
+    /**
+     * @return the values the option takes, and no other, as {@code ['gsp', 'json']}: on the class, or on a
+     * field of the type {@code String}; on a field of any other type its type says what it takes, and an
+     * enum has its constants for choices. None when empty.
+     * @since 9.0
+     */
+    String[] choices() default []
+
+    /**
+     * @return whether a value is one of the {@link #choices()} whatever its case, as {@code JSON} for
+     * {@code json}; the tool is given the value as it was given. Only with choices
+     * @since 9.0
+     */
+    boolean caseInsensitive() default false
 
 }

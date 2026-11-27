@@ -221,7 +221,7 @@ final class ToolArguments {
                 }
                 value = given[++index]
             }
-            Object converted = convert(name, value, option.valueType, option.choices)
+            Object converted = convert(name, value, option.valueType, option.integer, option.choices, option.caseInsensitive)
             if (option.repeatable) {
                 List<String> values = (List<String>) optionValues.get(option) ?: new ArrayList<String>()
                 values << (String) converted
@@ -242,7 +242,7 @@ final class ToolArguments {
             if (parameter.many) {
                 List<String> rest = new ArrayList<String>()
                 while (at < positional.size()) {
-                    rest << (String) convert(parameter.label, positional[at++], String, parameter.choices)
+                    rest << (String) convert(parameter.label, positional[at++], String, parameter.integer, parameter.choices, parameter.caseInsensitive)
                 }
                 if (rest.isEmpty() && parameter.required) {
                     throw new Refused("${parameter.label} is required")
@@ -251,7 +251,7 @@ final class ToolArguments {
                     values.put(parameter.field, rest)
                 }
             } else if (at < positional.size()) {
-                Object converted = convert(parameter.label, positional[at++], parameter.valueType, parameter.choices)
+                Object converted = convert(parameter.label, positional[at++], parameter.valueType, parameter.integer, parameter.choices, parameter.caseInsensitive)
                 if (parameter.field != null) {
                     values.put(parameter.field, converted)
                 }
@@ -271,7 +271,7 @@ final class ToolArguments {
             if (optionValues.containsKey(option)) {
                 values.put(option.field, optionValues.get(option))
             } else if (option.defaultValue != null) {
-                values.put(option.field, convert(option.longName, option.defaultValue, option.valueType, option.choices))
+                values.put(option.field, convert(option.longName, option.defaultValue, option.valueType, option.integer, option.choices, option.caseInsensitive))
             }
         }
         new Bound(commandLine(given, typed, positional, systemProperties), values)
@@ -320,7 +320,16 @@ final class ToolArguments {
         byName.containsKey(equals < 0 ? argument : argument.substring(0, equals))
     }
 
-    private static Object convert(String name, String value, Class<?> type, List<String> choices) throws Refused {
+    // the value as the tool is given it: of the type of its field, or the text it was given where a declaration on the class
+    // says that it is a whole number or one of choices
+    private static Object convert(String name, String value, Class<?> type, boolean integer, List<String> choices, boolean caseInsensitive)
+            throws Refused {
+        if (integer && !WHOLE_NUMBERS.contains(type)) {
+            if (!ToolDescriptor.isWholeNumber(value)) {
+                throw new Refused("${name} takes a whole number")
+            }
+            return value
+        }
         if (WHOLE_NUMBERS.contains(type)) {
             if (!ToolDescriptor.isWholeNumber(value)) {
                 throw new Refused("${name} takes a whole number")
@@ -334,7 +343,7 @@ final class ToolArguments {
             }
             return Long.valueOf(number)
         }
-        if (choices != null && !choices.contains(value)) {
+        if (choices != null && !ToolDescriptor.isChoice(value, choices, caseInsensitive)) {
             throw new Refused("${name} takes one of ${choices.join(', ')}")
         }
         if (type != null && type.isEnum()) {
@@ -453,6 +462,10 @@ final class ToolArguments {
         if (declared.arity()) {
             return "${what} gives an arity, which on a field the type of the field says: leave it out"
         }
+        String members = fieldMembers(declared.type(), declared.choices(), declared.caseInsensitive(), field, what)
+        if (members != null) {
+            return members
+        }
         Class<?> type = field.type
         if (type == boolean || type == Boolean) {
             return addOption(declared, ToolDescriptor.ARITY_SWITCH, field, type, what)
@@ -471,6 +484,10 @@ final class ToolArguments {
         if (declared.arity()) {
             return "${what} gives an arity, which on a field the type of the field says: leave it out"
         }
+        String members = fieldMembers(declared.type(), declared.choices(), declared.caseInsensitive(), field, what)
+        if (members != null) {
+            return members
+        }
         Class<?> type = field.type
         if (type == String || WHOLE_NUMBERS.contains(type) || type.isEnum() || isListOfStrings(field)) {
             return addParameter(declared, field, isListOfStrings(field) ? List : type, isListOfStrings(field) ? ToolDescriptor.ARITY_SOME : ToolDescriptor.ARITY_ONE,
@@ -479,12 +496,31 @@ final class ToolArguments {
         "${what} is on a field of the type ${field.genericType.typeName}, which no parameter takes: String, int, Integer, long, Long, an enum or List<String>"
     }
 
+    // a declaration on a field gives no type, since the type of the field says it, and gives choices only on a field of the type
+    // String: the type of any other field says what it takes, and an enum has its constants for choices
+    private static String fieldMembers(String type, String[] choices, boolean caseInsensitive, Field field, String what) {
+        if (type) {
+            return "${what} gives a type, which on a field the type of the field says: leave it out"
+        }
+        if (choices.length > 0 && field.type != String) {
+            return "${what} gives choices, which only a field of the type String takes: the type of any other field says what it takes, " +
+                    'and an enum has its constants for choices'
+        }
+        if (caseInsensitive && choices.length == 0) {
+            return "${what} is case-insensitive without choices of its own: only the choices it gives are taken in any case"
+        }
+        null
+    }
+
     private String addOption(ToolOption declared, String arity, Field field, Class<?> type, String what) {
         Map<String, Object> option = new LinkedHashMap<String, Object>()
         option.put('names', declared.names().toList())
         option.put('arity', arity)
         boolean whole = type != null && WHOLE_NUMBERS.contains(type)
-        option.put('type', arity == ToolDescriptor.ARITY_SWITCH ? ToolDescriptor.TYPE_BOOLEAN : whole ? ToolDescriptor.TYPE_INTEGER : ToolDescriptor.TYPE_STRING)
+        // on the class the members say what a value is; on a field its type does
+        String valueType = field == null && declared.type() ? declared.type() :
+                arity == ToolDescriptor.ARITY_SWITCH ? ToolDescriptor.TYPE_BOOLEAN : whole ? ToolDescriptor.TYPE_INTEGER : ToolDescriptor.TYPE_STRING
+        option.put('type', valueType)
         if (declared.label()) {
             option.put('label', declared.label())
         } else if (arity == ToolDescriptor.ARITY_ONE && ToolDescriptor.defaultLabel(declared.names().toList()) != null) {
@@ -493,8 +529,9 @@ final class ToolArguments {
         option.put('required', declared.required())
         option.put('description', declared.description())
         option.put('repeatable', type == List)
-        List<String> choices = type != null && type.isEnum() ? constantsOf(type) : null
+        List<String> choices = type != null && type.isEnum() ? constantsOf(type) : declared.choices().length > 0 ? declared.choices().toList() : null
         option.put('choices', choices)
+        option.put(ToolDescriptor.MEMBER_CASE_INSENSITIVE, declared.caseInsensitive() ? Boolean.TRUE : null)
         option.put('default', declared.defaultValue() ?: null)
         String why = ToolDescriptor.optionRefusal(option)
         if (why != null) {
@@ -502,7 +539,8 @@ final class ToolArguments {
         }
         options << new DeclaredOption(declaration: option, names: declared.names().toList(), isSwitch: arity == ToolDescriptor.ARITY_SWITCH,
                 repeatable: type == List, required: declared.required(), choices: choices, defaultValue: declared.defaultValue() ?: null,
-                field: field, valueType: type == List ? String : type)
+                field: field, valueType: type == List ? String : type, integer: valueType == ToolDescriptor.TYPE_INTEGER,
+                caseInsensitive: declared.caseInsensitive())
         null
     }
 
@@ -515,10 +553,14 @@ final class ToolArguments {
         Map<String, Object> parameter = new LinkedHashMap<String, Object>()
         parameter.put('label', declared.label())
         parameter.put('arity', arity)
-        parameter.put('type', type != null && WHOLE_NUMBERS.contains(type) ? ToolDescriptor.TYPE_INTEGER : ToolDescriptor.TYPE_STRING)
+        // on the class the members say what a value is; on a field its type does
+        String valueType = field == null && declared.type() ? declared.type() :
+                type != null && WHOLE_NUMBERS.contains(type) ? ToolDescriptor.TYPE_INTEGER : ToolDescriptor.TYPE_STRING
+        parameter.put('type', valueType)
         parameter.put('description', declared.description())
-        List<String> choices = type != null && type.isEnum() ? constantsOf(type) : null
+        List<String> choices = type != null && type.isEnum() ? constantsOf(type) : declared.choices().length > 0 ? declared.choices().toList() : null
         parameter.put('choices', choices)
+        parameter.put(ToolDescriptor.MEMBER_CASE_INSENSITIVE, declared.caseInsensitive() ? Boolean.TRUE : null)
         String why = ToolDescriptor.parameterRefusal(parameter)
         if (why != null) {
             return "${what} ${why}"
@@ -530,7 +572,8 @@ final class ToolArguments {
             return "${what} has the index ${declared.index()}, which another parameter has too: each parameter has an index of its own"
         }
         byIndex.put(declared.index(), new DeclaredParameter(declaration: parameter, label: declared.label(), many: arity.endsWith('*'),
-                required: arity.startsWith('1'), choices: choices, field: field, valueType: type == List ? String : type))
+                required: arity.startsWith('1'), choices: choices, field: field, valueType: type == List ? String : type,
+                integer: valueType == ToolDescriptor.TYPE_INTEGER, caseInsensitive: declared.caseInsensitive()))
         null
     }
 
@@ -561,6 +604,8 @@ final class ToolArguments {
         String defaultValue
         Field field
         Class<?> valueType
+        boolean integer
+        boolean caseInsensitive
 
         String getLongName() {
             names.find { String name -> ToolDescriptor.isLongOptionName(name) }
@@ -576,5 +621,7 @@ final class ToolArguments {
         List<String> choices
         Field field
         Class<?> valueType
+        boolean integer
+        boolean caseInsensitive
     }
 }
