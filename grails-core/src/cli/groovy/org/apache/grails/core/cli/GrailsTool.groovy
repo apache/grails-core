@@ -46,6 +46,20 @@ import org.apache.grails.gradle.model.cli.ToolDescriptor
 trait GrailsTool implements Named, Described {
 
     /**
+     * Whether the tool reads what is typed, as a tool that asks questions does: such a tool needs a
+     * user at a terminal, and is not run where nothing can be typed. A tool that reads what is typed
+     * says so:
+     * <pre>
+     * boolean readsInput = true
+     * </pre>
+     * <p>The value has to be the constant {@code true} or {@code false}: the compiler reads it from the
+     * source, without running the tool.</p>
+     *
+     * @since 9.0
+     */
+    boolean readsInput = false
+
+    /**
      * The name of the tool as it is typed, which its class name gives: {@code CreateReportTool} is
      * {@code create-report}. A class whose name does not end with {@code Tool} is named without the
      * ending {@code Command}: {@code UrlMappingsReportCommand} is {@code url-mappings-report}.

@@ -20,7 +20,9 @@ package org.apache.grails.core.cli
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 
 import grails.util.BuildSettings
 import org.grails.build.parsing.CommandLine
@@ -32,13 +34,31 @@ import org.grails.build.parsing.CommandLine
  */
 @CompileStatic
 @Canonical
-@ToString(allProperties = false)
+@ToString(allProperties = false, excludes = 'result')
+@TupleConstructor(excludes = 'result')
+@EqualsAndHashCode(excludes = 'result')
 class ExecutionContext {
 
     /**
      * The command line instance
      */
     CommandLine commandLine
+
+    /**
+     * What the tool gives as its result besides what it prints, for a program that runs it: a
+     * {@code Map}, a {@code List}, a {@code String}, a {@code Number} or a {@code Boolean} that can
+     * be written as JSON, made of these and {@code null}. A tool sets it while it runs; {@code null}
+     * is no result. It is no part of what makes two contexts the same, of how one is shown, or of
+     * what a context is made with.
+     *
+     * <pre>
+     * executionContext.result = [count: 3, files: written]
+     * </pre>
+     *
+     * @since 9.0
+     */
+    Object result
+
     /**
      * The base directory for the project
      */

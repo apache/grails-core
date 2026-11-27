@@ -47,7 +47,10 @@ import grails.util.GrailsNameUtils
  *       its descriptor says;</li>
  *   <li>{@code deprecated}, optionally: a list of what is deprecated about how the tool is written,
  *       {@code type} for a tool that implements a deprecated type and {@code folder} for one whose
- *       source is in a deprecated folder.</li>
+ *       source is in a deprecated folder;</li>
+ *   <li>{@code options}, {@code parameters}, {@code hints}, {@code readsInput} and {@code incomplete},
+ *       optionally: what the tool declares of its command line and of what it does, and what it lacks
+ *       of that ({@link #MEMBER_OPTIONS} and the members after it).</li>
  * </ul>
  *
  * <p>A reader ignores a member it does not know, and reads a descriptor only for a class the
@@ -93,6 +96,68 @@ final class ToolDescriptor {
 
     /** The member that lists what is deprecated about how a tool is written. */
     public static final String MEMBER_DEPRECATED = 'deprecated'
+
+    /**
+     * The member that lists the options a tool declares, each as {@code help --json} of the
+     * {@code grails} command line describes an option.
+     */
+    public static final String MEMBER_OPTIONS = 'options'
+
+    /**
+     * The member that lists the parameters a tool declares, in their order, each as {@code help --json}
+     * of the {@code grails} command line describes a parameter.
+     */
+    public static final String MEMBER_PARAMETERS = 'parameters'
+
+    /**
+     * The member with the hints a tool declares of what it does: the four booleans {@code readOnlyHint},
+     * {@code destructiveHint}, {@code idempotentHint} and {@code openWorldHint}. A tool that declares
+     * none has no such member.
+     */
+    public static final String MEMBER_HINTS = 'hints'
+
+    /** The member that says that a tool reads what is typed: {@code true}, and there only for a tool that does. */
+    public static final String MEMBER_READS_INPUT = 'readsInput'
+
+    /**
+     * The member that lists what a tool lacks of what describes it, as the compiler found it:
+     * {@link #INCOMPLETE_DESCRIPTION}, {@link #INCOMPLETE_ARGUMENTS} and {@link #INCOMPLETE_HINTS}.
+     */
+    public static final String MEMBER_INCOMPLETE = 'incomplete'
+
+    /** What a tool lacks that has no description. */
+    public static final String INCOMPLETE_DESCRIPTION = 'description'
+
+    /** What a tool lacks that reads its arguments without declaring them. */
+    public static final String INCOMPLETE_ARGUMENTS = 'arguments'
+
+    /** What a tool lacks that does not declare its hints. */
+    public static final String INCOMPLETE_HINTS = 'hints'
+
+    /** Everything a tool can lack of what describes it, in the order it is written down. */
+    public static final List<String> INCOMPLETE = [INCOMPLETE_DESCRIPTION, INCOMPLETE_ARGUMENTS, INCOMPLETE_HINTS].asImmutable()
+
+    /**
+     * The {@code type} of an option that takes no value, a switch. The member {@code type} of an
+     * option or a parameter says what each of its values is; for one that can be given more than
+     * once, what each value given is.
+     */
+    public static final String TYPE_BOOLEAN = 'boolean'
+
+    /** The {@code type} of a value that is text: a name, a path, or one of the {@code choices}. */
+    public static final String TYPE_STRING = 'string'
+
+    /** The {@code type} of a value that is a whole number. */
+    public static final String TYPE_INTEGER = 'integer'
+
+    /** The {@code type} of a value that is a number with a fraction. */
+    public static final String TYPE_NUMBER = 'number'
+
+    /** The {@code type} of an option whose values are keys with values, each given as {@code key=value}. */
+    public static final String TYPE_MAP = 'map'
+
+    /** Every {@code type} an option or a parameter can have, as {@code help --json} of the command line has them. */
+    public static final List<String> TYPES = [TYPE_BOOLEAN, TYPE_STRING, TYPE_INTEGER, TYPE_NUMBER, TYPE_MAP].asImmutable()
 
     /**
      * The execution target of a tool the build runs: with the application started around it, or,
