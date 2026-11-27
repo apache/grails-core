@@ -525,6 +525,9 @@ The usage of every command is laid out for a width of 100 columns, and the list 
 | `choices`
 | Every value an option or a parameter takes, where those are all it takes, as for `--servlet`, `--data`, `--reloading` and the `--type` of `project migrate`; `null` where any value is taken. The features are never listed here, because the generator knows them and the document is written without it: `--list-features` of the create commands and `feature list` list them.
 
+| `caseInsensitive`
+| `true` where an option or a parameter of a tool of the application or of a plugin takes its `choices` in any case, as `--views` of `generate-views` takes `JSON` for `json`. It follows `choices`, and is there only where it is `true`.
+
 | `default`
 | For an option that takes a value, the value the command declares it has when it is not given, as `"300"` for `--ready-timeout` of `run-app`; `null` where the command declares none, and for an option that takes no value. A default that depends on the project, as the environment of a command that runs the build, is said in the description.
 
@@ -532,7 +535,7 @@ The usage of every command is laid out for a width of 100 columns, and the list 
 | The type of the value an option or a parameter takes, as a program that offers or checks a value goes by it: `boolean` for an option that takes no value, `map` for an option whose values are `name=value` pairs, as those of `-D`, and otherwise `string`, `integer` or `number`. A value of an enum is a `string`, with its `choices`. It follows `arity`. `grails mcp` makes the type of each property of the input schema of a tool from it (see xref:commandLine#mcp[Driving Grails from an AI Agent]).
 
 | `parameters`
-| What the command takes besides options, in the order it is given, each with its `label`, `arity`, `repeatable`, `split`, `choices` and `type`.
+| What the command takes besides options, in the order it is given, each with its `label`, `arity`, `repeatable`, `split`, `choices` and `type`, and `caseInsensitive` where it is `true`.
 
 | `hints`
 | What a tool of the application or of a plugin says it does, where it declares it with `@ToolHints`: the four booleans `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint` (see xref:commandLine#creatingTools[Creating Tools]). A tool without `hints` is taken to have the most cautious ones: it changes something, may destroy something, does not give the same result twice, and reaches beyond the project.
