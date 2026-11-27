@@ -1406,3 +1406,11 @@ only shows in a schema that Hibernate creates: an application that manages its s
 keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
 The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
 enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
+
+==== Enums, interfaces, traits and nested classes are not domain classes because they are under `grails-app/domain`
+
+As of Grails 7.0.18, an enum, an interface, a trait or a nested class is no longer treated as a domain class at compile time because its source file is under `grails-app/domain`. Such a class never became an entity there, but while it was compiled together with a domain class that has a property of its type, the property was taken for an association, and the domain class got an association id getter, such as `getStatusId()` for a `status` property. Compiled against the already compiled type, as in an incremental build or when the type comes from another module, the same domain class did not get the getter. The getter is no longer generated in either case, so the domain class is the same however it is compiled.
+
+A class of these kinds that implements `GormEntity` itself, such as a trait that extends it, or that carries an entity annotation, such as a nested class annotated with `jakarta.persistence.Entity`, is still a domain class, wherever it is declared.
+
+* Code that calls such a getter no longer compiles when it is statically compiled, and fails at runtime otherwise. The getter returned nothing useful for a type that is not an entity: read the property itself.
