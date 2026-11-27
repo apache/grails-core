@@ -676,6 +676,26 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         Team.createCriteria().count { like('name', '%First%'); join('club', JoinType.INNER); select('club') } == ALL_TEAMS.size()
     }
 
+    void 'a join type that a fetch mode replaced in a criteria query does not change the join that a join type requested below the association makes'() {
+        given:
+        final root = new AssociationJoinTypeCategory(name: 'Root category').save(failOnError: true)
+        final child = new AssociationJoinTypeCategory(name: 'Child category', parent: root).save(failOnError: true)
+        new AssociationJoinTypeCategory(name: 'Grandchild category', parent: child).save(failOnError: true, flush: true)
+        final allCategories = ['Child category', 'Grandchild category', 'Root category']
+
+        expect: 'the left join of parent.parent joins the parent with a left join, which keeps the category without a parent'
+        AssociationJoinTypeCategory.createCriteria().list {
+            join('parent', JoinType.INNER)
+            join('parent')
+            join('parent.parent', JoinType.LEFT)
+        }*.name.sort() == allCategories
+        AssociationJoinTypeCategory.where { name ==~ '%category' }
+                .join('parent', JoinType.INNER)
+                .join('parent')
+                .join('parent.parent', JoinType.LEFT)
+                .list()*.name.sort() == allCategories
+    }
+
     void 'a fetch mode that a where query requests with #method replaces a join type that it requested before'() {
         given:
         final query = Team.where {
