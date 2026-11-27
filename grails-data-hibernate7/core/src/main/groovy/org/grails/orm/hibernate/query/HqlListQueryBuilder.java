@@ -20,9 +20,11 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -50,8 +52,8 @@ public class HqlListQueryBuilder {
     private final Map<String, String> sortJoins = new LinkedHashMap<>();
     // the paths that the query fetches, with the alias of a fetch that the query also sorts through
     private final Map<String, String> fetchJoins = new LinkedHashMap<>();
-    /** Whether a join of the sort is the join of a collection, which has a row for each element */
-    private boolean collectionSort;
+    // the sort joins that join a collection, which has a row for each element
+    private final Set<String> collectionSortJoins = new HashSet<>();
 
     public HqlListQueryBuilder(GrailsHibernatePersistentEntity entity, Map<String, Object> params) {
         this.entity = entity;
@@ -69,7 +71,7 @@ public class HqlListQueryBuilder {
     private String buildHql(boolean count) {
         sortJoins.clear();
         fetchJoins.clear();
-        collectionSort = false;
+        collectionSortJoins.clear();
         StringBuilder hql = new StringBuilder("from ");
         hql.append(entity.getName()).append(" e");
 
@@ -94,13 +96,15 @@ public class HqlListQueryBuilder {
                 hql.append(' ').append(alias);
             }
         });
-        // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null
+        // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null.
+        // A collection is always joined with an inner join, as with Hibernate 5
         String sortJoin = ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort() ? " left join " : " join ";
-        sortJoins.forEach((path, alias) -> hql.append(sortJoin).append(path).append(' ').append(alias));
+        sortJoins.forEach((path, alias) ->
+                hql.append(collectionSortJoins.contains(path) ? " join " : sortJoin).append(path).append(' ').append(alias));
         if (count) {
             // The list has a row for each element of a collection that it sorts by, and max and offset page
             // through those rows, so the total counts them. A fetch only loads what the instances hold.
-            hql.insert(0, collectionSort && fetchJoins.isEmpty() ? "select count(e) " : "select count(distinct e) ");
+            hql.insert(0, !collectionSortJoins.isEmpty() && fetchJoins.isEmpty() ? "select count(e) " : "select count(distinct e) ");
         } else if (!sortHql.isEmpty()) {
             hql.append(" order by ").append(sortHql);
         }
@@ -190,7 +194,9 @@ public class HqlListQueryBuilder {
                 }
             } else {
                 alias = sortJoins.computeIfAbsent(joined, path -> "s" + sortJoins.size());
-                collectionSort |= association instanceof ToMany<?>;
+                if (association instanceof ToMany<?>) {
+                    collectionSortJoins.add(joined);
+                }
             }
             current = association.getAssociatedEntity();
         }

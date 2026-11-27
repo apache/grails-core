@@ -165,6 +165,22 @@ public class ExpressionResolver {
      * @return the expression to sort by, or {@code null} if the path cannot be resolved
      */
     public Expression<?> resolveSort(String path, boolean endsWithForeignKey) {
+        return resolveSort(path, endsWithForeignKey, false);
+    }
+
+    /**
+     * Resolves the property that an order sorts by, as {@link #resolveSort(String, boolean)} does. A collection
+     * that only the sort uses is read through its path, as it was before a sort joined its associations:
+     * Hibernate joins the path with an inner join and returns a row for each element, where it returns an
+     * instance once when the query has a join of the collection. A count selects no instance and orders
+     * nothing, so the path would not join the collection at all; it asks for the join, to count those rows.
+     *
+     * @param path the property path of the order
+     * @param endsWithForeignKey whether the path ends with a foreign key
+     * @param joinCollections whether a collection that only the sort uses is joined, with an inner join
+     * @return the expression to sort by, or {@code null} if the path cannot be resolved
+     */
+    public Expression<?> resolveSort(String path, boolean endsWithForeignKey, boolean joinCollections) {
         String cleanPath = path != null && path.startsWith("root.") ? path.substring(5) : path;
         if (cleanPath == null || cleanPath.indexOf('.') < 0 || cleanPath.startsWith("{alias}") ||
                 cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR) ||
@@ -192,7 +208,7 @@ public class ExpressionResolver {
                 associationPath = associationPath.isEmpty() ? tokens[i] : associationPath + '.' + tokens[i];
             }
             boolean last = i == tokens.length - 2;
-            From<?, ?> join = sortJoin(from, tokens[i], associationPath, last, last && endsWithForeignKey);
+            From<?, ?> join = sortJoin(from, tokens[i], associationPath, last, last && endsWithForeignKey, joinCollections);
             if (join == null) {
                 // the rest of the path is a component path, a property or a foreign key, which resolves as it is
                 return getPath(from, String.join(".", Arrays.copyOfRange(tokens, i, tokens.length)));
@@ -216,7 +232,8 @@ public class ExpressionResolver {
      * @param foreignKey whether the attribute that follows this one is the foreign key of the association
      */
     private From<?, ?> sortJoin(
-            From<?, ?> from, String attributeName, String associationPath, boolean last, boolean foreignKey) {
+            From<?, ?> from, String attributeName, String associationPath, boolean last, boolean foreignKey,
+            boolean joinCollections) {
         Path<?> attribute = getPath(from, attributeName);
         if (attribute == null || !(attribute.getModel() instanceof Attribute<?, ?> model)) {
             return null;
@@ -246,7 +263,15 @@ public class ExpressionResolver {
         if (requested != null && !requested.explicit()) {
             return from.join(attributeName, requested.joinType());
         }
-        return foreignKey ? null : from.join(attributeName, leftJoinSort ? JoinType.LEFT : JoinType.INNER);
+        if (foreignKey) {
+            return null;
+        }
+        if (model.isCollection()) {
+            // the leftJoinAssociationSort setting is for an association to a single instance: a sort by a
+            // collection leaves out the instances whose collection is empty, as with Hibernate 5
+            return joinCollections ? from.join(attributeName, JoinType.INNER) : null;
+        }
+        return from.join(attributeName, leftJoinSort ? JoinType.LEFT : JoinType.INNER);
     }
 
     /**

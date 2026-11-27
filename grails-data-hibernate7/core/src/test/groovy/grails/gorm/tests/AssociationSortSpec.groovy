@@ -420,7 +420,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
     }
 
     void 'the total of #api sorted by a collection counts the rows that it pages through'() {
-        given: 'two owners with two scores each, and one without a score, which only a left join has a row for'
+        given: 'two owners with two scores each, and one without a score, which the inner join of a collection has no row for'
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
         manager.session.clear()
 
@@ -428,7 +428,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         final result = query.call()
 
         then: 'as with Hibernate 5, max and offset page through the rows of the join, so the total counts them'
-        result == (leftJoinSort ? 5 : 4)
+        result == 4
 
         where:
         api               | query
@@ -436,6 +436,32 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'criteria page'   | { AssociationSortOwner.createCriteria().list(max: 10, sort: 'scores.score') {}.totalCount }
         'detached page'   | { new DetachedCriteria(AssociationSortOwner).list(max: 10, sort: 'scores.score').totalCount }
         'static page'     | { AssociationSortOwner.list(max: 10, sort: 'scores.score').totalCount }
+    }
+
+    void '#api sorted by a collection returns an owner once for each score and leaves out an owner without a score'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect: 'the inner join of the collection in either mode of the setting, as before the setting and as with Hibernate 5'
+        query.call()*.name.sort() == ['Ann', 'Ann', 'Bob', 'Bob']
+
+        where:
+        api                  | query
+        'a where query'      | { AssociationSortOwner.where { name ==~ '%' }.list(sort: 'scores.score') }
+        'a criteria query'   | { AssociationSortOwner.withCriteria { order('scores.score') } }
+        'a paged criteria'   | { AssociationSortOwner.createCriteria().list(sort: 'scores.score', max: 10) {} }
+        'a dynamic finder'   | { AssociationSortOwner.findAllByNameLike('%', [sort: 'scores.score']) }
+        'a detached criteria'| { new DetachedCriteria(AssociationSortOwner).list(sort: 'scores.score') }
+    }
+
+    void 'list sorted by a collection leaves out an owner without a score in either mode of the setting'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        AssociationSortOwner.list(sort: 'scores.score')*.name as Set == ['Ann', 'Bob'] as Set
     }
 
     void 'every row of #api sorted by a collection is on a page that its total reaches'() {
@@ -451,7 +477,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         }
 
         then: 'no owner is on a page beyond the total'
-        names == (leftJoinSort ? ['Ann', 'Bob', 'Empty'] : ['Ann', 'Bob']) as Set
+        names == ['Ann', 'Bob'] as Set
 
         where:
         api             | query

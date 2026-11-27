@@ -1681,7 +1681,7 @@ A sort by a property of an association, such as `Book.list(sort: 'author.name')`
 
 A block-local sort uses a join type requested for its full path at the query root: `join('team.club', JoinType.LEFT)` applies to `team { order('club.name') }` or `team { order('club.id') }`, before or after the block. LEFT retains the missing club and INNER excludes it, independently of the association-sort setting.
 
-When sorting by a collection property, pagination limits the joined rows before duplicate instances are removed. A page can contain fewer than `max` instances, and an instance can appear on more than one page; adding the page sizes need not equal `totalCount`. Use a property of the queried class or a to-one association to page without repeated instances.
+The setting does not change a sort by a collection property, as with Hibernate 5: the collection is joined with an inner join, so instances whose collection is empty are left out, a criteria query, a where query and a dynamic finder return an instance once for each element, and `max`, `offset`, `count` and `totalCount` work on those rows. Use a property of the queried class or a to-one association to page without repeated instances.
 
 - Nothing needs to change to keep the previous results.
 - Search for `sort:` arguments, `.sort(` calls and `order(` calls whose property contains a `.`, such as `sort: 'author.name'`. If the application expects every instance from such a query, set `grails.gorm.leftJoinAssociationSort: true` in `application.yml`.

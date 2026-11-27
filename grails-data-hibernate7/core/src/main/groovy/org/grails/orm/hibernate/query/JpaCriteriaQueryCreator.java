@@ -324,9 +324,9 @@ public class JpaCriteriaQueryCreator<T> {
                 // tell apart from the joins of another block of the same association
                 String property = blockOrder.getAssociationProperty();
                 PersistentEntity associated = blockOrder.getAssociation().getAssociation().getAssociatedEntity();
-                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property, blockContext));
+                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property, blockContext), countOnly);
             } else {
-                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context));
+                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context), countOnly);
             }
             if (countOnly) {
                 // Keep the joins of the sort without ordering the aggregate: they decide the rows that the
