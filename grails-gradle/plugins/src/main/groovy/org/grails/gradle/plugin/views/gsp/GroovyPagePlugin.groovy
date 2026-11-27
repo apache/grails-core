@@ -206,11 +206,14 @@ class GroovyPagePlugin implements Plugin<Project> {
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
         SourceSetOutput output = mainSourceSet?.output
         FileCollection classesDirs = resolveClassesDirs(output, project)
-        // The classes of the project's AST transformations, which a plugin's build compiles in a source
-        // set of their own and copies into the main classes directory. Looked up when the pages are
-        // compiled, as the source set is added by a plugin that may be applied after this one.
+        // The project's AST transformations, which a plugin's build compiles in a source set of their
+        // own and copies, with that source set's resources, into the main classes directory. The whole
+        // output rather than its classes: the resources register the transformations, and the extension
+        // modules a page is type checked with, and the ABI the main classes are compared by leaves them
+        // out. Looked up when the pages are compiled, as the source set is added by a plugin that may be
+        // applied after this one.
         FileCollection astTransformationClasses = project.files {
-            SourceSets.findSourceSet(project, 'ast')?.output?.classesDirs ?: []
+            SourceSets.findSourceSet(project, 'ast')?.output ?: []
         }
         Provider<Directory> destDir = project.layout.buildDirectory.dir('gsp-classes/main')
         Provider<Directory> webappDestDir = project.layout.buildDirectory.dir('gsp-classes/webapp')

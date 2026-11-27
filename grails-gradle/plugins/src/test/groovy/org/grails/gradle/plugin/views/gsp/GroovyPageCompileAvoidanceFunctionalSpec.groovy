@@ -30,7 +30,7 @@ import org.grails.gradle.plugin.core.GradleSpecification
  * <p>Both read the project's classes for what a class compiled against them sees: the classes, their
  * members and signatures, and the annotations on them. A change to a method body or a private member
  * leaves them as they were. The project's AST transformations run while the pages are compiled, so a
- * change to what one does compiles the pages again.</p>
+ * change to what one does, or to a resource of theirs that registers one, compiles the pages again.</p>
  *
  * @since 9.0
  */
@@ -78,16 +78,7 @@ class GroovyPageCompileAvoidanceFunctionalSpec extends GradleSpecification {
     def "a change to what an AST transformation of the project does compiles the pages again"() {
         given: 'a transformation in an ast source set, copied into the main classes directory as a plugin build does'
         project()
-        new File(projectDir, 'build.gradle').append('''
-            sourceSets { ast }
-            dependencies { astImplementation localGroovy() }
-            def copyAstClasses = tasks.register('copyAstClasses', Copy) {
-                from(sourceSets.ast.output)
-                into(layout.buildDirectory.dir('classes/groovy/main'))
-            }
-            sourceSets.main.output.classesDirs.builtBy(copyAstClasses)
-            tasks.named('classes') { dependsOn(copyAstClasses) }
-        ''')
+        astSourceSet()
         write('src/ast/groovy/Stamp.groovy', '''
             class Stamp {
                 String stamp() { 'one' }
@@ -106,6 +97,32 @@ class GroovyPageCompileAvoidanceFunctionalSpec extends GradleSpecification {
         then: 'its ABI is the same, and the pages are compiled again all the same'
         result.task(':compileAstGroovy').outcome == TaskOutcome.SUCCESS
         result.task(':compileGroovyPages').outcome == TaskOutcome.SUCCESS
+    }
+
+    def "a change to a resource of the ast source set compiles the pages again"() {
+        given: 'transformations registered by a resource of the ast source set, copied into the main classes directory as a plugin build does'
+        project()
+        astSourceSet()
+        write('src/ast/groovy/Stamp.groovy', "class Stamp { String stamp() { 'one' } }")
+        write('src/ast/groovy/OtherStamp.groovy', "class OtherStamp { String stamp() { 'two' } }")
+        write("src/ast/resources/${resource}", 'Stamp')
+        write('src/main/webapp/index.gsp', 'a webapp page')
+        BuildResult first = compile('compileGroovyPages')
+        assert first.task(':compileWebappGroovyPages').outcome == TaskOutcome.SUCCESS
+
+        when: 'only the resource changes, to name a class already compiled'
+        write("src/ast/resources/${resource}", 'Stamp\nOtherStamp')
+        BuildResult result = compile('compileGroovyPages')
+
+        then: 'what the page compiler loads from the classpath has changed, so both page compilations run again'
+        result.task(':processAstResources').outcome == TaskOutcome.SUCCESS
+        result.task(':compileAstGroovy').outcome == TaskOutcome.UP_TO_DATE
+        result.task(':compileGroovyPages').outcome == TaskOutcome.SUCCESS
+        result.task(':compileWebappGroovyPages').outcome == TaskOutcome.SUCCESS
+
+        where:
+        resource << ['META-INF/services/org.codehaus.groovy.transform.ASTTransformation',
+                     'META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule']
     }
 
     def "a change to a scaffolded controller that is not read for its pages leaves them as they were"() {
@@ -270,6 +287,20 @@ class GroovyPageCompileAvoidanceFunctionalSpec extends GradleSpecification {
         write('src/main/templates/scaffolding/show.gsp', 'show ${className}')
         write('src/main/templates/scaffolding/admin/show.gsp', 'admin show ${className}')
         write('grails-app/views/book/index.gsp', 'a page')
+    }
+
+    /** An ast source set whose output is copied into the main classes directory, as a plugin's build does. */
+    private void astSourceSet() {
+        new File(projectDir, 'build.gradle').append('''
+            sourceSets { ast }
+            dependencies { astImplementation localGroovy() }
+            def copyAstClasses = tasks.register('copyAstClasses', Copy) {
+                from(sourceSets.ast.output)
+                into(layout.buildDirectory.dir('classes/groovy/main'))
+            }
+            sourceSets.main.output.classesDirs.builtBy(copyAstClasses)
+            tasks.named('classes') { dependsOn(copyAstClasses) }
+        ''')
     }
 
     private void write(String path, String content) {

@@ -74,8 +74,8 @@ import org.grails.gradle.plugin.views.ViewCompileOptions
  * Groovy and the compiler among them, by content, as {@link #getLibraryClasspath()}, so a build that
  * resolves another Groovy is not handed this one's pages; the project's own classes by their ABI, as
  * {@link #getProjectClasses()}, since a page sees no more of them than a class compiled against
- * them does; and the project's AST transformations by content, as
- * {@link #getAstTransformationClasses()}, since they run while the pages are compiled, as are all of
+ * them does; and the project's AST transformations by content, with the resources that register them,
+ * as {@link #getAstTransformationClasses()}, since they run while the pages are compiled, as are all of
  * the project's classes when an {@code application.groovy} runs with them, as
  * {@link #getConfigurationClasses()}.
  * {@link #getJavaLauncher()} and the target compatibility say which Java. The Grails
@@ -120,10 +120,12 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     final ConfigurableFileCollection projectClasses
 
     /**
-     * The classes of the project's AST transformations, which run while the pages are compiled, so
-     * what their method bodies do is part of what a page compiles to: normally the output of the
-     * {@code ast} source set, which a plugin's build copies into the main classes directory, among
-     * {@link #getProjectClasses()}. Fingerprinted by content.
+     * The project's AST transformations, which run while the pages are compiled, so what their method
+     * bodies do is part of what a page compiles to: normally the whole output of the {@code ast} source
+     * set, which a plugin's build copies into the main classes directory, among
+     * {@link #getProjectClasses()}. Its resources as well as its classes, since they register the
+     * transformations and the extension modules the pages are compiled with, and the ABI of
+     * {@link #getProjectClasses()} leaves out everything but classes. Fingerprinted by content.
      *
      * @since 9.0
      */
