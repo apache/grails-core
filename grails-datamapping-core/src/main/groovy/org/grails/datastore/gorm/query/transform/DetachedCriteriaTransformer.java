@@ -37,6 +37,7 @@ import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ConstructorNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.GenericsType;
+import org.codehaus.groovy.ast.InnerClassNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.PropertyNode;
@@ -177,13 +178,14 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
     @Override
     public void visitClass(ClassNode node) {
+        ClassNode enclosingClassNode = this.currentClassNode;
         try {
             this.currentClassNode = node;
             super.visitClass(node);
         } catch (Exception e) {
             logTransformationError(node, e);
         } finally {
-            currentClassNode = null;
+            currentClassNode = enclosingClassNode;
             detachedCriteriaVariables.clear();
         }
     }
@@ -198,11 +200,24 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                 // the where closures of the method were rewritten after the variable scopes were computed: a closure
                 // that no longer uses a variable still listed it, and one the transform creates had no scope of its own,
                 // so the class generator looked for a variable that the closure around it did not capture
-                AstUtils.processVariableScopes(sourceUnit, currentClassNode, node);
+                recomputeVariableScopes(node);
             }
         } finally {
             closureTransformed = transformedBefore;
             detachedCriteriaVariables.clear();
+        }
+    }
+
+    /**
+     * Computes the variable scopes of a method or constructor of the class being visited again. An anonymous class has
+     * no scope of its own, as the method that holds it gives it the variables around it, so the scopes of its outer
+     * class are computed again, which reach it.
+     */
+    private void recomputeVariableScopes(MethodNode node) {
+        if (currentClassNode instanceof InnerClassNode && ((InnerClassNode) currentClassNode).isAnonymous()) {
+            AstUtils.processVariableScopes(sourceUnit, ((InnerClassNode) currentClassNode).getOuterClass(), null);
+        } else {
+            AstUtils.processVariableScopes(sourceUnit, currentClassNode, node);
         }
     }
 
@@ -214,7 +229,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             super.visitConstructor(node);
             if (closureTransformed && currentClassNode != null) {
                 // a constructor is visited apart from the methods, and its scopes are computed again as those of a method are
-                AstUtils.processVariableScopes(sourceUnit, currentClassNode, node);
+                recomputeVariableScopes(node);
             }
         } finally {
             closureTransformed = transformedBefore;
@@ -229,8 +244,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         try {
             super.visitObjectInitializerStatements(node);
             if (closureTransformed) {
-                // the initializer blocks of a class become part of its constructors
-                AstUtils.processVariableScopes(sourceUnit, node, null);
+                // the initializer blocks of a class become part of its constructors; an anonymous class is scoped with its outer class
+                AstUtils.processVariableScopes(sourceUnit,
+                        node instanceof InnerClassNode && ((InnerClassNode) node).isAnonymous() ? ((InnerClassNode) node).getOuterClass() : node, null);
             }
         } finally {
             closureTransformed = transformedBefore;
@@ -503,6 +519,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         Expression objectExpression = call.getObjectExpression();
         Expression method = call.getMethod();
         Expression arguments = call.getArguments();
+        // a where call names the class it queries; the class being visited is current again once it is done
+        ClassNode visitedClassNode = this.currentClassNode;
         try {
             if (isCandidateMethodCallForTransform(objectExpression, method, arguments)) {
                 ClassExpression ce = getTargetClassExpresssion(objectExpression);
@@ -573,7 +591,11 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         } catch (Exception e) {
             logTransformationError(call, e);
         }
-        super.visitMethodCallExpression(call);
+        try {
+            super.visitMethodCallExpression(call);
+        } finally {
+            this.currentClassNode = visitedClassNode;
+        }
     }
 
     private ClassExpression getTargetClassExpresssion(Expression objectExpression) {
