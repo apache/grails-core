@@ -3307,7 +3307,11 @@ The {springAiReference}upgrade-notes.html[Spring AI upgrade notes] list the chan
 Spring AI 2.1 adds decision models, which pick among known outcomes and report how likely each is; the OpenAI and Ollama starters auto-configure one.
 The provider of the decision model is selected with `spring.ai.model.decision`, and in the test environment `grails-testing-support-ai` defaults it to `none`, like the other selection properties, so a test needs no credentials for it.
 
+The Grails BOM also manages the MCP Java SDK (`io.modelcontextprotocol.sdk:mcp-bom`), which Spring AI's MCP support builds on, at the version Spring AI depends on: 2.2.0 with Spring AI 2.1.0.
+An application that uses the SDK without Spring AI gets that version too.
+
 ===== Required Actions
 
 * An application that takes the Spring AI version from the Grails BOM changes nothing in its build; follow the Spring AI upgrade notes for the provider APIs it calls.
 * An application that pins `spring-ai-bom` itself moves the pin to 2.1, the line for Spring Boot 4.2.
+* An application that pins the MCP Java SDK itself removes the pin, or keeps it at the version its Spring AI depends on.
