@@ -169,6 +169,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
     protected Set<Expression> aliasExpressions = new HashSet<>();
     protected ClassNode currentClassNode;
 
+    /** The class being visited: what {@code this} is, however many where queries on other classes enclose it. */
+    private ClassNode ownerClassNode;
+
     public DetachedCriteriaTransformer(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
     }
@@ -179,13 +182,16 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
     @Override
     public void visitClass(ClassNode node) {
         ClassNode enclosingClassNode = this.currentClassNode;
+        ClassNode enclosingOwnerClassNode = this.ownerClassNode;
         try {
             this.currentClassNode = node;
+            this.ownerClassNode = node;
             super.visitClass(node);
         } catch (Exception e) {
             logTransformationError(node, e);
         } finally {
             currentClassNode = enclosingClassNode;
+            ownerClassNode = enclosingOwnerClassNode;
             detachedCriteriaVariables.clear();
         }
     }
@@ -538,10 +544,11 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                     this.currentClassNode = varType;
                     visitMethodCall(varType, arguments);
                 } else if (var.isThisExpression() &&
-                           currentClassNode != null &&
+                           ownerClassNode != null &&
                            isCandidateWhereMethod(method.getText(), arguments)) {
-                    if (AstUtils.isDomainClass(currentClassNode)) {
-                        visitMethodCall(this.currentClassNode, arguments);
+                    if (AstUtils.isDomainClass(ownerClassNode)) {
+                        this.currentClassNode = ownerClassNode;
+                        visitMethodCall(ownerClassNode, arguments);
                         call.setMethod(WHERE_LAZY);
                     }
                 }
@@ -612,8 +619,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         } else if (objectExpression instanceof VariableExpression) {
             VariableExpression ve = (VariableExpression) objectExpression;
             if (ve.isThisExpression() &&
-                AstUtils.isDomainClass(this.currentClassNode)) {
-                return new ClassExpression(this.currentClassNode);
+                AstUtils.isDomainClass(this.ownerClassNode)) {
+                return new ClassExpression(this.ownerClassNode);
             }
         }
         return null;

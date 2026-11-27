@@ -231,4 +231,41 @@ class JunctionBook {
         [query, operator, body, field, read] << [QUERIES_ON_NUMERIC_T.keySet().toList(), ['||', '&&'], BODIES.keySet().toList(),
                                                  FIELD_DECLARATIONS.keySet().toList(), ['t', 'this.t']].combinations()
     }
+
+    private static final Map<String, Closure<String>> NESTED_THIS_QUERIES = [
+        'inside a comparison'     : { String op -> "JunctionItem.where { t > 5 ${op} exists(this.where { title == 'x' }.property('title')) }" },
+        'as the only subquery'    : { String op -> "JunctionItem.where { exists(this.where { title == 'x' }.property('title')) }" },
+        'with an alias'           : { String op -> "JunctionItem.where { def a = JunctionItem; t > 5 ${op} exists(this.where { title == a.id }.property('title')) }" },
+    ]
+
+    @Unroll
+    void "a where query on this, inside a where query on a class that lacks the property, is checked against the class that holds it, #query on #operator in #body"() {
+        given:
+        String source = """
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@Entity
+class JunctionItem {
+    Integer t
+    JunctionBook owner
+}
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class JunctionBook {
+    String title
+    ${BODIES[body].call(NESTED_THIS_QUERIES[query].call(operator), "'text'")}
+}
+"""
+
+        when:
+        compile(source)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        [query, operator, body] << [NESTED_THIS_QUERIES.keySet().toList(), ['||', '&&'], BODIES.keySet().toList()].combinations()
+    }
 }
