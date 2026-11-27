@@ -25,6 +25,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.lang.reflect.RecordComponent
 import java.sql.Types
+import java.util.function.Function
 
 import groovy.transform.CompileStatic
 import jakarta.persistence.AssociationOverride
@@ -234,6 +235,18 @@ class GrailsDomainGenerator {
     private final ColumnConfigToColumnBinder columnConfigBinder
     private final StringColumnConstraintsBinder stringConstraints
     private final NumericColumnConstraintsBinder numericConstraints
+    private Function<HibernatePersistentProperty, CompositeUserType<?>> compositeUserTypes =
+            { HibernatePersistentProperty property -> BeanUtils.instantiateClass(property.compositeUserType) }
+
+    /**
+     * Sets how the composite user type of a property is instantiated: through its default constructor unless the caller says
+     * otherwise, as the binder of Hibernate's boot does when no bean container is configured. A binder that has a metadata
+     * building context hands the resolution that context allows, so that a type only a bean container can create is created
+     * the way {@code CompositeUserTypeBinder} creates it.
+     */
+    void setCompositeUserTypes(Function<HibernatePersistentProperty, CompositeUserType<?>> compositeUserTypes) {
+        this.compositeUserTypes = compositeUserTypes
+    }
     private final TypeConfiguration typeConfiguration
     private final TableForManyCalculator tableForMany
     private final DefaultColumnNameFetcher defaultColumnNames
@@ -1016,9 +1029,9 @@ class GrailsDomainGenerator {
      * @return why the generator rejects a property mapped with a composite user type, or null: the mapping names more columns than
      *     the user type's embeddable class has attributes, the one mapping the binder refuses as well
      */
-    private static String compositeProblem(HibernatePersistentProperty property) {
+    private String compositeProblem(HibernatePersistentProperty property) {
         Class<? extends CompositeUserType<?>> userType = property.compositeUserType
-        Class<?> embeddable = BeanUtils.instantiateClass(userType).embeddable()
+        Class<?> embeddable = compositeUserTypes.apply(property).embeddable()
         List<CompositeAttribute> attributes = compositeAttributes(embeddable)
         List<ColumnConfig> columns = property.hibernateMappedForm.columns ?: []
         if (columns.size() > attributes.size()) {
@@ -1043,7 +1056,7 @@ class GrailsDomainGenerator {
             throw new UnsupportedOperationException("Property [${property.name}] of [${property.hibernateOwner.name}] ${problem}")
         }
         Class<? extends CompositeUserType<?>> userType = property.compositeUserType
-        Class<?> embeddable = BeanUtils.instantiateClass(userType).embeddable()
+        Class<?> embeddable = compositeUserTypes.apply(property).embeddable()
         PropertyConfig mappedForm = property.hibernateMappedForm
         List<ColumnConfig> columns = mappedForm.columns ?: []
         List<CompositeAttribute> declared = compositeAttributes(embeddable)
