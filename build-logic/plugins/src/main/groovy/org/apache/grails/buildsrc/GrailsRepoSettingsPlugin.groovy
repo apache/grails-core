@@ -38,7 +38,7 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                 repo.exclusiveContent {
                     it.forRepository {
                         repo.maven {
-                            url = 'https://raw.githubusercontent.com/codeconsole/asset-pipeline/5833b1c74db0efd1a4c7e5905752af45aa8eea37'
+                            url = 'https://raw.githubusercontent.com/codeconsole/asset-pipeline/a3ba6dad29382ef18fb82cf50d16905252a2c33e'
                         }
                     }
                     it.filter {
@@ -91,7 +91,7 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                 repo.exclusiveContent {
                     it.forRepository {
                         repo.maven {
-                            url = 'https://raw.githubusercontent.com/codeconsole/asset-pipeline/5833b1c74db0efd1a4c7e5905752af45aa8eea37'
+                            url = 'https://raw.githubusercontent.com/codeconsole/asset-pipeline/a3ba6dad29382ef18fb82cf50d16905252a2c33e'
                         }
                     }
                     it.filter {

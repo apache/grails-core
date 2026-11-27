@@ -28,7 +28,7 @@ class GrailsRepoSettingsPluginSpec extends Specification {
     private static final String MAVEN_CENTRAL = 'https://repo.maven.apache.org/maven2'
     private static final String GRAILS_RESTRICTED = 'https://repo.grails.org/grails/restricted'
     // TEMPORARY, revert with the repository it checks
-    private static final String ASSET_PIPELINE_PREVIEW = 'https://raw.githubusercontent.com/codeconsole/asset-pipeline/5833b1c74db0efd1a4c7e5905752af45aa8eea37'
+    private static final String ASSET_PIPELINE_PREVIEW = 'https://raw.githubusercontent.com/codeconsole/asset-pipeline/a3ba6dad29382ef18fb82cf50d16905252a2c33e'
     private static final String APACHE_SNAPSHOTS = 'https://repository.apache.org/content/groups/snapshots'
     private static final String SONATYPE_SNAPSHOTS = 'https://central.sonatype.com/repository/maven-snapshots'
     private static final String APACHE_STAGING = 'https://repository.apache.org/content/groups/staging'
