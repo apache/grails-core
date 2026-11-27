@@ -40,6 +40,7 @@ import grails.core.GrailsApplication
 import grails.spring.BeanBuilder
 import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeProvider
+import grails.web.mime.MimeTypeResolver
 import org.grails.web.mime.DefaultMimeUtility
 import org.grails.web.mime.GrailsContentNegotiationStrategy
 import org.grails.web.mime.GrailsMimeTypesWebMvcConfigurer
@@ -153,6 +154,7 @@ class MimeTypesConfigurationSpec extends Specification {
         infrastructure                    | configuration
         'a locale resolver'               | CycleConfiguration
         "Spring MVC's handler adapter"    | HandlerAdapterCycleConfiguration
+        'the MIME type resolver'          | ResolverCycleConfiguration
     }
 
     void 'the data formats grails.mime.types declares are registered with Spring MVC, in place of the defaults'() {
@@ -262,6 +264,33 @@ class MimeTypesConfigurationSpec extends Specification {
 
         @Bean
         MimeTypeProvider adapterAwareMimeTypeProvider(RequestMappingHandlerAdapter handlerAdapter) {
+            new MimeTypeProvider() {
+                @Override
+                MimeType[] getMimeTypes() {
+                    [] as MimeType[]
+                }
+            }
+        }
+    }
+
+    /**
+     * A renderer is a MIME type provider, and the renderer registry it is given holds the GSP page locator, which is
+     * given the MIME type resolver.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @EnableWebMvc
+    @Import(MimeTypesConfiguration)
+    static class ResolverCycleConfiguration {
+
+        @Bean
+        GrailsApplication grailsApplication(ApplicationContext applicationContext) {
+            def application = new DefaultGrailsApplication()
+            application.setApplicationContext(applicationContext)
+            application
+        }
+
+        @Bean
+        MimeTypeProvider resolverAwareMimeTypeProvider(MimeTypeResolver mimeTypeResolver) {
             new MimeTypeProvider() {
                 @Override
                 MimeType[] getMimeTypes() {
