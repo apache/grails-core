@@ -42,7 +42,9 @@ ext {
             'jquery.version'                : '3.7.1',
             // Security: overrides spring-boot-dependencies (2.24.3). 2.25.5 fixes CVE-2026-49844 flagged against log4j-api.
             'log4j2.version'                : '2.25.5',
-            'objenesis.version'             : '3.4',
+            // Security: 3.6 fixes CVE-2026-116486, instantiators cached by class name, so that a shared instance on a
+            // parent class loader returned an instance of a same-named class from another class loader.
+            'objenesis.version'             : '3.6',
             'spring-boot.version'           : '3.5.16',
     ]
 
@@ -91,15 +93,19 @@ ext {
             'cas-client-core.version'       : '4.0.4',
             'bootstrap-icons.version'       : '1.13.2',
             'bootstrap.version'             : '5.3.9',
-            // Align with pac4j-oauth 6.5.x so the BOM manages the transitive version too.
-            'commons-codec.version'         : '1.22.1',
+            // Security: overrides spring-boot-dependencies (1.18.0) and stays at or above what pac4j-oauth 6.5.x pulls.
+            // 1.23.0 fixes CVE-2026-119078 (Blake3 doFinalize documented as stateful, so the Javadoc key derivation
+            // example derives identical keys) and CVE-2026-124077 (GitIdentifiers accepted NUL bytes in tree entry
+            // names, so two trees could get the same identifier).
+            'commons-codec.version'         : '1.23.0',
             'commons-compress.version'      : '1.28.0',
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
             'groovy.version'                : '4.0.33',
-            // Security: 33.7.2 fixes CVE-2026-102554, unbounded allocation when deserializing CompactHashMap,
-            // CompactHashSet and MapMakerInternalMap.
-            'guava.version'                 : '33.7.2-jre',
+            // Security: 33.8.0 fixes CVE-2026-118042 (GHSA-v5x9-67m3-7m56), hash flooding of HashBiMap and
+            // LinkedHashMultimap, and retains the 33.7.2 fix for CVE-2026-102554, unbounded allocation when
+            // deserializing CompactHashMap, CompactHashSet and MapMakerInternalMap.
+            'guava.version'                 : '33.8.0-jre',
             'h2.version'                    : '2.4.240',
             // Security: overrides spring-boot-dependencies (5.5.2). 5.6.4 fixes CVE-2026-64607, a connection leak in
             // the classic i/o model when a response carries an unsupported Content-Encoding. 5.6.5 targets
