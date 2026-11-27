@@ -212,7 +212,7 @@ class RelationshipsFunctionalSpec extends ContainerGebSpec {
         def projectsSelect = $('select[name="projects"]')
         if (projectsSelect.displayed) {
             // Multi-select should have multiple attribute
-            projectsSelect.attr('multiple') != null || projectsSelect.@multiple == 'multiple'
+            assert projectsSelect.attr('multiple') != null || projectsSelect.@multiple == 'multiple'
         } else {
             true  // Field may not be shown on create
         }
@@ -228,7 +228,7 @@ class RelationshipsFunctionalSpec extends ContainerGebSpec {
 
         then: "multi-select is displayed and has options"
         if (projectsSelect.displayed) {
-            projectsSelect.find('option').size() >= 0
+            assert projectsSelect.find('option').size() >= 0
         } else {
             true
         }
@@ -269,7 +269,7 @@ class RelationshipsFunctionalSpec extends ContainerGebSpec {
         then: "employees multi-select is present"
         def employeesSelect = $('select[name="employees"]')
         if (employeesSelect.displayed) {
-            employeesSelect.find('option').size() >= 0
+            assert employeesSelect.find('option').size() >= 0
         } else {
             true  // Field may not be displayed
         }

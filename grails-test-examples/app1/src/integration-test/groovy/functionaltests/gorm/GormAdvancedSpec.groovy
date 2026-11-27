@@ -203,7 +203,7 @@ class GormAdvancedSpec extends Specification {
 
         then: "results are ordered by price descending"
         for (int i = 0; i < results.size() - 1; i++) {
-            results[i].price >= results[i + 1].price
+            assert results[i].price >= results[i + 1].price
         }
     }
 

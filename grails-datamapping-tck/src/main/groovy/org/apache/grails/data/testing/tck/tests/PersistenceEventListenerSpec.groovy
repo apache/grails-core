@@ -21,6 +21,9 @@ package org.apache.grails.data.testing.tck.tests
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ConfigurableApplicationContext
 
+import spock.lang.IgnoreIf
+import spock.lang.PendingFeatureIf
+
 import grails.gorm.DetachedCriteria
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Simples
@@ -85,10 +88,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
 
     void 'Test multi-delete events'() {
         given:
-        def freds = (1..3).collect {
-            new Simples(name: "Fred$it").save(flush: true)
-        }
-        manager.session.clear()
+        def freds = saveFreds()
 
         when:
         freds = Simples.findAllByIdInList(freds*.id)
@@ -99,20 +99,29 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         0 == listener.PostDeleteCount
 
         when:
-        new DetachedCriteria(Simples).build {
-            'in'('id', freds*.id)
-        }.deleteAll()
-        manager.session.flush()
+        deleteAllById(freds*.id)
 
         then:
         0 == Simples.count()
         0 == Simples.list().size()
+    }
 
-        // conditional assertions because in the case of batch DML statements neither Hibernate nor JPA triggers delete events for individual entities
-        if (!manager.session.getClass().simpleName in ['JpaSession', 'HibernateSession']) {
-            3 == listener.PreDeleteCount
-            3 == listener.PostDeleteCount
-        }
+    // Hibernate runs a batch DML statement, which does not trigger delete events for individual entities
+    @IgnoreIf({ Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('hibernate7.gorm.suite') })
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('mongodb.gorm.suite') || Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'PreDeleteCount and PostDeleteCount are 0 instead of 3 after DetachedCriteria.deleteAll() on MongoDB and Neo4j, see #17020'
+    )
+    void 'Test multi-delete fires delete events for each entity'() {
+        given:
+        def freds = Simples.findAllByIdInList(saveFreds()*.id)
+
+        when:
+        deleteAllById(freds*.id)
+
+        then:
+        3 == listener.PreDeleteCount
+        3 == listener.PostDeleteCount
     }
 
     void 'Test update events'() {
@@ -177,43 +186,56 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
 
     void 'Test load events'() {
         given:
-        def p = new Simples()
-
-        p.name = 'Fred'
-        p.save(flush: true)
-        manager.session.clear()
+        def id = saveFred()
 
         when:
-        p = Simples.get(p.id)
+        def p = Simples.get(id)
 
         then:
         'Fred' == p.name
-        if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
-            // JPA doesn't seem to support a pre-load event
-            1 == listener.PreLoadCount
-        }
         1 == listener.PostLoadCount
+    }
+
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('mongodb.gorm.suite') || Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'PreLoadCount is 2 on MongoDB and 0 on Neo4j instead of 1 for get() after clear(), see #17020'
+    )
+    void 'Test load fires one pre-load event'() {
+        given:
+        def id = saveFred()
+
+        when:
+        Simples.get(id)
+
+        then:
+        1 == listener.PreLoadCount
     }
 
     void 'Test multi-load events'() {
         given:
-        def freds = (1..3).collect {
-            new Simples(name: "Fred$it").save(flush: true)
-        }
-        manager.session.clear()
+        def freds = saveFreds()
 
         when:
-        freds = Simples.findAllByIdInList(freds*.id)
-        for (f in freds) {
-        } // just to trigger load
+        freds = loadFreds(freds*.id)
 
         then:
         3 == freds.size()
-        if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
-            // JPA doesn't seem to support a pre-load event
-            3 == listener.PreLoadCount
-        }
         3 == listener.PostLoadCount
+    }
+
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('mongodb.gorm.suite') || Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'PreLoadCount is 0 instead of 3 for findAllByIdInList on MongoDB and Neo4j, see #17020'
+    )
+    void 'Test multi-load fires pre-load events'() {
+        given:
+        def ids = saveFreds()*.id
+
+        when:
+        loadFreds(ids)
+
+        then:
+        3 == listener.PreLoadCount
     }
 
     void 'Test validation events'() {
@@ -242,6 +264,34 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         p == listener.events[1].entityObject
         listener.events[1] instanceof ValidationEvent
         ['name'] == listener.events[1].validatedFields
+    }
+
+    private Long saveFred() {
+        def p = new Simples(name: 'Fred').save(flush: true)
+        manager.session.clear()
+        p.id
+    }
+
+    private List<Simples> saveFreds() {
+        def freds = (1..3).collect {
+            new Simples(name: "Fred$it").save(flush: true)
+        }
+        manager.session.clear()
+        freds
+    }
+
+    private List<Simples> loadFreds(List ids) {
+        def freds = Simples.findAllByIdInList(ids)
+        for (f in freds) {
+        } // just to trigger load
+        freds
+    }
+
+    private void deleteAllById(List ids) {
+        new DetachedCriteria(Simples).build {
+            'in'('id', ids)
+        }.deleteAll()
+        manager.session.flush()
     }
 }
 
