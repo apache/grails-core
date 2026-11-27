@@ -19,6 +19,7 @@
 package grails.gorm.tests
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.PagedResultList
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
 import grails.gorm.tests.entities.Contract
@@ -26,6 +27,10 @@ import grails.gorm.tests.entities.Player
 import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
+import org.grails.datastore.mapping.query.event.PreQueryEvent
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ApplicationListener
 import spock.lang.Requires
 import spock.lang.Shared
 
@@ -433,6 +438,69 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
                 (leftJoinSort ? ['Unattached First Team'] : [])
         Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name'])?.name ==
                 (leftJoinSort ? 'Unattached First Team' : null)
+    }
+
+    void 'findAllWhere with a sort and max returns a plain list'() {
+        when:
+        final results = Team.findAllWhere([name: 'Arsenal First Team'], [sort: 'club.name', max: 2])
+
+        then: 'as it does without a sort, and as with Hibernate 5'
+        results*.name == ['Arsenal First Team']
+        !(results instanceof PagedResultList)
+    }
+
+    void 'the count of a where query with a projection is the number of rows that the query lists'() {
+        expect: 'the join of the sort decides the rows of the count as it decides the rows of the list'
+        Team.where { name ==~ '%First%' }.projections { property('name') }.sort('club.name').list().size() == (leftJoinSort ? 4 : 3)
+        Team.where { name ==~ '%First%' }.projections { property('name') }.sort('club.name').count() == (leftJoinSort ? 4 : 3)
+
+        and: 'so does a requested inner join'
+        Team.where { name ==~ '%First%' }.join('club', JoinType.INNER).projections { property('name') }.list().size() == 3
+        Team.where { name ==~ '%First%' }.join('club', JoinType.INNER).projections { property('name') }.count() == 3
+    }
+
+    void 'a list sorted by a collection that fetches a single instance counts the rows that it pages through'() {
+        given: 'a team with two players, which a sort by the players lists twice'
+        final arsenal = Team.findByName('Arsenal First Team')
+        new Player(name: 'Aaron', team: arsenal, contract: new Contract(salary: 1)).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when: 'the pages that a pager asks for, which stops at the total'
+        final first = Team.list(max: 2, sort: 'players.name', fetch: [club: 'join'])
+        final names = []
+        for (int offset = 0; offset < first.totalCount; offset += 2) {
+            names.addAll(Team.list(max: 2, offset: offset, sort: 'players.name', fetch: [club: 'join'])*.name)
+        }
+
+        then: 'the fetch of the club does not change the rows, so the total counts a row for each player'
+        first.totalCount == 5
+        names.size() == 5
+        names.count('Arsenal First Team') == 2
+        'Unattached First Team' in names
+    }
+
+    void 'the total of a paged list announces its query as the list does'() {
+        given: 'a listener of the queries, as the one that enables the filter of a multi-tenant entity is'
+        final queried = []
+        final listener = { ApplicationEvent event ->
+            if (event instanceof PreQueryEvent) {
+                queried << event.query.entity.javaClass
+            }
+        } as ApplicationListener
+        ((ConfigurableApplicationEventPublisher) manager.hibernateDatastore.applicationEventPublisher).addApplicationListener(listener)
+
+        when:
+        final page = Team.list(max: 2, sort: 'name')
+
+        then:
+        queried == [Team]
+
+        when: 'the total is read, which runs a query of its own'
+        final total = page.totalCount
+
+        then:
+        total == 4
+        queried == [Team, Team]
     }
 
     void 'the total of #api sorted by a collection counts the rows that it pages through'() {

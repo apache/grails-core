@@ -572,7 +572,7 @@ public class HibernateQuery extends Query {
 
             ConversionService cs = getSession().getMappingContext().getConversionService();
             var creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs, this);
-            creator.populateSubquery(innerSubquery);
+            creator.populateCountSubquery(innerSubquery);
 
             countQuery.from(innerSubquery);
             countQuery.select(cb.count(cb.literal(1)));

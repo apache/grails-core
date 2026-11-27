@@ -150,7 +150,7 @@ public class JpaCriteriaQueryCreator<T> {
 
         // the criteria come first, so that an order reuses the join the criteria have for an association
         assignCriteria(cq, root, context, entity);
-        assignOrderBy(cq, context);
+        assignOrderBy(cq, context, isCountOnly());
         return cq;
     }
 
@@ -186,7 +186,14 @@ public class JpaCriteriaQueryCreator<T> {
                 }
             }
         }
-        joinTypes.forEach((path, joinType) -> {
+        applyRequestedInnerJoins(fetched);
+    }
+
+    /**
+     * Joins the to-one associations that the query requests an inner join for and has not fetched.
+     */
+    private void applyRequestedInnerJoins(Set<String> fetched) {
+        detachedCriteria.getJoinTypes().forEach((path, joinType) -> {
             if (joinType == JoinType.INNER && !fetched.contains(path) && path.indexOf('.') < 0 &&
                     entity.getPropertyByName(path) instanceof ToOne<?> toOne && !(toOne instanceof Embedded)) {
                 context.resolveAssociation(path);
@@ -194,8 +201,23 @@ public class JpaCriteriaQueryCreator<T> {
         });
     }
 
-    @SuppressWarnings("unchecked")
     public <T> void populateSubquery(JpaSubQuery<T> subquery) {
+        populateSubquery(subquery, false);
+    }
+
+    /**
+     * Populates the subquery that the rows of a query with projections are counted from. Unlike a subquery of
+     * the criteria, it has the inner joins that the query requests and the joins of its sort, which decide the
+     * rows that the query lists, so that the count is the number of those rows.
+     *
+     * @param subquery the subquery to count the rows of
+     */
+    public <T> void populateCountSubquery(JpaSubQuery<T> subquery) {
+        populateSubquery(subquery, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void populateSubquery(JpaSubQuery<T> subquery, boolean counted) {
         var projectionList = collectProjections();
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = subquery.from(javaClass);
@@ -204,11 +226,18 @@ public class JpaCriteriaQueryCreator<T> {
         context.setLeftJoinSort(entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
                 mappingContext.isLeftJoinAssociationSort());
 
+        if (counted) {
+            applyRequestedInnerJoins(Collections.emptySet());
+        }
+
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) subquery);
 
         assignGroupBy(subquery, context);
 
         assignCriteria(subquery, root, context, entity);
+        if (counted) {
+            assignOrderBy(null, context, true);
+        }
     }
 
     private List<Query.Projection> collectProjections() {
@@ -297,8 +326,7 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
-        boolean countOnly = isCountOnly();
+    private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context, boolean countOnly) {
         // A count joins a collection that only the sort uses, to count the rows that the list pages through. A
         // list that fetches a collection returns each instance once, so its count has no such rows
         boolean joinCollections = countOnly && !fetchesCollection();
@@ -368,6 +396,10 @@ public class JpaCriteriaQueryCreator<T> {
             } else {
                 jpaOrders.add(ascending ? criteriaBuilder.asc(expression) : criteriaBuilder.desc(expression));
             }
+        }
+        if (countOnly) {
+            // a count has the joins of its orders and no order
+            return;
         }
         if (distinctInMemory) {
             // SQL only orders a distinct query by what it selects, and an order through a join is not among

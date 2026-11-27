@@ -106,13 +106,32 @@ public class HqlListQueryBuilder {
                 hql.append(collectionSortJoins.contains(path) ? " join " : sortJoin).append(path).append(' ').append(alias));
         if (count) {
             // The list has a row for each element of a collection that it sorts by, and max and offset page
-            // through those rows, so the total counts them. A fetch only loads what the instances hold.
-            hql.insert(0, !collectionSortJoins.isEmpty() && fetchJoins.isEmpty() ? "select count(e) " : "select count(distinct e) ");
+            // through those rows, so the total counts them. A list that fetches a collection has each instance
+            // once, so its total counts instances; a fetch of a single instance leaves the rows as they are.
+            hql.insert(0, !collectionSortJoins.isEmpty() && !fetchesCollection() ? "select count(e) " : "select count(distinct e) ");
         } else if (!sortHql.isEmpty()) {
             hql.append(" order by ").append(sortHql);
         }
 
         return hql.toString();
+    }
+
+    /**
+     * Whether a fetch of the list reads a collection, at any point of its path.
+     */
+    private boolean fetchesCollection() {
+        for (String path : fetchJoins.keySet()) {
+            PersistentEntity current = entity;
+            // a fetched path starts with the alias of the entity
+            for (String name : path.substring(path.indexOf('.') + 1).split("\\.")) {
+                PersistentProperty<?> property = current == null ? null : current.getPropertyByName(name);
+                if (property instanceof ToMany<?>) {
+                    return true;
+                }
+                current = property instanceof Association<?> association ? association.getAssociatedEntity() : null;
+            }
+        }
+        return false;
     }
 
     private String buildSortClause() {
