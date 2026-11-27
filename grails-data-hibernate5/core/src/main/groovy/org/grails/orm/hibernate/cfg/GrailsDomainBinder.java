@@ -3708,7 +3708,14 @@ public class GrailsDomainBinder implements MetadataContributor {
             return INSTANCES.get(clazz);
         }
 
+        /**
+         * The type name Hibernate treats as a user collection type class. A basic collection (a list, set or map of
+         * simple values) maps its mapped {@code type} to the element, so it names no collection type.
+         */
         public String getTypeName(ToMany property) {
+            if (property instanceof Basic) {
+                return null;
+            }
             return binder.getTypeName(property, binder.getPropertyConfig(property), getMapping(property.getOwner()));
         }
 
