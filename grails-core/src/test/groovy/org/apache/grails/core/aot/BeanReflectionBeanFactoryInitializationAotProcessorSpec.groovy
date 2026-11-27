@@ -18,6 +18,8 @@
  */
 package org.apache.grails.core.aot
 
+import java.util.function.Supplier
+
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.InMemoryGeneratedFiles
 import org.springframework.aot.generate.NameGenerator
@@ -82,14 +84,27 @@ class BeanReflectionBeanFactoryInitializationAotProcessorSpec extends Specificat
             registered(hints, DeclaredByClassFixture, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS)
     }
 
-    void 'a bean a registrar declares with a supplier is wired but not created reflectively'() {
-        given:
+    void 'a bean a registrar declares with a supplier can be created and given its properties'() {
+        given: 'a registrar whose supplier is dynamically compiled Groovy, as a plugin descriptor usually is'
             register(new FixtureRegistrar())
 
         when:
             def hints = hints()
 
-        then: 'the supplier creates it, and Spring still sets its properties afterwards'
+        then: 'Groovy chooses the constructor the supplier calls reflectively, and Spring sets its properties afterwards'
+            registered(hints, DeclaredWithSupplierFixture, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS)
+            RuntimeHintsPredicates.reflection().onConstructorInvocation(
+                    DeclaredWithSupplierFixture.getDeclaredConstructor(String, boolean)).test(hints)
+    }
+
+    void 'a bean declared with a supplier outside any registrar is wired but not created reflectively'() {
+        given: 'the generated code creates it, as the definition it was shown says'
+            context.registerBean('withSupplier', DeclaredWithSupplierFixture, { -> new DeclaredWithSupplierFixture('fixture', false) } as Supplier)
+
+        when:
+            def hints = hints()
+
+        then:
             registered(hints, DeclaredWithSupplierFixture, MemberCategory.INVOKE_PUBLIC_METHODS)
             !registered(hints, DeclaredWithSupplierFixture, MemberCategory.INVOKE_DECLARED_CONSTRUCTORS)
     }
@@ -178,7 +193,8 @@ class BeanReflectionBeanFactoryInitializationAotProcessorSpec extends Specificat
         void register(BeanRegistry registry, Environment environment) {
             registry.registerBean('byClass', DeclaredByClassFixture)
             registry.registerBean('withSupplier', DeclaredWithSupplierFixture) { BeanRegistry.Spec<DeclaredWithSupplierFixture> spec ->
-                spec.supplier { new DeclaredWithSupplierFixture() }
+                boolean enabled = true
+                spec.supplier { new DeclaredWithSupplierFixture('fixture', enabled) }
             }
         }
     }
@@ -199,6 +215,13 @@ class BeanReflectionBeanFactoryInitializationAotProcessorSpec extends Specificat
     static class DeclaredWithSupplierFixture {
 
         String name
+
+        final boolean enabled
+
+        DeclaredWithSupplierFixture(String name, boolean enabled) {
+            this.name = name
+            this.enabled = enabled
+        }
     }
 
     static class FactoryFixture {

@@ -59,6 +59,12 @@ import org.springframework.util.ReflectionUtils;
  * stopped at the first plugin bean declared by class, with "No default constructor found", and then at the
  * first one with an autowired setter.</p>
  *
+ * <p>A bean a registrar declares with a supplier is created through its constructor as well. The supplier is
+ * the registrar's own code, and a plugin's registrar is usually dynamically compiled Groovy, where
+ * {@code new X(...)} is not a constructor call but a request to Groovy to choose a constructor of {@code X},
+ * which it does reflectively. An image built without this stopped at the first post-processor a plugin
+ * declared that way, with {@code MissingReflectionRegistrationError} for its constructor.</p>
+ *
  * <p>Every bean definition with a class is covered, so it does not matter how a plugin declared it.</p>
  *
  * <p>The injection points of every bean are registered as well, Spring's included. An application running
@@ -102,8 +108,8 @@ public class BeanReflectionBeanFactoryInitializationAotProcessor implements Bean
 
     /**
      * The class of every bean, and how much of it is reached reflectively: a bean is created through its
-     * constructor unless a supplier or a factory method creates it, and the product of a factory method, like
-     * a Spring bean the generated code creates, only has its annotated members reached.
+     * constructor unless a factory method or a supplier other than a registrar's creates it, and the product of
+     * a factory method, like a Spring bean the generated code creates, only has its annotated members reached.
      */
     private Map<Class<?>, Integer> beanClassesOf(ConfigurableListableBeanFactory beanFactory) {
         Map<Class<?>, Integer> beanClasses = new LinkedHashMap<>();
@@ -126,7 +132,9 @@ public class BeanReflectionBeanFactoryInitializationAotProcessor implements Bean
             }
             else {
                 beanClass = beanClassOf(beanDefinition, beanFactory.getBeanClassLoader());
-                access = (beanDefinition.getInstanceSupplier() == null) ? CREATED : WIRED;
+                boolean createdThroughConstructor = beanDefinition.getInstanceSupplier() == null ||
+                        isLeftOutOfGeneration(beanDefinition);
+                access = createdThroughConstructor ? CREATED : WIRED;
             }
             if (beanClass == null) {
                 continue;
