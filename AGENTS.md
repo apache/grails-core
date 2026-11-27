@@ -81,6 +81,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - **Grails application upgrade guidance** (9.x to 10 breaking changes, changes between 10.x releases) → Read `.agents/skills/grails-upgrade/SKILL.md`
 > - **Using AI models from a Grails application** (`grails-spring-ai`, Spring AI providers, `ChatClient`, streaming, scripted models in tests) → Read `.agents/skills/grails-ai-developer/SKILL.md`
 > - **Grails web application development** (controllers, views, GORM models, taglibs, services, web MVC) → Read `.agents/skills/grails-developer/SKILL.md`
+> - **Converting a Gradle project from Java to Groovy** (moving `src/*/java` sources to Groovy paths, the two-commit conversion and its review) → Read `.agents/skills/java-to-groovy-conversion/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
@@ -96,6 +97,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **grails-upgrade** | Upgrading applications from Grails 9.x to 10, and between 10.x releases | `.agents/skills/grails-upgrade/SKILL.md` | Application upgrade guide, changes of each release, defaults announced in Grails 9 |
 | **grails-ai-developer** | `grails-spring-ai`, Spring AI providers, `ChatClient`, streamed answers | `.agents/skills/grails-ai-developer/SKILL.md` | Using AI models from an application: providers, chat client, streaming, testing |
 | **grails-developer** | Controllers, views, GORM models, taglibs, services, web MVC | `.agents/skills/grails-developer/SKILL.md` | Web applications, REST APIs, GORM, controllers, views, plugins |
+| **java-to-groovy-conversion** | Converting a Gradle project from Java to Groovy, `git mv` of `src/*/java` sources | `.agents/skills/java-to-groovy-conversion/SKILL.md` | The two-commit conversion, static compilation, the review checklist |
 
 ## Repository Conventions
 

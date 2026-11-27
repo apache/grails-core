@@ -1,0 +1,112 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.orm.hibernate.cfg.domainbinding.util
+
+import groovy.transform.CompileStatic
+import org.hibernate.MappingException
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Table
+
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
+
+@CompileStatic
+class CreateKeyForProps {
+
+    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher
+    private final UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator
+
+    CreateKeyForProps(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher
+        this.uniqueKeyForColumnsCreator = new UniqueKeyForColumnsCreator()
+    }
+
+    protected CreateKeyForProps(
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator) {
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher
+        this.uniqueKeyForColumnsCreator = uniqueKeyForColumnsCreator
+    }
+
+    void createKeyForProps(HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
+        if (HibernateToManyProperty.isBoundAsCollection(grailsProp)) {
+            // The column of a bound collection lives in the collection table, which does not hold the columns
+            // of the other properties of the group, so a unique group has no key to create there. A to-many
+            // mapped with a user type or as serializable is a plain column of the owner table, so it keeps its
+            // key. The condition is the one GrailsPropertyBinder routes by.
+            return
+        }
+        PropertyConfig mappedForm = grailsProp.mappedForm
+
+        if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
+
+            List<Column> keyList = new ArrayList<>()
+            keyList.add(new Column(columnName))
+            addGroupColumns(grailsProp, mappedForm, path, keyList)
+            uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList)
+        }
+    }
+
+    /**
+     * Creates the unique key of a property that spans several columns, such as one mapped with a composite user
+     * type, when the property is unique: one key across all of its columns and, when it is unique within a group,
+     * the columns of the other properties of the group. None of the columns is unique on its own, since two
+     * different values of the property can share the value of one of them, so a property that is unique on its
+     * own needs the key as well. The key holds the bound columns themselves, so it keeps their quoting and case.
+     *
+     * @param grailsProp the property
+     * @param path the path of the property within its entity
+     * @param table the table that holds the columns
+     * @param columns the bound columns of the property
+     */
+    void createKeyForColumns(
+            HibernatePersistentProperty grailsProp, String path, Table table, List<Column> columns) {
+        PropertyConfig mappedForm = grailsProp.mappedForm
+        if (!mappedForm.isUnique() || columns.isEmpty()) {
+            return
+        }
+        List<Column> keyList = new ArrayList<>(columns)
+        if (mappedForm.isUniqueWithinGroup()) {
+            addGroupColumns(grailsProp, mappedForm, path, keyList)
+        }
+        uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList)
+    }
+
+    /**
+     * Adds the columns of the other properties of the uniqueness group of the property. A property of the group
+     * that spans several columns, such as one mapped with a composite user type, contributes all of them.
+     */
+    private void addGroupColumns(
+            HibernatePersistentProperty grailsProp, PropertyConfig mappedForm, String path, List<Column> keyList) {
+        GrailsHibernatePersistentEntity owner = grailsProp.hibernateOwner
+        for (String propertyName : mappedForm.uniquenessGroup) {
+            HibernatePersistentProperty otherProp = owner.getHibernatePropertyByName(propertyName)
+            if (otherProp == null) {
+                throw new MappingException(
+                        "${owner.javaClass.name} references an unknown property ${propertyName}".toString())
+            }
+            for (String otherColumnName :
+                    columnNameForPropertyAndPathFetcher.getColumnNamesForPropertyAndPath(otherProp, path)) {
+                keyList.add(new Column(otherColumnName))
+            }
+        }
+    }
+}
