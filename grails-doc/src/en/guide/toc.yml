@@ -43,6 +43,7 @@ upgrading:
   upgrading60x: Upgrading from Grails 5 to Grails 6
   upgrading50x: Upgrading from Grails 4 to Grails 5
   upgrading40x: Upgrading from Grails 3.3.x to Grails 4
+  compatibilitySettings: Compatibility Settings
 conf:
   title: Configuration
   config:
