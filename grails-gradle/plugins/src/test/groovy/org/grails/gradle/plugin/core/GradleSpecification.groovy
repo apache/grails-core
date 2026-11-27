@@ -56,9 +56,13 @@ abstract class GradleSpecification extends Specification {
         // The TestKit directory is the Gradle user home of the builds, so every test project runs with the
         // configuration cache, as generated applications do, and fails on any configuration cache problem.
         // A test passes --no-configuration-cache to run a build without it.
+        // File-system watching is off: the daemon is reused, and a test that edits a source file
+        // milliseconds after a build ends can otherwise have the next build miss the edit and leave the
+        // task up to date.
         Files.writeString(testKitDir.resolve('gradle.properties'), '''\
             org.gradle.configuration-cache=true
             org.gradle.configuration-cache.problems=fail
+            org.gradle.vfs.watch=false
             '''.stripIndent())
         gradleRunner = GradleRunner.create()
                 .withPluginClasspath()
