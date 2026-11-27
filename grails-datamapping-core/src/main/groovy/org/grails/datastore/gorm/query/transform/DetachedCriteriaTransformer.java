@@ -77,6 +77,7 @@ import org.codehaus.groovy.transform.trait.Traits;
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.transform.AstPropertyResolveUtils;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.api.ProjectionList;
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
 import org.grails.datastore.mapping.reflect.AstUtils;
 
@@ -1259,15 +1260,22 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
                             boolean validProperty = aggregatePropertyName != null && propertyNames.contains(aggregatePropertyName);
                             if (validProperty) {
-                                ClosureAndArguments closureAndArguments = new ClosureAndArguments(variableScope);
-                                BlockStatement currentBody = closureAndArguments.getCurrentBody();
+                                if ("property".equals(aggregateFunctionName)) {
+                                    ClosureAndArguments closureAndArguments = new ClosureAndArguments(variableScope);
+                                    addProjectionToCurrentBody(closureAndArguments.getCurrentBody(), aggregateFunctionName, aggregatePropertyName, variableScope);
+                                    rightExpression = closureAndArguments.getClosureExpression();
 
-                                addProjectionToCurrentBody(currentBody, aggregateFunctionName, aggregatePropertyName, variableScope);
-
-                                rightExpression = closureAndArguments.getClosureExpression();
-
-                                if ("property".equals(aggregateFunctionName) && METHOD_TO_SUBQUERY_MAP.containsKey(methodToCall)) {
-                                    methodToCall = methodToCall + "All";
+                                    if (METHOD_TO_SUBQUERY_MAP.containsKey(methodToCall)) {
+                                        methodToCall = methodToCall + "All";
+                                    }
+                                } else {
+                                    // The closure takes the subquery as its parameter and calls projections on it. The
+                                    // @Where of a data service is compiled statically, and there the calls of a closure
+                                    // without that parameter resolve to the enclosing criteria, so the aggregate was
+                                    // added to the outer query. The criteria the closure is passed to builds the
+                                    // subquery when the query runs, of its own class, which can be a subclass of the
+                                    // class named where the query is written.
+                                    rightExpression = projectionsOnParameter(aggregateFunctionName, aggregatePropertyName, variableScope);
                                 }
                             } else {
                                 sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot use aggregate function " + aggregateFunctionName + " on property \"" + aggregatePropertyName + "\" - no such property on class " + this.currentClassNode.getName() + " exists.", Token.newString(propertyName, aggregateMethodCall.getLineNumber(), aggregateMethodCall.getColumnNumber()), sourceUnit));
@@ -1385,6 +1393,31 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         VariableExpression thisExpression = new VariableExpression("this");
         projectionsBody.getCurrentBody().addStatement(new ExpressionStatement(new MethodCallExpression(thisExpression, functionName, aggregateArgs)));
         currentBody.addStatement(new ExpressionStatement(new MethodCallExpression(thisExpression, "projections", projectionsBody.getArguments())));
+    }
+
+    /**
+     * A closure that adds the aggregate to the criteria it is called with:
+     * {@code { DetachedCriteria c -> c.projections { ((ProjectionList) delegate).fn(property) } }}. The aggregate is
+     * called on the delegate by name: in a statically compiled closure, such as the {@code @Where} of a data service, a
+     * call without a receiver is not sent to the delegate, and the subquery is left without a projection.
+     */
+    private ClosureExpression projectionsOnParameter(String functionName, String aggregatePropertyName, VariableScope variableScope) {
+        Parameter criteria = new Parameter(getParameterizedDetachedCriteriaClassNode(null), "$subquery");
+        VariableScope scope = new VariableScope(variableScope);
+        scope.putDeclaredVariable(criteria);
+        ClosureAndArguments projectionsBody = new ClosureAndArguments(scope);
+        MethodCallExpression aggregate = new MethodCallExpression(
+                new CastExpression(ClassHelper.make(ProjectionList.class), new VariableExpression("delegate")), functionName,
+                new ArgumentListExpression(new ConstantExpression(aggregatePropertyName)));
+        aggregate.setImplicitThis(false);
+        projectionsBody.getCurrentBody().addStatement(new ExpressionStatement(aggregate));
+        MethodCallExpression projections = new MethodCallExpression(new VariableExpression(criteria), "projections", projectionsBody.getArguments());
+        projections.setImplicitThis(false);
+        BlockStatement body = new BlockStatement();
+        body.addStatement(new ExpressionStatement(projections));
+        ClosureExpression closure = new ClosureExpression(new Parameter[]{criteria}, body);
+        closure.setVariableScope(scope);
+        return closure;
     }
 
     @Override
