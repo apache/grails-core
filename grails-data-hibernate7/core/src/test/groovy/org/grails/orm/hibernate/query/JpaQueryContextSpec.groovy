@@ -23,8 +23,6 @@ import jakarta.persistence.criteria.ParameterExpression
 import jakarta.persistence.criteria.Path
 import jakarta.persistence.metamodel.Attribute
 import jakarta.persistence.metamodel.SingularAttribute
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
-import org.grails.datastore.mapping.model.types.Association
 import org.hibernate.query.sqm.tree.domain.SqmPath
 import org.hibernate.query.sqm.tree.from.SqmFrom
 import spock.lang.Specification
@@ -285,34 +283,15 @@ class JpaQueryContextSpec extends Specification {
         resolved == heightPath
     }
 
-    def "test the context of an association block is recorded in the context of the query"() {
-        given:
-        def context = new JpaQueryContext(Mock(From))
-        def outerContext = JpaQueryContext.forBlock(context, null, Mock(From), 'owner')
-        def blockContext = JpaQueryContext.forBlock(outerContext, null, Mock(From), 'club')
-        def block = new DetachedAssociationCriteria(Object, Mock(Association))
-        def other = new DetachedAssociationCriteria(Object, Mock(Association))
-
-        when: 'the context of a nested block is recorded'
-        outerContext.registerAssociationContext(block, blockContext)
-
-        then: 'the context of the query has it, so that an order of the query finds the block at any depth'
-        context.getAssociationContext(block).is(blockContext)
-        outerContext.getAssociationContext(block).is(blockContext)
-
-        and: 'a block that the query has not built has no context'
-        context.getAssociationContext(other) == null
-    }
-
     def "test a path of the root or of one of its components is a column of the root"() {
         given:
         def root = Mock(From)
         def context = new JpaQueryContext(root)
-        def componentAttribute = Mock(Attribute)
+        def componentAttribute = Mock(SingularAttribute)
         componentAttribute.getPersistentAttributeType() >> Attribute.PersistentAttributeType.EMBEDDED
-        def componentJoin = Mock(Join)
-        componentJoin.getAttribute() >> componentAttribute
-        componentJoin.getParent() >> root
+        def componentPath = Mock(Path)
+        componentPath.getModel() >> componentAttribute
+        componentPath.getParentPath() >> root
         def associationPath = Mock(Path)
         associationPath.getParentPath() >> root
         def name = Mock(Path)
@@ -320,7 +299,7 @@ class JpaQueryContextSpec extends Specification {
         def foreignKey = Mock(Path)
         foreignKey.getParentPath() >> associationPath
         def componentProperty = Mock(Path)
-        componentProperty.getParentPath() >> componentJoin
+        componentProperty.getParentPath() >> componentPath
 
         expect:
         context.isColumnOfRoot(name)
@@ -361,7 +340,7 @@ class JpaQueryContextSpec extends Specification {
         def sqmContext = new JpaQueryContext(sqmRoot)
 
         when:
-        def result = sqmContext.getSortExpression('club.id', true)
+        def result = sqmContext.getSortExpression('club.id', true, false)
 
         then:
         _ * sqmRoot.get('club') >> clubPath

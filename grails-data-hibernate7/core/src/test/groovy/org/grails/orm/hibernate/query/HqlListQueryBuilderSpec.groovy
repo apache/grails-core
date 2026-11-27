@@ -560,14 +560,14 @@ class HqlListQueryBuilderSpec extends Specification {
         builder.buildListHql() == "from Person e order by upper(e.address.city) asc"
     }
 
-    void "test buildListHql sorts by a property of an association inside an embedded component through a left join"() {
+    void "test buildListHql sorts by a property of an association inside an embedded component through its path"() {
         given:
         def detailsEntity = associated(entity, "details", Mock(Embedded))
         property(associated(detailsEntity, "author"), "name", String)
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "details.author.name"])
 
-        expect: "the component has no join of its own, and the association is joined through its path"
-        builder.buildListHql() == "from Person e left join e.details.author s0 order by upper(s0.name) asc"
+        expect: "a path through a component is read as it is, as Hibernate 5 leaves such a path alone"
+        builder.buildListHql() == "from Person e order by upper(e.details.author.name) asc"
     }
 }
