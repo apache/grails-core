@@ -185,6 +185,33 @@ class GroovyPageCompileAvoidanceFunctionalSpec extends GradleSpecification {
         scaffolded('java.lang.Integer').listFiles().any { File copy -> new File(copy, 'admin/show.gsp').isFile() }
     }
 
+    def "a controller in two class directories that declares a namespace in only one expands its namespace's pages"() {
+        given: 'the main classes declare the namespace in a private field, and another directory has the controller without it'
+        project()
+        new File(projectDir, 'build.gradle').append('''
+            sourceSets { extra }
+            dependencies { extraImplementation localGroovy(); extraImplementation sourceSets.main.output }
+            tasks.named('generateScaffoldedViews') { classesDirs.from(sourceSets.extra.output.classesDirs) }
+        ''')
+        write('grails-app/controllers/BookController.groovy', '''
+            import grails.plugin.scaffolding.annotation.Scaffold
+            @Scaffold(Integer)
+            class BookController { private static String namespace = 'admin' }
+        ''')
+        write('src/extra/groovy/BookController.groovy', '''
+            import grails.plugin.scaffolding.annotation.Scaffold
+            @Scaffold(Integer)
+            class BookController { }
+        ''')
+
+        when:
+        BuildResult result = compile('generateScaffoldedViews')
+
+        then: 'the namespace is seen, as it was before the controllers were an input'
+        result.task(':generateScaffoldedViews').outcome == TaskOutcome.SUCCESS
+        scaffolded('java.lang.Integer').listFiles().any { File copy -> new File(copy, 'admin/show.gsp').isFile() }
+    }
+
     private void project() {
         projectDir = setupTestResourceProject('gsp-compile-classpath').projectDir
         new File(projectDir, 'build.gradle').append('''
