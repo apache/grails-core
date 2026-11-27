@@ -211,7 +211,7 @@ $ grails create-tool data-import
 $ grails data-import orders.csv
 ----
 
-As it is written, the tool prints its name and what it was given, `Ran data-import with the arguments [orders.csv]`, and succeeds. Its work goes into its `handle()` method, which returns `true` when the tool has done it and `false` to end the tool with exit code 1.
+As it is written, the tool prints its name and what it was given, `Ran data-import for orders.csv`, and succeeds. Its work goes into its `handle()` method, which returns `true` when the tool has done it and `false` to end the tool with exit code 1. The tool also declares what it takes and what it does: a one-line description, the parameter it was given, and whether it changes anything. `grails help data-import` shows them, the command line refuses an argument the tool does not declare before anything is run, and an agent of `grails mcp` is offered the tool with them.
 
 A tool that only reads and writes files of the project, such as one that renders a template into the project, goes into `src/standalone` instead: `grails create-tool --standalone create-report`. `grails` runs such a tool as a Java process of its own, without Gradle and without the application, so it starts at once and works also while the project does not compile. Neither folder is part of the application: no tool, and no library that only tools use, is in the application as it runs or as it is packaged.
 
@@ -390,3 +390,5 @@ Outside interactive mode, bash and zsh complete the commands of `grails`, their 
 === Using the command line from a script or a tool
 
 Every command ends with an exit code: `0` when it did what it was asked, `2` for a mistake in the command line (a command there is not, an unknown option, features that cannot be had together) and `1` for any other failure. `--plain-output` writes plain text without terminal markup, `--non-interactive` never waits for input, and `help --json` describes the commands of the current directory as one JSON document. These are described under "Help" and "Output for a Program, and Running Without a User" in xref:commandLine[the introduction of this chapter].
+
+An AI coding agent uses the command line through `grails mcp`, which its MCP client starts in the project: the agent gets the commands of the project and the tools of the application and its plugins as tools of its own, and each call runs the command you would type. `claude mcp add --scope project grails -- ./grailsw mcp` registers it for Claude Code. See xref:commandLine#mcp[Driving Grails from an AI Agent].

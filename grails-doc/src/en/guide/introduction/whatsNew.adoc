@@ -200,9 +200,10 @@ Grails 9 has one command line, `grails`. The Grails shell and its profiles are g
 * *`list-plugins` and `plugin-info`.* The two commands of the Grails shell for finding plugins are commands of the one command line. They know the plugins of the Grails release without the network, with the versions the Grails BOM manages, and read the plugins of the community from the Grails plugin index, which is what the plugin portal shows. `plugin-info` gives the line for `build.gradle` and names the feature that `feature add` adds the plugin with. Each is also a command of `plugin`, as `plugin list` and `plugin show`, beside `plugin find`. See xref:commandLine#findingPlugins[Finding Plugins].
 * *`feature find`, `feature show` and `feature diff`.* Find a feature by a word, say what one feature is and what it contributes to an application, and show what `feature add` would change as a unified diff, in a project and, for a new application of a type, outside one. See "Adding a feature to a project" in xref:commandLine#creatingProject[Creating a Grails Project].
 * *Tools.* What an application or a plugin adds to `grails` is a tool, run by its name: a tool of `src/cli` by the build, and a tool of `src/standalone` as a process of its own without Gradle. `create-tool` writes one. See "Tools of Applications and Plugins" below.
+* *`grails mcp`.* The command line is also a server of the Model Context Protocol, for an AI coding agent. See "Driving Grails from an AI Agent" below.
 * *Multi-project builds.* `create-app --subproject` creates an application as a project of an existing Gradle build, with the files of the application only, and prints the `include` line for the settings of the build. In such a build the commands run the Gradle wrapper of the root and name their tasks by the path of the project.
 
-The `.grails` record, `feature add`, `project show`, `project regenerate`, `project migrate` and `--subproject` are described in xref:commandLine#creatingProject[Creating a Grails Project]. What an existing application has to change, the Grails wrapper among it, is in xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], notes 32 to 39, 41 to 51 and 63 to 66.
+The `.grails` record, `feature add`, `project show`, `project regenerate`, `project migrate` and `--subproject` are described in xref:commandLine#creatingProject[Creating a Grails Project]. What an existing application has to change, the Grails wrapper among it, is in xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], notes 32 to 39, 41 to 51, 63 to 66 and 71 to 73.
 
 ==== Hibernate 7 Application Generation
 
@@ -360,6 +361,54 @@ This keeps what only tools need, and its side effects, such as the WAR-deploymen
 
 The Grails Data plugin itself (`grails-data-hibernate5` or `grails-data-hibernate7`) is an application dependency only: generated builds no longer place it on the `buildscript` classpath or in `buildSrc`, where Gradle's own Groovy would run the compile-time transformations the plugin carries while compiling the build scripts.
 See the xref:upgrading#upgrading80x[upgrade guide] for the equivalent change in an existing build.
+
+==== Tools Declare Their Options, Parameters and Hints
+
+A tool says what it takes and what it does, and everything that shows or runs tools reads it: `grails help NAME`, completion in interactive mode, `help --json` and so IDEs, and the agents of `grails mcp`. The declarations are annotations of `org.apache.grails.core.cli`, which the compiler reads without running the tool:
+
+[source,groovy]
+----
+@ToolHints(readOnlyHint = true)
+class AuditReportTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Writes the audit report'
+
+    @ToolOption(names = ['--since', '-s'], label = 'DATE', description = 'The first day of the report')
+    String since
+
+    @ToolParameter(index = 0, label = 'OUTPUT', description = 'The file to write')
+    String output
+
+    boolean handle() {
+        ...
+    }
+}
+----
+
+* `@ToolOption` and `@ToolParameter` on the fields of the tool declare its options and parameters, and the tool is given their values before `handle()`. A tool that declares them is held to them: `grails audit-report --sinse 2026-01-01` is refused with exit code 2 before a build is started. A set of options several tools share is one Groovy `@AnnotationCollector`.
+* `@ToolHints` says whether the tool changes anything, with the members and defaults of the hints of the Model Context Protocol.
+* `boolean readsInput = true` says that the tool asks what is typed: `--non-interactive` refuses it, and interactive mode gives it the terminal.
+* `executionContext.result` gives a result as data, which an agent of `grails mcp` receives as structured content.
+* `create-tool` writes a tool that declares all of it, and the compiler warns about a tool that has no description, or reads its arguments without declaring them. `grails project health` names the tools of the application that lack a declaration.
+
+Nothing is required: a tool of Grails 8 compiles and runs as before, with free arguments. The tools of the framework, the `dbm-*` tools of the Database Migration plugin and the tools of Spring Security and scaffolding among them, declare theirs, under the names their options always had. See xref:commandLine#creatingTools[Creating Tools], and notes 51, 72 and 73 of the xref:upgrading#upgrading90x[upgrade guide].
+
+==== Driving Grails from an AI Agent: `grails mcp`
+
+`grails mcp` makes the `grails` command line a server of the Model Context Protocol, so that an AI coding agent such as Claude Code or Cursor drives it with the commands a developer types:
+
+[source,console]
+----
+$ claude mcp add --scope project grails -- ./grailsw mcp
+----
+
+* *Everything without a terminal.* The agent gets every command of the directory that makes sense without a terminal, creating projects and classes, adding features, building, testing, running and stopping the application, the `project` commands, and every tool of the application and its plugins, with their options, parameters and hints. A tool written while the agent works is offered once the project is compiled, and the client is told.
+* *One program.* The server is the `grails` process. It runs each call as interactive mode runs a line, with one connection to Gradle and the project generator kept for the session, so calls after the first answer at once. No code of the project runs in its JVM, and its standard output carries the protocol only.
+* *For agents.* Several calls run at once in three lanes, a call can be cancelled, long output is shortened and its whole text kept in `.grails/run/mcp`, a JSON document comes as structured content, and progress is reported while a build runs.
+* *Safe by the rules of the command line.* A call is the command line you could type, with your rights. Over MCP no new source of code can be named (no feature pack by its coordinates, no preset or catalog), hints are passed on only for the commands of Grails, the tools of the project and those of Grails' own plugins, and `--read-only` gives an agent only what changes nothing.
+* *The protocol of the official MCP Java SDK*, at the version the Grails BOM manages for Spring AI, revision 2026-07-28. The new optional feature `grails-mcp` writes `.mcp.json` for a new application.
+
+`grails mcp` serves the developer's command line; an MCP endpoint of the running application is built with Spring AI through `grails-spring-ai`. See xref:commandLine#mcp[Driving Grails from an AI Agent].
 
 ==== GSP Tag Library Improvements
 

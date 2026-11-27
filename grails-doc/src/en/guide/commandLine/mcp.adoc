@@ -1,0 +1,398 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+`grails mcp` makes the `grails` command line a server of the https://modelcontextprotocol.io[Model Context Protocol] (MCP), so that an AI coding agent can drive it. The agent's MCP client, such as Claude Code, Cursor or VS Code, starts `grails mcp` in the directory of a project, and the agent then has, as tools of its own, every command of `grails` that makes sense without a terminal and every tool of the application and its plugins, with everything the command line knows about each:
+
+[source,console]
+----
+$ claude mcp add grails -- grails mcp
+----
+
+`grails mcp` serves the command line of the developer: creating projects and classes, adding features, building, testing, running the application and its tools. It is not an MCP endpoint of the application. An application that offers MCP tools of its own to agents, as beans that the running application serves, does that with Spring AI through the `grails-spring-ai` plugin, which xref:usingAi[Using AI in Your Application] describes.
+
+[[mcpOneProgram]]
+=== One Program, Two Front Ends
+
+`grails` and `grails mcp` are one program. A call of an MCP tool runs the same command, with the same rules, as typing it does:
+
+* *The `grails mcp` process is the server.* It runs each call as one command line, `grails --plain-output --non-interactive` with the arguments of the call, in its own JVM, the way xref:commandLine#interactiveMode[interactive mode] runs a line. For the whole session it keeps what interactive mode keeps: one connection to Gradle, through the Gradle Tooling API, for the builds of the project, and the project generator, which the first call that needs it starts. So a build begins at once, and `create-controller` or `project_show` answers in a few dozen milliseconds after the first call.
+* *What runs outside the process is what runs outside it at the terminal*: a standalone tool as a Java process of its own, the application of `run-app` as a process of the Gradle wrapper, and a build that the Tooling API does not run, as for a Gradle wrapper that is a link, with the wrapper. No code of the project runs in the JVM of `grails mcp`: builds run in Gradle, and tools in Gradle or in a process of their own.
+* *The list of tools is `help --json`.* The server reads the commands and the tools of its directory from the same document that `help`, completion and IDEs read (see "Help" in xref:commandLine[The Command Line]), and turns each entry into an MCP tool. A command of a feature of the project and a tool of a plugin are offered as soon as `help --json` has them.
+* *The standard output carries the protocol and nothing else.* What a command writes is the result of its call. What the server says for you, such as that it abandoned a call, is written to the standard error, which MCP clients keep in the log of the server.
+
+[[mcpClients]]
+=== Clients
+
+`grails mcp` speaks the revision 2026-07-28 of the Model Context Protocol, and no earlier one. A client has to speak that revision:
+
+* Claude Code speaks it in its v2 MCP runtime, which the environment variable `MCP_SDK_GENERATION` selects; the documentation of Claude Code names the value.
+* A client that knows the revisions before and after 2026-07-28 asks a server with `server/discover` first, and is served.
+* A client that starts with `initialize`, which the revisions up to 2025-11-25 begin with, is answered with the error `-32022`, whose message names the revision the server speaks. Nothing else is served to it: see <<mcpTroubleshooting,Troubleshooting>>.
+
+[[mcpRegistering]]
+=== Registering a Client
+
+The client starts `grails mcp` itself, with the project as its working directory. `grails mcp` runs the installed command line; `./grailsw mcp` runs the command line of the version the project is on, which the Grails wrapper downloads the first time, and is the form for a project that more than one person works on.
+
+[cols="1,3"]
+|===
+| Client | How
+
+| Claude Code
+| `claude mcp add grails -- grails mcp` registers the installed command line for you. `claude mcp add --scope project grails -- ./grailsw mcp` registers the Grails wrapper of the project in its `.mcp.json`, for everyone who works on it.
+
+| `.mcp.json` at the root of the project (Claude Code; VS Code with Copilot)
+| The object below.
+
+| Cursor
+| The same object, in `.cursor/mcp.json`.
+
+| Any other client
+| The command `grails` (or `./grailsw`) with the argument `mcp`, and the directory of the project as the working directory.
+|===
+
+[source,json]
+..mcp.json
+----
+{
+  "mcpServers": {
+    "grails": {
+      "command": "./grailsw",
+      "args": ["mcp"]
+    }
+  }
+}
+----
+
+On Windows the wrapper is a batch file, which the command interpreter runs:
+
+[source,json]
+..mcp.json
+----
+{
+  "mcpServers": {
+    "grails": {
+      "command": "cmd",
+      "args": ["/c", "grailsw.bat", "mcp"]
+    }
+  }
+}
+----
+
+A new project gets the first file from the feature `grails-mcp`, which no application type selects by itself: `grails create-app com.example.shop --features grails-mcp` writes `.mcp.json` with the entry of `./grailsw mcp`, and a line of the `README.md` with the form for Windows and the place Cursor reads it from. A `.mcp.json` that is committed registers the server for the agent of everyone who works on the project, which is for the team to decide.
+
+* *Starting.* `grails mcp` answers within a second of starting, and has its list of tools a moment later. The first `./grailsw mcp` of a version downloads the command line before that, which takes longer than a client may wait for a server to start (Claude Code waits 30 seconds, or what `MCP_TIMEOUT` says): run `./grailsw --version` once in a terminal after a change of `grailsVersion`. The Grails wrapper writes everything it says to the standard error, so a download never disturbs the protocol.
+* *Java.* `grails mcp` needs Java 21, as every command does, and the scripts that start it refuse an earlier Java on the standard error. A client starts the server with its own environment, which need not be that of your shell: where `JAVA_HOME` is set only in the profile of your shell, add it to the environment the client gives the server.
+* *At a terminal.* `grails mcp` started by hand, with the terminal as its input, writes one line on the standard error that says what it is for and how a client registers it, and then serves what is typed, which is the protocol. Ctrl-C or Ctrl-D ends it.
+* *Not in another program.* At the prompt of interactive mode `mcp` is refused with exit code 2, and through `GrailsCli.execute` in the JVM of a program with exit code 1: the server needs the standard input and output of a process of its own.
+
+[[mcpDirectory]]
+==== One Server, One Directory
+
+A server serves one directory for its whole session: the directory it was started in, or the one `--directory DIR` names. Its tools are the commands and tools of that directory, as `grails help` lists them there, and a command of a project works on the project of that directory, as it does at the terminal. The list does not change from one call to the next, and there is no argument that names another directory.
+
+Another project gets a server of its own. In a Gradle build of several projects, where the commands of a project are run in the directory of the project and not at the root of the build, register one server for each application:
+
+[source,console]
+----
+$ claude mcp add shop -- grails mcp --directory apps/shop
+$ claude mcp add admin -- grails mcp --directory apps/admin
+----
+
+Outside a project, the server offers the commands that create one; the description of each says that the project it creates gets a server of its own.
+
+[[mcpTools]]
+=== What an Agent Gets
+
+The server describes itself to the client in a few lines, which the client gives its agent: the directory it serves, that each tool is a `grails` command run without a terminal, what `refresh_tools` is for, the environment the tools run in and how `run-tool` gives another, that `run-app` leaves the application running and `stop-app` stops it, that long output is shortened and kept, and where this guide is for the version that runs.
+
+[[mcpCommands]]
+==== The Commands of `grails`
+
+Every command that `help --json` lists in the directory of the server is a tool, except those that need a terminal or a person:
+
+[cols="3,1,4"]
+|===
+| Commands, by their names as tools | Offered | How
+
+| `create-app`, `create-restapi`, `create-plugin`, `create-web-plugin`, `create-rest-api-plugin`
+| Yes
+| `create-webapp`, another name of `create-app`, is not offered. Neither is `list-features` or `list-catalog-features`: `feature_list` answers what they would, as a JSON document. Neither are the options that name a new source of code (see <<mcpSafety,Safety>>).
+
+| `feature_add`, `feature_list`, `feature_find`, `feature_show`, `feature_diff`
+| Yes
+| `feature_add` with `dry-run` gives the JSON document of `feature add --dry-run --json`; `feature_find` and `feature_show` always give theirs.
+
+| `plugin_list`, `plugin_find`, `plugin_show`
+| Yes
+| Always as JSON. `plugin-index` is not offered. `list-plugins` and `plugin-info` are the same commands by other names and are not offered.
+
+| `project_show`, `project_health`, `project_migrate`, `project_regenerate`
+| Yes
+| `project_show` and `project_health` always give their JSON documents. `project_regenerate` compares only, as `project regenerate --diff --json`, and writes nothing.
+
+| The code generation commands, `create-controller` to `create-tool`, `add-property`, `install-templates`, and the `create-` command of each feature of the project that has one
+| Yes
+| As on the command line, `force` included.
+
+| `compile`, `clean`, `assemble`, `dependency-report`, `test-app`, `package-plugin`, `publish-plugin`
+| Yes
+| `test-app` without `continuous` and `debug-jvm`.
+
+| `run-app`, `stop-app`
+| Yes
+| `run-app` always leaves the application running, as `run-app --detach` does; see <<mcpRunApp,Running the Application>>. `detach`, `foreground` and `debug-jvm` are not offered.
+
+| `run-tool`
+| Yes
+| The way to run a tool of the application or of a plugin in another environment (`system-properties`, as `-Dgrails.env=...` in front of the name of the tool), and to run one whose name a command of `grails` has.
+
+| `stats`, `update-wrapper`
+| Yes
+|
+
+| `gradle`
+| No
+| Gradle is driven through the tooling of Gradle itself, MCP servers for Gradle among it; `grails mcp` offers what Grails adds. The commands that build, and the tools, are offered.
+
+| `shell`, `console`, interactive mode, the `!` lines of interactive mode
+| No
+| They read what is typed.
+
+| `run-script FILE`, `run-command`, `create-webapp`
+| No
+| Deprecated, or another name. The scripts of `src/main/scripts` are offered by their names, as at the terminal, with a description that says that they are deprecated.
+
+| `bug-report`, `help`
+| No
+| For a person. What `help --json` says is the resource `grails://commands`.
+
+| `install`, `mcp`
+| No
+|
+|===
+
+A command or a tool is offered by its name as a tool:
+
+* *The name* is the command and its subcommand joined by `_`, so that the name of each tool is one word: `create-controller`, `feature_add`, `project_show`. A tool of the application or of a plugin keeps its own name, as `dbm-update`. The command line keeps `_` out of the names of its commands and tools, so a name made this way is never another tool's.
+* *The title* is the command line as it is typed, `grails feature add`.
+* *The description* is the description of the command from `help --json`, with what the server does differently for it, as in the table above. A tool of the application or of a plugin has its own description, and after it how it is run and where it comes from (as in `grails help NAME`), its environment, and what of it is deprecated or not declared.
+* The member `org.apache.grails/command` of its `_meta` is the whole entry of `help --json` for the command or the tool, without the commands below it, and `org.apache.grails/run` the command line that a call runs. A client that wants all there is to know of a tool reads those.
+
+[[mcpArguments]]
+==== Arguments
+
+The arguments of a tool are described by its input schema, a JSON Schema made from the options and parameters of the command in `help --json`. Every property of a call becomes one argument of the command line, given as the one argument it is and never through a shell:
+
+* *An option* is the property named by its first long name without its hyphens: `--dry-run` is `dry-run`, `--dataSource` is `dataSource`. An option that takes no value is a `boolean`, and `true` gives it. An option that takes a value is a `string`, an `integer` or a `number`, as the member `type` of the option in `help --json` says; an option whose values are a choice has them as an `enum`, and an option that can be given more than once is an array. A value is given as `--name=value`, so that a value that begins with `-` is never read as an option.
+* *`-D`* is the property `system-properties`, an object of strings, each given as `-Dname=value`; `-P` is `project-properties` in the same way.
+* *A parameter*, what a command takes besides its options, is the property named after its label in lower case, with every run of other characters than letters and digits a `-`: `CONTROLLER-NAME` is `controller-name`, `PROPERTY:TYPE` is `property-type`. A parameter that a command needs is required, and one that takes several values is an array. A parameter value that begins with `-` is refused, so that it is never read as an option; the `args` of a command that gives what follows to something else, as `run-tool` gives its `arguments` to the tool, are given as they are.
+* *A tool of the application or of a plugin* that declares its options and parameters (see xref:commandLine#creatingTools[Creating Tools]) has them in its schema, as a command of `grails` has. One that declares none has one property, `arguments`, an array of strings, each of them given to the tool as the one argument it is.
+* The options of the command line itself are not offered. Every call is given `--plain-output --non-interactive`, and `--help`, `--version`, `--verbose` and `--stacktrace` are no properties.
+* The rules a command holds its options to beyond what each takes, such as `--detach` and `--foreground` of `run-app`, which exclude each other, are not in the schema. The command line refuses a call that breaks one, as it refuses such a command line, and the call ends with an error that says why.
+
+The server checks every call before anything runs: the types, the required properties, the values of a choice, properties the tool does not have, the character U+0000, at most 4,096 arguments and at most 1 MiB of them. A call that fails a check ends as an error that names the property. A leading `@` in an argument is given as `@@`, which the command line reads as one `@`: the command line reads an argument that begins with `@` as the name of a file of arguments, and without this the text of any file you can read could be read into the arguments of a command, and from there into what the agent reads.
+
+[[mcpResources]]
+==== Resources
+
+[cols="2,4"]
+|===
+| URI | What it is (`application/json`)
+
+| `grails://commands`
+| The `help --json` document of the directory of the server, with `complete` and `diagnostics`: why a tool is missing, or that the list may be out of date.
+
+| `grails://tools/{name}`
+| The entry of one command or tool in `help --json`, with how the server runs it.
+
+| `grails://project`, `grails://project/health`
+| In a project, what `project show --json` and `project health --json` write.
+
+| The log of a call
+| The whole output of one call, in a file of `.grails/run/mcp` of the project. It is not listed: the result of the call links it (see <<mcpResults,Results>>).
+|===
+
+The server offers no prompts. What an agent should know of Grails beyond the descriptions of the tools is in the `grails-developer` agent skill: see xref:gettingStarted#agentSkills[Agent Skills].
+
+[[mcpRefreshTools]]
+==== `refresh_tools`
+
+The one tool of the server's own is `refresh_tools`. It runs the Gradle task `grailsToolCatalog` again, which compiles the project and lists the tools of the application and its plugins, and the list of tools is then made again from what it wrote. It is the call to make after a plugin was added to `build.gradle`, and whenever `grails://commands` says that the list is not complete or may be out of date; its description says so then. See <<mcpChanges,When the List of Tools Changes>>.
+
+[[mcpCalls]]
+=== How a Call Runs
+
+[[mcpLanes]]
+==== Calls at the Same Time
+
+A client may call several tools at once, as Claude Code does with the calls it knows change nothing. The server runs them side by side in three lanes:
+
+[cols="1,4,2"]
+|===
+| Lane | Calls | At once
+
+| Build
+| Every call that runs Gradle or a tool: the commands that build, test and package, `run-app`, `run-tool`, the tools of the application and its plugins, the scripts of the application, `refresh_tools`
+| One, the others wait in the order they came. They share the one connection to Gradle.
+
+| Generator
+| The calls that start the project generator: the commands that create a project, `feature_add` and the other `feature_` commands, `project_regenerate`, `project_migrate`
+| One
+
+| Direct
+| Every other call: the code generation commands that do not need the generator, `project_show`, `project_health`, `plugin_` commands, `stats`, `stop-app`, `update-wrapper`, and reading the resources
+| Four
+|===
+
+So a `test-app` that runs for ten minutes does not hold up `project_show`. A call that waits for its lane says so in a progress message, `Waiting for test-app, which is running`, every five seconds, and can be cancelled while it waits.
+
+[[mcpCancel]]
+==== Cancelling a Call
+
+When the client cancels a call, the server interrupts it, as Ctrl-C interrupts a command in interactive mode: a build is cancelled, the Gradle wrapper and what it started are ended, by force after ten seconds, the process of a standalone tool is ended, and `run-app` stops waiting for the application. A call that was waiting for its lane leaves the queue. As the protocol has it, a call that was cancelled gets no answer. The commands that only generate files, such as `create-controller` and `feature_add`, are not interrupted: they take well under two seconds, and their result is dropped when they have ended.
+
+A call that has not ended thirty seconds after it was interrupted, which a build that does not react to the cancellation can cause, is given up: the server says so in one line on the standard error and frees its lane, and when it was a build it closes its connection to Gradle, so that the next build gets a new one. After three calls that were given up the server ends with exit code 1, and the client starts it again when it next needs it.
+
+A call that is not cancelled has no time limit: `test-app` can take an hour. Its progress messages keep a client waiting; a client sets its own limits.
+
+[[mcpRunApp]]
+==== Running the Application
+
+`run-app` starts the application as `run-app --detach` does: the call ends once the application answers on its port, and the application goes on running after the call and after the server, until `stop-app` stops it, as a call or at the terminal. Its output is in `.grails/run/app.log`. See link:commandLine.html#gradleBuild[Building with Gradle] for both commands.
+
+[[mcpResults]]
+==== Results, Logs and Progress
+
+A call ends with the exit code of its command line. Exit code 0 is a result; 1, a command that failed, and 2, a command line that was refused, are a result marked as an error (`isError`), whose text has the lines of the command that say what to correct.
+
+* *Text.* The result of a command is what it wrote, its standard output and its standard error in the order it wrote them, as one text.
+* *JSON.* A command that writes a JSON document, as `project_show`, `feature_add` with `dry-run` and `plugin_list` do, gives the document as the structured content of the result and as its text, and what it wrote to its standard error as a second text.
+* *The result of a tool.* A tool of the application or of a plugin that sets `executionContext.result` gives that value as the structured content of the result, besides what it printed; see "The Result of a Tool" in xref:commandLine#creatingTools[Creating Tools].
+* *Long output* is shortened, so that it fits what a client gives an agent: a call that succeeded keeps its first 4,000 and its last 28,000 characters, and a call that failed, whose cause is at its end, its first 1,000 and its last 9,000. A line in the place of what was left out says how much that was, and names the file that has all of it. A JSON document is given whole up to 256 KiB. Colours and other control characters, except line breaks and tabs, are taken out.
+* *The log.* In a project the whole output of every call is written to a file of `.grails/run/mcp`, named after the time and the tool, which only you can read and which the result links. The newest 50 are kept. Outside a project there is no file, and the line that says what was left out says so.
+* The member `org.apache.grails/result` of the `_meta` of the result has the exit code, the command line that ran with the arguments the server added, how long the call took, whether its output was shortened, and the file of its log.
+
+While a call runs, the server sends progress messages: `Running: grails test-app` when it starts, and then, at most once a second, how many lines the command has written and the last of them. A client shows them, and they keep it waiting for a call that takes long; Claude Code moves a call that takes more than two minutes into the background.
+
+[[mcpSession]]
+==== The End of a Session
+
+A session ends when the client closes the input of the server, as it does when it ends, or when the server is sent the signal to end (SIGINT or SIGTERM). The server then takes no new call, interrupts the calls that run as a cancellation does, waits a moment for them, closes its connection to Gradle and the project generator, and ends with exit code 0. A build that ran is cancelled by Gradle, and the application of `run-app` goes on running. A server that is killed (SIGKILL) runs none of this: Gradle cancels a build whose server is gone, and a Gradle wrapper or a standalone tool that the server started in its last moments may go on, as after `kill -9` of `grails` at the terminal.
+
+[[mcpChanges]]
+=== Tools of the Project, and When the List of Tools Changes
+
+Every tool of the application and its plugins that `help` lists is offered to agents, with no step to take for it: a tool of `src/cli` or `src/standalone`, of a plugin, of the deprecated `grails-app/commands`, and the scripts of `src/main/scripts`, marked deprecated. A tool offers what it declares: its description, its options and parameters as the input schema, and its hints, which tell a client whether it changes anything. A tool that declares nothing is offered with free arguments, and its description says that its arguments are not declared. xref:commandLine#creatingTools[Creating Tools] says how a tool declares what it takes and what it does; `create-tool` writes a tool that declares it.
+
+The one tool that is not offered is a tool that declares `readsInput`, because it asks what is typed and an agent cannot answer it. `grails://commands` names it in `diagnostics`, with the reason.
+
+A tool that is written, by `create-tool` through the server or at the terminal, or by hand, is offered once the build has listed it, which every build that compiles the project does: a call of `compile` or `test-app`, a build at the terminal or in an IDE, or `refresh_tools`. The result of `create-tool` through the server says so. The server never runs a build by itself to list the tools, so that a project that does not compile stays usable.
+
+The server notices that the list may have changed: it looks at the files the list is made from every two seconds, and right after every call that is not one that changes nothing. These are the list of the tools that the build writes, `.grails/cache/tool-catalog.json`, the record of the project, `gradle.properties`, the build and settings files, whether `grails-app` and `.grails` are there, and the names of the scripts in `src/main/scripts`. When the list of tools it makes from them is not the one it has, it takes the new one and tells the clients that asked to be told (`notifications/tools/list_changed`), which then read the list again; when the directory becomes a project, or stops being one, it tells them that the resources have changed as well. A change to `build.gradle`, such as a new plugin, makes `grails://commands` say that the list may be out of date, until a build has listed the tools again.
+
+[[mcpReadOnly]]
+=== An Agent That Only Looks: `--read-only`
+
+[source,console]
+----
+$ claude mcp add grails-readonly -- grails mcp --read-only
+----
+
+With `--read-only` the server offers only the tools whose hints say that they change nothing (`readOnlyHint`): `feature_list`, `feature_find`, `feature_show`, `feature_diff`, the `plugin_` commands, `project_show`, `project_health`, `project_regenerate`, `stats`, `dependency-report`, and the tools of the project and of the plugins of Grails that declare that they change nothing. `refresh_tools` is not offered either. It is the server for an agent that should look at a project and not change it, as one that reads text from outside, such as web pages or issues.
+
+[[mcpSafety]]
+=== Safety
+
+A call is a `grails` command line in the directory of the server, run with your rights, under every rule the command line has at the terminal: a project and a Gradle wrapper above the directory are used only when they are your own (`GRAILS_SAFE_DIRECTORY` names exceptions), arguments are a list and never a text for a shell, and every build is given an input that has already ended. The server binds no socket: only the client that started it can reach it, through its standard input. The server adds these rules of its own:
+
+* *No new source of code.* A feature pack is code that runs while a project is generated, and a plugin named by its coordinates is a feature pack. At the terminal naming one is your decision; an agent can be talked into naming one by text it reads. So these are not offered: `--feature-pack-dir`, `--feature-pack-repository`, `--feature-catalog`, `--feature-pack-sha256`, `--preset`, `--plugin-index`, and `--output` and `--force` of `project regenerate`; and a feature with `:` or `#` in its name, which names a plugin by its coordinates, is refused. The sources you configured in the environment, `GRAILS_REPO_URL`, `GRAILS_FORGE_CATALOG` and `GRAILS_PLUGIN_INDEX`, apply as at the terminal.
+* *A leading `@` is escaped*, and *every call is checked* before it runs (see <<mcpArguments,Arguments>>).
+* *Calls are limited by the lanes*: one build, one generator call and four other calls at a time.
+* *Hints are given only where the server can vouch for them.* A client treats the hints of a tool as a claim, and may approve a call that changes nothing with less friction, or run several at once. The server gives the hints of the commands of `grails` (below), of the tools of the application, and of the tools of the plugins of Grails, whose group is `org.apache.grails` or begins with `org.apache.grails.`. A tool of any other plugin has the most cautious hints of the protocol, whatever it declares: its declaration is in its `_meta`.
+* *Tools that read what is typed are not offered*, and neither are the commands of the table above that need a terminal.
+
+[cols="5,1,1,1,1"]
+|===
+| Commands | `readOnlyHint` | `destructiveHint` | `idempotentHint` | `openWorldHint`
+
+| `feature_list`, `feature_find`, `feature_show`, `feature_diff`, `plugin_list`, `plugin_find`, `plugin_show`
+| true | | | true
+
+| `project_show`, `project_health`, `project_regenerate`, `stats`
+| true | | | false
+
+| `dependency-report`
+| true | | | true
+
+| `compile`, `clean`, `assemble`, `package-plugin`
+| false | false | true | true
+
+| `test-app`, the commands that create a project, `run-app`
+| false | false | false | true
+
+| `stop-app`
+| false | false | true | false
+
+| `refresh_tools`
+| false | false | true | true
+
+| The code generation commands, `add-property`, `install-templates`
+| false | true | false | false
+
+| `feature_add`
+| false | true | true | true
+
+| `project_migrate`
+| false | true | false | false
+
+| `update-wrapper`
+| false | true | true | false
+
+| `run-tool`, `publish-plugin`
+| false | true | false | true
+
+| A tool of the application or of a plugin of Grails
+4+| As it declares with `@ToolHints`, and the most cautious hints where it declares none: see xref:commandLine#creatingTools[Creating Tools]
+|===
+
+A command that changes nothing has no `destructiveHint` and `idempotentHint`, which say something only of a command that changes something. A command is destructive when it may replace or delete files you wrote, or data the application holds; deleting what a build wrote, as `clean` does, does not count.
+
+Everything else an agent can do through the server is what you could type, with your rights: create projects and classes, add the features of Grails and of the catalogs you configured, build, test, package and publish, run the application and stop it, and run every tool of the application and its plugins, which runs their code. Whom you let drive the server, and which calls you approve, is decided in the client: it asks you before a call unless you have told it not to, and lets you deny tools by their names. There is no setting by which a tool keeps itself from agents, because `run-tool` reaches every tool; a tool that is dangerous to call says so with its hints, and clients ask before a call that is destructive. Do not approve every tool of `grails mcp` for good for an agent that reads text from outside, such as web pages, issues or the files of dependencies: such text can ask the agent to build, test and run tools with your rights. Keep approving the calls that change something, or give such an agent `grails mcp --read-only`.
+
+[[mcpTroubleshooting]]
+=== Troubleshooting
+
+*The client reports the error `-32022`* (`this server does not support the initialize handshake; supported protocol versions: 2026-07-28`). The client speaks a revision of MCP before 2026-07-28, which begins a session with `initialize`, and the server speaks only 2026-07-28 (see <<mcpClients,Clients>>). Use a client, or a setting of it, that speaks 2026-07-28: for Claude Code, its v2 MCP runtime, which `MCP_SDK_GENERATION` selects.
+
+*The server does not start, or the client gives up waiting for it.* Run the command of the client in a terminal, in the directory of the project, as `./grailsw mcp`: what it says on the standard error is what went wrong, such as a Java before 21, or a download of the command line that the client did not wait for; `./grailsw --version` does the download once. The client keeps what the server wrote to its standard error in its log of the server.
+
+*A tool of the application is not offered.* Read `grails://commands`: its `diagnostics` say why. A tool that was written since the last build is offered once the project is compiled: call `compile` or `refresh_tools`. A tool that declares `readsInput` is never offered. A tool whose name a command of `grails` has is run with `run-tool`, as at the terminal.
+
+*The tools of a plugin that was just added are missing.* The build has not listed them yet: call `refresh_tools`, which runs the build that lists them.
+
+*A command works on the wrong project, or is refused at the root of a build.* A server serves the directory it was started in: register one for each application, with `--directory` (see <<mcpDirectory,One Server, One Directory>>).
+
+*The application is still running after the agent has finished.* `run-app` leaves it running on purpose: call `stop-app`, or type `grails stop-app` in the project.
+
+*The result of a call is cut short.* The line in the middle names the file in `.grails/run/mcp` that has all of it, which the agent can read, and which the result links.
+
+*Which command line did a call run?* The member `org.apache.grails/result` of the `_meta` of its result has it, and the log of the call its output. With the environment variable `GRAILS_CLI_DIAGNOSTICS=true` in the environment the client gives the server, the server says on its standard error how it runs each command, as at the terminal (see link:commandLine.html#gradleRunnerDiagnostics[Seeing How a Command Runs]).
+
+See link:{commandLineRef}mcp.html[mcp] in the reference for the options of the command.

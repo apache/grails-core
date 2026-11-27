@@ -84,6 +84,7 @@ commandLine:
   interactiveMode: Interactive Mode
   creatingCustomScripts: Creating Custom Scripts
   creatingTools: Creating Tools
+  mcp: Driving Grails from an AI Agent
   creatingProject: Creating a Grails Project
   reusingGrailsScripts: Re-using Grails scripts
   gradleBuild:
