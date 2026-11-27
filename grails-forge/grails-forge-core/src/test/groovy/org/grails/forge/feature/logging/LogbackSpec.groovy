@@ -22,7 +22,9 @@ package org.grails.forge.feature.logging
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
-import org.grails.forge.options.*
+import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.Options
+import org.yaml.snakeyaml.Yaml
 import spock.lang.Unroll
 
 class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture {
@@ -48,6 +50,16 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
 
         then:
         !output.containsKey("grails-app/conf/logback-spring.xml")
+
+        and: "only development uses time-only log timestamps"
+        def config = new Yaml().load(output.get("grails-app/conf/application.yml"))
+        def developmentConfig = new Yaml().load(output.get("grails-app/conf/application-development.yml"))
+        developmentConfig['logging.pattern.dateformat'] == 'HH:mm:ss.SSS'
+        !developmentConfig.environments
+        !config.environments?.development?.logging?.pattern?.dateformat
+        !config.logging?.pattern?.dateformat
+        !config.environments?.production?.logging?.pattern?.dateformat
+        !config.environments?.test?.logging?.pattern?.dateformat
 
         where:
         applicationType << ApplicationType.values().toList()
