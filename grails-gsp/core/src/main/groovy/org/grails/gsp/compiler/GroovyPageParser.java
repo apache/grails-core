@@ -1327,26 +1327,34 @@ public class GroovyPageParser implements Tokens {
 
         out.println();
         String token = scan.getToken();
+        int line = getLineNumberOfTrimmedToken(token);
         if (gsp) {
-            // the white space of the code is printed as one space, so its lines are one, and a line feed
-            // that is printed for a line break of HTML is none of the page
-            write(token.trim(), true);
-            out.println();
+            printlnGspScript(token.trim(), line);
         } else {
-            out.printlnPageText(token.trim(), getLineNumberOfTrimmedToken(token));
+            out.printlnPageText(token.trim(), line);
         }
         out.println();
     }
 
-    private void write(CharSequence text, boolean gsp) {
-        if (!gsp) {
-            out.print(text);
-            return;
-        }
-
+    /**
+     * Prints the code of a {@code %{ }%} scriptlet. Each run of white space in it, line breaks too, is
+     * printed as one space, and a line break of HTML, such as {@code <br>}, as a line feed, so a line of
+     * the generated source can have the code of several lines of the page. Each line of the generated
+     * source is recorded with the line of the page that its code starts on.
+     *
+     * @param line the line of the page that the code starts on
+     */
+    private void printlnGspScript(String text, int line) {
+        StringBuilder code = new StringBuilder();
+        // the line of the page that the character at ix is on
+        int pageLine = line;
+        // the line of the page that the code of the line being printed starts on, or 0 before its code starts
+        int codeLine = 0;
         for (int ix = 0, ixz = text.length(); ix < ixz; ix++) {
+            int from = ix;
             char c = text.charAt(ix);
             String rep = null;
+            boolean lineFeed = false;
             if (Character.isWhitespace(c)) {
                 for (ix++; ix < ixz; ix++) {
                     if (Character.isWhitespace(text.charAt(ix))) {
@@ -1372,26 +1380,40 @@ public class GroovyPageParser implements Tokens {
                 }
             } else if (c == '<') {
                 if (match("<br>", text, ix) || match("<hr>", text, ix)) {
-                    rep = "\n";
-                    //incrementLineNumber();
+                    lineFeed = true;
                     ix += 3;
                 } else {
                     int end = match(PARA_BREAK, text, ix);
                     if (end <= 0)
                         end = match(ROW_BREAK, text, ix);
                     if (end > 0) {
-                        rep = "\n";
-                        //incrementLineNumber();
+                        lineFeed = true;
                         ix = end;
                     }
                 }
             }
-            if (rep != null) {
-                out.print(rep);
+            if (lineFeed) {
+                out.printlnCode(code.toString(), codeLine > 0 ? codeLine : pageLine, true);
+                code.setLength(0);
+                codeLine = 0;
             } else {
-                out.print(c);
+                if (codeLine == 0 && (rep != null ? !" ".equals(rep) : !Character.isWhitespace(c))) {
+                    codeLine = pageLine;
+                }
+                if (rep != null) {
+                    code.append(rep);
+                } else {
+                    code.append(c);
+                }
+            }
+            // the line feeds of the page in the characters this has gone past, up to and including the one at ix
+            for (int i = from; i <= ix && i < ixz; i++) {
+                if (text.charAt(i) == '\n') {
+                    pageLine++;
+                }
             }
         }
+        out.printlnCode(code.toString(), codeLine > 0 ? codeLine : pageLine, false);
     }
 
     public long getLastModified() {

@@ -155,6 +155,14 @@ class GspLineNumberSpec extends Specification {
         'inside an expression of several lines'            | 'one\n${[1,\n 2,\n new no.such.Thing()].size()}\nfive' + AFTER     || 4
         'inside an expression that starts after a line break' | 'one\n${\n\n [1,\n new no.such.Thing()].size()}\nsix' + AFTER || 5
         'inside an output scriptlet of several lines'      | 'one\n<%= [1,\n 2,\n new no.such.Thing()].size() %>\nfive' + AFTER || 4
+        'inside a scriptlet in braces whose code starts on the next line'   | 'one\n%{\n new no.such.Thing()\n}%\nfour' + AFTER                  || 3
+        'inside a scriptlet in braces whose code starts after blank lines'  | 'one\n%{\n\n\n new no.such.Thing()\n}%\nsix' + AFTER               || 5
+        'inside a scriptlet in braces with Windows line breaks'             | 'one\r\n%{\r\n new no.such.Thing()\r\n}%\r\nfour' + AFTER         || 3
+        'inside a scriptlet in braces, after a line break of HTML in it'    | 'one\n%{ int a = 1<br>\n new no.such.Thing() }%\nthree' + AFTER    || 3
+        'inside a scriptlet in braces, after a line break of HTML on the line it is on' | 'one\n%{ int a = 1;\n int b = 2<br>new no.such.Thing() }%\nthree' + AFTER || 3
+        'inside a scriptlet in braces whose code of several lines is one line of code' | 'one\n%{ int a = 1;\n new no.such.Thing() }%\nthree' + AFTER  || 2
+        'after a scriptlet in braces of several lines'                      | 'one\n%{ int a = 1;\n int b = 2 }%\nfour\n<% new no.such.Thing() %>' + AFTER || 5
+        'after a scriptlet in braces with a line break of HTML in it'       | 'one\n%{ int a = 1<br>\n int b = 2 }%\nfour\n<% new no.such.Thing() %>' + AFTER || 5
         'because a block is left open, in a page that ends with a line break'    | 'one\n<% if (true) { %>\nthree\n' || 3
         'because a block is left open, in a page that ends without a line break' | 'one\n<% if (true) { %>\nthree'   || 3
     }
@@ -178,6 +186,8 @@ class GspLineNumberSpec extends Specification {
         'on a later line'                        | 'one\n<%\n int a = 1\n int b = 2\n [].nope()\n%>\nseven\n'     || 5
         'on a later line, with Windows line breaks' | 'one\r\n<%\r\n int a = 1\r\n [].nope()\r\n%>\r\nsix\r\n' || 4
         'after a scriptlet of several lines'     | '<%\n int a = 1\n int b = 2\n%>\nfive\n<% [].nope() %>\nseven\n' || 6
+        'inside a scriptlet in braces whose code starts on the next line' | 'one\n%{\n [].nope()\n}%\nfour\n'              || 3
+        'inside a scriptlet in braces, after a line break of HTML in it'  | 'one\n%{ int a = 1<br>\n [].nope() }%\nthree\n' || 3
     }
 
     void "a scriptlet that does not compile at the end of a page of 5000 lines names line 5000"() {
@@ -215,6 +225,19 @@ class GspLineNumberSpec extends Specification {
         'scriptlets'  | { int each -> "<% int a${each} = ${each} %>\n".toString() } | 600
         'scriptlets'  | { int each -> "<% int a${each} = ${each} %>\n".toString() } | 1100
         'scriptlets'  | { int each -> "<% int a${each} = ${each} %>\n".toString() } | 2100
+    }
+
+    @Unroll
+    void "#what"() {
+        expect: 'the code of a scriptlet in braces is not split into statements where the page has a line break'
+        render(source) == result
+
+        where:
+        what                                                                   | source                          || result
+        'a line break of the page in a scriptlet in braces is a space'         | '%{ def x = 1\n + 2 }%${x}'     || '3'
+        'a Windows line break of the page in a scriptlet in braces is a space' | '%{ def x = 1\r\n + 2 }%${x}'   || '3'
+        'a line break of HTML in a scriptlet in braces is a line break'        | '%{ def x = 1<br> + 2 }%${x}'   || '1'
+        'a line break of the page in a scriptlet is a line break'              | '<% def x = 1\n + 2 %>${x}'     || '1'
     }
 
     void "a comment is still left out of what a page writes"() {

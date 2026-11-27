@@ -149,6 +149,26 @@ public class GSPWriter extends PrintWriter {
         pageLine = 0;
     }
 
+    /**
+     * Prints code that has no line break in it and ends the line of the generated source it is on, which is
+     * recorded with the given line of the page. The code of a {@code %{ }%} scriptlet is printed so, as its
+     * line breaks are not printed as they are in the page.
+     *
+     * @param line the line of the page that the code starts on
+     * @param lineFeed whether a line feed ends the line, as one ends it for a {@code <br>} in the code,
+     * rather than the line separator that {@link #println()} prints
+     */
+    void printlnCode(String code, int line, boolean lineFeed) {
+        pageLine = line;
+        print(code);
+        if (lineFeed) {
+            print('\n');
+        } else {
+            println();
+        }
+        pageLine = 0;
+    }
+
     public void printlnToBuffer(String s, int index) {
         if (s == null) s = "''";
         super.print("buf" + index + " << ");
