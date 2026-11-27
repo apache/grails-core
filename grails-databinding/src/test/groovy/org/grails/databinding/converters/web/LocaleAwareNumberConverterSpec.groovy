@@ -47,6 +47,7 @@ class LocaleAwareNumberConverterSpec extends Specification {
         new Locale('nb', 'NO') | new LocaleAwareNumberConverter()           | Long       | '-1'      | -1L
         new Locale('nb', 'NO') | new LocaleAwareBigDecimalConverter()       | BigDecimal | '-1,25'   | new BigDecimal('-1.25')
         new Locale('nb', 'NO') | new LocaleAwareBigDecimalConverter()       | BigInteger | '-1'      | new BigInteger('-1')
+        new Locale('de', 'DE') | new LocaleAwareBigDecimalConverter()       | BigDecimal | '-1,25'   | new BigDecimal('-1.25')
         Locale.US              | new LocaleAwareNumberConverter()           | Long       | '-1'      | -1L
         Locale.US              | new LocaleAwareBigDecimalConverter()       | BigDecimal | '-1.25'   | new BigDecimal('-1.25')
         Locale.US              | new LocaleAwareBigDecimalConverter()       | BigInteger | '-1'      | new BigInteger('-1')
