@@ -42,7 +42,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
                                       AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal,
                                        AssociationJoinTypePrize, AssociationJoinTypeRibbon,
                                        RequestedJoinBagTeam, RequestedJoinBagMember, RequestedJoinBagTrophy,
-                                       AssociationSortBook, AssociationSortAuthor)
+                                       AssociationSortBook, AssociationSortAuthor, RequestedJoinSortedTeam)
     }
 
     void 'a join type requested for a path through an embedded component is applied by #description'() {
@@ -68,6 +68,29 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         'a left join of a longer path alone'     | { AssociationSortBook.list(fetch: ['details.author.mentor': JoinType.LEFT], sort: 'title')*.title }                                                 || ['Anonymous', 'It']
     }
 
+    void '#operation changes only the book that a join type requested through an embedded component keeps'() {
+        given: 'a book with an author, and one whose component has none'
+        final king = new AssociationSortAuthor(name: 'King').save(failOnError: true)
+        new AssociationSortBook(title: 'It', details: new AssociationSortBookDetails(isbn: '1', author: king)).save(failOnError: true)
+        new AssociationSortBook(title: 'Anonymous', details: new AssociationSortBookDetails(isbn: '3')).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final changed = mutate.call(query.call())
+        manager.session.clear()
+
+        then: 'the update or the delete leaves alone the book that the list leaves out'
+        changed == 1
+        AssociationSortBook.list(sort: 'title')*.title == expected
+
+        where:
+        operation                            | query                                                                                       | mutate                                       || expected
+        'deleteAll of a where query'         | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER) }      | { criteria -> criteria.deleteAll() }          || ['Anonymous']
+        'updateAll of a where query'         | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER) }      | { criteria -> criteria.updateAll(title: 'X') } || ['Anonymous', 'X']
+        'deleteAll of a detached criteria'   | { new DetachedCriteria(AssociationSortBook).join('details.author', JoinType.INNER) }        | { criteria -> criteria.deleteAll() }          || ['Anonymous']
+        'updateAll of a detached criteria'   | { new DetachedCriteria(AssociationSortBook).join('details.author', JoinType.INNER) }        | { criteria -> criteria.updateAll(title: 'X') } || ['Anonymous', 'X']
+    }
+
     void setup() {
         final manUtd = new Club(name: 'Manchester United').save()
         final arsenal = new Club(name: 'Arsenal').save()
@@ -79,6 +102,49 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         new Team(club: arsenal, name: 'Playerless First Team').save(failOnError: true)
         manager.session.flush()
         manager.session.clear()
+    }
+
+    void '#api with an empty map returns #expected when the fetch argument requests a join type'() {
+        expect: 'as without the join type, a query by no property finds nothing'
+        query.call() == expected
+
+        where:
+        api            | query                                                                       || expected
+        'findWhere'    | { Team.findWhere([:], [fetch: [club: JoinType.LEFT]]) }                     || null
+        'findAllWhere' | { Team.findAllWhere([:], [fetch: [club: JoinType.LEFT]]) }                  || null
+        'findWhere'    | { Team.findWhere(null, [fetch: [club: JoinType.INNER]]) }                   || null
+        'findAllWhere' | { Team.findAllWhere(null, [fetch: [club: JoinType.INNER]]) }                || null
+    }
+
+    void 'list with a join type in the fetch argument sorts by the default sort of the mapping'() {
+        given: 'teams saved out of the order of their names, one of them without a club'
+        final club = Club.findByName('Arsenal')
+        new RequestedJoinSortedTeam(name: 'Charlie', club: club).save(failOnError: true)
+        new RequestedJoinSortedTeam(name: 'Alpha').save(failOnError: true)
+        new RequestedJoinSortedTeam(name: 'Bravo', club: club).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect: 'the same order, and the same first page, as without the join type'
+        RequestedJoinSortedTeam.list()*.name == ['Alpha', 'Bravo', 'Charlie']
+        RequestedJoinSortedTeam.list(fetch: [club: JoinType.LEFT])*.name == ['Alpha', 'Bravo', 'Charlie']
+        RequestedJoinSortedTeam.list(fetch: [club: JoinType.INNER])*.name == ['Bravo', 'Charlie']
+        RequestedJoinSortedTeam.list(max: 2, fetch: [club: JoinType.LEFT])*.name == RequestedJoinSortedTeam.list(max: 2)*.name
+        RequestedJoinSortedTeam.list(fetch: [club: JoinType.LEFT], order: 'desc')*.name == RequestedJoinSortedTeam.list(order: 'desc')*.name
+    }
+
+    void 'list with max 0 and a join type in the fetch argument lists no team and counts the teams that the join keeps'() {
+        when:
+        final page = Team.list(max: 0, fetch: [club: joinType])
+
+        then: 'as without the join type, max 0 lists nothing, and the total counts what the query would list'
+        page.empty
+        page.totalCount == total
+        Team.list(max: 0).empty
+
+        where:
+        joinType       || total
+        JoinType.LEFT  || ALL_TEAMS.size()
+        JoinType.INNER || TEAMS_WITH_A_CLUB.size()
     }
 
     protected static void savePlayer(String name, Team team) {
@@ -447,6 +513,106 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         rows.count { it == null } == 2
     }
 
+    void 'right join pages sorted by a fetched collection count the rows without a team'() {
+        given: 'two clubs without a team, and a team with two players'
+        new Club(name: 'Teamless A').save(failOnError: true)
+        new Club(name: 'Teamless B').save(failOnError: true)
+        savePlayer('Second Arsenal Player', Team.findByName('Arsenal First Team'))
+        manager.session.clear()
+        final query = new DetachedCriteria(Team).join('club', JoinType.RIGHT)
+
+        when: 'a page of one row for each row that the total counts, in the order of the players and then of the teams'
+        final sort = ['players.name': 'asc', id: 'asc']
+        final total = query.list(max: 1, sort: sort, fetch: [players: JoinType.LEFT]).totalCount
+        final pages = (0..<total).collect { offset ->
+            query.list(max: 1, offset: offset, sort: sort, fetch: [players: JoinType.LEFT])
+        }
+        final rows = pages.collectMany { it.toList() }
+
+        then: 'a row for each player of a team with a club, one for the team without players, and one for each club without a team'
+        total == 7
+        pages.every { it.size() == 1 && it.totalCount == total }
+        rows.findAll { it != null }*.name.unique().sort() == TEAMS_WITH_A_CLUB
+        rows.count { it?.name == 'Arsenal First Team' } == 2
+        rows.count { it == null } == 2
+    }
+
+    void 'the total of #api counts each instance once when the list fetches a collection behind an association'() {
+        given: 'a team with three players, so that the join of the players of a player has nine rows for them'
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = query.call()
+
+        then: 'each player once, and a total that counts the players'
+        results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Squad Player A', 'Squad Player B', 'Squad Player without contract', 'Unattached Player']
+        results.totalCount == results.size()
+
+        where:
+        api                  | query
+        'a detached criteria' | { new DetachedCriteria(Player).join('team.players', JoinType.LEFT).list(max: 10, sort: 'team.players.name') }
+        'a where query'       | { Player.where { name ==~ '%' }.list(max: 10, sort: 'team.players.name', fetch: ['team.players': JoinType.LEFT]) }
+        'a criteria query'    | { Player.createCriteria().list(max: 10, sort: 'team.players.name', fetch: ['team.players': JoinType.LEFT]) { } }
+        'list'                | { Player.list(max: 10, sort: 'team.players.name', fetch: ['team.players': JoinType.LEFT]) }
+    }
+
+    void 'the total of #api sorted by one collection that fetches another counts the instances that the list returns'() {
+        given: 'S1 with two players and two reserves, S2 with one player, S3 with neither'
+        final s1 = new AssociationJoinTypeSquad(name: 'S1').save(failOnError: true)
+        final s2 = new AssociationJoinTypeSquad(name: 'S2').save(failOnError: true)
+        new AssociationJoinTypeSquad(name: 'S3').save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'P1', squad: s1).save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'P2', squad: s1).save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'R1', reserveSquad: s1).save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'R2', reserveSquad: s1).save(failOnError: true)
+        new AssociationJoinTypeSquadMember(name: 'P3', squad: s2).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = query.call()
+
+        then: 'the fetch of the reserves makes the list return each squad with a player once, and the total counts those squads'
+        results*.name.sort() == ['S1', 'S2']
+        results.totalCount == 2
+        results.find { it.name == 'S1' }.reserves*.name.sort() == ['R1', 'R2']
+
+        where:
+        api                    | query
+        'a criteria query'     | { AssociationJoinTypeSquad.createCriteria().list(max: 10, sort: 'players.name', fetch: [reserves: 'join']) { } }
+        'a requested left join' | { AssociationJoinTypeSquad.createCriteria().list(max: 10, sort: 'players.name', fetch: [reserves: JoinType.LEFT]) { } }
+        'a where query'        | { AssociationJoinTypeSquad.where { name ==~ 'S%' }.join('reserves').list(max: 10, sort: 'players.name') }
+        'list'                 | { AssociationJoinTypeSquad.list(max: 10, sort: 'players.name', fetch: [reserves: 'join']) }
+    }
+
+    void 'the total of #api sorted by one collection whose bag fetch it defers counts the rows that its pages go through'() {
+        given: 'Full with two members and two trophies, Members with one member, Trophies with one trophy, and Empty with neither'
+        final full = new RequestedJoinBagTeam(name: 'Full')
+        full.addToMembers(name: 'M1').addToMembers(name: 'M2').addToTrophies(name: 'T1').addToTrophies(name: 'T2')
+        full.save(failOnError: true)
+        new RequestedJoinBagTeam(name: 'Members').addToMembers(name: 'M3').save(failOnError: true)
+        new RequestedJoinBagTeam(name: 'Trophies').addToTrophies(name: 'T3').save(failOnError: true)
+        new RequestedJoinBagTeam(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when: 'the pages of two rows that a pager asks for, which stops at the total'
+        final first = query.call(0)
+        final names = [] as Set
+        for (int offset = 0; offset < first.totalCount; offset += 2) {
+            names.addAll(query.call(offset)*.name)
+        }
+
+        then: 'the bag is loaded after the query, so the rows are those of the sort, a row for each trophy'
+        first.totalCount == 3
+        names == ['Full', 'Trophies'] as Set
+        first.find { it.name == 'Full' }.members*.name.sort() == ['M1', 'M2']
+
+        where:
+        api                | query
+        'list'             | { int offset -> RequestedJoinBagTeam.list(max: 2, offset: offset, sort: 'trophies.name', fetch: [members: 'join']) }
+        'a where query'    | { int offset -> RequestedJoinBagTeam.where { name ==~ '%' }.list(max: 2, offset: offset, sort: 'trophies.name', fetch: [members: 'join']) }
+        'a criteria query' | { int offset -> RequestedJoinBagTeam.createCriteria().list(max: 2, offset: offset, sort: 'trophies.name', fetch: [members: 'join']) { } }
+    }
+
     void 'static list fetches a nested collection together with its owner'() {
         given:
         saveTeamWithAPlayerWithoutContract()
@@ -729,7 +895,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         'the fetch argument'  | { AssociationJoinTypePost.where { title ==~ '%post' }.list(fetch: [tags: JoinType.INNER]) }
         'a criteria query'    | { AssociationJoinTypePost.createCriteria().list { like('title', '%post'); join('tags', JoinType.INNER) } }
         'a dynamic finder'    | { AssociationJoinTypePost.findAllByTitleLike('%post', [fetch: [tags: JoinType.INNER]]) }
-        'findAll by example'  | { AssociationJoinTypePost.findAll(new AssociationJoinTypePost(), [fetch: [tags: JoinType.INNER]]) }
+        'findAll by example'  | { ['Tagged post', 'Untagged post'].collectMany { title -> AssociationJoinTypePost.findAll(new AssociationJoinTypePost(title: title), [fetch: [tags: JoinType.INNER]]) } }
         'list'                | { AssociationJoinTypePost.list(fetch: [tags: JoinType.INNER]) }
     }
 
@@ -1442,7 +1608,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         final squad = results.find { it.name == 'Squad Team' }
 
         then: 'each team is counted once'
-        results*.name.unique().sort() == (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+        results*.name.sort() == (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
         count == 5
         paged.totalCount == 5
 
@@ -1491,7 +1657,6 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
 
         where:
         api                  | query
-        'findAll by example' | { Team.findAll(new Team(), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }
         'list'               | { Team.list(sort: 'club.name', fetch: [club: JoinType.INNER]) }
         'a paged list'       | { Team.list(sort: 'club.name', max: 10, fetch: [club: JoinType.INNER]) }
     }
@@ -1511,12 +1676,12 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         given:
         saveTeamWithAPlayerWithoutContract()
 
-        expect:
-        query.call()*.name.unique().sort() == expected
+        expect: 'each team once, also when the fetched collection holds several players of the team'
+        query.call()*.name.sort() == expected
 
         where:
         api                  | path               | query                                                                                         || expected
-        'findAll by example' | 'club'             | { Team.findAll(new Team(), [fetch: [club: JoinType.INNER]]) }                                || TEAMS_WITH_A_CLUB + 'Squad Team'
+        'findAll by example' | 'club'             | { Team.findAll(new Team(name: 'Unattached First Team'), [fetch: [club: JoinType.INNER]]) }   || []
         'list'               | 'club'             | { Team.list(fetch: [club: JoinType.INNER]) }                                                 || TEAMS_WITH_A_CLUB + 'Squad Team'
         'findAllWhere'       | 'players'          | { Team.findAllWhere([name: 'Playerless First Team'], [fetch: [players: JoinType.INNER]]) }   || []
         'list'               | 'players'          | { Team.list(fetch: [players: JoinType.INNER]) }                                              || (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
@@ -1765,5 +1930,15 @@ class AssociationJoinTypeCategory {
 
     static constraints = {
         parent nullable: true
+    }
+}
+
+@Entity
+class RequestedJoinSortedTeam {
+    String name
+    Club club
+
+    static mapping = {
+        sort 'name'
     }
 }

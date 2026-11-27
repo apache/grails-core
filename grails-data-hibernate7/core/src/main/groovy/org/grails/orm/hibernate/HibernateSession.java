@@ -391,11 +391,22 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             if (requestedJoin.getValue() == null || requestedJoin.getValue() == JoinType.LEFT) {
                 continue;
             }
-            String association = requestedJoin.getKey().split("\\.")[0];
-            if (criteria.getPersistentEntity().getPropertyByName(association) instanceof Basic) {
+            // the first association of the path, which can be inside an embedded component
+            String association = null;
+            PersistentProperty<?> property = null;
+            PersistentEntity owner = criteria.getPersistentEntity();
+            for (String token : requestedJoin.getKey().split("\\.")) {
+                property = owner != null ? owner.getPropertyByName(token) : null;
+                association = association == null ? token : association + '.' + token;
+                if (!(property instanceof Embedded<?> embedded)) {
+                    break;
+                }
+                owner = embedded.getAssociatedEntity();
+            }
+            if (property instanceof Basic) {
                 return true;
             }
-            if (!(criteria.getPersistentEntity().getPropertyByName(association) instanceof ToMany)) {
+            if (!(property instanceof ToMany)) {
                 continue;
             }
             if (persister.getPropertyType(association) instanceof CollectionType collectionType &&
@@ -513,7 +524,8 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
      * instance through the association, by the side of it that has the foreign key: a one-to-one whose foreign key
      * the other entity has, such as a {@code hasOne}, is matched through the property of the other entity that
      * refers back. A collection of a basic type has no entity of its own, so a path that starts with one selects
-     * from the entity itself.
+     * from the entity itself. An embedded component has no join of its own: the path goes through it to the
+     * association that it holds.
      * <p>
      * MySQL does not allow an update or a delete to select from the table that it modifies. A path that leads back
      * to the class of the entity cannot be applied there, and is rejected instead of being left to fail in the
@@ -532,8 +544,15 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         String alias = null;
         boolean selectsFromModifiedTable = false;
         PersistentEntity currentEntity = entity;
+        // the components between the entity or the last join and the next association, as a path prefix
+        String componentPath = "";
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty<?> property = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
+            if (property instanceof Embedded<?> embedded && i != last) {
+                componentPath = componentPath + tokens[i] + '.';
+                currentEntity = embedded.getAssociatedEntity();
+                continue;
+            }
             if (!(property instanceof Association<?> association) || property instanceof Embedded || (property instanceof Basic && i != last)) {
                 return null;
             }
@@ -541,29 +560,31 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             if (associatedEntity == null && !(association instanceof Basic)) {
                 return null;
             }
+            String attributePath = componentPath + tokens[i];
+            componentPath = "";
             String joinAlias = "join" + index + '_' + i;
-            if (i > 0) {
-                from.append(" INNER JOIN ").append(alias).append('.').append(tokens[i]).append(' ').append(joinAlias);
+            if (alias != null) {
+                from.append(" INNER JOIN ").append(alias).append('.').append(attributePath).append(' ').append(joinAlias);
             }
             else if (association instanceof Basic) {
                 String ownerAlias = "join" + index + "_owner";
                 from.append(entity.getName()).append(' ').append(ownerAlias)
-                        .append(" INNER JOIN ").append(ownerAlias).append('.').append(tokens[i]).append(' ').append(joinAlias);
+                        .append(" INNER JOIN ").append(ownerAlias).append('.').append(attributePath).append(' ').append(joinAlias);
                 correlation = ownerAlias + " = " + rootAlias;
                 selectsFromModifiedTable = true;
             }
             else {
                 from.append(associatedEntity.getName()).append(' ').append(joinAlias);
-                String referencedProperty = persister.getPropertyType(tokens[i]) instanceof OneToOneType oneToOne ?
+                String referencedProperty = persister.getPropertyType(attributePath) instanceof OneToOneType oneToOne ?
                         oneToOne.getRHSUniqueKeyPropertyName() : null;
                 if (association instanceof ToMany) {
-                    correlation = joinAlias + " MEMBER OF " + rootAlias + '.' + tokens[i];
+                    correlation = joinAlias + " MEMBER OF " + rootAlias + '.' + attributePath;
                 }
                 else if (referencedProperty != null) {
                     correlation = joinAlias + '.' + referencedProperty + " = " + rootAlias;
                 }
                 else {
-                    correlation = joinAlias + " = " + rootAlias + '.' + tokens[i];
+                    correlation = joinAlias + " = " + rootAlias + '.' + attributePath;
                 }
             }
             if (associatedEntity != null) {

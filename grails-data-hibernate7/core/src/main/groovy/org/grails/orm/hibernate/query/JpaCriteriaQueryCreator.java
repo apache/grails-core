@@ -78,6 +78,8 @@ public class JpaCriteriaQueryCreator<T> {
     private JpaQueryContext context;
     private boolean distinctInMemory;
     private final Set<String> deferredCollectionFetches = new HashSet<>();
+    // whether the list that a count is made for fetches a collection, so that Hibernate lists each instance once
+    private boolean listsInstancesOnce;
     // the restrictions of the join types that the query requests for a path through a collection
     private final List<Predicate> requestedJoinRestrictions = new ArrayList<>();
     private boolean sortedByCollection;
@@ -155,7 +157,7 @@ public class JpaCriteriaQueryCreator<T> {
         context.setLeftJoinSort(entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
                 mappingContext.isLeftJoinAssociationSort());
 
-        applyRequestedJoins(cq, root, projectionList.stream().noneMatch(p -> !(p instanceof Query.DistinctProjection)));
+        applyRequestedJoins(cq, root, projectionList.stream().noneMatch(p -> !(p instanceof Query.DistinctProjection)), isCountOnly());
 
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) cq);
         assignGroupBy(cq, context);
@@ -179,12 +181,17 @@ public class JpaCriteriaQueryCreator<T> {
      * return an instance once for each of its elements, and a collection fetched from such rows would lack the
      * elements that the rest of the path leaves out.</li>
      * </ul>
-     * A query that selects entities fetches the associations on the path as well. A path that names a property
-     * that is not an association is left alone.
+     * A query that selects entities fetches the associations on the path as well. The count of such a query joins
+     * the paths that the list fetches in the same way, without fetching them, so that a sort reads the same joins,
+     * and records whether the list fetches a collection. A path that names a property that is not an association is
+     * left alone.
+     *
+     * @param countsList whether the query counts the instances that the query with the same criteria lists
      */
-    private void applyRequestedJoins(AbstractQuery<?> query, Root<?> root, boolean entitySelect) {
+    private void applyRequestedJoins(AbstractQuery<?> query, Root<?> root, boolean entitySelect, boolean countsList) {
         requestedJoinRestrictions.clear();
         deferredCollectionFetches.clear();
+        listsInstancesOnce = false;
         // a fetch mode that is requested after a join type replaces it, so the fetch strategies say what is joined
         Map<String, JoinType> requested = new LinkedHashMap<>();
         collectRequestedFetches(detachedCriteria, "", requested);
@@ -224,10 +231,11 @@ public class JpaCriteriaQueryCreator<T> {
             if (restricts && collection >= 0) {
                 requestedJoinRestrictions.add(joinedInSubquery(query, root, tokens));
             }
+            String bag = bagOnPath(path);
+            boolean deferred = deferForRightJoin && collection >= 0 ||
+                    bags == 1 && bag != null && joinedCollections.stream().anyMatch(collectionPath -> !collectionPath.equals(bag));
             if (entitySelect) {
-                String bag = bagOnPath(path);
-                if (deferForRightJoin && collection >= 0 ||
-                        bags == 1 && bag != null && joinedCollections.stream().anyMatch(collectionPath -> !collectionPath.equals(bag))) {
+                if (deferred) {
                     deferredCollectionFetches.add(path);
                     return;
                 }
@@ -235,8 +243,11 @@ public class JpaCriteriaQueryCreator<T> {
                 // elements; the subquery decides which instances the query returns
                 fetchPath(root, tokens, collection, requested, fetches);
             }
-            else if (collection < 0) {
-                joinProjectionPath(root, tokens, requested, projectionJoins);
+            else if (collection < 0 || countsList && !deferred) {
+                // A count joins what the list fetches. The list fetches a collection, so Hibernate lists each of its
+                // instances once, and the count counts instances
+                joinProjectionPath(root, tokens, collection, requested, projectionJoins);
+                listsInstancesOnce |= countsList && collection >= 0;
             }
         });
     }
@@ -352,15 +363,19 @@ public class JpaCriteriaQueryCreator<T> {
         }
     }
 
-    /** A projection uses the same requested types for each to-one prefix as the entity fetch. */
-    private static void joinProjectionPath(Root<?> root, String[] tokens, Map<String, JoinType> requested, Map<String, From<?, ?>> joins) {
+    /**
+     * A projection and a count join a path as the entity fetch does: each to-one prefix with its requested type, and
+     * from the first collection onwards with left joins.
+     */
+    private static void joinProjectionPath(Root<?> root, String[] tokens, int collection, Map<String, JoinType> requested, Map<String, From<?, ?>> joins) {
         From<?, ?> parent = root;
         String path = "";
         for (int i = 0; i < tokens.length; i++) {
             path = path.isEmpty() ? tokens[i] : path + '.' + tokens[i];
             From<?, ?> join = joins.get(path);
             if (join == null) {
-                join = parent.join(tokens[i], requested.getOrDefault(path, JoinType.LEFT));
+                JoinType type = collection < 0 || i < collection ? requested.getOrDefault(path, JoinType.LEFT) : JoinType.LEFT;
+                join = parent.join(tokens[i], type);
                 joins.put(path, join);
             }
             parent = join;
@@ -407,7 +422,7 @@ public class JpaCriteriaQueryCreator<T> {
                 mappingContext.isLeftJoinAssociationSort());
 
         // a subquery fetches nothing, so the joins that it requests only decide which rows it selects
-        applyRequestedJoins(subquery, root, false);
+        applyRequestedJoins(subquery, root, false, false);
 
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) subquery);
 
@@ -506,16 +521,6 @@ public class JpaCriteriaQueryCreator<T> {
 
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context, boolean countOnly) {
-        // A count joins a collection that only the sort uses, to count the rows that the list pages through. A
-        // list that fetches a collection returns each instance once, so its count has no such rows
-        boolean joinCollections = countOnly && !fetchesCollection();
-        boolean fetchedCollectionSort = false;
-        if (countOnly && !joinCollections && entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
-                mappingContext.isLeftJoinAssociationSort()) {
-            // With the leftJoinAssociationSort setting a sort joins with left joins, which leave out no instance, and
-            // a list that fetches a collection returns each instance once, so its count needs none of those joins
-            return;
-        }
         // the orders that are still in an association block come after the orders of the criteria
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
         orders.addAll(AssociationOrders.inBlocks(detachedCriteria.getCriteria()));
@@ -555,17 +560,17 @@ public class JpaCriteriaQueryCreator<T> {
                 expression = context.getFullyQualifiedExpression(propertyName);
             } else if (blockContext != null) {
                 // the order sorts by the joins that its own block made, which its path from the root does not
-                // tell apart from the joins of another block of the same association
+                // tell apart from the joins of another block of the same association. A count joins a collection
+                // that only the sort uses, so that it has the rows that the list pages through
                 String property = blockOrder.getAssociationProperty();
                 PersistentEntity associated = blockOrder.getAssociation().getAssociation().getAssociatedEntity();
-                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property, blockContext), joinCollections);
+                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property, blockContext), countOnly);
             } else {
-                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context), joinCollections);
+                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context), countOnly);
             }
             if (countOnly) {
                 // Keep the joins of the sort without ordering the aggregate: they decide the rows that the
                 // list pages through, so the count has a row for each element of a collection that it sorts by
-                fetchedCollectionSort |= !joinCollections && expression != null && readsCollection(expression);
                 continue;
             }
             if (expression == null) {
@@ -585,10 +590,10 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
         if (countOnly) {
-            if (fetchedCollectionSort && cq != null && projections.getProjectionList().size() == 1 &&
+            if (listsInstancesOnce && cq != null && projections.getProjectionList().size() == 1 &&
                     projections.getProjectionList().get(0).getClass() == Query.CountProjection.class) {
-                // The sort reads the join of a collection that the query fetches or requests a join type for. The
-                // list returns each instance once, so its total counts instances and not the rows of that join
+                // The list fetches a collection, and Hibernate lists each instance of such a query once, so its total
+                // counts instances and not the rows of the joins
                 ((CriteriaQuery<Long>) cq).select(criteriaBuilder.countDistinct(context.getRoot()));
             }
             // a count has the joins of its orders and no order
@@ -602,30 +607,6 @@ public class JpaCriteriaQueryCreator<T> {
         if (!jpaOrders.isEmpty()) {
             cq.orderBy(jpaOrders);
         }
-    }
-
-    /**
-     * Whether the query requests a fetch or a join type for a collection of the queried class.
-     */
-    private boolean fetchesCollection() {
-        Set<String> paths = new HashSet<>(detachedCriteria.getJoinTypes().keySet());
-        if (hibernateQuery != null) {
-            paths.addAll(hibernateQuery.getFetchJoinPaths());
-        }
-        // the query that counts for a page is a copy, which has the fetches of the criteria only
-        detachedCriteria.getFetchStrategies().forEach((path, fetchType) -> {
-            if (fetchType == FetchType.EAGER) {
-                paths.add(path);
-            }
-        });
-        for (String path : paths) {
-            int dot = path == null ? -1 : path.indexOf('.');
-            String first = path == null ? null : dot < 0 ? path : path.substring(0, dot);
-            if (first != null && entity.getPropertyByName(first) instanceof ToMany<?>) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

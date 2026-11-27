@@ -59,6 +59,7 @@ import org.springframework.transaction.PlatformTransactionManager
 
 import grails.orm.HibernateCriteriaBuilder
 import grails.gorm.DetachedCriteria
+import grails.gorm.PagedResultList
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
@@ -72,6 +73,9 @@ import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
+import org.grails.orm.hibernate.cfg.HibernateMappingContext
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.SortConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
 import org.grails.orm.hibernate.query.HibernatePagedResultList
@@ -434,10 +438,10 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D findWhere(Map queryMap, Map args) {
+        if (!queryMap) return null
         if (requestsJoinType(args)) {
             return whereCriteria(queryMap).find(args)
         }
-        if (!queryMap) return null
         if (requestsSort(args)) {
             return whereCriteria(queryMap).find(buildFindWhereArgs(args))
         }
@@ -446,10 +450,10 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
+        if (!queryMap) return null
         if (requestsJoinType(args)) {
             return whereCriteria(queryMap).list(args)
         }
-        if (!queryMap) return null
         if (requestsSort(args)) {
             // a plain list, as an unsorted call returns: with max, the criteria would return a paged list
             return new ArrayList<D>(whereCriteria(queryMap).list(buildQuerySettings(args)))
@@ -663,7 +667,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     List<D> list(Map params = Collections.emptyMap()) {
         if (requestsJoinType(params) || requiresCriteriaFetch(params)) {
-            return new DetachedCriteria<D>(persistentClass).withConnection(getQualifier()).list(params)
+            return listAsCriteria(params)
         }
         firePreQueryEvent()
         HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) persistentEntity, params)
@@ -681,6 +685,41 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         List<D> result = (List<D>) hqlQuery.list()
         firePostQueryEvent(result)
         result
+    }
+
+    /**
+     * Runs a static list as a criteria query, with the arguments as the HQL of {@code list} reads them: the default
+     * sort of the mapping applies, with its own directions, when the arguments name no sort, and {@code max: 0}
+     * lists no instance, where a criteria query takes it as no limit. The total of such an empty page counts what
+     * the query would list.
+     */
+    private List<D> listAsCriteria(Map params) {
+        Map arguments = new LinkedHashMap(params)
+        if (arguments.get(HibernateQueryArgument.SORT.value()) == null) {
+            Mapping mapping = ((HibernateMappingContext) persistentEntity.mappingContext).mappingCacheHolder.getMapping(persistentClass)
+            // a single sort property of the mapping is a map of one entry as well
+            Map namesAndDirections = ((SortConfig) mapping?.getSort())?.namesAndDirections
+            if (namesAndDirections) {
+                arguments.put(HibernateQueryArgument.SORT.value(), new LinkedHashMap(namesAndDirections))
+            }
+        }
+        DetachedCriteria<D> criteria = new DetachedCriteria<D>(persistentClass).withConnection(getQualifier())
+        Object max = arguments.get(HibernateQueryArgument.MAX.value())
+        if (max != null && conversionService.convert(max, Integer) == 0) {
+            arguments.remove(HibernateQueryArgument.MAX.value())
+            arguments.remove(HibernateQueryArgument.OFFSET.value())
+            Map counted = arguments
+            return new PagedResultList<D>(null) {
+                @Override
+                int getTotalCount() {
+                    if (this.@totalCount == Integer.MIN_VALUE) {
+                        this.@totalCount = criteria.count(counted).intValue()
+                    }
+                    this.@totalCount
+                }
+            }
+        }
+        criteria.list(arguments)
     }
 
     private boolean requiresCriteriaFetch(Map params) {
