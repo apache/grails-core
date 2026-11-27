@@ -55,7 +55,7 @@ class GrailsPluginDependenciesGradlePlugin implements Plugin<Project> {
                     VerifyPluginDependenciesTask) { VerifyPluginDependenciesTask task ->
                 task.group = LifecycleBasePlugin.VERIFICATION_GROUP
                 task.description = 'Checks that a dependency of the project provides every plugin a Grails plugin of it depends on.'
-                task.pluginDescriptors.from((main.output.classesDirs + main.resources.sourceDirectories).asFileTree
+                task.pluginDescriptors.from(main.output.asFileTree
                         .matching { PatternFilterable pattern ->
                             pattern.include(PluginDescriptorWriter.PLUGIN_DESCRIPTORS_PREFIX + '*/' +
                                     PluginDescriptorWriter.PLUGIN_PROPERTIES_FILE)

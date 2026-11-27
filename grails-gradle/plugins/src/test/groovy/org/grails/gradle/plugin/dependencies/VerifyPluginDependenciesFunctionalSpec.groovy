@@ -57,6 +57,33 @@ class VerifyPluginDependenciesFunctionalSpec extends GradleSpecification {
         !result.output.contains('depends on [providedPlugin]')
     }
 
+    def "a plugin descriptor in a resource directory a task generates is verified once that task has run"() {
+        given: 'a task that generates a resource directory holding a descriptor with an unmet dependency'
+        def runner = setupTestResourceProject('plugin-dependencies')
+        new File(runner.projectDir, 'consumer/build.gradle') << '''
+            def generated = layout.buildDirectory.dir('generated-descriptor')
+            def generate = tasks.register('generateDescriptor') {
+                outputs.dir(generated)
+                doLast {
+                    def file = generated.get().file('META-INF/grails/plugins/generated/plugin.properties').asFile
+                    file.parentFile.mkdirs()
+                    file.text = 'format.version=1\\nname=generated\\nclass=example.GeneratedGrailsPlugin\\ndependsOn.notOnTheClassPath=*\\n'
+                }
+            }
+            sourceSets.main.resources.srcDir(generated)
+            tasks.named('processResources') { dependsOn(generate) }
+        '''.stripIndent()
+
+        when:
+        def result = runner.withArguments(':consumer:check', '--stacktrace').buildAndFail()
+
+        then: 'the task runs after the generator, so Gradle reports no implicit dependency and the descriptor is read'
+        result.task(':consumer:generateDescriptor').outcome == TaskOutcome.SUCCESS
+        result.task(':consumer:verifyPluginDependencies').outcome == TaskOutcome.FAILED
+        !result.output.contains('implicit dependency')
+        result.output.contains('Grails plugin [generated] depends on [notOnTheClassPath]')
+    }
+
     def "a project without Grails plugins has nothing to verify"() {
         given:
         def runner = setupTestResourceProject('plugin-dependencies')
