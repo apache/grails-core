@@ -644,6 +644,13 @@ The cache annotations and `GrailsCacheAdminService` cache with the bean named `g
 - A `grailsCacheManager` created from a bean with cached methods no longer starts; create it from that bean's dependencies.
 - Plugins compiled against Grails 8 keep the Grails 8.0.1 behaviour until they are compiled against Grails 9.
 
+## Pages Are Compiled Again Only for Changes They Can See
+
+`compileGroovyPages` and `compileWebappGroovyPages` compare the application's own classes by their ABI, so a change to a method body or a private member no longer compiles every page again, and `generateScaffoldedViews` no longer expands every scaffolded page again. Libraries, Groovy and the page compiler are still compared by content, as is the whole output of the `ast` source set (its classes, and the resources that register its transformations and extension modules), and so are all of the application's classes when it has a `grails-app/conf/application.groovy`.
+
+- Search the main sources for classes implementing `ASTTransformation` that the pages apply. Move them to `src/ast` or a library to have the pages compiled again when only what they do changes; one in the main sources is compared by its ABI only, and its pages keep the previous result until a change they can see, or a `clean`.
+- A `GroovyPageForkCompileTask` the build registers itself still compares its whole `classpath` by content unless it sets `projectClasses`.
+
 # After the Upgrade
 
 ## Verification Checklist
