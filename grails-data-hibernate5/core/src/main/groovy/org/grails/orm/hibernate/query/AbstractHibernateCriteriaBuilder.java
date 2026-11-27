@@ -25,11 +25,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 import groovy.lang.Closure;
@@ -155,8 +153,13 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * applied once the criteria are built, see {@link #applyRequestedJoinTypes()}.
      */
     private final Map<String, JoinType> requestedJoinTypes = new LinkedHashMap<>();
-    // Fetch modes that replace a requested join type retain precedence over an implied outer join.
-    private final Set<String> explicitFetchModes = new HashSet<>();
+    /**
+     * The join types that a fetch mode replaced, by association path. They are kept for the join that
+     * the criteria make for the association, see {@link #applyRequestedJoinTypes()}, and the fetch
+     * mode takes precedence over the outer join that a left join requested below the association
+     * implies for the join of a sort, see {@link #isRequestedLeftSortJoin(String)}.
+     */
+    private final Map<String, JoinType> supersededJoinTypes = new LinkedHashMap<>();
     /**
      * The orders that the criteria request, in the order of the requests. They are added once the
      * criteria are built, see {@link #applyRequestedOrders()}.
@@ -341,10 +344,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria join(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.JOIN);
-        // the fetch mode alone replaces a join type that was requested for the association before
-        if (requestedJoinTypes.remove(getRequestedJoinPath(associationPath)) != null) {
-            explicitFetchModes.add(getRequestedJoinPath(associationPath));
-        }
+        supersedeJoinType(getRequestedJoinPath(associationPath));
         return this;
     }
 
@@ -357,8 +357,23 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public BuildableCriteria join(String property, JoinType joinType) {
         criteria.setFetchMode(calculatePropertyName(property), FetchMode.JOIN);
         requestedJoinTypes.put(getRequestedJoinPath(property), joinType);
-        explicitFetchModes.remove(getRequestedJoinPath(property));
+        supersededJoinTypes.remove(getRequestedJoinPath(property));
         return this;
+    }
+
+    /**
+     * Replaces a join type that was requested for an association with the fetch mode that is now
+     * requested for it. The fetch mode decides how the association is fetched, so the join type no
+     * longer joins the association by itself, but the join that the criteria make for the association
+     * keeps it, as it does in a where query.
+     *
+     * @param associationPath The path of the association from the queried class
+     */
+    private void supersedeJoinType(String associationPath) {
+        JoinType joinType = requestedJoinTypes.remove(associationPath);
+        if (joinType != null) {
+            supersededJoinTypes.put(associationPath, joinType);
+        }
     }
 
     /**
@@ -373,8 +388,13 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     /**
      * Applies the join types requested with {@link #join(String, JoinType)}. This happens once the
      * criteria are built, so that the requested type also applies to a join created by a block or alias.
+     * A join type that a fetch mode replaced is applied only to such a join, so it is applied before the
+     * requested join types make joins of their own.
      */
     private void applyRequestedJoinTypes() {
+        for (Map.Entry<String, JoinType> supersededJoinType : supersededJoinTypes.entrySet()) {
+            GrailsHibernateUtil.applyJoinTypeToExistingJoin(criteria, supersededJoinType.getKey(), supersededJoinType.getValue());
+        }
         for (Map.Entry<String, JoinType> requestedJoinType : requestedJoinTypes.entrySet()) {
             GrailsHibernateUtil.applyJoinType(datastore, targetClass, criteria, requestedJoinType.getKey(), requestedJoinType.getValue());
         }
@@ -401,13 +421,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             Object fetchValue = ((Map.Entry) entry).getValue();
             if (fetchValue instanceof JoinType) {
                 requestedJoinTypes.put(associationPath, (JoinType) fetchValue);
-                explicitFetchModes.remove(associationPath);
+                supersededJoinTypes.remove(associationPath);
             }
             else {
                 criteria.setFetchMode(associationPath, GrailsHibernateUtil.getFetchMode(fetchValue));
-                if (requestedJoinTypes.remove(associationPath) != null) {
-                    explicitFetchModes.add(associationPath);
-                }
+                supersedeJoinType(associationPath);
             }
         }
         Map remaining = new HashMap(arguments);
@@ -448,9 +466,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria select(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.SELECT);
-        if (requestedJoinTypes.remove(getRequestedJoinPath(associationPath)) != null) {
-            explicitFetchModes.add(getRequestedJoinPath(associationPath));
-        }
+        supersedeJoinType(getRequestedJoinPath(associationPath));
         return this;
     }
 
@@ -689,9 +705,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public void fetchMode(String associationPath, FetchMode fetchMode) {
         if (criteria != null) {
             criteria.setFetchMode(associationPath, fetchMode);
-            if (requestedJoinTypes.remove(associationPath) != null) {
-                explicitFetchModes.add(associationPath);
-            }
+            supersedeJoinType(associationPath);
         }
     }
 
@@ -1711,7 +1725,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         if (requestedJoinTypes.containsKey(associationPath)) {
             return requestedJoinTypes.get(associationPath) == JoinType.LEFT;
         }
-        if (explicitFetchModes.contains(associationPath)) {
+        if (supersededJoinTypes.containsKey(associationPath)) {
             return false;
         }
         String prefix = associationPath + '.';
@@ -1996,7 +2010,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             applyRequestedSortJoins(listArguments);
             applyRequestedOrders();
             requestedJoinTypes.clear();
-            explicitFetchModes.clear();
+            supersededJoinTypes.clear();
 
             if (resultTransformer != null) {
                 criteria.setResultTransformer(resultTransformer);
@@ -2318,7 +2332,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         applyRequestedJoinTypes();
         applyRequestedOrders();
         requestedJoinTypes.clear();
-        explicitFetchModes.clear();
+        supersededJoinTypes.clear();
         return criteria;
     }
 

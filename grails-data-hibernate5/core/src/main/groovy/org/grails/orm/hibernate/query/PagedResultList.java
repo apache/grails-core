@@ -24,6 +24,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Fetch;
+import jakarta.persistence.criteria.FetchParent;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
@@ -70,13 +71,15 @@ public class PagedResultList extends grails.gorm.PagedResultList {
                     // a count does not select the associations that the list fetched, and Hibernate rejects
                     // a fetch of an association whose owner the query does not select. A sort through a fetched
                     // association joins from the fetch, and the list pages through the rows of that join
+                    final boolean fetchesCollection = fetchesCollection(queryRoot);
                     if (!queryRoot.getFetches().isEmpty()) {
                         joinWhatIsJoinedFromFetches(queryRoot, queryRoot, "count");
                         queryRoot.getFetches().clear();
                     }
                     // a list that fetches a collection returns each instance once, whatever a sort joins; any other
-                    // list returns a row for each element of a collection that it sorts by, and pages through those rows
-                    final Expression count = criteriaQuery.isDistinct() ? criteriaBuilder.countDistinct(queryRoot) : criteriaBuilder.count(queryRoot);
+                    // list, also one whose collection fetch is loaded after it, returns a row for each element of a
+                    // collection that it sorts by, and pages through those rows
+                    final Expression count = fetchesCollection ? criteriaBuilder.countDistinct(queryRoot) : criteriaBuilder.count(queryRoot);
                     final CriteriaQuery finalQuery = criteriaQuery.select(count).orderBy();
                     final Query query = session.createQuery(finalQuery);
                     hibernateTemplate.applySettings(query);
@@ -85,6 +88,21 @@ public class PagedResultList extends grails.gorm.PagedResultList {
             });
         }
         return totalCount;
+    }
+
+    /**
+     * Whether the list fetches a collection, at any depth. Hibernate then returns each instance once and
+     * pages through the instances; a list whose collection fetch is loaded after it pages through rows.
+     */
+    @SuppressWarnings("rawtypes")
+    private static boolean fetchesCollection(FetchParent parent) {
+        for (Object existing : parent.getFetches()) {
+            Fetch fetch = (Fetch) existing;
+            if (fetch.getAttribute().isCollection() || fetchesCollection(fetch)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

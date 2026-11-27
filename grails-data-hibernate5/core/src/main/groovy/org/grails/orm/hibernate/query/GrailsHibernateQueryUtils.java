@@ -42,7 +42,6 @@ import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
 import org.hibernate.LockMode;
-import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.internal.CriteriaImpl;
@@ -184,21 +183,23 @@ public class GrailsHibernateQueryUtils {
             Map argMap,
             ConversionService conversionService,
             boolean useDefaultMapping) {
-        populateArgumentsForCriteria(null, entity, query, queryRoot, criteriaBuilder, argMap, conversionService, useDefaultMapping);
+        populateArgumentsForListQuery(entity, query, queryRoot, criteriaBuilder, argMap, conversionService, useDefaultMapping);
     }
 
     /**
-     * Populates criteria arguments for the given target class and arguments map
+     * Populates the criteria query of a {@code list} from the given arguments map, as
+     * {@link #populateArgumentsForCriteria(PersistentEntity, CriteriaQuery, Root, CriteriaBuilder, Map, ConversionService, boolean)}
+     * does, and returns the paths of the collections whose fetch it removed from the query because a sort
+     * by another collection would multiply their elements. Initialize those collections after executing
+     * the query.
      *
-     * @param sessionFactory The session factory, which knows what the mapping of the entity fetches, or null
      * @param entity The {@link org.grails.datastore.mapping.model.PersistentEntity} instance
      * @param query  The criteria instance
      * @param argMap The arguments map
-     * @return Collection paths to initialize after executing the query
+     * @return The paths of the collections to initialize after executing the query
      */
     @SuppressWarnings("rawtypes")
-    public static List<String> populateArgumentsForCriteria(
-            SessionFactory sessionFactory,
+    public static List<String> populateArgumentsForListQuery(
             PersistentEntity entity,
             CriteriaQuery query,
             Root queryRoot,
@@ -223,15 +224,14 @@ public class GrailsHibernateQueryUtils {
             }
         }
 
-        final Map fetchArguments = fetchObj instanceof Map ? (Map) fetchObj : null;
-        addSortArguments(sessionFactory, entity, query, queryRoot, criteriaBuilder, argMap, fetchArguments, useDefaultMapping);
+        addSortArguments(entity, query, queryRoot, criteriaBuilder, argMap, useDefaultMapping);
         List<String> deferred = GrailsHibernateUtil.deferSortedCollectionFetches(query);
         if (!deferred.isEmpty()) {
             // Orders can reference a fetch that was just removed. Rebuild the sort joins against
             // the remaining fetches so every order still references a join in the query.
             clearSortJoins(queryRoot);
             query.orderBy(Collections.emptyList());
-            addSortArguments(sessionFactory, entity, query, queryRoot, criteriaBuilder, argMap, fetchArguments, useDefaultMapping);
+            addSortArguments(entity, query, queryRoot, criteriaBuilder, argMap, useDefaultMapping);
         }
         return deferred;
     }
@@ -246,8 +246,8 @@ public class GrailsHibernateQueryUtils {
     }
 
     @SuppressWarnings("rawtypes")
-    private static void addSortArguments(SessionFactory sessionFactory, PersistentEntity entity, CriteriaQuery query,
-                                         Root queryRoot, CriteriaBuilder criteriaBuilder, Map argMap, Map fetchArguments, boolean useDefaultMapping) {
+    private static void addSortArguments(PersistentEntity entity, CriteriaQuery query, Root queryRoot,
+                                         CriteriaBuilder criteriaBuilder, Map argMap, boolean useDefaultMapping) {
         String orderParam = (String) argMap.get(DynamicFinder.ARGUMENT_ORDER);
         final Object sortObj = argMap.get(DynamicFinder.ARGUMENT_SORT);
         if (sortObj != null) {
@@ -260,12 +260,12 @@ public class GrailsHibernateQueryUtils {
                 Map sortMap = (Map) sortObj;
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(sessionFactory, fetchArguments, query, queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
                 final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase(orderParam) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                addOrderPossiblyNested(sessionFactory, fetchArguments, query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase);
+                addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase);
             }
         } else if (useDefaultMapping) {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
@@ -273,7 +273,7 @@ public class GrailsHibernateQueryUtils {
                 Map sortMap = m.getSort().getNamesAndDirections();
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(sessionFactory, fetchArguments, query, queryRoot, criteriaBuilder, entity, (String) sort, order, true);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, true);
                 }
             }
         }
@@ -562,9 +562,7 @@ public class GrailsHibernateQueryUtils {
     /**
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
-    private static void addOrderPossiblyNested(SessionFactory sessionFactory,
-                                               Map fetchArguments,
-                                               CriteriaQuery query,
+    private static void addOrderPossiblyNested(CriteriaQuery query,
                                                From queryRoot,
                                                CriteriaBuilder criteriaBuilder,
                                                PersistentEntity entity,
@@ -587,10 +585,9 @@ public class GrailsHibernateQueryUtils {
                 addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 final Association<? extends Property> a = (Association<? extends Property>) property;
-                final Join join = getOrCreateSortJoin(sessionFactory, fetchArguments, query, queryRoot, sortHead,
-                        GrailsHibernateUtil.isLeftJoinAssociationSort(entity));
+                final Join join = getOrCreateSortJoin(queryRoot, sortHead, GrailsHibernateUtil.isLeftJoinAssociationSort(entity));
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                addOrderPossiblyNested(sessionFactory, fetchArguments, query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
+                addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
     }
@@ -604,8 +601,7 @@ public class GrailsHibernateQueryUtils {
      * before execution by {@link GrailsHibernateUtil#deferSortedCollectionFetches(CriteriaQuery)}.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static Join getOrCreateSortJoin(SessionFactory sessionFactory, Map fetchArguments, CriteriaQuery query, From from, String associationName,
-                                            boolean leftJoin) {
+    private static Join getOrCreateSortJoin(From from, String associationName, boolean leftJoin) {
         for (Object existing : from.getJoins()) {
             Join join = (Join) existing;
             if (associationName.equals(join.getAttribute().getName())) {
@@ -617,8 +613,7 @@ public class GrailsHibernateQueryUtils {
                 return (Join) existing;
             }
         }
-        final Join join = from.join(associationName, leftJoin ? JoinType.LEFT : JoinType.INNER);
-        return join;
+        return from.join(associationName, leftJoin ? JoinType.LEFT : JoinType.INNER);
     }
 
     private static boolean isIgnoreCaseProperty(boolean ignoreCase, PersistentProperty<? extends Property> persistentProperty) {
