@@ -482,6 +482,9 @@ public class JpaCriteriaQueryCreator<T> {
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
         boolean countOnly = isCountOnly();
+        // A count joins a collection that only the sort uses, to count the rows that the list pages through. A
+        // list that fetches a collection returns each instance once, so its count has no such rows
+        boolean joinCollections = countOnly && !fetchesCollection();
         // the orders that are still in an association block come after the orders of the criteria
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
         orders.addAll(AssociationOrders.inBlocks(detachedCriteria.getCriteria()));
@@ -524,9 +527,9 @@ public class JpaCriteriaQueryCreator<T> {
                 // tell apart from the joins of another block of the same association
                 String property = blockOrder.getAssociationProperty();
                 PersistentEntity associated = blockOrder.getAssociation().getAssociation().getAssociatedEntity();
-                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property, blockContext), countOnly);
+                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property, blockContext), joinCollections);
             } else {
-                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context), countOnly);
+                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context), joinCollections);
             }
             if (countOnly) {
                 // Keep the joins of the sort without ordering the aggregate: they decide the rows that the
@@ -557,6 +560,30 @@ public class JpaCriteriaQueryCreator<T> {
         if (!jpaOrders.isEmpty()) {
             cq.orderBy(jpaOrders);
         }
+    }
+
+    /**
+     * Whether the query requests a fetch or a join type for a collection of the queried class.
+     */
+    private boolean fetchesCollection() {
+        Set<String> paths = new HashSet<>(detachedCriteria.getJoinTypes().keySet());
+        if (hibernateQuery != null) {
+            paths.addAll(hibernateQuery.getFetchJoinPaths());
+        }
+        // the query that counts for a page is a copy, which has the fetches of the criteria only
+        detachedCriteria.getFetchStrategies().forEach((path, fetchType) -> {
+            if (fetchType == FetchType.EAGER) {
+                paths.add(path);
+            }
+        });
+        for (String path : paths) {
+            int dot = path == null ? -1 : path.indexOf('.');
+            String first = path == null ? null : dot < 0 ? path : path.substring(0, dot);
+            if (first != null && entity.getPropertyByName(first) instanceof ToMany<?>) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
