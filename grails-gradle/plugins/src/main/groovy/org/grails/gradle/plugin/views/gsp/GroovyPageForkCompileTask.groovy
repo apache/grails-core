@@ -75,7 +75,9 @@ import org.grails.gradle.plugin.views.ViewCompileOptions
  * resolves another Groovy is not handed this one's pages; the project's own classes by their ABI, as
  * {@link #getProjectClasses()}, since a page sees no more of them than a class compiled against
  * them does; and the project's AST transformations by content, as
- * {@link #getAstTransformationClasses()}, since they run while the pages are compiled.
+ * {@link #getAstTransformationClasses()}, since they run while the pages are compiled, as are all of
+ * the project's classes when an {@code application.groovy} runs with them, as
+ * {@link #getConfigurationClasses()}.
  * {@link #getJavaLauncher()} and the target compatibility say which Java. The Grails
  * environment whose configuration the pages are compiled with, {@link #getGrailsEnvironment()}, is
  * part of the key too. The pages are fingerprinted by their path under the source, so a checkout in
@@ -108,7 +110,9 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
      * signatures, and not what their method bodies do, so a change to a method body or a private member
      * leaves the pages as they were, where a page is otherwise compiled again for every change to any
      * class of the project. AST transformations among them run their code while the pages are compiled,
-     * and are an input by content as well, as {@link #getAstTransformationClasses()}.
+     * and are an input by content as well, as {@link #getAstTransformationClasses()}, and so is all of
+     * them when an {@code application.groovy} configures the pages, as
+     * {@link #getConfigurationClasses()}.
      *
      * @since 9.0
      */
@@ -125,6 +129,22 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
      */
     @Classpath
     final ConfigurableFileCollection astTransformationClasses
+
+    /**
+     * {@link #getProjectClasses()} by content when a Groovy configuration is among
+     * {@link #getGrailsConfigurationPaths()}, and nothing otherwise. The compiler runs an
+     * {@code application.groovy} with the project's classes, and takes the codecs and the other
+     * settings of the pages from what it computes, so with one a method body of the project can
+     * decide what a page compiles to. A project configured by {@code application.yml} alone has its
+     * pages compiled again only for what they can see.
+     *
+     * @since 9.0
+     */
+    @Classpath
+    FileCollection getConfigurationClasses() {
+        boolean groovyConfiguration = grailsConfigurationPaths.files.any { File file -> file.name.endsWith('.groovy') && file.isFile() }
+        groovyConfiguration ? projectClasses : projectClasses.minus(projectClasses)
+    }
 
     /**
      * {@link #getClasspath()} without {@link #getProjectClasses()}: the libraries the pages are

@@ -212,6 +212,25 @@ class GroovyPageCompileAvoidanceFunctionalSpec extends GradleSpecification {
         scaffolded('java.lang.Integer').listFiles().any { File copy -> new File(copy, 'admin/show.gsp').isFile() }
     }
 
+    def "with an application.groovy a change to a method body of the project's classes compiles the pages again"() {
+        given: 'a configuration that can compute its settings with the classes of the project'
+        project()
+        write('grails-app/conf/application.groovy', "grails.views.gsp.codecs.expression = 'html'")
+        compile('compileGroovyPages')
+
+        when: 'a method body changes, which leaves the ABI as it was'
+        write('src/main/groovy/Shelf.groovy', '''
+            class Shelf {
+                String label() { 'another shelf' }
+            }
+        ''')
+        BuildResult result = compile('compileGroovyPages')
+
+        then: 'what the configuration computes may have changed, so the pages are compiled again'
+        result.task(':compileGroovy').outcome == TaskOutcome.SUCCESS
+        result.task(':compileGroovyPages').outcome == TaskOutcome.SUCCESS
+    }
+
     private void project() {
         projectDir = setupTestResourceProject('gsp-compile-classpath').projectDir
         new File(projectDir, 'build.gradle').append('''
