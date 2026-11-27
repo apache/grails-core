@@ -19,6 +19,7 @@
 package org.grails.forge.cli
 
 import java.nio.file.Path
+import java.util.concurrent.Callable
 import java.util.function.BiFunction
 import java.util.function.Predicate
 import java.util.function.Supplier
@@ -29,6 +30,7 @@ import org.apache.grails.forge.cli.artefact.PackArtefactCommand
 import org.apache.grails.forge.cli.StartupPreload
 import org.apache.grails.forge.core.pack.BundledPackFeatures
 import org.apache.grails.forge.cli.console.ProjectTools
+import org.apache.grails.forge.cli.console.CommandStreams
 import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.EarlierGrailsProject
@@ -217,13 +219,39 @@ final class ForgeCli {
      * then put together again and read again: see {@link ProjectTools#listsFor}.</p>
      */
     static int execute(ForgeContext context, String... args) {
+        return executeWriting(context, null, args)
+    }
+
+    /**
+     * Executes one command line on a context as {@link #execute(ForgeContext, String[])} does, writing to
+     * the given streams and not to those of the process: what a program that runs command lines in its own
+     * process, as {@code grails mcp} does, calls for each of them. The command line is put together anew,
+     * as for every command line; what its commands write through it, their output, their errors, the help
+     * and the refusal of a mistake, goes to {@link CommandStreams#out} and {@link CommandStreams#err}; and
+     * the streams are bound with {@link CommandStreams#bind} while it runs, so that {@link CommandStreams#current()}
+     * is them for whatever runs a build or a tool for it.
+     *
+     * @param context the application, which is started when a command first needs it and stays as it is
+     * for the next command line
+     * @param streams where the command line writes
+     * @param args the command line
+     * @return the exit code
+     * @since 9.0
+     */
+    static int execute(ForgeContext context, CommandStreams streams, String... args) {
+        Objects.requireNonNull(streams, 'streams')
+        return CommandStreams.bind(streams, { -> executeWriting(context, streams, args) } as Callable<Integer>)
+    }
+
+    // the command line, written to the streams given, or where picocli writes when none are given
+    private static int executeWriting(ForgeContext context, CommandStreams streams, String... args) {
         // What reading the record of the project has to say is held back until the command is known:
         // a short form is looked up among the commands of the project too, and may then be a command
         // that has nothing to do with the project.
         HeldBack held = new HeldBack()
         held.mayList = true
         boolean reads = readsProject(args)
-        CommandLine commandLine = createCommandLine(context, held, reads, listsApplication(args))
+        CommandLine commandLine = writingTo(createCommandLine(context, held, reads, listsApplication(args)), streams)
         if (reads) {
             held.advice = { advice(context) } as Supplier<String>
         } else {
@@ -237,7 +265,7 @@ final class ForgeCli {
             // the build has just listed the tools of the application and its plugins: they are read
             // again, and so is the record of the project, whose warnings were not said the first time
             HeldBack again = new HeldBack()
-            CommandLine listed = createCommandLine(context, again, reads, listsApplication(args))
+            CommandLine listed = writingTo(createCommandLine(context, again, reads, listsApplication(args)), streams)
             if (reads) {
                 again.advice = { advice(context) } as Supplier<String>
             } else {
@@ -253,6 +281,16 @@ final class ForgeCli {
                 generator(context)
             }
         }
+    }
+
+    // A command line that writes to the streams given: every command it has now writes there, those of the project
+    // and the tools of the application among them, since they were all added when it was put together.
+    private static CommandLine writingTo(CommandLine commandLine, CommandStreams streams) {
+        if (streams != null) {
+            commandLine.setOut(new PrintWriter(streams.out, true))
+            commandLine.setErr(new PrintWriter(streams.err, true))
+        }
+        return commandLine
     }
 
     // whether the project generator runs, and how many templates of the packs of Forge it compiled and took as the build compiled them

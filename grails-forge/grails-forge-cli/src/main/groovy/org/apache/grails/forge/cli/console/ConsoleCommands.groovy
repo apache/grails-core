@@ -45,24 +45,71 @@ final class ConsoleCommands {
     private static final String PLUGIN_SOURCES = 'src/main/groovy'
     private static final String PLUGIN_CLASS_ENDING = 'GrailsPlugin.groovy'
 
-    private static volatile boolean interactive
+    /**
+     * What the commands of this process run in: one command line, the interactive shell, or a server of
+     * the Model Context Protocol that runs a command line for each call of a tool.
+     *
+     * @since 9.0
+     */
+    enum Session {
+
+        /** One command line, as the program {@code grails} with a command runs, or a program that runs one in its own process. */
+        NONE,
+
+        /**
+         * The interactive shell, which runs a command line for each line that is typed: a command that
+         * starts something returns to the prompt and does not stay with it, and the builds run through
+         * one connection to the Gradle of the project, which is kept while the shell runs.
+         */
+        CONSOLE,
+
+        /**
+         * {@code grails mcp}, which runs a command line for each call of a tool, with nothing to type and
+         * no terminal: the builds run through one connection to the Gradle of the project, which is kept
+         * while the server runs.
+         */
+        MCP
+    }
+
+    private static volatile Session session = Session.NONE
 
     private ConsoleCommands() {
     }
 
     /**
-     * @return whether the commands run in the interactive shell, where a command that starts something
-     * returns to the prompt and does not stay with it
+     * @return what the commands of this process run in now; {@link Session#NONE} unless the interactive
+     * shell or {@code grails mcp} said otherwise
+     * @since 9.0
      */
-    static boolean isInteractive() {
-        return interactive
+    static Session getSession() {
+        return session
     }
 
     /**
-     * Says whether the commands run in the interactive shell. The shell says so while it runs.
+     * Says what the commands of this process run in. The interactive shell and {@code grails mcp} say so
+     * while they run, and say {@link Session#NONE} when they end.
+     *
+     * @param running what the commands run in; {@code null} is {@link Session#NONE}
+     * @since 9.0
+     */
+    static void setSession(Session running) {
+        session = running ?: Session.NONE
+    }
+
+    /**
+     * @return whether the commands run in the interactive shell, where a command that starts something
+     * returns to the prompt and does not stay with it: {@link #getSession()} is {@link Session#CONSOLE}
+     */
+    static boolean isInteractive() {
+        return session == Session.CONSOLE
+    }
+
+    /**
+     * Says whether the commands run in the interactive shell, as {@link #setSession} with
+     * {@link Session#CONSOLE} or {@link Session#NONE}.
      */
     static void setInteractive(boolean inShell) {
-        interactive = inShell
+        setSession(inShell ? Session.CONSOLE : Session.NONE)
     }
 
     /**
