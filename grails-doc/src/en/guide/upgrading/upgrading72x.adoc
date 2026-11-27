@@ -132,3 +132,10 @@ This release carries the changes of <<grails-7-1-7,Grails 7.1.7>>. It has no upg
 === Grails 7.2.5
 
 This release carries the changes of <<grails-7-1-8,Grails 7.1.8>>. It has no upgrade notes of its own.
+
+[[grails-7-2-6]]
+=== Grails 7.2.6
+
+==== A DetachedCriteria alias path can start with an alias declared earlier
+
+As of Grails 7.2.6, a path given to `createAlias` on a `DetachedCriteria` or a `where` query that starts with an alias declared earlier continues the path of that alias: after `createAlias('children', 'c')`, the path `c.related` is `children.related` (issue https://github.com/apache/grails-core/issues/14647[#14647]). Such a call failed before, with a `QueryException` or invalid SQL, so no working code changes. A first segment that is both an alias and a property of the class names the alias. An alias belongs to the whole query, so it is found wherever it was declared: at the top level, inside `and`, `or` or `not`, or inside a nested block, and it can be continued from inside the same block or from another one. A path that starts with a name that is no alias of the query, or that continues past a property that is not an association, is refused with an `IllegalArgumentException`.

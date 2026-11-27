@@ -192,7 +192,7 @@ public abstract class AbstractHibernateCriterionAdapter {
                     alias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria());
                 }
                 else {
-                    alias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria(), existing.getAlias());
+                    alias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria(), existing.getAlias(), existing.getAssociationPath());
                 }
                 Association association = existing.getAssociation();
                 hibernateQuery.associationStack.add(association);
