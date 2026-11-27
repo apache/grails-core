@@ -232,4 +232,5 @@ class CMTBManyToManyItem implements MultiTenant<CMTBManyToManyItem> {
     Long id
     Long tenantId
     static hasMany = [owners: CMTBManyToManyOwner]
+    static belongsTo = [CMTBManyToManyOwner]
 }

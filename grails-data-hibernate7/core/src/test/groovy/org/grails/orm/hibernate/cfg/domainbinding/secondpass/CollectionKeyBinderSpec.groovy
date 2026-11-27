@@ -242,6 +242,7 @@ class CKBManyToManyOwner {
 class CKBManyToManyItem {
     Long id
     static hasMany = [owners: CKBManyToManyOwner]
+    static belongsTo = [CKBManyToManyOwner]
 }
 
 @Entity

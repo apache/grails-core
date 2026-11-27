@@ -167,11 +167,12 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         currentTable = new Table("TEST_TABLE")
         currentTable.setName("TEST_TABLE")
         rootClass.setTable(currentTable)
+        def datastoreMappingContext = getMappingContext()
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> null
             getName() >> "TestEntity"
-            getMappingContext() >> getGrailsDomainBinder().hibernateMappingContext
+            getMappingContext() >> datastoreMappingContext
             getMapping() >> Mock(org.grails.datastore.mapping.model.ClassMapping)
             getReflector() >> reflector
             getIdentityProperty() >> Mock(HibernateSimpleIdentityProperty)

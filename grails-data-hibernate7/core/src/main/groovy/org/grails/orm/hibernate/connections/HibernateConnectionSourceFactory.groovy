@@ -176,6 +176,7 @@ class HibernateConnectionSourceFactory
         HibernateMappingContextConfiguration configuration = resolveConfiguration(hibernateSettings.configClass)
         configuration.setBytecodeProvider(this.bytecodeProvider)
         configuration.setDataSourceName(name)
+        configuration.setGeneratedDomainClasses(hibernateSettings.generatedDomainClasses)
         configuration.properties.put('jakarta.persistence.nonJtaDataSource', dataSourceConnectionSource.source)
         if (applicationContext != null) {
             configuration.setApplicationContext(applicationContext)

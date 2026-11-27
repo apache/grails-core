@@ -1,0 +1,43 @@
+entity SnapAuthor contributor=orm dataSource=default
+entity SnapBook contributor=orm dataSource=default
+entity SnapCar contributor=orm dataSource=default
+entity SnapTag contributor=orm dataSource=default
+entity SnapVehicle contributor=orm dataSource=default
+table SNAP_AUTHOR
+  column ID BIGINT(64,0) NOT NULL
+  column NAME CHARACTER VARYING(60,0) NULL
+  column VERSION BIGINT(64,0) NOT NULL
+  primaryKey [ID]
+  index unique=true columns=[ID]
+table SNAP_BOOK
+  column AUTHOR_ID BIGINT(64,0) NULL
+  column BOOK_TITLE CHARACTER VARYING(255,0) NULL
+  column ID BIGINT(64,0) NOT NULL
+  column PAGES INTEGER(32,0) NULL
+  column PRICE NUMERIC(38,2) NULL
+  column STATUS ENUM('DRAFT', 'PUBLISHED')(9,0) NULL
+  column VERSION BIGINT(64,0) NOT NULL
+  primaryKey [ID]
+  foreignKey AUTHOR_ID -> SNAP_AUTHOR.ID
+  index unique=false columns=[AUTHOR_ID]
+  index unique=true columns=[ID]
+table SNAP_TAG
+  column ID BIGINT(64,0) NOT NULL
+  column NAME CHARACTER VARYING(255,0) NULL
+  primaryKey [ID]
+  index unique=true columns=[ID]
+table SNAP_TAG_LABELS
+  column LABELS_JAVA_LANG_STRING CHARACTER VARYING(255,0) NULL
+  column SNAP_TAG_ID BIGINT(64,0) NULL
+  primaryKey []
+  foreignKey SNAP_TAG_ID -> SNAP_TAG.ID
+  index unique=false columns=[SNAP_TAG_ID]
+  index unique=true columns=[LABELS_JAVA_LANG_STRING, SNAP_TAG_ID]
+table SNAP_VEHICLE
+  column CLASS CHARACTER VARYING(255,0) NOT NULL
+  column DOORS INTEGER(32,0) NULL
+  column ID BIGINT(64,0) NOT NULL
+  column NAME CHARACTER VARYING(255,0) NULL
+  column VERSION BIGINT(64,0) NOT NULL
+  primaryKey [ID]
+  index unique=true columns=[ID]

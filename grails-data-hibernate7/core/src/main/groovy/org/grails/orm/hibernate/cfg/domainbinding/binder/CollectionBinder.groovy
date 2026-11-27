@@ -79,6 +79,7 @@ class CollectionBinder {
     @PackageScope final MapSecondPassBinder mapSecondPassBinder
     private final InFlightMetadataCollector mappings
     private final TableForManyCalculator tableForManyCalculator
+    private final ManyToManyOwnerValidator manyToManyOwnerValidator = new ManyToManyOwnerValidator()
 
     void setComponentBinder(ComponentBinder componentBinder) {
         this.collectionSecondPassBinder.setComponentBinder(componentBinder)
@@ -214,6 +215,7 @@ class CollectionBinder {
 
     private void bindCollectionTable(HibernateToManyProperty property, Collection collection) {
         inheritOwningJoinTable(property)
+        manyToManyOwnerValidator.validate(property)
         String tableName = tableForManyCalculator.getTableName(property)
         String schemaName = tableForManyCalculator.getJoinTableSchema(property)
         String catalogName = tableForManyCalculator.getJoinTableCatalog(property)

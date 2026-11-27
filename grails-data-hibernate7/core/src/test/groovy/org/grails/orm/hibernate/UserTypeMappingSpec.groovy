@@ -30,6 +30,8 @@ import grails.gorm.hibernate.HibernateEntity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.cfg.Settings
 import org.hibernate.mapping.SimpleValue
+import org.hibernate.type.CustomType
+import org.hibernate.type.Type
 import org.hibernate.type.descriptor.WrapperOptions
 import org.hibernate.usertype.UserType
 import spock.lang.Specification
@@ -128,7 +130,13 @@ class UserTypeMappingSpec extends Specification {
     }
 
     private static String typeNameOf(HibernateDatastore datastore, Class entity) {
-        (datastore.metadata.getEntityBinding(entity.name).getProperty('active').value as SimpleValue).typeName
+        SimpleValue value = datastore.metadata.getEntityBinding(entity.name).getProperty('active').value as SimpleValue
+        // the domain binder states the type by name, Hibernate's annotation binder (hibernate.generatedDomainClasses) by the type it resolves
+        value.typeName ?: resolvedTypeName(value.type)
+    }
+
+    private static String resolvedTypeName(Type type) {
+        type instanceof CustomType ? ((CustomType) type).userType.class.name : type.returnedClass.name
     }
 
     private static Map<String, String> storedFlags(HibernateDatastore datastore, String table) {

@@ -710,6 +710,7 @@ class HTMPCourse {
     Long id
     String title
     static hasMany = [students: HTMPStudent]
+    static belongsTo = [HTMPStudent]
 }
 
 @Entity // Only if outside grails-app/domain
