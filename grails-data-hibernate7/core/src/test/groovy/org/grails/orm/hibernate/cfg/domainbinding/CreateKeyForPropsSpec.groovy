@@ -23,15 +23,102 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.MappingException
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.boot.spi.SecondPass
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
 import spock.lang.Specification
 
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
 import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueKeyForColumnsCreator
 
 class CreateKeyForPropsSpec extends Specification {
+
+    def "resolves group columns in the second pass for #entryPoint"() {
+        given:
+        def collector = Mock(InFlightMetadataCollector)
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
+        def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator, collector)
+        def owner = Stub(GrailsHibernatePersistentEntity)
+        def parent = Stub(HibernatePersistentProperty)
+        def grailsProp = Stub(HibernatePersistentProperty) {
+            getMappedForm() >> new PropertyConfig(unique: ['parent'])
+            getHibernateOwner() >> owner
+        }
+        owner.getHibernatePropertyByName('parent') >> parent
+        def table = new Table(name: 'child')
+        def columns = [new Column('`Amount`'), new Column('currency')]
+        SecondPass secondPass
+
+        when:
+        if (entryPoint == 'columns') {
+            subject.createKeyForColumns(grailsProp, null, table, columns)
+        } else {
+            subject.createKeyForProps(grailsProp, null, table, 'child_state')
+        }
+
+        then: 'no member is resolved before the association columns have been bound'
+        1 * collector.addSecondPass(_) >> { SecondPass pass -> secondPass = pass }
+        0 * columnNameFetcher._
+        0 * uniqueKeyCreator._
+
+        when:
+        secondPass.doSecondPass([:])
+
+        then:
+        1 * columnNameFetcher.getColumnNamesForPropertyAndPath(parent, null) >> ['parent_code', 'parent_revision']
+        1 * uniqueKeyCreator.createUniqueKeyForColumns(table, { List<Column> key ->
+            key*.name == expected && (entryPoint != 'columns' || key[0].is(columns[0]) && key[1].is(columns[1]))
+        })
+
+        where:
+        entryPoint | expected
+        'props'    | ['child_state', 'parent_code', 'parent_revision']
+        'columns'  | ['Amount', 'currency', 'parent_code', 'parent_revision']
+    }
+
+    def "creates a key immediately for #entryPoint with #collectorState collector"() {
+        given:
+        def columnNameFetcher = Stub(ColumnNameForPropertyAndPathFetcher)
+        def collector = collectorState == 'absent' ? null : Mock(InFlightMetadataCollector) {
+            isInSecondPass() >> true
+        }
+        def subject = collector == null ? new CreateKeyForProps(columnNameFetcher) :
+                new CreateKeyForProps(columnNameFetcher, collector)
+        def parent = Stub(HibernatePersistentProperty)
+        def owner = Stub(GrailsHibernatePersistentEntity) {
+            getHibernatePropertyByName('parent') >> parent
+        }
+        def grailsProp = Stub(HibernatePersistentProperty) {
+            getMappedForm() >> new PropertyConfig(unique: ['parent'])
+            getHibernateOwner() >> owner
+        }
+        columnNameFetcher.getColumnNamesForPropertyAndPath(parent, null) >> ['parent_code', 'parent_revision']
+        def table = new Table(name: 'child')
+
+        when:
+        if (entryPoint == 'columns') {
+            subject.createKeyForColumns(grailsProp, null, table, [new Column('amount'), new Column('currency')])
+        } else {
+            subject.createKeyForProps(grailsProp, null, table, 'child_state')
+        }
+
+        then:
+        table.uniqueKeys.values().collect { it.columns*.name.toSet() } == [expected as Set]
+        if (collector != null) {
+            0 * collector.addSecondPass(_)
+        }
+
+        where:
+        entryPoint | collectorState | expected
+        'props'    | 'absent'       | ['child_state', 'parent_code', 'parent_revision']
+        'columns'  | 'absent'       | ['amount', 'currency', 'parent_code', 'parent_revision']
+        'props'    | 'second-pass'  | ['child_state', 'parent_code', 'parent_revision']
+        'columns'  | 'second-pass'  | ['amount', 'currency', 'parent_code', 'parent_revision']
+    }
 
     def "creates unique key when property is unique within group"() {
         given:
@@ -70,7 +157,7 @@ class CreateKeyForPropsSpec extends Specification {
         1 * grailsProp.getMappedForm() >> mappedForm
         1 * grailsProp.getHibernateOwner() >> owner
         1 * mappedForm.isUnique() >> true
-        1 * mappedForm.isUniqueWithinGroup() >> true
+        2 * mappedForm.isUniqueWithinGroup() >> true
         1 * mappedForm.getUniquenessGroup() >> ["p1", "p2"]
         1 * owner.getHibernatePropertyByName("p1") >> otherProp1
         1 * owner.getHibernatePropertyByName("p2") >> otherProp2
@@ -162,7 +249,7 @@ class CreateKeyForPropsSpec extends Specification {
         1 * grailsProp.getMappedForm() >> mappedForm
         1 * grailsProp.getHibernateOwner() >> owner
         1 * mappedForm.isUnique() >> true
-        1 * mappedForm.isUniqueWithinGroup() >> true
+        2 * mappedForm.isUniqueWithinGroup() >> true
         1 * mappedForm.getUniquenessGroup() >> ["missingProp"]
         1 * owner.getJavaClass() >> CreateKeyForPropsSpec
         1 * owner.getHibernatePropertyByName("missingProp")

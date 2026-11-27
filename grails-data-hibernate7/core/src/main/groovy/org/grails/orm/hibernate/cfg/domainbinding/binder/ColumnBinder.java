@@ -97,7 +97,8 @@ public class ColumnBinder {
                 columnNameFetcher(metadataBuildingContext, namingStrategy),
                 new StringColumnConstraintsBinder(),
                 new NumericColumnConstraintsBinder(dialect),
-                new CreateKeyForProps(columnNameFetcher(metadataBuildingContext, namingStrategy)),
+                new CreateKeyForProps(columnNameFetcher(metadataBuildingContext, namingStrategy),
+                        metadataBuildingContext == null ? null : metadataBuildingContext.getMetadataCollector()),
                 new IndexBinder());
     }
 
