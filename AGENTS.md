@@ -77,6 +77,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - **Java sources and interop** (`**/*.java`, Java 21 baseline, records, sealed types) → Read `.agents/skills/java-developer/SKILL.md`
 > - **Style, CodeNarc, Checkstyle, PMD, SpotBugs violations** (`codeStyle`, `aggregateViolations`, linting) → Read `.agents/skills/violation-fixer/SKILL.md`
 > - **Fixing test failures or flaky tests** (test debugging, parallel test isolation, thread-local resets) → Read `.agents/skills/test-fixer/SKILL.md`
+> - **GORM for MongoDB work** (`grails-data-mongodb/**`, `*Mongo*`, BSON codecs, GeoJSON, Mongo indexes, Testcontainers Mongo tests) → Read `.agents/skills/mongodb-developer/SKILL.md`
 > - **Merging standalone plugin repositories into monorepo** → Read `.agents/skills/mono-repo-integration/SKILL.md`
 > - **Grails application upgrade guidance** (7.x to 8.x breaking changes, changes between 8.x releases, Jakarta EE 10, Spring Boot 4) → Read `.agents/skills/grails-upgrade/SKILL.md`
 > - **Grails web application development** (controllers, views, GORM models, taglibs, services, web MVC) → Read `.agents/skills/grails-developer/SKILL.md`
@@ -91,6 +92,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **java-developer** | `**/*.java`, Java interop | `.agents/skills/java-developer/SKILL.md` | Java 21 baseline features, Groovy interop, records, sealed types |
 | **violation-fixer** | CodeNarc, Checkstyle, PMD, SpotBugs violations, `codeStyle`, conventions | `.agents/skills/violation-fixer/SKILL.md` | Code quality, static analysis tools, repo conventions |
 | **test-fixer** | Broken or flaky tests, test isolation, fork pollution | `.agents/skills/test-fixer/SKILL.md` | Test failure debugging, report analysis, thread-safe request context |
+| **mongodb-developer** | `grails-data-mongodb/**`, `*Mongo*`, BSON codecs, GeoJSON, indexes, Mongo multi-tenancy | `.agents/skills/mongodb-developer/SKILL.md` | GORM for MongoDB: codec-based mapping, GeoJSON, indexes, multi-tenancy, Testcontainers tests |
 | **mono-repo-integration** | Merging standalone Grails plugin repos | `.agents/skills/mono-repo-integration/SKILL.md` | Monorepo integration, subproject wiring, BOM registration |
 | **grails-upgrade** | Upgrading applications from Grails 7.x to 8, and between 8.x releases | `.agents/skills/grails-upgrade/SKILL.md` | Application upgrade guide, changes of each release, Jakarta EE 10, Spring Boot 4.1, validation changes |
 | **grails-developer** | Controllers, views, GORM models, taglibs, services, web MVC | `.agents/skills/grails-developer/SKILL.md` | Web applications, REST APIs, GORM, controllers, views, plugins |
@@ -134,8 +136,8 @@ This repository contains multiple independent Gradle projects:
 | Project | Description | Build Command |
 |---------|-------------|---------------|
 | **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
-| **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ./gradlew build` |
-| **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
+| **build-logic/** | Gradle convention plugins for the build; see [`build-logic/AGENTS.md`](build-logic/AGENTS.md) | `cd build-logic && ./gradlew build` |
+| **grails-gradle/** | Grails Gradle plugins; see [`grails-gradle/AGENTS.md`](grails-gradle/AGENTS.md) | `cd grails-gradle && ./gradlew build` |
 | **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
 | **end-to-end/** | End-to-end tests consuming published Grails artifacts (see `end-to-end/README.md` for required setup) | `cd end-to-end && ./gradlew check` |
 
