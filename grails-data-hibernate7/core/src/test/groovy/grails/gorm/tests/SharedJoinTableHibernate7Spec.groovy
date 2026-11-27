@@ -50,9 +50,7 @@ class SharedJoinTableHibernate7Spec extends HibernateGormDatastoreSpec {
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
     void "on #db a shared join table is unique per association"() {
         given: 'the datastore on this database, with the schema created for it'
-        if (container != null && !container.isRunning()) {
-            container.start()
-        }
+        DatabaseContainers.start(container)
         manager.destroy()
         manager.grailsConfig = [
                 'dataSource.url'            : container?.jdbcUrl ?: 'jdbc:h2:mem:sharedJoinTableDB;LOCK_TIMEOUT=10000',

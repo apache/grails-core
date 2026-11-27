@@ -53,9 +53,7 @@ class NativeIdGeneratorHibernate7Spec extends Specification {
 
     void "default id mapping generates distinct ids and creates the sequence it needs with #db"() {
         given:
-        if (container != null && !container.isRunning()) {
-            container.start()
-        }
+        DatabaseContainers.start(container)
         Map config = [
                 'dataSource.url'            : container?.jdbcUrl ?: "jdbc:h2:mem:nativeIdDB;LOCK_TIMEOUT=10000",
                 'dataSource.driverClassName': container?.driverClassName ?: "org.h2.Driver",

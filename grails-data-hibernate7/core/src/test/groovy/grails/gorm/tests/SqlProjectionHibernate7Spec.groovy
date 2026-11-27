@@ -44,9 +44,7 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
 
     void "sqlProjection and sqlGroupProjection work with #db"() {
         given:
-        if (container != null && !container.isRunning()) {
-            container.start()
-        }
+        DatabaseContainers.start(container)
         manager.destroy()
         manager.grailsConfig = [
                 'dataSource.url'            : container?.jdbcUrl ?: 'jdbc:h2:mem:sqlProjectionDB;LOCK_TIMEOUT=10000',

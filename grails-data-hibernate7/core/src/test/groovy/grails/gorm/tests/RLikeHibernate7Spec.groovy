@@ -43,9 +43,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
     void "test rlike works with #db"() {
         given:
-        if (container != null && !container.isRunning()) {
-            container.start()
-        }
+        DatabaseContainers.start(container)
 
         // Reconfigure manager for this specific database
         manager.destroy() // Ensure a completely fresh state for each DB
