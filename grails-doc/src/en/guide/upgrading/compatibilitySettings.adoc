@@ -21,8 +21,6 @@ A fix that changes the result of a call that works today can ship behind a setti
 
 This page lists every such setting. The upgrade notes of the release that adds a setting describe the change in detail.
 
-When a collection sort would multiply the elements of a fetched bag, Grails loads the affected collection after the query instead of reading repeated elements from the joined rows. The collection is initialized before the results are returned. This can issue a separate query per instance and deferred collection, with the setting disabled as well as enabled.
-
 [cols="3,5,2,2,2,2,2", options="header"]
 |===
 | Setting | What it changes | Added in | Grails 7 default | Grails 8.0 default | Grails 8.1 default (planned) | Removed in
