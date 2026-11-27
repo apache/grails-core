@@ -32,6 +32,19 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                 if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
                     repo.mavenLocal()
                 }
+                // TEMPORARY, revert before merge: the Grails 9 build of asset-pipeline (wondrify/asset-pipeline#503),
+                // served from a fork, pinned to the commit that holds the artifacts, until asset-pipeline publishes its
+                // Grails 9 line
+                repo.exclusiveContent {
+                    it.forRepository {
+                        repo.maven {
+                            url = 'https://raw.githubusercontent.com/codeconsole/asset-pipeline/5833b1c74db0efd1a4c7e5905752af45aa8eea37'
+                        }
+                    }
+                    it.filter {
+                        it.includeVersionByRegex('cloud[.]wondrify.*', '.*', '5[.]3[.]0-grails9-preview[.].*')
+                    }
+                }
                 repo.mavenCentral()
                 repo.gradlePluginPortal()
                 repo.maven {
@@ -71,6 +84,19 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
             manager.repositories { RepositoryHandler repo ->
                 if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
                     repo.mavenLocal()
+                }
+                // TEMPORARY, revert before merge: the Grails 9 build of asset-pipeline (wondrify/asset-pipeline#503),
+                // served from a fork, pinned to the commit that holds the artifacts, until asset-pipeline publishes its
+                // Grails 9 line
+                repo.exclusiveContent {
+                    it.forRepository {
+                        repo.maven {
+                            url = 'https://raw.githubusercontent.com/codeconsole/asset-pipeline/5833b1c74db0efd1a4c7e5905752af45aa8eea37'
+                        }
+                    }
+                    it.filter {
+                        it.includeVersionByRegex('cloud[.]wondrify.*', '.*', '5[.]3[.]0-grails9-preview[.].*')
+                    }
                 }
                 // Maven Central first. Gradle disables a repository for the rest of the build on a transport
                 // failure and fails resolution instead of trying the next repository, so the primary

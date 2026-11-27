@@ -27,6 +27,8 @@ class GrailsRepoSettingsPluginSpec extends Specification {
 
     private static final String MAVEN_CENTRAL = 'https://repo.maven.apache.org/maven2'
     private static final String GRAILS_RESTRICTED = 'https://repo.grails.org/grails/restricted'
+    // TEMPORARY, revert with the repository it checks
+    private static final String ASSET_PIPELINE_PREVIEW = 'https://raw.githubusercontent.com/codeconsole/asset-pipeline/5833b1c74db0efd1a4c7e5905752af45aa8eea37'
     private static final String APACHE_SNAPSHOTS = 'https://repository.apache.org/content/groups/snapshots'
     private static final String SONATYPE_SNAPSHOTS = 'https://central.sonatype.com/repository/maven-snapshots'
     private static final String APACHE_STAGING = 'https://repository.apache.org/content/groups/staging'
@@ -56,12 +58,13 @@ class GrailsRepoSettingsPluginSpec extends Specification {
         List<String> repositories = urls(result, 'DEPENDENCY_REPOSITORIES')
 
         then:
-        repositories.size() == 5
-        repositories[0].startsWith(MAVEN_CENTRAL)
-        repositories[1].startsWith(GRAILS_RESTRICTED)
-        repositories[2].startsWith(APACHE_SNAPSHOTS)
-        repositories[3].startsWith(SONATYPE_SNAPSHOTS)
-        repositories[4].startsWith(APACHE_STAGING)
+        repositories.size() == 6
+        repositories[0].startsWith(ASSET_PIPELINE_PREVIEW)
+        repositories[1].startsWith(MAVEN_CENTRAL)
+        repositories[2].startsWith(GRAILS_RESTRICTED)
+        repositories[3].startsWith(APACHE_SNAPSHOTS)
+        repositories[4].startsWith(SONATYPE_SNAPSHOTS)
+        repositories[5].startsWith(APACHE_STAGING)
     }
 
     void 'plugin repositories start with Maven Central and the plugin portal'() {
@@ -70,12 +73,13 @@ class GrailsRepoSettingsPluginSpec extends Specification {
         List<String> repositories = urls(result, 'PLUGIN_REPOSITORIES')
 
         then:
-        repositories.size() == 5
-        repositories[0].startsWith(MAVEN_CENTRAL)
-        repositories[1].startsWith(PLUGIN_PORTAL)
-        repositories[2].startsWith(APACHE_SNAPSHOTS)
-        repositories[3].startsWith(SONATYPE_SNAPSHOTS)
-        repositories[4].startsWith(APACHE_STAGING)
+        repositories.size() == 6
+        repositories[0].startsWith(ASSET_PIPELINE_PREVIEW)
+        repositories[1].startsWith(MAVEN_CENTRAL)
+        repositories[2].startsWith(PLUGIN_PORTAL)
+        repositories[3].startsWith(APACHE_SNAPSHOTS)
+        repositories[4].startsWith(SONATYPE_SNAPSHOTS)
+        repositories[5].startsWith(APACHE_STAGING)
     }
 
     void 'project level repositories are rejected'() {
@@ -95,13 +99,15 @@ class GrailsRepoSettingsPluginSpec extends Specification {
         List<String> pluginRepositories = urls(result, 'PLUGIN_REPOSITORIES')
 
         then:
-        dependencyRepositories.size() == 6
+        dependencyRepositories.size() == 7
         dependencyRepositories[0].startsWith('file:')
-        dependencyRepositories[1].startsWith(MAVEN_CENTRAL)
-        dependencyRepositories[2].startsWith(GRAILS_RESTRICTED)
-        pluginRepositories.size() == 6
+        dependencyRepositories[1].startsWith(ASSET_PIPELINE_PREVIEW)
+        dependencyRepositories[2].startsWith(MAVEN_CENTRAL)
+        dependencyRepositories[3].startsWith(GRAILS_RESTRICTED)
+        pluginRepositories.size() == 7
         pluginRepositories[0].startsWith('file:')
-        pluginRepositories[1].startsWith(MAVEN_CENTRAL)
+        pluginRepositories[1].startsWith(ASSET_PIPELINE_PREVIEW)
+        pluginRepositories[2].startsWith(MAVEN_CENTRAL)
     }
 
     private GradleRunner runner() {
