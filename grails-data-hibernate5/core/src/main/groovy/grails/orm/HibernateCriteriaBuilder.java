@@ -18,6 +18,8 @@
  */
 package grails.orm;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -122,6 +124,9 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
     public static final Type MATERIALIZED_CLOB = StandardBasicTypes.MATERIALIZED_CLOB;
     public static final Type SERIALIZABLE = StandardBasicTypes.SERIALIZABLE;
 
+    /** The arguments of a query that {@link HibernateQuery#setArguments(Map)} checks and applies. */
+    private static final List<String> QUERY_SETTINGS = Arrays.asList("fetchSize", "timeout", "readOnly", "flushMode");
+
     @SuppressWarnings("rawtypes")
     public HibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory) {
         super(targetClass, sessionFactory);
@@ -171,9 +176,26 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
 
     @Override
     protected List createPagedResultList(Map args) {
-        GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, args, conversionService);
+        // the Hibernate settings of the arguments are read as the arguments of any other query are, with the same message
+        // naming the argument for a value that is not valid: HibernateQuery.setArguments checks them and sets them on the
+        // criteria, before the arguments of the page are applied. A builder made from a session factory alone has no datastore,
+        // and the settings need no entity
+        PersistentEntity entity = datastore == null ? null : datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+        new HibernateQuery(criteria, entity).setArguments(args);
+        // those settings are applied once: the arguments of the page are read without them, so a value that the check above
+        // accepts, such as a timeout of '9.0' or a flushMode of ' MANUAL ', is not parsed a second time and refused there
+        Map pageArguments = new HashMap(args);
+        pageArguments.keySet().removeAll(QUERY_SETTINGS);
+        GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, pageArguments, conversionService);
         GrailsHibernateTemplate ght = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) datastore, getDefaultFlushMode());
-        return new PagedResultList(ght, criteria);
+        PagedResultList paged = new PagedResultList(ght, criteria);
+        Object mode = args.get("flushMode");
+        if (mode != null) {
+            // the value was checked above, so this cannot fail
+            paged.flushMode = mode instanceof org.hibernate.FlushMode ?
+                    (org.hibernate.FlushMode) mode : org.hibernate.FlushMode.valueOf(String.valueOf(mode).trim());
+        }
+        return paged;
     }
 
     /**

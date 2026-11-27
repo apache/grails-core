@@ -1406,3 +1406,9 @@ only shows in a schema that Hibernate creates: an application that manages its s
 keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
 The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
 enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
+
+==== Query arguments reach where queries and dynamic finders with Hibernate 5
+
+`findAll(Map queryParams, Closure whereCriteria)`, the dynamic finders and the `where` queries document the `readOnly`, `fetchSize`, `timeout` and `flushMode` arguments, but Hibernate 5 ignored them for these queries: `Person.where { age > 18 }.list(readOnly: true)`, `Person.findAll(readOnly: true) { age > 18 }` and `Person.findAllByAgeGreaterThan(18, [readOnly: true])` loaded modifiable entities (issue https://github.com/apache/grails-core/issues/16808[#16808]). They now apply, as they already did for `list(args)` and `createCriteria().list(args)`. For these queries and for `createCriteria().list(args)`, a `fetchSize` or `timeout` that is not a whole number, or a `flushMode` that is not the name of a Hibernate `FlushMode`, throws an `IllegalArgumentException` that names the argument, and the total of a paged list is read with the `flushMode` and `timeout` of the call, so a page read with `flushMode: 'MANUAL'` does not flush for its `totalCount` either. `list(args)` is unchanged: it still accepts a `timeout` such as `0.5`, and the total of `list(max: 10, flushMode: 'MANUAL')` is read with the default flush mode.
+
+To keep the earlier result, remove `readOnly`, `fetchSize`, `timeout` or `flushMode` from the call.

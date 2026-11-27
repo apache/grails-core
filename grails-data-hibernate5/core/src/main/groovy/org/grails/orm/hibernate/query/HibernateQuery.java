@@ -20,8 +20,10 @@ package org.grails.orm.hibernate.query;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.hibernate.Criteria;
+import org.hibernate.FlushMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.dialect.Dialect;
@@ -35,6 +37,7 @@ import org.hibernate.type.TypeResolver;
 import grails.orm.HibernateCriteriaBuilder;
 import grails.orm.RlikeExpression;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.query.api.QueryArgumentsAware;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
@@ -47,7 +50,11 @@ import org.grails.orm.hibernate.HibernateSession;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public class HibernateQuery extends AbstractHibernateQuery {
+public class HibernateQuery extends AbstractHibernateQuery implements QueryArgumentsAware {
+
+    /** The flush mode and the timeout of the query arguments, which a copy of the query for a count has to keep. */
+    private FlushMode flushMode;
+    private Integer timeout;
 
     public static final HibernateCriterionAdapter HIBERNATE_CRITERION_ADAPTER = new HibernateCriterionAdapter();
 
@@ -79,6 +86,58 @@ public class HibernateQuery extends AbstractHibernateQuery {
     public Criteria getHibernateCriteria() {
         applyDeferredJoins();
         return this.criteria;
+    }
+
+    /**
+     * Applies the Hibernate settings of a GORM query arguments map to the criteria: {@code fetchSize},
+     * {@code timeout}, {@code readOnly} and {@code flushMode}. Settings absent from the map are left as they are.
+     * The other arguments, such as {@code max} and {@code sort}, are applied by the caller.
+     *
+     * @param arguments the query arguments, may be {@code null}
+     * @throws IllegalArgumentException when {@code fetchSize} or {@code timeout} is not a whole number
+     */
+    @Override
+    public void setArguments(Map arguments) {
+        if (arguments == null || criteria == null) {
+            return;
+        }
+        if (arguments.get("fetchSize") != null) {
+            criteria.setFetchSize(wholeNumber("fetchSize", arguments.get("fetchSize")));
+        }
+        if (arguments.get("timeout") != null) {
+            timeout = wholeNumber("timeout", arguments.get("timeout"));
+            criteria.setTimeout(timeout);
+        }
+        if (arguments.get("readOnly") != null) {
+            criteria.setReadOnly(Boolean.parseBoolean(String.valueOf(arguments.get("readOnly"))));
+        }
+        Object mode = arguments.get("flushMode");
+        if (mode instanceof FlushMode) {
+            flushMode = (FlushMode) mode;
+            criteria.setFlushMode(flushMode);
+        }
+        else if (mode != null) {
+            try {
+                flushMode = FlushMode.valueOf(String.valueOf(mode).trim());
+            }
+            catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("The flushMode argument must be one of " + java.util.Arrays.toString(FlushMode.values()) + " but was [" + mode + "]", e);
+            }
+            criteria.setFlushMode(flushMode);
+        }
+    }
+
+    /**
+     * The value as an {@code int}, when it is a whole number that fits in one. A number with a fraction, such as 0.5, or one
+     * outside the range of an {@code int} is refused, not cut to a different number.
+     */
+    private static int wholeNumber(String argument, Object value) {
+        try {
+            return new java.math.BigDecimal(String.valueOf(value).trim()).intValueExact();
+        }
+        catch (NumberFormatException | ArithmeticException e) {
+            throw new IllegalArgumentException("The " + argument + " argument must be a whole number but was [" + value + "]", e);
+        }
     }
 
     /**
@@ -141,6 +200,14 @@ public class HibernateQuery extends AbstractHibernateQuery {
             while (subcriteriaIterator.hasNext()) {
                 CriteriaImpl.Subcriteria sub = (CriteriaImpl.Subcriteria) subcriteriaIterator.next();
                 newCriteria.createAlias(sub.getPath(), sub.getAlias(), sub.getJoinType(), sub.getWithClause());
+            }
+            // the copy runs the count of a page, which has to read the data the page read: a flush mode or a timeout that the
+            // query arguments gave belongs to it too
+            if (flushMode != null) {
+                newCriteria.setFlushMode(flushMode);
+            }
+            if (timeout != null) {
+                newCriteria.setTimeout(timeout);
             }
             return new HibernateQuery(newCriteria, hibernateSession, entity);
         });
