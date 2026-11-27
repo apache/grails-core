@@ -48,8 +48,9 @@ import java.lang.annotation.Target
 @interface ToolHints {
 
     /**
-     * @return whether the tool changes nothing: no file of the project and no data. Then the other
-     * hints say nothing
+     * @return whether the tool changes nothing: no data, and no file of the project but one whose name
+     * the caller gives it for what it writes, which the caller has chosen to have written. Then the
+     * other hints say nothing
      */
     boolean readOnlyHint() default false
 

@@ -56,6 +56,19 @@ class DatabaseMigrationToolsCompleteSpec extends Specification {
         className << toolClasses()
     }
 
+    def "the tools that never change the database are read-only, though two of them write a file the caller names"() {
+        when:
+        Map<String, Map> hints = toolClasses().collectEntries { String className ->
+            Map descriptor = descriptorOf(className)
+            [(descriptor.name): descriptor.hints]
+        }
+
+        then:
+        hints.findAll { String name, Map toolHints -> toolHints.readOnlyHint }.keySet() == ['dbm-validate', 'dbm-status', 'dbm-list-locks'] as Set
+        hints['dbm-status'] == [readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true]
+        hints['dbm-list-locks'] == [readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true]
+    }
+
     // the tools of the plugin the registry of the tools finds, by the name of their class
     private static List<String> toolClasses() {
         ApplicationContextCommandRegistry.instance.findCommands()

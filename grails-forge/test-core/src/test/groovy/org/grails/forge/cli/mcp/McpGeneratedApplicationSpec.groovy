@@ -254,12 +254,22 @@ class McpGeneratedApplicationSpec extends Specification {
         when:
         Tool update = tools['dbm-update']
         Tool validate = tools['dbm-validate']
+        Tool status = tools['dbm-status']
+        Tool listLocks = tools['dbm-list-locks']
 
         then:
-        update != null && validate != null
+        update != null && validate != null && status != null && listLocks != null
         ((Map) update.inputSchema().get('properties')).keySet().containsAll(['dataSource', 'defaultSchema', 'contexts'])
         update.annotations().readOnlyHint() == false
         validate.annotations().readOnlyHint() == true
+
+        and: 'the tools that only read the database are read-only, though they write a file the caller names'
+        status.annotations().readOnlyHint() == true
+        status.annotations().destructiveHint() == false
+        listLocks.annotations().readOnlyHint() == true
+        listLocks.annotations().destructiveHint() == false
+        tools.findAll { String name, Tool tool -> name.startsWith('dbm-') && tool.annotations()?.readOnlyHint() }.keySet() ==
+                ['dbm-validate', 'dbm-status', 'dbm-list-locks'] as Set
         ((Map) update.meta()['org.apache.grails/command']).origin != 'application'
         tools.keySet().count { it.startsWith('dbm-') } > 20
     }

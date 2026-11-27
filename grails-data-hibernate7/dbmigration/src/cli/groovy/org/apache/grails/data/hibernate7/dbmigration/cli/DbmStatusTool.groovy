@@ -27,7 +27,8 @@ import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolOption
 import org.apache.grails.core.cli.ToolParameter
 
-@ToolHints(readOnlyHint = false, destructiveHint = true)
+// It never changes the database, and writes a file only when the caller names one: read-only, as dbm-validate is
+@ToolHints(readOnlyHint = true, destructiveHint = false, idempotentHint = true)
 @DatabaseMigrationOptions
 @ToolOption(names = ['--verbose'], arity = '1', label = 'TRUE-OR-FALSE', choices = ['true', 'false'], caseInsensitive = true, defaultValue = 'true',
         description = 'Lists the change sets that have not run when true, and only counts them when false')

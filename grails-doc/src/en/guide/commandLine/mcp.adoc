@@ -328,7 +328,7 @@ The server notices that the list may have changed: it looks at the files the lis
 $ claude mcp add grails-readonly -- grails mcp --read-only
 ----
 
-With `--read-only` the server offers only the tools whose hints say that they change nothing (`readOnlyHint`): `feature_list`, `feature_find`, `feature_show`, `feature_diff`, the `plugin_` commands, `project_show`, `project_health`, `project_regenerate`, `stats`, `dependency-report`, and the tools of the application and of the plugins of Grails that declare that they change nothing, such as `dbm-validate`, `query-tail` and `url-mappings-report`. `refresh_tools` is not offered either. The instructions of the server tell the agent so. It is the server for an agent that should look at a project and not change it, as one that reads text from outside, such as web pages or issues.
+With `--read-only` the server offers only the tools whose hints say that they change nothing (`readOnlyHint`): `feature_list`, `feature_find`, `feature_show`, `feature_diff`, the `plugin_` commands, `project_show`, `project_health`, `project_regenerate`, `stats`, `dependency-report`, and the tools of the application and of the plugins of Grails that declare that they change nothing, such as `dbm-validate`, `dbm-status`, `dbm-list-locks`, `query-tail` and `url-mappings-report`. `dbm-status` and `dbm-list-locks` count as read-only because they never change the database, and write a file only when they are given its name. `refresh_tools` is not offered either. The instructions of the server tell the agent so. It is the server for an agent that should look at a project and not change it, as one that reads text from outside, such as web pages or issues.
 
 [[mcpSafety]]
 === Safety
