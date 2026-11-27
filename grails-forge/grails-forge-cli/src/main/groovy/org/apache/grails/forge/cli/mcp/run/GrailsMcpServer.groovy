@@ -212,6 +212,7 @@ final class GrailsMcpServer implements McpHandler, Closeable {
         output.errors = ran.streams.standardError()
         output.toolResult = ToolResult.take(ran.streams)
         output.json = tool.jsonResult(arguments)
+        output.reportOutcomes = reportOutcomes(tool)
         output.log = logs.keep(tool.name, CommandOutput.cleaned(output.merged))
         output.note = tool.name == 'create-tool' && ran.exitCode == 0 ? CommandOutput.LISTED_AFTER_COMPILE : null
         Map<String, Object> result = CommandOutput.result(output)
@@ -263,6 +264,14 @@ final class GrailsMcpServer implements McpHandler, Closeable {
         } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt()
         }
+    }
+
+    // the outcomes of the JSON document of the command of a tool that are a report, as its policy says in how the tool runs
+    private static List<String> reportOutcomes(McpTool tool) {
+        Object run = tool.meta.get(McpNames.META_RUN)
+        Object outcomes = run instanceof Map ? ((Map) run).get(ToolProjection.REPORT_OUTCOMES) : null
+        return outcomes instanceof List ? ((List<Object>) outcomes).findAll { Object each -> each instanceof String }.collect { Object each -> (String) each } :
+                Collections.<String>emptyList()
     }
 
     // a call whose arguments the tool cannot be given: a result that is an error, and says which argument and why

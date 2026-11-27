@@ -25,6 +25,7 @@ import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ToolResult
 import org.apache.grails.forge.cli.mcp.McpNames
+import org.apache.grails.forge.cli.mcp.tools.CommandPolicy
 
 /**
  * What a call of {@code grails mcp} gives its client: the result of the command line it ran, made from
@@ -32,7 +33,11 @@ import org.apache.grails.forge.cli.mcp.McpNames
  *
  * <ul>
  * <li>Exit code 0 is a result that is no error; 1, a command that failed, and 2, a command line that was
- * refused, are a result that is an error, whose lines say what to correct.</li>
+ * refused, are a result that is an error, whose lines say what to correct. One exception: a command whose
+ * JSON document is a report, as {@code project regenerate --diff --json} with files that differ, ends with
+ * 1 although it did what it was asked. Where it wrote its document, and the document has one of the
+ * {@linkplain Ran#reportOutcomes outcomes that are a report}, the result is no error; the exit code is in
+ * its {@code _meta} all the same. Exit code 1 without such a document, and exit code 2, are errors.</li>
  * <li>A command whose output is text gives one text block: everything it wrote, its output and its errors
  * in the order they were written. A command whose output is a JSON document gives the document as the
  * structured content of the result and as a text block, whole up to {@value #MAX_DOCUMENT_BYTES} bytes, and
@@ -102,14 +107,14 @@ final class CommandOutput {
      * @return the result, as the protocol's {@code CallToolResult}
      */
     static Map<String, Object> result(Ran ran) {
-        boolean failed = ran.exitCode != 0
+        Map<String, Object> document = ran.json ? document(ran.output) : null
+        boolean failed = ran.exitCode != 0 && !isReport(ran, document)
         int head = failed ? FAILURE_HEAD : SUCCESS_HEAD
         int tail = failed ? FAILURE_TAIL : SUCCESS_TAIL
         String whole = ran.log == null ? 'grails mcp keeps no file of the output outside a project' :
                 ran.log.file != null ? "the whole output is ${ran.log.file}".toString() : ran.log.reason
         List<Map<String, Object>> content = []
         boolean truncated = false
-        Map<String, Object> document = ran.json ? document(ran.output) : null
         if (document != null) {
             content.add(text(ran.output.trim()))
             String errors = cleaned(ran.errors)
@@ -154,6 +159,12 @@ final class CommandOutput {
         meta.put('log', ran.log?.uri)
         result.put('_meta', [(McpNames.META_RESULT): meta] as Map<String, Object>)
         return result
+    }
+
+    // A command that ended with 1 and wrote the report it was asked for: its document has an outcome that is a report. Any
+    // other exit code, and a document with another outcome, as that of a command that could not read the project, is not.
+    private static boolean isReport(Ran ran, Map<String, Object> document) {
+        return ran.exitCode == 1 && document != null && ran.reportOutcomes.contains(document.get(CommandPolicy.OUTCOME))
     }
 
     /**
@@ -286,6 +297,12 @@ final class CommandOutput {
 
         /** Whether its output is a JSON document. */
         boolean json
+
+        /**
+         * The outcomes of its JSON document that are a report, which make a result that is no error although the
+         * command ended with exit code 1; none for most commands.
+         */
+        List<String> reportOutcomes = []
 
         /** Where the whole output was kept; {@code null} where nothing was tried, which is outside a project. */
         OutputLog.Kept log

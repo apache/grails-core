@@ -52,7 +52,8 @@ import org.apache.grails.forge.cli.mcp.McpToolSet
  * passes on.</li>
  * <li>Its {@code _meta} has, under {@link McpNames#META_COMMAND}, the whole entry {@code help --json}
  * has for it, without its commands, and under {@link McpNames#META_RUN} the command line each call
- * starts with, its lane, and whether its output is JSON.</li>
+ * starts with, its lane, whether its output is JSON, and the outcomes of that JSON that are a report
+ * and not an error, where a command has such outcomes ({@link CommandPolicy#reportOutcomes}).</li>
  * </ul>
  *
  * <p>Outside a project the commands of a project are not offered, since none of them can run there. A
@@ -86,6 +87,13 @@ final class ToolProjection {
 
     /** How the arguments of a tool that declares nothing are given, in {@link McpNames#META_RUN}: as they are. */
     public static final String FREE_FORM = 'free-form'
+
+    /**
+     * The member of {@link McpNames#META_RUN} with the outcomes of the JSON document of a command that are a
+     * report, and make a result that is no error although the command ends with exit code 1; there only for a
+     * command that has such outcomes.
+     */
+    public static final String REPORT_OUTCOMES = 'reportOutcomes'
 
     /** The diagnostic that says that the commands of a project are not offered outside one. */
     public static final String OUTSIDE_A_PROJECT = 'The commands of a project are not offered: grails mcp serves the directory it was started in, which is in no project. ' +
@@ -249,6 +257,9 @@ final class ToolProjection {
         List<String> notOffered = policy.leftOutOptions.findAll { String option -> listed.contains(option) }
         if (!notOffered.isEmpty()) {
             runs.put('leftOut', notOffered)
+        }
+        if (!policy.reportOutcomes.isEmpty()) {
+            runs.put(REPORT_OUTCOMES, policy.reportOutcomes)
         }
         if (policy.isolated) {
             runs.put('isolated', true)

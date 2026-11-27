@@ -158,6 +158,18 @@ class CommandPolicySpec extends CommandSpec {
         CommandPolicy.rows()*.name.toUnique().size() == CommandPolicy.rows().size()
     }
 
+    void "the JSON documents that are a report although their command ends with exit code 1 are those of three rows, which say so in their notes"() {
+        given:
+        List<CommandPolicy> reporting = CommandPolicy.rows().findAll { !it.reportOutcomes.isEmpty() }
+
+        expect: 'the outcomes that are a report, and not those of a failure, which these commands write a document for too'
+        reporting.collectEntries { [(it.name): it.reportOutcomes] } ==
+                [feature_add: [CommandPolicy.CONFLICTS], project_health: [CommandPolicy.CHECKED], project_regenerate: [CommandPolicy.CHANGES]]
+        reporting.every { CommandPolicy row -> row.json != NEVER && row.note.contains(' a result and not an error') && row.note.contains('exit code 1') }
+        !reporting*.reportOutcomes.flatten().any { it in ['refused', 'failed', 'invalid-record', 'no-changes'] }
+        CommandPolicy.ofFeatureCommand().reportOutcomes.isEmpty()
+    }
+
     void "the commands that start the project generator run in its lane, and the others not"() {
         expect:
         CommandPolicy.rows().findAll { it.exposed }.every { CommandPolicy row ->

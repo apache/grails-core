@@ -145,7 +145,7 @@ Every command that `help --json` lists in the directory of the server is a tool,
 
 | `project_show`, `project_health`, `project_migrate`, `project_regenerate`
 | Yes
-| `project_show` and `project_health` always give their JSON documents. `project_regenerate` compares only, as `project regenerate --diff --json`, and writes nothing. As on the command line, `project_regenerate` ends with exit code 1 when a file differs from what the application was generated with, and `project_health` when it finds an error, so their results are marked as errors (`isError`) and still have the JSON document.
+| `project_show` and `project_health` always give their JSON documents. `project_regenerate` compares only, as `project regenerate --diff --json`, and writes nothing. As on the command line, `project_regenerate` ends with exit code 1 when a file differs from what the application was generated with, and `project_health` when it finds an error; the document is then the answer that was asked for, so the result is not marked as an error, and its `_meta` keeps the exit code (see <<mcpResults,Results>>).
 
 | The code generation commands: `create-controller`, `create-service`, `create-domain-class`, `create-taglib`, `create-interceptor`, `create-job`, `create-restful-controller`, `create-domain-resource`, `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-tool`, `add-property`, `install-templates`, and the `create-` command of each feature of the project that has one
 | Yes, those `help --json` lists in the project
@@ -290,6 +290,8 @@ A call that is not cancelled has no time limit: `test-app` can take an hour. Its
 ==== Results, Logs and Progress
 
 A call ends with the exit code of its command line. Exit code 0 is a result; 1, a command that failed, and 2, a command line that was refused, are a result marked as an error (`isError`), whose text has the lines of the command that say what to correct.
+
+A report is the one exception. `project_regenerate` with files that differ from what the application was generated with (the outcome `changes`), `project_health` with findings that fail it (the outcome `checked`, with `passed` false), and `feature_add` with `dry-run` when the features would conflict with the files of the project (the outcome `conflicts`) end with exit code 1, as on the command line, but they wrote the document that was asked for: their result is not marked as an error, and `exitCode` in its `_meta` is 1. The same commands write a document when they fail too, as when the record of the project cannot be read, with another outcome, and that result is an error, as is every call that ends with exit code 2 and every one that ends with 1 without a document.
 
 * *Text.* The result of a command is what it wrote, its standard output and its standard error in the order it wrote them, as one text.
 * *JSON.* A command that writes a JSON document, as `project_show`, `feature_add` with `dry-run` and `plugin_list` do, gives the document as the structured content of the result and as its text, and what it wrote to its standard error as a second text. A document of more than 256 KiB is given as text, as any other output.

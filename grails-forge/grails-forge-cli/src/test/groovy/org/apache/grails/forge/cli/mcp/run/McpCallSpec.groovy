@@ -183,6 +183,76 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         new JsonSlurper().parseText(((TextResourceContents) mcp.client.resource('grails://project/health').read().contents()[0]).text()) instanceof Map
     }
 
+    void "a report whose command ends with exit code 1 is a result and not an error, with the exit code in its _meta, and a failure that writes a document is still an error"() {
+        given: 'a project that was edited, as every project is: its Gradle wrapper is not the one it was generated with'
+        project()
+        serve()
+
+        when:
+        CallToolResult differs = mcp.client.tool('project_regenerate').call()
+
+        then: 'the files that differ are the answer'
+        !differs.isError()
+        ((Map) differs.structuredContent()).outcome == 'changes'
+        ((Map) differs.structuredContent()).hasChanges == true
+        ((List<Map>) ((Map) differs.structuredContent()).files)*.path.contains('gradlew')
+        ran(differs).exitCode == 1
+
+        when: 'the health of a project whose Gradle wrapper names no Gradle, which is an error finding'
+        new File(dir, 'gradle/wrapper/gradle-wrapper.properties').delete()
+        CallToolResult health = mcp.client.tool('project_health').call()
+        Map<String, Object> checked = (Map<String, Object>) health.structuredContent()
+
+        then: 'the findings are the answer'
+        !health.isError()
+        checked.outcome == 'checked'
+        checked.passed == false
+        ((Map) checked.counts).error > 0
+        ran(health).exitCode == 1
+
+        when: 'the record of the project is gone, so that nothing can be compared'
+        new File(dir, '.grails').deleteDir()
+        CallToolResult failed = mcp.client.tool('project_regenerate').call()
+
+        then: 'the command wrote a document all the same, and its outcome is a failure: the result is an error'
+        failed.isError()
+        ((Map) failed.structuredContent()).outcome == 'invalid-record'
+        ran(failed).exitCode == 1
+    }
+
+    void "a dry run of feature_add that finds conflicts is a result and not an error, and one that names no feature is an error with exit code 2"() {
+        given: 'a project whose configuration the feature would change where it was edited'
+        project()
+        File config = new File(dir, 'grails-app/conf/application.yml')
+        config.text = config.text.replace('url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE', 'url: jdbc:h2:file:./ourDevDb')
+        serve()
+
+        when:
+        CallToolResult conflicts = mcp.client.tool('feature_add').arguments([feature: ['postgres'], 'dry-run': true]).call()
+
+        then:
+        !conflicts.isError()
+        ((Map) conflicts.structuredContent()).outcome == 'conflicts'
+        ((List<Map>) ((Map) conflicts.structuredContent()).files).find { it.action == 'conflict' }.path == 'grails-app/conf/application.yml'
+        ran(conflicts).exitCode == 1
+
+        when:
+        CallToolResult unknown = mcp.client.tool('feature_add').arguments([feature: ['no-such-feature'], 'dry-run': true]).call()
+
+        then: 'a mistake in what was asked is an error, also where the command wrote a document'
+        unknown.isError()
+        ((Map) unknown.structuredContent()).outcome == 'refused'
+        ran(unknown).exitCode == 2
+
+        when: 'without dry-run there is no document, and exit code 1 is an error'
+        CallToolResult added = mcp.client.tool('feature_add').arguments([feature: ['postgres']]).call()
+
+        then:
+        added.isError()
+        added.structuredContent() == null
+        ran(added).exitCode == 1
+    }
+
     void "the whole outputs of the newest calls are kept, and only files of the directory of the project are read as resources"() {
         given:
         project()

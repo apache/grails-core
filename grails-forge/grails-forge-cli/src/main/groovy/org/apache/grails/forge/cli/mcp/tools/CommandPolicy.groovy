@@ -35,6 +35,14 @@ import org.apache.grails.forge.cli.mcp.McpNames
  * stays with the application, is not offered. And a command is offered by its own name only, never by
  * another name or a deprecated one.</p>
  *
+ * <p>A command whose JSON document is a report can end with exit code 1 although the report is what was
+ * asked for: {@code project regenerate --diff --json} when a file differs from what the application was
+ * generated with, {@code project health --json} when it has an error finding, and
+ * {@code feature add --dry-run --json} when the features would conflict with the files of the project.
+ * Its row names the {@linkplain #reportOutcomes outcomes} of its document that are such a report. Each of
+ * these commands writes a document for a failure too, with another outcome, so it is the outcome, and not
+ * the exit code, that tells a report from a failure.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -72,6 +80,18 @@ final class CommandPolicy {
     /** The options that name a new source of code: feature packs, feature catalogs and presets. */
     public static final List<String> SOURCES_OF_CODE = ['--feature-catalog', '--feature-pack-dir', '--feature-pack-repository', '--feature-pack-sha256', '--preset'].asImmutable()
 
+    /** The member of the JSON document of a command that says what the command came to. */
+    public static final String OUTCOME = 'outcome'
+
+    /** The outcome of {@code project regenerate --diff --json} whose files differ from what the application was generated with. */
+    public static final String CHANGES = 'changes'
+
+    /** The outcome of {@code feature add --dry-run --json} whose features would conflict with the files of the project. */
+    public static final String CONFLICTS = 'conflicts'
+
+    /** The outcome of {@code project health --json} whose checks ran, whatever they found. */
+    public static final String CHECKED = 'checked'
+
     /** The option that names a plugin index other than the one the environment configures. */
     public static final String PLUGIN_INDEX = '--plugin-index'
 
@@ -92,7 +112,7 @@ final class CommandPolicy {
 
     private static final List<CommandPolicy> ROWS = table()
 
-    private static final CommandPolicy FEATURE_COMMAND = new CommandPolicy([], true, null, Lane.DIRECT, changes(true, false, false), [], [], JsonForm.NEVER, null, [], [], false)
+    private static final CommandPolicy FEATURE_COMMAND = new CommandPolicy([], true, null, Lane.DIRECT, changes(true, false, false), [], [], JsonForm.NEVER, null, [], [], [], false)
 
     /** The words of the command, as {@code ['feature', 'add']}; none for the row of the commands the features of an application give. */
     final List<String> path
@@ -128,13 +148,21 @@ final class CommandPolicy {
     final List<String> passedAsIs
 
     /**
+     * The outcomes of its JSON document, the member {@value #OUTCOME}, that are the report the command was
+     * asked for, also where the command ends with exit code 1: a result with such a document is no error,
+     * and its {@code _meta} keeps the exit code. Empty for a command whose exit code 1 is always a failure.
+     */
+    final List<String> reportOutcomes
+
+    /**
      * Whether the command is run in a process of its own rather than in the server's. Reserved: no command
      * needs it, and the server has no such process yet.
      */
     final boolean isolated
 
     private CommandPolicy(List<String> path, boolean exposed, String reason, Lane lane, Map<String, Object> annotations, List<String> forcedOptions,
-                          List<String> leftOutOptions, JsonForm json, String note, List<String> featureValued, List<String> passedAsIs, boolean isolated) {
+                          List<String> leftOutOptions, JsonForm json, String note, List<String> featureValued, List<String> passedAsIs,
+                          List<String> reportOutcomes, boolean isolated) {
         this.path = Collections.unmodifiableList(new ArrayList<String>(path))
         this.exposed = exposed
         this.reason = reason
@@ -146,6 +174,7 @@ final class CommandPolicy {
         this.note = note
         this.featureValued = Collections.unmodifiableList(new ArrayList<String>(featureValued))
         this.passedAsIs = Collections.unmodifiableList(new ArrayList<String>(passedAsIs))
+        this.reportOutcomes = Collections.unmodifiableList(new ArrayList<String>(reportOutcomes))
         this.isolated = isolated
     }
 
@@ -183,7 +212,9 @@ final class CommandPolicy {
         }
         rows.add(notExposed(['create-webapp'], 'another name of create-app, which is offered'))
         rows.add(exposed(['feature', 'add'], Lane.GENERATOR, changes(true, true, true), [], SOURCES_OF_CODE + [JSON], JsonForm.WITH_DRY_RUN,
-                'With dry-run the result is a JSON document. ' + NO_NEW_SOURCE, [FEATURE], []))
+                'With dry-run the result is a JSON document. A dry run that finds that the features would conflict with the files of the project ' +
+                        'is a result and not an error, with the outcome conflicts and the files that conflict, though the command ends with exit code 1. ' +
+                        NO_NEW_SOURCE, [FEATURE], []).reporting([CONFLICTS]))
         rows.add(exposed(['feature', 'list'], Lane.GENERATOR, readOnly(true), [], SOURCES_OF_CODE, JsonForm.NEVER, 'Feature packs cannot be named.', [], []))
         rows.add(exposed(['feature', 'find'], Lane.GENERATOR, readOnly(true), [JSON], SOURCES_OF_CODE + [JSON], JsonForm.ALWAYS,
                 'The result is a JSON document. Feature packs and feature catalogs cannot be named.', [], []))
@@ -199,12 +230,15 @@ final class CommandPolicy {
         rows.add(notExposed(['list-plugins'], 'the same command as plugin list, which is offered as plugin_list'))
         rows.add(notExposed(['plugin-info'], 'the same command as plugin show, which is offered as plugin_show'))
         rows.add(exposed(['project', 'show'], Lane.DIRECT, readOnly(false), [JSON], [JSON], JsonForm.ALWAYS, 'The result is a JSON document.', [], []))
-        rows.add(exposed(['project', 'health'], Lane.DIRECT, readOnly(false), [JSON], [JSON], JsonForm.ALWAYS, 'The result is a JSON document.', [], []))
+        rows.add(exposed(['project', 'health'], Lane.DIRECT, readOnly(false), [JSON], [JSON], JsonForm.ALWAYS,
+                'The result is a JSON document. A project with error findings is a result and not an error, with the outcome checked and passed false, ' +
+                        'though the command ends with exit code 1.', [], []).reporting([CHECKED]))
         rows.add(exposed(['project', 'migrate'], Lane.GENERATOR, changes(true, false, false), [], SOURCES_OF_CODE, JsonForm.NEVER, NO_NEW_SOURCE,
                 [FEATURES, EXCLUDE_FEATURES], []))
         rows.add(exposed(['project', 'regenerate'], Lane.GENERATOR, readOnly(false), ['--diff', JSON], SOURCES_OF_CODE + ['--diff', JSON, '--output', '--force'], JsonForm.ALWAYS,
-                'It runs only as --diff --json: it writes nothing, and its result is a JSON document of the files that are not what the application was generated with.',
-                [], []))
+                'It runs only as --diff --json: it writes nothing, and its result is a JSON document of the files that are not what the application was generated with. ' +
+                        'Files that differ, as in any project that was edited, are a result and not an error, with the outcome changes, ' +
+                        'though the command ends with exit code 1.', [], []).reporting([CHANGES]))
         for (String command : CODE_GENERATION) {
             rows.add(exposed([command], Lane.DIRECT, changes(true, false, false), [], [], JsonForm.NEVER,
                     command == 'create-tool' ? 'A new tool is offered once the project is compiled: call compile or refresh_tools.' : null, [], []))
@@ -259,11 +293,16 @@ final class CommandPolicy {
 
     private static CommandPolicy exposed(List<String> path, Lane lane, Map<String, Object> annotations, List<String> forced, List<String> leftOut, JsonForm json, String note,
                                          List<String> featureValued, List<String> passedAsIs) {
-        return new CommandPolicy(path, true, null, lane, annotations, forced, leftOut, json, note, featureValued, passedAsIs, false)
+        return new CommandPolicy(path, true, null, lane, annotations, forced, leftOut, json, note, featureValued, passedAsIs, [], false)
+    }
+
+    // the same row, whose JSON document is a report with these outcomes
+    private CommandPolicy reporting(List<String> outcomes) {
+        return new CommandPolicy(path, exposed, reason, lane, annotations, forcedOptions, leftOutOptions, json, note, featureValued, passedAsIs, outcomes, isolated)
     }
 
     private static CommandPolicy notExposed(List<String> path, String reason) {
-        return new CommandPolicy(path, false, reason, Lane.DIRECT, Collections.<String, Object>emptyMap(), [], [], JsonForm.NEVER, null, [], [], false)
+        return new CommandPolicy(path, false, reason, Lane.DIRECT, Collections.<String, Object>emptyMap(), [], [], JsonForm.NEVER, null, [], [], [], false)
     }
 
     // a command that changes nothing: the other two hints mean nothing then, and are not given

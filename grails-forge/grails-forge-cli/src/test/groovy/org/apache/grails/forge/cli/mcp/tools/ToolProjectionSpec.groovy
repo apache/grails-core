@@ -106,6 +106,20 @@ class ToolProjectionSpec extends Specification {
         !refresh.meta.containsKey(McpNames.META_COMMAND)
     }
 
+    void "a tool whose JSON document is a report says in how it runs which outcomes of the document are a report, and in its description what that means"() {
+        when:
+        Map<String, McpTool> byName = McpToolSamples.tools('web-application').tools.collectEntries { [(it.name): it] }
+
+        then:
+        byName.project_regenerate.meta[McpNames.META_RUN][ToolProjection.REPORT_OUTCOMES] == ['changes']
+        byName.project_health.meta[McpNames.META_RUN][ToolProjection.REPORT_OUTCOMES] == ['checked']
+        byName.feature_add.meta[McpNames.META_RUN][ToolProjection.REPORT_OUTCOMES] == ['conflicts']
+        byName.project_regenerate.description.contains('Files that differ, as in any project that was edited, are a result and not an error, with the outcome changes, ' +
+                'though the command ends with exit code 1.')
+        byName.findAll { String name, McpTool tool -> !(name in ['project_regenerate', 'project_health', 'feature_add']) }
+                .every { String name, McpTool tool -> !((Map) tool.meta[McpNames.META_RUN]).containsKey(ToolProjection.REPORT_OUTCOMES) }
+    }
+
     void "the tools of the application and its plugins are offered, but not one that reads what is typed"() {
         when:
         McpToolSet tools = McpToolSamples.tools('application-with-tools')

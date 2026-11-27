@@ -198,7 +198,7 @@
       "name": "feature_add",
       "title": "grails feature add",
       "lane": "generator",
-      "description": "Adds features to the application in the current directory: its files and its record become those of an application that was created with them. A feature the application already has is left as it is. A feature takes the place of one the application has by default, as postgres takes that of h2, and the command says which it replaces; a feature that was asked for by name, when the application was created or added to, is replaced only with --replace, and an option the application was created with is never replaced. The files you changed keep your changes. When a feature changes or takes out what you changed too, or a file it writes is there already, nothing is written and the files are named. The feature of a plugin is added by the coordinates of the plugin, group:artifact:version, whose jar is taken from a repository as the create commands take it; by its name with the directory of its feature pack (--feature-pack-dir); or by its name in a feature catalog. The record then names the pack as it does for an application that was created with it. A pack is code: use one only when you trust where it comes from. An application with the feature of a feature pack that is not part of Grails gets a feature only with that very pack: the jar of a plugin is fetched again by the coordinates and the SHA-256 its record has, and the pack of a directory is given again with --feature-pack-dir. With dry-run the result is a JSON document. Feature packs and feature catalogs cannot be named, and a feature named by the coordinates of a plugin is refused.",
+      "description": "Adds features to the application in the current directory: its files and its record become those of an application that was created with them. A feature the application already has is left as it is. A feature takes the place of one the application has by default, as postgres takes that of h2, and the command says which it replaces; a feature that was asked for by name, when the application was created or added to, is replaced only with --replace, and an option the application was created with is never replaced. The files you changed keep your changes. When a feature changes or takes out what you changed too, or a file it writes is there already, nothing is written and the files are named. The feature of a plugin is added by the coordinates of the plugin, group:artifact:version, whose jar is taken from a repository as the create commands take it; by its name with the directory of its feature pack (--feature-pack-dir); or by its name in a feature catalog. The record then names the pack as it does for an application that was created with it. A pack is code: use one only when you trust where it comes from. An application with the feature of a feature pack that is not part of Grails gets a feature only with that very pack: the jar of a plugin is fetched again by the coordinates and the SHA-256 its record has, and the pack of a directory is given again with --feature-pack-dir. With dry-run the result is a JSON document. A dry run that finds that the features would conflict with the files of the project is a result and not an error, with the outcome conflicts and the files that conflict, though the command ends with exit code 1. Feature packs and feature catalogs cannot be named, and a feature named by the coordinates of a plugin is refused.",
       "annotations": {"readOnlyHint":false,"destructiveHint":true,"idempotentHint":true,"openWorldHint":true},
       "inputSchema": {
         "type": "object",
@@ -223,7 +223,7 @@
         "required": ["feature"],
         "additionalProperties": false
       },
-      "run": {"commandLine":["--plain-output","--non-interactive","feature","add"],"arguments":"declared","lane":"generator","json":"with dry-run","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256","--json"]}
+      "run": {"commandLine":["--plain-output","--non-interactive","feature","add"],"arguments":"declared","lane":"generator","json":"with dry-run","leftOut":["--feature-catalog","--feature-pack-dir","--feature-pack-repository","--feature-pack-sha256","--json"],"reportOutcomes":["conflicts"]}
     },
     {
       "name": "feature_list",
@@ -335,7 +335,7 @@
       "name": "project_regenerate",
       "title": "grails project regenerate",
       "lane": "generator",
-      "description": "Generates the application in the current directory again as its record says it was generated, and changes nothing in it. With --output the application is written to another directory, whose record is then that of this one. With --diff nothing is written, and the files of this application that are not what was generated are named: those that were added, removed and changed. It runs only as --diff --json: it writes nothing, and its result is a JSON document of the files that are not what the application was generated with.",
+      "description": "Generates the application in the current directory again as its record says it was generated, and changes nothing in it. With --output the application is written to another directory, whose record is then that of this one. With --diff nothing is written, and the files of this application that are not what was generated are named: those that were added, removed and changed. It runs only as --diff --json: it writes nothing, and its result is a JSON document of the files that are not what the application was generated with. Files that differ, as in any project that was edited, are a result and not an error, with the outcome changes, though the command ends with exit code 1.",
       "annotations": {"readOnlyHint":true,"openWorldHint":false},
       "inputSchema": {
         "type": "object",
@@ -344,7 +344,7 @@
         },
         "additionalProperties": false
       },
-      "run": {"commandLine":["--plain-output","--non-interactive","project","regenerate","--diff","--json"],"arguments":"declared","lane":"generator","json":"always","leftOut":["--feature-pack-dir","--feature-pack-repository","--diff","--json","--output","--force"]}
+      "run": {"commandLine":["--plain-output","--non-interactive","project","regenerate","--diff","--json"],"arguments":"declared","lane":"generator","json":"always","leftOut":["--feature-pack-dir","--feature-pack-repository","--diff","--json","--output","--force"],"reportOutcomes":["changes"]}
     },
     {
       "name": "project_migrate",
@@ -383,7 +383,7 @@
       "name": "project_health",
       "title": "grails project health",
       "lane": "direct",
-      "description": "Says what the files of the project in the current directory show of its state: what makes its build fail (error), what the upgrade notes ask for and is not done or what is deprecated (warning), and what the guide recommends (advice), each with what to do. The project is read as text and nothing is changed: no Gradle, no generator and nothing of the network is run. A project still on Grails 7 or 8 is checked for what Grails 9 asks of it. The command ends with 1 when there is an error, and with --strict when there is a warning too; advice never fails it. The result is a JSON document.",
+      "description": "Says what the files of the project in the current directory show of its state: what makes its build fail (error), what the upgrade notes ask for and is not done or what is deprecated (warning), and what the guide recommends (advice), each with what to do. The project is read as text and nothing is changed: no Gradle, no generator and nothing of the network is run. A project still on Grails 7 or 8 is checked for what Grails 9 asks of it. The command ends with 1 when there is an error, and with --strict when there is a warning too; advice never fails it. The result is a JSON document. A project with error findings is a result and not an error, with the outcome checked and passed false, though the command ends with exit code 1.",
       "annotations": {"readOnlyHint":true,"openWorldHint":false},
       "inputSchema": {
         "type": "object",
@@ -392,7 +392,7 @@
         },
         "additionalProperties": false
       },
-      "run": {"commandLine":["--plain-output","--non-interactive","project","health","--json"],"arguments":"declared","lane":"direct","json":"always","leftOut":["--json"]}
+      "run": {"commandLine":["--plain-output","--non-interactive","project","health","--json"],"arguments":"declared","lane":"direct","json":"always","leftOut":["--json"],"reportOutcomes":["checked"]}
     },
     {
       "name": "create-controller",
