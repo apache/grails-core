@@ -136,9 +136,12 @@ ext {
             // fixes CVE-2026-59295 (DoS in the Apache HttpAsyncClient instrumentation) and CVE-2026-59296 (metric
             // name/tag injection via unsanitised newlines); the 1.15.13 patch is Enterprise Support only.
             'micrometer.version'            : '1.16.9',
-            // Security: 5.11.1 fixes CVE-2026-88033 (GridFS query-operator injection in file identifiers) and
-            // retains the 5.9.2 fix for CVE-2026-18710 (SOCKS5 proxy credentials exposed in logs).
-            'mongodb.version'               : '5.11.1',
+            // Security: 5.15.0 fixes CVE-2026-129931 (credentials in connection string parse errors) and
+            // CVE-2026-129933 (NUL bytes in SASL PLAIN credentials), and retains the 5.14.0 fix for CVE-2026-118581
+            // (raw document size prefix not checked against its bytes), the 5.13.0 fix for CVE-2026-129932 (SRV
+            // parent-domain check bypass), the 5.11.1 fix for CVE-2026-88033 (GridFS query-operator injection in
+            // file identifiers) and the 5.9.2 fix for CVE-2026-18710 (SOCKS5 proxy credentials exposed in logs).
+            'mongodb.version'               : '5.15.0',
             // Security: overrides spring-boot-dependencies (4.1.135.Final), which no open source Spring Boot 3.5.x
             // release will move. 4.1.137.Final and later fix CVE-2026-75595 (SNI routing bypass via a fragmented
             // TLS ClientHello) and the SPDY, HTTP/2 and CORS advisories against 4.1.135.Final. 4.1.140.Final adds
