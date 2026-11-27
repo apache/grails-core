@@ -27,7 +27,8 @@ import spock.lang.Unroll
 /**
  * The JVM options of the start scripts of the Grails wrapper: {@code -XX:TieredStopAtLevel=1} for a start with a
  * command, first on the command line of the JVM so that what a user sets comes after it, and in nothing
- * the JVM hands on to what it starts. The scripts are the ones the build generates.
+ * the JVM hands on to what it starts. The command {@code mcp}, a server that runs for as long as the agent that
+ * started it, is not given it. The scripts are the ones the build generates.
  */
 class WrapperScriptsSpec extends Specification {
 
@@ -35,6 +36,9 @@ class WrapperScriptsSpec extends Specification {
 
     // the option of the command line the wrapper starts that, alone, leaves it to start the interactive mode
     static final String PLAIN_OUTPUT = '--plain-output'
+
+    // the command of the command line the wrapper starts that serves an agent for as long as the agent runs
+    static final String MCP = 'mcp'
 
     File scripts = new File(System.getProperty('grails.wrapper.scripts'))
     File dir = Files.createTempDirectory('grailsscripts').toFile().canonicalFile
@@ -75,6 +79,11 @@ class WrapperScriptsSpec extends Specification {
         [PLAIN_OUTPUT, '--non-interactive']        | true     | 'given'
         ['*']                                      | true     | 'given'
         ['']                                       | true     | 'given'
+        [MCP]                                      | false    | 'not given'
+        [PLAIN_OUTPUT, MCP]                        | false    | 'not given'
+        [MCP, '--read-only']                       | false    | 'not given'
+        ['--non-interactive', MCP]                 | false    | 'not given'
+        ['update-wrapper', MCP]                    | true     | 'given'
     }
 
     @Unroll
@@ -95,6 +104,11 @@ class WrapperScriptsSpec extends Specification {
         [PLAIN_OUTPUT, 'compile']                  | 1     | 'with C1 alone'
         ['--non-interactive']                      | 1     | 'with C1 alone'
         ['create-app', 'two words']                | 1     | 'with C1 alone'
+        [MCP]                                      | 4     | 'as the JVM does by default: that is the server of an agent'
+        [PLAIN_OUTPUT, MCP]                        | 4     | 'as the JVM does by default: that is the server of an agent'
+        [MCP, '--read-only']                       | 4     | 'as the JVM does by default: that is the server of an agent'
+        ['--non-interactive', MCP]                 | 4     | 'as the JVM does by default: that is the server of an agent'
+        ['compile', MCP]                           | 1     | 'with C1 alone'
     }
 
     void "both scripts say beside the option why it is there, what it costs and how it is overridden"() {
@@ -102,15 +116,16 @@ class WrapperScriptsSpec extends Specification {
         [new File(scripts, 'grailsw'), new File(scripts, 'grailsw.bat')].every { File script ->
             List<String> lines = script.readLines()
             int option = lines.findIndexOf { String line -> line.contains(OPTION) && !line.trim().startsWith('#') && !line.trim().startsWith('@rem') }
-            int first = lines.findIndexOf { String line -> line in ['for GRAILS_ARGUMENT in "$@" ; do', 'set GRAILS_SHORT_RUN='] }
+            int first = lines.findIndexOf { String line -> line in ['GRAILS_SHORT_RUN=', 'set GRAILS_SHORT_RUN='] }
             String comment = lines.subList(0, first).reverse().takeWhile { String line -> line.startsWith('#') || line.startsWith('@rem') }.join(' ')
             first > 0 && option > first && comment.contains('SIGNIFICANTLY SLOWER') && comment.contains('short-lived') &&
                     comment.contains('GRAILSW_OPTS=-XX:TieredStopAtLevel=4') && comment.contains('Interactive mode') &&
-                    comment.contains("without an argument or with ${PLAIN_OUTPUT} alone")
+                    comment.contains("without an argument or with ${PLAIN_OUTPUT} alone") &&
+                    comment.contains("${MCP}, the server an agent starts")
         }
     }
 
-    void "the batch file gives the option when it has an argument other than --plain-output, and compares each one in a variable"() {
+    void "the batch file gives the option when it has an argument other than --plain-output and a command other than mcp, and compares each one in a variable"() {
         given:
         List<String> lines = new File(scripts, 'grailsw.bat').readLines()
         int defaults = lines.findIndexOf { String line -> line.startsWith('set DEFAULT_JVM_OPTS=') }
@@ -119,7 +134,7 @@ class WrapperScriptsSpec extends Specification {
         expect: 'after the options the script has by itself, and before Java is looked for and started'
         defaults > 0
         start > defaults
-        lines.subList(start, start + 15) == [
+        lines.subList(start, start + 17) == [
                 'set GRAILS_SHORT_RUN=',
                 ':grailsNextArgument',
                 'set GRAILS_ARGUMENT=%1',
@@ -127,6 +142,8 @@ class WrapperScriptsSpec extends Specification {
                 'setlocal EnableDelayedExpansion',
                 'set GRAILS_INTERACTIVE_OPTION=',
                 "if \"!GRAILS_ARGUMENT!\"==\"${PLAIN_OUTPUT}\" set GRAILS_INTERACTIVE_OPTION=1".toString(),
+                "if \"!GRAILS_ARGUMENT!\"==\"${MCP}\" (endlocal & set GRAILS_SHORT_RUN=& goto grailsArgumentsRead)".toString(),
+                'if not defined GRAILS_INTERACTIVE_OPTION if "!GRAILS_ARGUMENT:~0,1!"=="-" (endlocal & set GRAILS_SHORT_RUN=1& shift & goto grailsNextArgument)',
                 'if not defined GRAILS_INTERACTIVE_OPTION (endlocal & set GRAILS_SHORT_RUN=1& goto grailsArgumentsRead)',
                 'endlocal',
                 'shift',
@@ -136,9 +153,9 @@ class WrapperScriptsSpec extends Specification {
                 'set GRAILS_ARGUMENT=',
                 'set GRAILS_SHORT_RUN=',
         ]
-        lines.findIndexOf { String line -> line.contains('%DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRAILSW_OPTS%') && line.contains(' %* ') } > start + 14
+        lines.findIndexOf { String line -> line.contains('%DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRAILSW_OPTS%') && line.contains(' %* ') } > start + 16
         // shift moves %1 to %9 and leaves %* as it was: nothing after the loop reads the numbered arguments
-        lines.subList(start + 15, lines.size()).every { String line -> !(line ==~ /.*%[1-9].*/) }
+        lines.subList(start + 17, lines.size()).every { String line -> !(line ==~ /.*%[1-9].*/) }
     }
 
     @Unroll

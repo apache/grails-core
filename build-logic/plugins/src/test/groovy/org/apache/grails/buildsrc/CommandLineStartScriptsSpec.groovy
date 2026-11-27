@@ -32,7 +32,7 @@ import spock.lang.Unroll
 class CommandLineStartScriptsSpec extends Specification {
 
     static final String DEFAULTS = 'DEFAULT_JVM_OPTS=\'"--enable-native-access=ALL-UNNAMED"\''
-    static final String START = 'for GRAILS_ARGUMENT in "$@" ; do'
+    static final String START = 'GRAILS_SHORT_RUN='
 
     static final String UNIX = '#!/bin/sh\n' +
             '# Add default JVM options here. You can also use JAVA_OPTS and GRAILS_OPTS to pass JVM options to this script.\n' +
@@ -45,7 +45,7 @@ class CommandLineStartScriptsSpec extends Specification {
             '\r\n' +
             '"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRAILS_OPTS% -classpath "%CLASSPATH%" Main %*\r\n'
 
-    void "the option is put in front of the options a script has by itself, for a start with an argument that is not --plain-output"() {
+    void "the option is put in front of the options a script has by itself, for a start with an argument that is not --plain-output and a command that is not mcp"() {
         when:
         List<String> lines = CommandLineStartScripts.unix(UNIX, 'GRAILS_OPTS').readLines()
         int defaults = lines.indexOf(DEFAULTS)
@@ -54,17 +54,25 @@ class CommandLineStartScriptsSpec extends Specification {
         then:
         lines[defaults + 1].startsWith('# -XX:TieredStopAtLevel=1 for a command line that runs one command')
         start > defaults
-        lines.subList(start, start + 6) == [
+        lines.subList(start, start + 13) == [
                 START,
+                'for GRAILS_ARGUMENT in "$@" ; do',
                 '    case $GRAILS_ARGUMENT in',
                 '        --plain-output) ;;',
-                '        *) DEFAULT_JVM_OPTS="-XX:TieredStopAtLevel=1 $DEFAULT_JVM_OPTS" ; break ;;',
+                '        mcp) GRAILS_SHORT_RUN= ; break ;;',
+                '        -*) GRAILS_SHORT_RUN=1 ;;',
+                '        *) GRAILS_SHORT_RUN=1 ; break ;;',
                 '    esac',
                 'done',
+                'if [ -n "$GRAILS_SHORT_RUN" ] ; then',
+                '    DEFAULT_JVM_OPTS="-XX:TieredStopAtLevel=1 $DEFAULT_JVM_OPTS"',
+                'fi',
+                'unset GRAILS_ARGUMENT GRAILS_SHORT_RUN',
         ]
         lines.any { String line -> line.contains('SIGNIFICANTLY SLOWER') }
         lines.any { String line -> line.contains('GRAILS_OPTS=-XX:TieredStopAtLevel=4') }
-        lines.any { String line -> line.contains('without an argument or with --plain-output alone') }
+        lines.any { String line -> line.contains('without an argument or with --plain-output alone, and mcp, the server an agent starts') }
+        lines.any { String line -> line.contains('unless the command (the first argument that is no option) is mcp') }
         lines.last() == 'exec "$JAVACMD" "$@"'
     }
 
@@ -88,16 +96,48 @@ class CommandLineStartScriptsSpec extends Specification {
         script?.delete()
 
         where:
-        arguments                            | given
-        []                                   | false
-        ['--plain-output']                   | false
-        ['--plain-output', '--plain-output'] | false
-        ['--plain-output', 'compile']        | true
-        ['compile', '--plain-output']        | true
-        ['--non-interactive']                | true
-        ['*']                                | true
-        ['']                                 | true
-        ['two words']                        | true
+        arguments                                       | given
+        []                                              | false
+        ['--plain-output']                              | false
+        ['--plain-output', '--plain-output']            | false
+        ['--plain-output', 'compile']                   | true
+        ['compile', '--plain-output']                   | true
+        ['--non-interactive']                           | true
+        ['--non-interactive', 'compile']                | true
+        ['*']                                           | true
+        ['']                                            | true
+        ['two words']                                   | true
+        ['mcp']                                         | false
+        ['--plain-output', 'mcp']                       | false
+        ['mcp', '--read-only']                          | false
+        ['--non-interactive', 'mcp']                    | false
+        ['-x', '--verbose', '--plain-output', 'mcp']    | false
+        ['compile', 'mcp']                              | true
+        ['create-app', 'mcp']                           | true
+        ['mcp-server']                                  | true
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a variable of the environment that has the name of one of the script's own decides nothing, and is not handed on"() {
+        given: 'the script, which shows the options and the environment instead of starting Java'
+        File script = File.createTempFile('grailsstart', '.sh')
+        script.text = CommandLineStartScripts.unix(UNIX, 'GRAILS_OPTS').replace('exec "$JAVACMD" "$@"',
+                'printf "%s\\n" "$DEFAULT_JVM_OPTS"; env | grep "^GRAILS_" || :')
+
+        when: 'started for the interactive mode, by a user who has the variable set'
+        ProcessBuilder builder = new ProcessBuilder(['/bin/sh', script.path]).redirectErrorStream(true)
+        builder.environment().keySet().removeIf { String name -> name.startsWith('GRAILS_') }
+        builder.environment().put('GRAILS_SHORT_RUN', '1')
+        builder.environment().put('GRAILS_ARGUMENT', 'compile')
+        Process process = builder.start()
+        List<String> said = process.inputStream.text.readLines()
+
+        then:
+        process.waitFor() == 0
+        said == ['"--enable-native-access=ALL-UNNAMED"']
+
+        cleanup:
+        script?.delete()
     }
 
     void "the batch file keeps its line ends, names the variable of its own script, and compares each argument"() {
@@ -113,6 +153,8 @@ class CommandLineStartScriptsSpec extends Specification {
                 'setlocal EnableDelayedExpansion\r\n' +
                 'set GRAILS_INTERACTIVE_OPTION=\r\n' +
                 'if "!GRAILS_ARGUMENT!"=="--plain-output" set GRAILS_INTERACTIVE_OPTION=1\r\n' +
+                'if "!GRAILS_ARGUMENT!"=="mcp" (endlocal & set GRAILS_SHORT_RUN=& goto grailsArgumentsRead)\r\n' +
+                'if not defined GRAILS_INTERACTIVE_OPTION if "!GRAILS_ARGUMENT:~0,1!"=="-" (endlocal & set GRAILS_SHORT_RUN=1& shift & goto grailsNextArgument)\r\n' +
                 'if not defined GRAILS_INTERACTIVE_OPTION (endlocal & set GRAILS_SHORT_RUN=1& goto grailsArgumentsRead)\r\n' +
                 'endlocal\r\n' +
                 'shift\r\n' +

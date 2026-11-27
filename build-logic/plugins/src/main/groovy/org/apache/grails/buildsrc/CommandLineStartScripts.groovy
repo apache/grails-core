@@ -52,6 +52,14 @@ import org.gradle.api.tasks.application.CreateStartScripts
  * {@code --plain-output} alone, as often as it is given: then the JVM compiles as it does by default. With
  * {@code --non-interactive} the command line shows its help and ends, so that is a command like any other.</p>
  *
+ * <p><strong>The commands that run for long.</strong> {@code mcp} is a command that does not end: it is the server
+ * an agent starts and talks to for as long as the agent runs, and it runs the commands it is sent in its own
+ * JVM, as the interactive mode does. So the option is not given either when the command, the first argument
+ * that is not an option ({@link #LONG_LIVED_COMMANDS}), is {@code mcp}: {@code mcp}, {@code --plain-output mcp}
+ * and {@code mcp --read-only} start a JVM that compiles as it does by default, and {@code compile} one with the
+ * option. An option in front of the command ({@code --non-interactive mcp}) does not change that; an option
+ * alone is a command line like any other, as said above.</p>
+ *
  * <p><strong>How it is overridden.</strong> The option comes first on the command line of the JVM, before
  * what {@code JAVA_OPTS} and {@code GRAILS_OPTS} (for the wrapper {@code GRAILSW_OPTS}) hold, and the JVM
  * takes the last value it is given: {@code GRAILS_OPTS=-XX:TieredStopAtLevel=4} restores the default.</p>
@@ -72,17 +80,24 @@ class CommandLineStartScripts {
      */
     static final List<String> INTERACTIVE_OPTIONS = ['--plain-output']
 
+    /**
+     * The commands that do not end when their work is done, and so are not given the option: the command is the
+     * first argument that does not begin with {@code -}, whatever options are in front of it.
+     */
+    static final List<String> LONG_LIVED_COMMANDS = ['mcp']
+
     private static final List<String> WHY = [
             OPTION + ' for a command line that runs one command: one that has an argument other than',
-            INTERACTIVE_OPTIONS.join(', ') + '.',
+            INTERACTIVE_OPTIONS.join(', ') + ', unless the command (the first argument that is no option) is ' + LONG_LIVED_COMMANDS.join(', ') + '.',
             'Why: a command is a short-lived process whose time is the start of the JVM and the loading of',
             'classes. With C1 alone a command is 15-20% faster (create-app 1.5 to 1.3 s) and create-app',
             'takes a quarter of the CPU time, because the optimizing compiler (C2) is never started.',
             'The cost: code that runs long and hot is SIGNIFICANTLY SLOWER without C2. That is accepted',
             'because a command is short, and builds, tests and the application run in the JVMs of Gradle',
             'and of the application, which are not given this option. Interactive mode, which is started',
-            'without an argument or with ' + INTERACTIVE_OPTIONS.join(', ') + ' alone, and is the one long-lived JVM',
-            'of the command line, is not given it either.',
+            'without an argument or with ' + INTERACTIVE_OPTIONS.join(', ') + ' alone, and ' + LONG_LIVED_COMMANDS.join(', ') +
+                    ', the server an agent starts,',
+            'are the long-lived JVMs of the command line, and are not given it either.',
     ]
 
     // the line of the script Gradle generates for a POSIX shell that follows the lines that find the java command
@@ -266,6 +281,7 @@ class CommandLineStartScripts {
         task.inputs.property('shortRunOption', OPTION)
         task.inputs.property('shortRunComment', WHY)
         task.inputs.property('interactiveOptions', INTERACTIVE_OPTIONS)
+        task.inputs.property('longLivedCommands', LONG_LIVED_COMMANDS)
         // named in what is written into both scripts
         task.inputs.property('shortRunOptionsVariable', optionsVariable)
         task.doLast { Task generated ->
@@ -278,25 +294,36 @@ class CommandLineStartScripts {
     /**
      * @param script the script Gradle generates for a POSIX shell
      * @return the script with the option, for a start with an argument other than {@link #INTERACTIVE_OPTIONS}
+     * whose command is not one of {@link #LONG_LIVED_COMMANDS}
      */
     static String unix(String script, String optionsVariable) {
         String line = lineOf(script, UNIX_DEFAULTS, '\n', "${OPTION} is added after the one that does")
-        // the word of a case is neither split nor expanded as a path, so an argument is compared as it is
+        // The word of a case is neither split nor expanded as a path, so an argument is compared as it is. The
+        // arguments are read up to the command: an option in front of it gives the option, unless the command
+        // that follows is a long-lived one.
         String added = WHY.collect { String each -> "# ${each}\n" }.join('') +
                 "# To override it: ${optionsVariable}=-XX:TieredStopAtLevel=4 (what ${optionsVariable} and JAVA_OPTS hold comes later\n" +
                 '# on the command line of the JVM, and the JVM takes the last value it is given).\n' +
+                'GRAILS_SHORT_RUN=\n' +
                 'for GRAILS_ARGUMENT in "$@" ; do\n' +
                 '    case $GRAILS_ARGUMENT in\n' +
                 "        ${INTERACTIVE_OPTIONS.join('|')}) ;;\n" +
-                "        *) DEFAULT_JVM_OPTS=\"${OPTION} \$DEFAULT_JVM_OPTS\" ; break ;;\n" +
+                "        ${LONG_LIVED_COMMANDS.join('|')}) GRAILS_SHORT_RUN= ; break ;;\n" +
+                '        -*) GRAILS_SHORT_RUN=1 ;;\n' +
+                '        *) GRAILS_SHORT_RUN=1 ; break ;;\n' +
                 '    esac\n' +
-                'done\n'
+                'done\n' +
+                'if [ -n "$GRAILS_SHORT_RUN" ] ; then\n' +
+                "    DEFAULT_JVM_OPTS=\"${OPTION} \$DEFAULT_JVM_OPTS\"\n" +
+                'fi\n' +
+                'unset GRAILS_ARGUMENT GRAILS_SHORT_RUN\n'
         return script.replace(line, line + '\n' + added)
     }
 
     /**
      * @param script the batch file Gradle generates
      * @return the batch file with the option, for a start with an argument other than {@link #INTERACTIVE_OPTIONS}
+     * whose command is not one of {@link #LONG_LIVED_COMMANDS}
      */
     static String windows(String script, String optionsVariable) {
         String end = script.contains('\r\n') ? '\r\n' : '\n'
@@ -304,7 +331,9 @@ class CommandLineStartScripts {
         // Each argument is read into a variable while delayed expansion is off, so that an exclamation mark in it
         // stays one, and compared while it is on: the value of !variable! is not read again by the command
         // interpreter, so a quote, an equals sign or an ampersand in it does not break the comparison. What Java
-        // is given is %*, which shift does not change.
+        // is given is %*, which shift does not change. The arguments are read up to the command: an option in
+        // front of it gives the option and the next argument is read, unless the command that follows is a
+        // long-lived one.
         String added = WHY.collect { String each -> "@rem ${each}${end}" }.join('') +
                 "@rem To override it: set ${optionsVariable}=-XX:TieredStopAtLevel=4 (what ${optionsVariable} and JAVA_OPTS hold comes${end}" +
                 "@rem later on the command line of the JVM, and the JVM takes the last value it is given).${end}" +
@@ -315,6 +344,10 @@ class CommandLineStartScripts {
                 "setlocal EnableDelayedExpansion${end}" +
                 "set GRAILS_INTERACTIVE_OPTION=${end}" +
                 INTERACTIVE_OPTIONS.collect { String option -> "if \"!GRAILS_ARGUMENT!\"==\"${option}\" set GRAILS_INTERACTIVE_OPTION=1${end}" }.join('') +
+                LONG_LIVED_COMMANDS.collect { String command ->
+                    "if \"!GRAILS_ARGUMENT!\"==\"${command}\" (endlocal & set GRAILS_SHORT_RUN=& goto grailsArgumentsRead)${end}"
+                }.join('') +
+                "if not defined GRAILS_INTERACTIVE_OPTION if \"!GRAILS_ARGUMENT:~0,1!\"==\"-\" (endlocal & set GRAILS_SHORT_RUN=1& shift & goto grailsNextArgument)${end}" +
                 "if not defined GRAILS_INTERACTIVE_OPTION (endlocal & set GRAILS_SHORT_RUN=1& goto grailsArgumentsRead)${end}" +
                 "endlocal${end}" +
                 "shift${end}" +
