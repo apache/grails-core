@@ -21,6 +21,14 @@ ext.configurePluginRepositories = { RepositoryHandler repositories ->
     if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
         repositories.mavenLocal()
     }
+    // TEMPORARY, revert before merge: the Grails 9 build of asset-pipeline (wondrify/asset-pipeline#503), served
+    // from a fork pinned to the commit that holds the artifacts, for the builds the end-to-end tests generate
+    repositories.maven {
+        url = uri('https://raw.githubusercontent.com/codeconsole/asset-pipeline/a3ba6dad29382ef18fb82cf50d16905252a2c33e')
+        content {
+            includeVersionByRegex('cloud[.]wondrify.*', '.*', '5[.]3[.]0-grails9-preview[.].*')
+        }
+    }
     repositories.mavenCentral()
     repositories.gradlePluginPortal()
     repositories.maven {
