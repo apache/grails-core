@@ -480,13 +480,28 @@ public class HibernateQuery extends Query {
     @Override
     public Query select(String property) {
         detachedCriteria.select(property);
-        if (!(entity.getPropertyByName(property) instanceof Association)) {
+        if (!isAssociationPath(property)) {
             // Ensure property is added to projections for Hibernate 7
             projections.property(property);
         }
-        // for an association it is a fetch mode: the association is loaded when it is read, and the query still
-        // returns its entities
+        // for an association, also one at the end of a path through other associations, it is a fetch mode: the
+        // association is loaded when it is read, and the query still returns its entities
         return this;
+    }
+
+    /**
+     * Whether a path from the queried entity names an association, also through other associations, as
+     * {@code team.club} does.
+     */
+    private boolean isAssociationPath(String path) {
+        PersistentEntity current = entity;
+        for (String token : path.split("\\.")) {
+            if (current == null || !(current.getPropertyByName(token) instanceof Association<?> association)) {
+                return false;
+            }
+            current = association.getAssociatedEntity();
+        }
+        return true;
     }
 
     @Override

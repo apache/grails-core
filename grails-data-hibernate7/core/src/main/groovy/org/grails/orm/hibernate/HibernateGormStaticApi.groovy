@@ -69,6 +69,7 @@ import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
@@ -439,10 +440,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        if (requestsJoinType(args)) {
-            return whereCriteria(queryMap).find(args)
-        }
-        if (requestsSort(args)) {
+        if (requestsJoinType(args) || requestsSort(args)) {
             return whereCriteria(queryMap).find(buildFindWhereArgs(args))
         }
         executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
@@ -451,11 +449,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        if (requestsJoinType(args)) {
-            return whereCriteria(queryMap).list(args)
-        }
-        if (requestsSort(args)) {
-            // a plain list, as an unsorted call returns: with max, the criteria would return a paged list
+        if (requestsJoinType(args) || requestsSort(args)) {
+            // a plain list, as the HQL query returns: with max, the criteria would return a paged list
             return new ArrayList<D>(whereCriteria(queryMap).list(buildQuerySettings(args)))
         }
         executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
@@ -733,17 +728,22 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             if (!('join'.equalsIgnoreCase(mode) || 'eager'.equalsIgnoreCase(mode))) {
                 continue
             }
-            PersistentEntity current = persistentEntity
             String path = entry.key.toString()
+            boolean associations = true
+            boolean sortedBag = false
+            PersistentEntity current = persistentEntity
             for (String token : path.split('\\.')) {
                 PersistentProperty property = current?.getPropertyByName(token)
-                if (!(property instanceof Association)) {
+                if (!(property instanceof Association) || property instanceof Embedded) {
+                    // the HQL of list rejects a path that does not consist of associations, as it did before
+                    associations = false
                     break
                 }
-                if (path.contains('.') || property instanceof ToMany && property.type == Collection && params.containsKey(HibernateQueryArgument.SORT.value())) {
-                    return true
-                }
+                sortedBag |= property instanceof ToMany && property.type == Collection && params.containsKey(HibernateQueryArgument.SORT.value())
                 current = ((Association) property).associatedEntity
+            }
+            if (associations && (path.contains('.') || sortedBag)) {
+                return true
             }
         }
         false

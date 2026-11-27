@@ -19,6 +19,7 @@
 package grails.gorm.tests
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.PagedResultList
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
 import grails.gorm.tests.entities.Contract
@@ -28,6 +29,7 @@ import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.Hibernate
 import org.hibernate.loader.MultipleBagFetchException
+import spock.lang.Shared
 
 import jakarta.persistence.criteria.JoinType
 
@@ -37,7 +39,11 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
     private static final List<String> TEAMS_WITH_PLAYERS = ['Arsenal First Team', 'Chelsea First Team', 'MU First Team', 'Unattached First Team']
     private static final List<String> ALL_TEAMS = (TEAMS_WITH_A_CLUB + 'Unattached First Team').sort()
 
+    @Shared
+    final AssociationSortSqlCapture sqlCapture = new AssociationSortSqlCapture()
+
     void setupSpec() {
+        manager.grailsConfig.hibernate.session_factory.statement_inspector = sqlCapture
         manager.registerDomainClasses(Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
                                       AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
                                       AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal,
@@ -91,6 +97,28 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         'findAllWhere' | { Team.findAllWhere([:], [fetch: [club: JoinType.LEFT]]) }                  || null
         'findWhere'    | { Team.findWhere(null, [fetch: [club: JoinType.INNER]]) }                   || null
         'findAllWhere' | { Team.findAllWhere(null, [fetch: [club: JoinType.INNER]]) }                || null
+    }
+
+    void 'findAllWhere with a join type in the fetch argument and max returns a list, as without the join type'() {
+        when:
+        final results = Team.findAllWhere([club: Club.findByName('Arsenal')], [fetch: [club: JoinType.INNER], max: 1, sort: 'name'])
+
+        then: 'a list, as the HQL and the sorted query of findAllWhere return, and as with Hibernate 5'
+        !(results instanceof PagedResultList)
+        results*.name == ['Arsenal First Team']
+    }
+
+    void 'findWhere with a join type in the fetch argument selects one team when several match'() {
+        given:
+        final arsenal = Club.findByName('Arsenal')
+        sqlCapture.statements.clear()
+
+        when:
+        final team = Team.findWhere([club: arsenal], [fetch: [club: JoinType.INNER], sort: 'name', order: 'desc'])
+
+        then: 'with one query, which is limited to one row, as with Hibernate 5'
+        team.name == 'Playerless First Team'
+        sqlCapture.statements.size() == 1
     }
 
     void 'list with a join type in the fetch argument sorts by the default sort of the mapping'() {
@@ -1723,6 +1751,48 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         then:
         results.size() == 2
         results.totalCount == TEAMS_WITH_A_CLUB.size()
+    }
+
+    void 'a #description of a criteria query that requests a join of a collection counts each team once'() {
+        given: 'a team with three players'
+        saveTeamWithAPlayerWithoutContract()
+
+        expect: 'as on 8.0.x and with Hibernate 5: a count of a property counts the teams, which a join of the collection would repeat'
+        new ArrayList(query.call()) == expected
+
+        where:
+        description                                          | query                                                                                                           || expected
+        'count of a property with a left join'               | { Team.createCriteria().list { join('players', JoinType.LEFT); projections { count('name') } } }                 || [6L]
+        'count of a property with a fetch mode'              | { Team.createCriteria().list { join('players'); projections { count('name') } } }                               || [6L]
+        'count of a property with the fetch argument'        | { Team.createCriteria().list(fetch: [players: 'join']) { projections { count('name') } } }                       || [6L]
+        'count of a property with an inner join'             | { Team.createCriteria().list { join('players', JoinType.INNER); projections { count('name') } } }                || [5L]
+        'count of an association with a left join'           | { Team.createCriteria().list { join('players', JoinType.LEFT); projections { count('club') } } }                 || [5L]
+        'distinct count of a property with a left join'      | { Team.createCriteria().list { join('players', JoinType.LEFT); projections { countDistinct('name') } } }         || [6L]
+        'row count and count of a property with a left join' | { Team.createCriteria().list { join('players', JoinType.LEFT); projections { rowCount(); count('name') } } }     || [[6L, 6L]]
+        'row count with a left join'                         | { Team.createCriteria().list { join('players', JoinType.LEFT); projections { rowCount() } } }                    || [6L]
+    }
+
+    void '#api of an association through another association is a fetch mode, and the query returns its players'() {
+        expect: 'as with Hibernate 5, and as for an association of the queried class'
+        query.call()*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+
+        where:
+        api                                              | query
+        'select of a criteria query'                     | { Player.createCriteria().list { select('team.club') } }
+        'select of a where query'                        | { Player.where { name ==~ '%Player' }.select('team.club').list() }
+        'select in the fetch argument of a where query'  | { Player.where { name ==~ '%Player' }.list(fetch: ['team.club': 'select']) }
+        'lazy in the fetch argument of a dynamic finder' | { Player.findAllByNameLike('%Player', [fetch: ['team.club': 'lazy']]) }
+    }
+
+    void 'list rejects a fetch mode for #path, as without an association before it on the path'() {
+        when:
+        Player.list(fetch: [(path): 'join'])
+
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        path << ['team.bogus', 'team.name', 'bogus']
     }
 
     void 'a join type requested for a property that is not an association is ignored'() {

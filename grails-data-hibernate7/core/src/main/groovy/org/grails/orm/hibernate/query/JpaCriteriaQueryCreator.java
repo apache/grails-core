@@ -157,7 +157,7 @@ public class JpaCriteriaQueryCreator<T> {
         context.setLeftJoinSort(entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
                 mappingContext.isLeftJoinAssociationSort());
 
-        applyRequestedJoins(cq, root, projectionList.stream().noneMatch(p -> !(p instanceof Query.DistinctProjection)), isCountOnly());
+        applyRequestedJoins(cq, root, projectionList.stream().noneMatch(p -> !(p instanceof Query.DistinctProjection)), isEntityCount());
 
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) cq);
         assignGroupBy(cq, context);
@@ -569,8 +569,7 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
         if (countOnly) {
-            if (listsInstancesOnce && cq != null && projections.getProjectionList().size() == 1 &&
-                    projections.getProjectionList().get(0).getClass() == Query.CountProjection.class) {
+            if (listsInstancesOnce && cq != null && isEntityCount()) {
                 // The list fetches a collection, and Hibernate lists each instance of such a query once, so its total
                 // counts instances and not the rows of the joins
                 ((CriteriaQuery<Long>) cq).select(criteriaBuilder.countDistinct(context.getRoot()));
@@ -676,6 +675,17 @@ public class JpaCriteriaQueryCreator<T> {
         return !projectionList.isEmpty() && projectionList.stream()
                 .allMatch(projection -> projection instanceof Query.CountProjection ||
                         projection instanceof Query.CountDistinctProjection);
+    }
+
+    /**
+     * Whether the query counts its instances and selects nothing else, as {@code count()} and the total of a paged list
+     * do. Such a count joins what the list with the same criteria fetches, so that it counts the instances that the list
+     * returns. A count of a property, or a count next to another projection, counts the values of the rows that the
+     * criteria select, which a join of a fetched collection would repeat.
+     */
+    private boolean isEntityCount() {
+        List<Query.Projection> projectionList = projections.getProjectionList();
+        return projectionList.size() == 1 && projectionList.get(0).getClass() == Query.CountProjection.class;
     }
 
     private void assignCriteria(
