@@ -19,11 +19,22 @@
 # approval to the new head by itself after a push that leaves the diff of the pull request as it was, such as a rebase
 # or a merge of the base branch, so those approvals are kept.
 #
+# GitHub does not move an approval over a merge of the base branch that had conflicts, since resolving them changes
+# the diff of the pull request. Such an update merge is not a change of the pull request to review again, so the
+# approval is kept as well, as long as every commit pushed after it is a merge of the base branch that differs from
+# the merge git makes by itself only inside the conflicts git could not merge, and resolves each of them as a whole:
+# one side, the other, or both. Any other resolution is a change like any other. The pull request then gets a comment
+# naming the files whose conflicts were resolved, once for each merge, since nobody reviewed the resolution. A merge
+# that changes any other line, or that merges anything but the base branch, dismisses the approval like any other
+# push, and so does a walk over the merges that cannot finish, because a request fails or the walk takes more than
+# its two minutes. How many merges follow the approval does not matter.
+#
 # A pull_request run from a fork gets a read-only token that cannot dismiss a review, so this workflow does not react
 # to the pull request. It reacts to the Code Style workflow being requested for one, which a push to a pull request
 # does, even for a draft or a pull request labelled "no ci", whose jobs are then skipped. A workflow_run run uses the
 # workflow file of the default branch and a token of this repository, and it never checks out or runs anything of the
-# pull request: it only reads commit ids through the API.
+# pull request: it reads commit ids through the API and, to repeat a merge, fetches the history of its commits and
+# merges them in a bare repository, which runs no hook and no filter.
 #
 # Not every push requests the Code Style workflow: GitHub starts no pull_request workflow for a commit whose message
 # asks to skip them ("[skip ci]" and its variants), nor for a pull request that conflicts with its base branch. So
@@ -61,20 +72,434 @@ jobs:
           # Empty on a scheduled and on a manual run, which look at every open pull request.
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          # A check of the merges after an approval has two minutes, and all of them together have seven, which
+          # leaves the job three for the rest before its timeout. Each git and gh command a check runs gets what is
+          # left: a request or a fetch left to hang, or one pull request with a long run of merges, would otherwise
+          # end the job at its timeout, and with it the dismissals of every pull request after that one, on each run.
+          # What comes after the checks, the dismissals and then the comments on the pull requests, has until a
+          # minute before the job's timeout, and each request of it a minute at most.
+          # Paths are taken literally, and awk compares and counts bytes, whatever awk the runner has and in
+          # whatever locale.
+          export GIT_LITERAL_PATHSPECS=1 LC_ALL=C
+          checks_end=$(( SECONDS + 420 )) job_end=$(( SECONDS + 540 ))
+          before_job_end() {
+            local left=$(( job_end - SECONDS ))
+            (( left > 0 )) || return 124
+            (( left <= 60 )) || left=60
+            timeout "$left" "$@"
+          }
+          bounded() {
+            local left=$(( deadline - SECONDS ))
+            (( left > 0 )) || return 124
+            timeout "$left" "$@"
+          }
+          # Fetches the commits named with their history, but without trees or file contents, which git fetches
+          # when a merge needs them. Each commit fetched is kept under a ref, so that the next fetch tells the
+          # server what is already here and gets only the history that is new, not the whole history again. A
+          # failed fetch is tried once more after a pause, as long as the check has time left: an approval kept
+          # this way is checked again on every hourly run, and one passing error should not dismiss it.
+          fetched() {
+            local commits=() commit
+            for commit in "$@"; do commits+=("+$commit:refs/fetched/$commit"); done
+            bounded git -C merges.git fetch --quiet --filter=tree:0 origin "${commits[@]}" && return
+            (( deadline - SECONDS > 5 )) || return 124
+            sleep 5
+            bounded git -C merges.git fetch --quiet --filter=tree:0 origin "${commits[@]}"
+          }
+          # Whether a merge commit changed a conflicted file only inside its conflicts, and resolved each of them as
+          # a whole. The file git merges by itself holds each conflict between markers labelled with the two
+          # parents, and the pushed file has to be that file with every line outside the conflicts as git wrote it
+          # and each conflict replaced by what git offers for one: the lines of the pull request's side, those of
+          # the base branch's side, or both sides one after the other, in either order. Conflict markers left in the
+          # file are no resolution. The pushed file is matched against those choices line by line from the start,
+          # so the answer does not depend on how a diff would line the two files up; lines are compared with their
+          # line ends, and the file has to end, or not, with a newline as the choice that ends it does. Lines picked
+          # from the sides, repeated, reordered or written by hand are a change nobody reviewed, even when each line
+          # looks like one of a side. Answers 1 when the file is not such a resolution, also for a conflict git
+          # writes without markers, such as one of a binary file or of a file deleted on one side, and when the
+          # mode differs; and 2 when a command fails or runs out of time.
+          resolved_within_conflicts() {
+            local tree=$1 commit=$2 path=$3 first=$4 second=$5 size=$6 ours=$7 theirs=$8 entry pushed
+            entry=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$tree" -- "$path") || return 2
+            [[ "$entry" == 100*' blob' ]] || return 1
+            pushed=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$commit" -- "$path") || return 2
+            [[ "$pushed" == "$entry" ]] || return 1
+            [[ -n "$ours" && -n "$theirs" ]] || return 1
+            bounded git -C merges.git cat-file blob "$tree:$path" > conflicted.file || return 2
+            bounded git -C merges.git cat-file blob "$commit:$path" > resolved.file || return 2
+            bounded git -C merges.git cat-file blob "$ours" > ours.file || return 2
+            bounded git -C merges.git cat-file blob "$theirs" > theirs.file || return 2
+            # Whether a file ends with a newline: its last byte is one. A read that fails answers as a failure.
+            ends() {
+              local byte
+              byte=$(set -o pipefail; tail -c 1 "$1" | od -An -tx1) || return 1
+              [[ "${byte// /}" == 0a ]] && echo 1 || echo 0
+            }
+            local merged_nl resolved_nl ours_nl theirs_nl
+            merged_nl=$(ends conflicted.file) && resolved_nl=$(ends resolved.file) \
+              && ours_nl=$(ends ours.file) && theirs_nl=$(ends theirs.file) || return 2
+            bounded awk -v size="$size" -v first="$first" -v second="$second" -v merged_nl="$merged_nl" \
+              -v resolved_nl="$resolved_nl" -v ours_nl="$ours_nl" -v theirs_nl="$theirs_nl" '
+              # c repeated n times, by doubling, so that a long marker takes no time to build.
+              function run(c, n,   s) { s = c; while (2 * length(s) <= n) s = s s; return s substr(s, 1, n - length(s)) }
+              # Whether the pushed lines from p on are the merged lines from a to b. The lines are compared as
+              # text: awk takes two lines read from files that look like numbers, such as 42 and 042, for
+              # numbers and compares their values.
+              function same(p, a, b,   j) {
+                if (p - 1 + (b - a + 1) > lines) return 0
+                for (j = a; j <= b; j++) if ((resolved[p + j - a] "") != (merged[j] "")) return 0
+                return 1
+              }
+              # The lines of the side s (ours or theirs) of conflict k from the pushed line p on: the position
+              # after them, or 0. When they end the file, their last line is compared with the last line of the
+              # side as it is, as git ends a last line that has no line end with the line end of the file in a
+              # conflict, \r\n in a file of Windows line ends, which the side itself does not have.
+              function side(p, s, ends_file,   a, b) {
+                a = s == "ours" ? open[k] + 1 : split_at[k] + 1; b = s == "ours" ? split_at[k] - 1 : shut[k] - 1
+                if (a > b) return p
+                if (!ends_file) return same(p, a, b) ? p + b - a + 1 : 0
+                if (!same(p, a, b - 1) || p + b - a != lines) return 0
+                return (resolved[lines] "") == ((s == "ours" ? ours_last : theirs_last) "") ? lines + 1 : 0
+              }
+              FILENAME == ARGV[1] { merged[FNR] = $0; total = FNR; next }
+              FILENAME == ARGV[2] { resolved[FNR] = $0; lines = FNR; next }
+              FILENAME == ARGV[3] { ours_last = $0; next }
+              FILENAME == ARGV[4] { theirs_last = $0; next }
+              END {
+                opening = run("<", size) " " first; closing = run(">", size) " " second; separator = run("=", size)
+                for (j = 1; j <= total; j++) {
+                  line = merged[j]; sub(/\r$/, "", line)
+                  if (line == opening || index(line, opening ":") == 1) { if (start) exit 1; start = j; seps = 0; at = 0 }
+                  else if (start && line == separator) { seps++; at = j }
+                  else if (line == closing || index(line, closing ":") == 1) {
+                    if (!start) exit 1
+                    if (seps != 1) exit 1
+                    conflicts++; open[conflicts] = start; shut[conflicts] = j; split_at[conflicts] = at; start = 0
+                  }
+                }
+                if (start || !conflicts) exit 1
+                # Every place in the pushed file the lines matched so far can end at, with the choice that ended it.
+                reach[1] = "file"; done_to = 0
+                for (k = 1; k <= conflicts; k++) {
+                  delete next_reach
+                  # Whether this conflict ends the file, so that the last side a choice writes ends it too.
+                  eof = k == conflicts && shut[k] == total
+                  o = split_at[k] - open[k] - 1; t = shut[k] - split_at[k] - 1
+                  for (p in reach) {
+                    if (!same(p + 0, done_to + 1, open[k] - 1)) continue
+                    q = p + open[k] - 1 - done_to
+                    if (e = side(q, "ours", eof)) next_reach[e] = next_reach[e] " ours"
+                    if (e = side(q, "theirs", eof)) next_reach[e] = next_reach[e] " theirs"
+                    # Both sides one after the other end the file as the second one does, unless it has no lines.
+                    if ((e = side(q, "ours", eof && !t)) && (e = side(e, "theirs", eof))) next_reach[e] = next_reach[e] (t ? " theirs" : " ours")
+                    if ((e = side(q, "theirs", eof && !o)) && (e = side(e, "ours", eof))) next_reach[e] = next_reach[e] (o ? " ours" : " theirs")
+                  }
+                  delete reach; for (p in next_reach) reach[p] = next_reach[p]; done_to = shut[k]
+                }
+                for (p in reach) {
+                  if (!same(p + 0, done_to + 1, total) || p - 1 + total - done_to != lines) continue
+                  # The newline at the end is that of the merged file, unless the last conflict ends the file: then
+                  # it is that of the side the resolution ends with, as git takes it from that side.
+                  if (lines == 0) exit 0
+                  if (done_to < total) { if (resolved_nl == merged_nl) exit 0; continue }
+                  if (index(reach[p], "ours") && resolved_nl == ours_nl) exit 0
+                  if (index(reach[p], "theirs") && resolved_nl == theirs_nl) exit 0
+                }
+                exit 1
+              }' conflicted.file resolved.file ours.file theirs.file
+            case $? in 0) return 0 ;; 1) return 1 ;; *) return 2 ;; esac
+          }
+          # Whether every commit from the approved one to the head is a merge of the base branch that changes nothing
+          # by hand outside the conflicts git could not merge. Each commit on the way has to have two parents, the
+          # second one a commit of the base branch, and its tree is compared with the one git merges from those
+          # parents: the files that differ have to be conflicted ones, resolved as described above. The head and
+          # the base branch are fetched with their history, so that git finds the merge bases of each merge as a
+          # merge of its own would, also when there are more than one, and answers from the history whether a
+          # commit is on the base branch; it fetches the trees and the contents of the files a merge needs only when
+          # it merges. Paths are read as git writes them with -z, unquoted, so that any name can be looked up. Sets
+          # the reason of a dismissal, and lists the files whose conflicts were resolved by hand, one line with the
+          # merge and the file each. A commit that is not such a merge answers no, and so does anything that keeps
+          # the check from finishing: a fetch that fails twice, or a command that fails or runs out of time. The
+          # number of merges is not limited, only the time: GitHub does not move an approval kept this way, so each
+          # hourly run walks its merges again, and the time limit is what bounds that cost.
+          # A name as it is written in the summary and the comments: one line, with a backslash, a line end, a
+          # tab and every other control character written as an escape, so that it shows the very file.
+          shown() {
+            local name=$1 out= i c
+            name=${name//\\/\\\\} name=${name//$'\n'/\\n} name=${name//$'\r'/\\r} name=${name//$'\t'/\\t}
+            [[ "$name" == *[[:cntrl:]]* ]] || { printf '%s' "$name"; return; }
+            for (( i = 0; i < ${#name}; i++ )); do
+              c=${name:i:1}
+              if [[ "$c" == [[:cntrl:]] ]]; then out+=$(printf '\\x%02x' "'$c"); else out+=$c; fi
+            done
+            printf '%s' "$out"
+          }
+          only_merges_base() {
+            local base=$1 approved=$2 commit=$3 deadline=${approval_end:-$(( SECONDS + 120 ))} parents first second other tree record path entry pushed marked size longest status run unsupported count type i
+            local -A conflicted=() stages=() changed=()
+            (( deadline <= checks_end )) || deadline=$checks_end
+            accepted=
+            reason="the commits after this approval could not be checked"
+            fetched "$commit" "$base" || return 1
+            while [[ "$commit" != "$approved" ]]; do
+              parents=$(bounded git -C merges.git rev-list --parents -n 1 "$commit") || return 1
+              read -r _ first second other <<< "$parents"
+              # A commit without parents ends the history without reaching the approved one.
+              [[ -n "$first" ]] || { reason="the pull request changed after this approval"; return 1; }
+              [[ -n "$second" && -z "$other" ]] || { reason="the pull request changed after this approval"; return 1; }
+              bounded git -C merges.git merge-base --is-ancestor "$second" "$base"
+              case $? in
+                0) ;;
+                1) reason="the pull request changed after this approval"; return 1 ;;
+                *) return 1 ;;
+              esac
+              # git's markers are seven characters long, and a side may hold a line just like one, such as the seven
+              # equal signs that underline a heading. The merge is made once to learn the conflicted files and the
+              # sides git took each from (stages 2 and 3, as mode and object), and when a regular file of a side has
+              # a line that starts with seven or more <, = or >, once more with markers one longer than the longest
+              # such run, given in the repository's own attributes, which no attribute of a commit overrides, and
+              # for that merge alone. The attributes of the merge are those of the pull request's side, as they are
+              # for a merge made in its checkout; no merge driver they name is configured, so none runs.
+              # The size is given also when it is git's own seven, so that no attribute of the pull request sets it.
+              size=7
+              while :; do
+                printf '* conflict-marker-size=%d\n' "$size" > merges.git/info/attributes || { rm -f merges.git/info/attributes; return 1; }
+                # The merge answers 1 for conflicts, as a failed redirection would; without a file from an earlier
+                # merge, such a failure leaves nothing to read and answers as one.
+                rm -f merged.z || { rm -f merges.git/info/attributes; return 1; }
+                bounded git -C merges.git --attr-source="$first" -c merge.conflictStyle=merge \
+                  merge-tree --write-tree -z "$first" "$second" > merged.z
+                status=$?
+                (( status <= 1 )) || { rm -f merges.git/info/attributes; return 1; }
+                conflicted=() stages=() tree= unsupported=
+                # The tree, then the conflicted files with their stages, then git's messages: the number of the
+                # paths a message is about, the paths, its type and its text. A conflict of a type that ties
+                # several paths together, such as a file renamed to two names or moved with a directory, is not
+                # one this check can tell resolved from changed, and leaves the commits unchecked.
+                {
+                  while IFS= read -r -d '' record; do
+                    [[ -n "$tree" ]] || { tree=$record; continue; }
+                    [[ -n "$record" ]] || break
+                    path=${record#*$'\t'} entry=${record%%$'\t'*}
+                    conflicted[$path]=1
+                    stages["${entry##* } $path"]=${entry% *}
+                  done
+                  while IFS= read -r -d '' count; do
+                    [[ "$count" =~ ^[0-9]+$ ]] || { unsupported="a message git wrote"; break; }
+                    for (( i = 0; i < count; i++ )); do IFS= read -r -d '' _ || break; done
+                    IFS= read -r -d '' type && IFS= read -r -d '' _ || { unsupported="a message git wrote"; break; }
+                    case $type in
+                      'CONFLICT (contents)' | 'CONFLICT (binary)' | 'CONFLICT (modify/delete)' | 'CONFLICT (add/add)' | 'CONFLICT (submodule'*) ;;
+                      CONFLICT*) unsupported=$type ;;
+                    esac
+                  done
+                } < merged.z
+                [[ -n "$tree" && -z "$unsupported" ]] || { rm -f merges.git/info/attributes; return 1; }
+                # A conflict git reports without naming a file, as it can for a rename of a directory, leaves
+                # nothing to check.
+                (( status == 0 || ${#conflicted[@]} > 0 )) || { rm -f merges.git/info/attributes; return 1; }
+                (( size == 7 )) || break
+                longest=0
+                for path in "${!conflicted[@]}"; do
+                  for entry in "${stages["2 $path"]:-}" "${stages["3 $path"]:-}"; do
+                    [[ "$entry" == 100* ]] || continue
+                    run=$(set -o pipefail; bounded git -C merges.git cat-file blob "${entry#* }" | bounded awk '
+                      { sub(/\r$/, ""); if (match($0, /^(<+|=+|>+)/) && RLENGTH > longest) longest = RLENGTH }
+                      END { print longest + 0 }') || { rm -f merges.git/info/attributes; return 1; }
+                    (( run <= longest )) || longest=$run
+                  done
+                done
+                (( longest >= 7 )) || break
+                size=$(( longest + 1 ))
+              done
+              rm -f merges.git/info/attributes || return 1
+              bounded git -C merges.git diff --name-only -z --no-renames "$tree" "$commit^{tree}" > changed.z || return 1
+              changed=()
+              while IFS= read -r -d '' path; do changed[$path]=1; done < changed.z
+              for path in "${!changed[@]}"; do
+                [[ -n "${conflicted[$path]+set}" ]] || { reason="the pull request changed after this approval"; return 1; }
+              done
+              # Every conflicted file, changed by the merge or not. One git wrote with conflict markers has to be
+              # resolved inside them, as resolved_within_conflicts checks; markers left in it are no resolution. One
+              # git wrote without markers, such as a binary file, a file deleted on one side or a submodule, has to
+              # be one side's exactly, mode and content, or absent where that side has none.
+              for path in "${!conflicted[@]}"; do
+                entry=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objectname)' "$tree" -- "$path") || return 1
+                marked=0
+                if [[ "$entry" == 100* && "${stages["2 $path"]:-}" == 100* && "${stages["3 $path"]:-}" == 100* ]]; then
+                  bounded git -C merges.git cat-file blob "${entry#* }" > conflicted.file || return 1
+                  bounded awk -v size="$size" -v first="$first" '
+                    BEGIN { opening = "<"; while (2 * length(opening) <= size) opening = opening opening
+                      opening = opening substr(opening, 1, size - length(opening)) " " first }
+                    { sub(/\r$/, "") }
+                    $0 == opening || index($0, opening ":") == 1 { found = 1; exit }
+                    END { exit found ? 3 : 0 }' conflicted.file
+                  case $? in 0) ;; 3) marked=1 ;; *) return 1 ;; esac
+                fi
+                if (( marked )); then
+                  resolved_within_conflicts "$tree" "$commit" "$path" "$first" "$second" "$size" "${stages["2 $path"]#* }" "${stages["3 $path"]#* }" || {
+                    (( $? == 1 )) && reason="the pull request changed after this approval"
+                    return 1
+                  }
+                else
+                  pushed=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objectname)' "$commit" -- "$path") || return 1
+                  [[ "$pushed" == "${stages["2 $path"]:-}" || "$pushed" == "${stages["3 $path"]:-}" ]] || { reason="the pull request changed after this approval"; return 1; }
+                fi
+                accepted+="$commit $(shown "$path")"$'\n'
+              done
+              commit=$first
+            done
+          }
+          # The answer of only_merges_base, worked out once per run for the same approved commit, head and base
+          # branch, such as for two approvals given to the same commit.
+          declare -A answers=() reasons=() resolutions=()
+          checked_merges() {
+            local key="$1 $2 $3"
+            if [[ -z "${answers[$key]+set}" ]]; then
+              only_merges_base "$@" < /dev/null
+              answers[$key]=$? reasons[$key]=$reason resolutions[$key]=$accepted
+            fi
+            reason=${reasons[$key]} accepted=${resolutions[$key]}
+            return "${answers[$key]}"
+          }
+          # Whether an approval whose commit has the very tree of the head was given at the same place on the base
+          # branch: whether the approved commit and the head have the same merge bases with it. The same files then
+          # make the same changes, as after a reworded commit or a rebase onto the same commit. When the head has
+          # taken in commits of the base branch that the approved commit had not, through a merge or a rebase, the
+          # same files undo what those commits changed, which is a change of the pull request, so the approval goes
+          # to the check of the merges instead. Answers 0 for the same place, 1 for another, and 2 when the history
+          # could not be fetched or read; the answer is worked out once per run for the same commits.
+          declare -A forks=()
+          same_fork() {
+            local base=$1 approved=$2 head=$3 key="$1 $2 $3" deadline=${approval_end:-$(( SECONDS + 120 ))} before after
+            (( deadline <= checks_end )) || deadline=$checks_end
+            if [[ -z "${forks[$key]+set}" ]]; then
+              forks[$key]=2
+              if fetched "$approved" "$head" "$base" < /dev/null; then
+                # merge-base answers 1, with nothing, for commits without a common one.
+                before=$(bounded git -C merges.git merge-base --all "$approved" "$base"; (( $? <= 1 ))) \
+                  && after=$(bounded git -C merges.git merge-base --all "$head" "$base"; (( $? <= 1 ))) \
+                  && forks[$key]=1
+                if [[ "${forks[$key]}" == 1 && -n "$before" ]] && [[ "$(sort <<< "$before")" == "$(sort <<< "$after")" ]]; then
+                  forks[$key]=0
+                fi
+              fi
+            fi
+            return "${forks[$key]}"
+          }
+          # A conflict resolution that keeps an approval was not reviewed, so the pull request says which files each
+          # merge resolved, in a comment of its own for each merge, whose last line is a hidden marker with the
+          # merge. Only a last line counts as a marker, so that the name of a file in a comment cannot pass for one.
+          # Two runs at once can both find a merge without a comment and both write one, and a run stopped after
+          # writing can leave its comment behind, so every run that writes for a pull request also takes away the
+          # comments of a merge but its oldest. The comments are written after the dismissals, so that they cannot
+          # take the time the dismissals need, and only while the pull request is still the one checked.
+          declare -A unnoted=() pull_heads=() pull_bases=()
+          # The merge and id of each comment of this workflow on a pull request, a line each.
+          comment_markers() {
+            before_job_end gh api --paginate "repos/$REPO/issues/$1/comments" \
+              --jq '.[] | select(.user.login == "github-actions[bot]") | . as $comment
+                | ($comment.body | rtrimstr("\n") | split("\n") | last | rtrimstr("\r"))
+                | capture("^<!-- kept-resolution:(?<merge>[0-9a-f]{40}) -->$") | "\(.merge) \($comment.id)"'
+          }
+          # A name as Markdown code, whatever backticks and spaces it holds: the fence is longer than its longest run
+          # of backticks, and a name that starts or ends with a backtick or a space gets a space inside each end,
+          # which Markdown takes off again.
+          md_code() {
+            local name=$1 fence='`'
+            while [[ "$name" == *"$fence"* ]]; do fence+='`'; done
+            [[ "$name" == [\ \`]* || "$name" == *[\ \`] ]] && name=" $name "
+            printf '%s%s%s' "$fence" "$name" "$fence"
+          }
+          note_resolutions() {
+            local number=$1 resolutions=$2 merge line name files markers others id status failed=0 more
+            local -A named=()
+            [[ -n "$resolutions" ]] || return 0
+            markers=$(comment_markers "$number") || return 1
+            for merge in $(cut -d ' ' -f 1 <<< "$resolutions" | awk 'NF && !seen[$0]++'); do
+              grep -q "^$merge " <<< "$markers" && continue
+              # Each name once, compared as it is before it is written as code. A comment is at most 65,536
+              # characters; the names that do not fit are left to the step summary, which has them all.
+              files= more=0 named=()
+              while IFS= read -r line; do
+                [[ "${line%% *}" == "$merge" ]] || continue
+                name=${line#* }
+                [[ -z "${named[$name]+set}" ]] || continue
+                named[$name]=1
+                if (( ${#files} + ${#name} < 60000 )); then files+="${files:+, }$(md_code "$name")"; else more=$(( more + 1 )); fi
+              done <<< "$resolutions"
+              (( more == 0 )) || files+=", and $more more, named in the step summary of the run"
+              # The pull request may have moved since it was checked, also while its comments were read; the next
+              # run looks at it again.
+              status=0; pull_unchanged "$number" "${pull_heads[$number]}" "${pull_bases[$number]}" || status=$?
+              (( status != 1 )) || return 0
+              (( status == 0 )) || return 1
+              if ! before_job_end gh api "repos/$REPO/issues/$number/comments" -f body="An approval of this pull request was kept across merge $merge of the base branch, whose conflicts were resolved by hand. Each resolution keeps one side of a conflict, the other, or both, and nobody has reviewed it yet: $files"$'\n\n'"<!-- kept-resolution:$merge -->" > /dev/null; then
+                # A comment that fails leaves the comments of the other merges to be written.
+                failed=1
+                continue
+              fi
+              markers=$(comment_markers "$number") || return 1
+            done
+            for merge in $(cut -d ' ' -f 1 <<< "$markers" | sort -u); do
+              others=$(while read -r line; do [[ "${line%% *}" == "$merge" ]] && echo "${line#* }"; done <<< "$markers" | sort -n | tail -n +2)
+              for id in $others; do
+                # A comment another run took away first is gone, as wanted.
+                before_job_end gh api -X DELETE "repos/$REPO/issues/comments/$id" > /dev/null \
+                  || echo "::warning title=Comment not removed::Could not remove comment $id, a second one for merge $merge, from pull request #$number"
+              done
+            done
+            return "$failed"
+          }
+          # Whether the pull request is still open, with the head and the base branch the check looked at, the base
+          # branch both by name and by the commit it was at: 0 when it is, 1 when it moved, 2 when it could not be
+          # read. A push, a change of the base branch or a new commit on it while the check ran makes this run's
+          # answer stale; the run for that push, or the next hourly run, looks at it again.
+          pull_unchanged() {
+            local number=$1 head=$2 base=$3 now
+            now=$(before_job_end gh api "repos/$REPO/pulls/$number" --jq '.state + " " + .head.sha + " " + .base.ref') || return 2
+            [[ "$now" == "open $head ${base%% *}" ]] || return 1
+            # A base branch GraphQL gave no commit for has none to compare.
+            [[ "${base#* }" != - ]] || return 0
+            now=$(before_job_end gh api "repos/$REPO/git/ref/heads/${base%% *}" --jq '.object.sha') || return 2
+            [[ "$now" == "${base#* }" ]] || return 1
+          }
+          # Whether an approval to dismiss is still the one checked: an approval, at the commit the check looked
+          # at, of a pull request that has not moved. GitHub may have moved it to another commit, where this run's
+          # answer does not hold. When GraphQL gave no commit for it, it only has to be away from the head.
+          unchanged() {
+            local number=$1 review=$2 commit=$3 head=$4 base=$5 now
+            now=$(before_job_end gh api "repos/$REPO/pulls/$number/reviews/$review" --jq '.state + " " + (.commit_id // "")') || return 2
+            if [[ "$commit" == - ]]; then
+              [[ "$now" == "APPROVED "* && "$now" != "APPROVED $head" ]] || return 1
+            else
+              [[ "$now" == "APPROVED $commit" ]] || return 1
+            fi
+            pull_unchanged "$number" "$head" "$base"
+          }
+          git init --quiet --bare merges.git
+          # Every fetch adds a pack, and once there are enough of them git would start a gc in the background, which
+          # holds the lock of the shallow commits that the next fetch has to take, and that fetch would then fail.
+          git -C merges.git config gc.auto 0
+          git -C merges.git config maintenance.auto false
+          git -C merges.git remote add origin "$GITHUB_SERVER_URL/$REPO"
+          git -C merges.git config "http.$GITHUB_SERVER_URL/.extraheader" "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           # The approvals given to another commit than the head, of every open pull request or of the ones whose head
           # is the pushed commit. A review dismissed earlier is no longer an approval. GitHub has already moved an
           # approval to the head when the push left the diff of the pull request as it was, so an approval still at
-          # another commit was given to other changes. Nothing is compared here but the trees of the two commits: an
-          # approval is kept when its commit has the very tree of the head, which holds the content, the name and
-          # the mode of every file, and dismissed otherwise, also when either tree is unknown. One query serves a
-          # hundred pull requests, so that the hourly run does not spend a request of the token's rate limit on each.
-          gh api graphql --paginate -f owner="${REPO%/*}" -f name="${REPO#*/}" -f query='
+          # another commit was given to other changes. Only two of those are kept: an approval whose commit has the
+          # very tree of the head, which holds the content, the name and the mode of every file, at the same place on
+          # the base branch (see same_fork), and an approval that only merges of the base branch separate from the
+          # head (see only_merges_base). Every other one is dismissed, also when a tree is unknown. One query serves
+          # a hundred pull requests, so that the hourly run does not spend a request of the token's rate limit on each.
+          timeout 120 gh api graphql --paginate -f owner="${REPO%/*}" -f name="${REPO#*/}" -f query='
             query($owner: String!, $name: String!, $endCursor: String) {
               repository(owner: $owner, name: $name) {
                 pullRequests(states: OPEN, first: 100, after: $endCursor) {
                   pageInfo { hasNextPage endCursor }
                   nodes {
-                    number headRefOid
+                    number headRefOid baseRefName
+                    baseRef { target { oid } }
                     commits(last: 1) { nodes { commit { oid tree { oid } } } }
                     reviews(states: APPROVED, first: 100) { nodes { databaseId author { login } commit { oid tree { oid } } } }
                   }
@@ -84,17 +509,57 @@ jobs:
               | ([.commits.nodes[].commit | select(.oid == $pull.headRefOid) | .tree.oid][0] // "-") as $tree
               | .reviews.nodes[] | select(.commit.oid != $pull.headRefOid)
               | [$pull.number, $pull.headRefOid, .databaseId, .author.login // "ghost", .commit.oid // "-",
-                  (if $tree != "-" and .commit.tree.oid == $tree then "same" else "changed" end)] | @tsv' > stale.tsv
-          while IFS=$'\t' read -r number head review login commit tree; do
-            if [[ "$tree" == same ]]; then
+                  (if $tree != "-" and .commit.tree.oid == $tree then "same" else "changed" end),
+                  $pull.baseRef.target.oid // "-", $pull.baseRefName] | @tsv' > stale.tsv
+          # First every check, each approval with two minutes for all its checks, then the dismissals, so that their
+          # requests cannot take the time of a check, and then the comments.
+          dismissals=()
+          while IFS=$'\t' read -r number head review login commit tree base base_ref; do
+            reason="the pull request changed after this approval" accepted= fork=1 approval_end=$(( SECONDS + 120 ))
+            if [[ "$tree" == same && "$base" != - ]]; then
+              fork=0; same_fork "$base" "$commit" "$head" || fork=$?
+            fi
+            if (( fork == 0 )); then
               echo "#$number: approval of $login at ${commit:0:10} kept, ${head:0:10} has the same files"
-            elif [[ "$DRY_RUN" == true ]]; then
-              echo "#$number: approval of $login at ${commit:0:10} would be dismissed, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
-            elif gh api -X PUT "repos/$REPO/pulls/$number/reviews/$review/dismissals" -f event=DISMISS \
-              -f message="Dismissed automatically: the pull request changed after this approval, from ${commit:0:10} to ${head:0:10}." > /dev/null; then
-              echo "#$number: approval of $login at ${commit:0:10} dismissed, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            if [[ "$commit" != - && "$base" != - ]] && checked_merges "$base" "$commit" "$head"; then
+              # One line per file, the merge and the name separated by the first space.
+              echo "#$number: approval of $login at ${commit:0:10} kept, ${head:0:10} only merges the base branch$(
+                awk 'NF { merge = substr($0, 1, index($0, " ") - 1); file = substr($0, index($0, " ") + 1)
+                    files[merge] = files[merge] sep[merge] file; sep[merge] = ", "; if (!(merge in seen)) order[++n] = merge; seen[merge] }
+                  END { for (i = 1; i <= n; i++) printf "%s %s resolved %s", (i == 1 ? ";" : ","), substr(order[i], 1, 10), files[order[i]] }' <<< "$accepted")" | tee -a "$GITHUB_STEP_SUMMARY"
+              if [[ "$DRY_RUN" != true ]]; then
+                unnoted[$number]+=$accepted pull_heads[$number]=$head pull_bases[$number]="$base_ref $base"
+              fi
+              continue
+            fi
+            # A same tree whose place on the base branch could not be read was not shown to be a change.
+            (( fork != 2 )) || reason="the commits after this approval could not be checked"
+            if [[ "$DRY_RUN" == true ]]; then
+              echo "#$number: approval of $login at ${commit:0:10} would be dismissed, $reason, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            dismissals+=("$number"$'\t'"$head"$'\t'"$review"$'\t'"$login"$'\t'"$commit"$'\t'"$base_ref $base"$'\t'"$reason")
+          done < stale.tsv
+          unset approval_end
+          for dismissal in "${dismissals[@]}"; do
+            IFS=$'\t' read -r number head review login commit base_ref reason <<< "$dismissal"
+            status=0; unchanged "$number" "$review" "$commit" "$head" "$base_ref" || status=$?
+            case $status in
+              0) ;;
+              1) echo "#$number: approval of $login at ${commit:0:10} left to the next run, the pull request moved while it was checked"; continue ;;
+              *) echo "::warning title=Review not dismissed::Could not read review $review of $login on pull request #$number again before dismissing it"; continue ;;
+            esac
+            if before_job_end gh api -X PUT "repos/$REPO/pulls/$number/reviews/$review/dismissals" -f event=DISMISS \
+              -f message="Dismissed automatically: $reason, from ${commit:0:10} to ${head:0:10}." > /dev/null; then
+              echo "#$number: approval of $login at ${commit:0:10} dismissed, $reason, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
             else
               # Another run may have dismissed it first, which is the outcome wanted anyway.
               echo "::warning title=Review not dismissed::Could not dismiss review $review of $login on pull request #$number"
             fi
-          done < stale.tsv
+          done
+          for number in "${!unnoted[@]}"; do
+            note_resolutions "$number" "${unnoted[$number]}" \
+              || echo "::warning title=Resolution not noted::Could not comment on pull request #$number about the conflicts resolved after an approval"
+          done

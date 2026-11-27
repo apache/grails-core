@@ -1,0 +1,71 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Tests the step of dismiss-stale-reviews.yml whenever it, or its test, changes. That workflow runs only from the
+# default branch, on events no pull request can start, so its checks are tested here instead: the test takes the
+# step's script from the workflow file and runs it against small repositories, with a stand-in for gh.
+name: "Dismiss Stale Reviews Test"
+on:
+  push:
+    branches:
+      - '[0-9]+.[0-9]+.x'
+    paths:
+      - '.github/workflows/dismiss-stale-reviews.yml'
+      - '.github/workflows/dismiss-stale-reviews-test.yml'
+      - '.github/scripts/test-dismiss-stale-reviews.sh'
+  pull_request:
+    # ready_for_review is not a default type: a draft runs nothing until it is ready or labelled "run ci".
+    types: [ opened, synchronize, reopened, ready_for_review ]
+    paths:
+      - '.github/workflows/dismiss-stale-reviews.yml'
+      - '.github/workflows/dismiss-stale-reviews-test.yml'
+      - '.github/scripts/test-dismiss-stale-reviews.sh'
+  workflow_dispatch:
+    inputs:
+      run-tests:
+        description: "Run the test where the branch rule would skip it (a release branch below the default); a [skip tests] head commit still skips it"
+        type: boolean
+        default: false
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
+jobs:
+  policy:
+    name: "CI policy"
+    # A pull request labelled "no ci", or a draft without the "run ci" label, skips this job; the test needs
+    # it, so nothing runs for such a pull request.
+    if: >-
+      github.event_name != 'pull_request'
+      || (!contains(github.event.pull_request.labels.*.name, 'no ci')
+          && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
+    uses: ./.github/workflows/ci-policy.yml
+  test:
+    name: "Test the dismissal of stale reviews"
+    needs: [ policy ]
+    # As every test of the repository: on a release branch below the default, and so on a pull request into
+    # one, only on request (the "run ci" label, a commit starting with [run tests], or a manual run).
+    if: ${{ needs.policy.outputs.run-tests == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github
+      - name: "🧪 Test the dismissal of stale reviews"
+        run: bash .github/scripts/test-dismiss-stale-reviews.sh
