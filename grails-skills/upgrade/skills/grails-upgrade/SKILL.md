@@ -69,6 +69,7 @@ Use the published Grails documentation as the source of truth before changing an
 | `https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes` | Spring Boot 4.2 changes |
 | `https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes` | Spring Framework 7.1 changes |
 | `https://github.com/graphql-java/graphql-java/releases/tag/v26.0` | graphql-java 26.0 breaking changes, for applications using the GraphQL plugin |
+| `https://docs.spring.io/spring-ai/reference/2.1/upgrade-notes.html` | Spring AI 2.0.2, 2.0.3 and 2.1.0 changes, for applications using Spring AI |
 | `https://github.com/ReactiveX/RxJava/wiki/What's-different-in-3.0` | RxJava 3 API differences, with the RxJava 1 to 2 differences it links to |
 
 # Grails 9.0.0-M1
@@ -81,6 +82,7 @@ Verify these before touching application code; `gradle.properties`, the Gradle w
 - Groovy moves from 5.x to 6.0, and Spock to the `groovy-6.0` variant. Do not pin `groovy-all` or Spock yourself; the Grails BOM manages both.
 - Spring Boot moves from 4.1 to 4.2 and Spring Framework from 7.0 to 7.1; the Grails BOM manages the exact versions. The managed versions that change include Spring Security 7.2, Spring Data 2026.1, Micrometer 1.18 and Reactor 2026.0. Spring Boot 4.2 renames configuration properties, so a Grails 8 application's Boot configuration needs review; see [Spring Boot 4.2 and Spring Framework 7.1](#spring-boot-42-and-spring-framework-71).
 - Applications using the GraphQL plugin (`grails-data-graphql`) move from graphql-java 25 to graphql-java 26, which Spring Boot 4.2 manages.
+- Applications using Spring AI (`grails-spring-ai`) move from Spring AI 2.0.1 to 2.1.0, the Spring Boot 4.2 line, which the Grails BOM manages. In the test environment `grails-testing-support-ai` also defaults the new `spring.ai.model.decision` selection to `none`.
 - Gradle 9.7 or later, the minimum Grails 8 already required. The requirements page of the guide names the Gradle version Grails 9 generates applications with.
 - RxGORM (`grails-datamapping-rx`) depends on `io.reactivex.rxjava3:rxjava`. The RxJava 1 artifact `io.reactivex:rxjava` is no longer transitively available through it.
 - Groovy source sets compile with invokedynamic by default; `grails { indy = false }` was the Grails 8 default and is now unset.

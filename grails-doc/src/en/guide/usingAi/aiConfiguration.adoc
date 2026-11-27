@@ -67,6 +67,9 @@ The plugin selects no provider and no credential; the starter the application ad
 
 | `spring.ai.model.moderation`
 | the moderation model
+
+| `spring.ai.model.decision`
+| the decision model, which picks among known outcomes, such as yes or no, and reports how likely each is
 |===
 
 Which model a provider uses, and with what options, is set under the provider's own prefix, for example `spring.ai.openai.chat.model` and `spring.ai.openai.chat.temperature`, or `spring.ai.anthropic.chat.model`; each provider's page in the Spring AI reference lists them with their defaults.

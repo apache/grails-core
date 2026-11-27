@@ -114,9 +114,9 @@ ext {
             'sitemesh.version'              : '2.6.0',
             'scribejava.version'            : '8.3.3',
             'spock.version'                 : '2.5-groovy-6.0',
-            // Not managed by spring-boot-dependencies. Spring AI 2.0.x is the Spring Boot 4.0 / 4.1
+            // Not managed by spring-boot-dependencies. Spring AI 2.1.x is the Spring Boot 4.2
             // line; grails-bom imports its BOM so applications and grails-spring-ai share one Spring AI version.
-            'spring-ai-bom.version'         : '2.0.1',
+            'spring-ai-bom.version'         : '2.1.0',
             // Not managed by spring-boot-dependencies. springdoc 3.x is the Spring Boot 4 /
             // Spring Framework 7 line; the grails-openapi module compiles against its
             // OpenApiCustomizer SPI and apps add the webmvc-ui starter for Swagger UI.
