@@ -110,6 +110,27 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         expected = leftJoinSort ? 4 : 3
     }
 
+    void '#api sorted by #sort orders by the club, not by the team or the player'() {
+        given:
+        savePlayersInDistinctOrders()
+
+        expect:
+        query.call()*.name == expected
+
+        where:
+        api                                       | sort             | query                                                                                                    || expected
+        'a where query'                           | 'team.club.name' | { Player.where { name ==~ 'Order%' }.list(sort: 'team.club.name') }                                     || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a where query'                           | 'team.club.id'   | { Player.where { name ==~ 'Order%' }.list(sort: 'team.club.id') }                                       || ['Order player 2', 'Order player 3', 'Order player 1']
+        'a where query with criteria on the team' | 'team.club.name' | { Player.where { team.name ==~ 'Order%' }.list(sort: 'team.club.name') }                                || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a where query with criteria on the team' | 'team.club.id'   | { Player.where { team.name ==~ 'Order%' }.list(sort: 'team.club.id') }                                  || ['Order player 2', 'Order player 3', 'Order player 1']
+        'a where query through an alias'          | 't.club.id'      | { Player.where { final t = team; t.name ==~ 'Order%' }.list(sort: 't.club.id') }                         || ['Order player 2', 'Order player 3', 'Order player 1']
+        'a dynamic finder'                        | 'team.club.name' | { Player.findAllByNameLike('Order%', [sort: 'team.club.name']) }                                        || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a paged criteria query'                  | 'team.club.name' | { Player.createCriteria().list(sort: 'team.club.name', max: 10) { like('name', 'Order%') } }             || ['Order player 2', 'Order player 1', 'Order player 3']
+        'a paged criteria query'                  | 'team.club.id'   | { Player.createCriteria().list(sort: 'team.club.id', max: 10) { like('name', 'Order%') } }               || ['Order player 2', 'Order player 3', 'Order player 1']
+        'order in a criteria query'               | 'team.club.name' | { Player.createCriteria().list { like('name', 'Order%'); order('team.club.name') } }                     || ['Order player 2', 'Order player 1', 'Order player 3']
+        'order in a criteria query'               | 'team.club.id'   | { Player.createCriteria().list { like('name', 'Order%'); order('team.club.id') } }                       || ['Order player 2', 'Order player 3', 'Order player 1']
+    }
+
     @Issue(['https://github.com/apache/grails-core/issues/9860', 'https://github.com/apache/grails-core/issues/15589'])
     void 'sort by an association property that is also used in the where query'() {
         when:

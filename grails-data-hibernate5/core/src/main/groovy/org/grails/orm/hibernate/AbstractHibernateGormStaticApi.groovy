@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.Root
 
 import org.hibernate.Criteria
@@ -43,6 +44,11 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder
@@ -569,6 +575,8 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             Criteria crit = session.createCriteria(persistentEntity.javaClass)
             hibernateTemplate.applySettings(crit)
             crit.add(example)
+            // Collection-sort joins must know about find's implicit limit before they are created.
+            crit.maxResults = 1
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, crit, args, datastore.mappingContext.conversionService, true)
             crit.maxResults = 1
             firePreQueryEvent(session, crit)
@@ -590,11 +598,38 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             hibernateTemplate.applySettings(crit)
             crit.add(example)
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, crit, args, datastore.mappingContext.conversionService, true)
+            if (requestsTypedCollectionFetch(args)) {
+                crit.setResultTransformer(DistinctRootEntityResultTransformer.INSTANCE)
+            }
             firePreQueryEvent(session, crit)
             List results = crit.list()
             firePostQueryEvent(session, crit, results)
             return results
         }
+    }
+
+    private boolean requestsTypedCollectionFetch(Map args) {
+        Object fetch = args.get(DynamicFinder.ARGUMENT_FETCH)
+        if (!(fetch instanceof Map)) {
+            return false
+        }
+        return ((Map) fetch).any { path, mode ->
+            mode instanceof JoinType && path instanceof String && isCollectionFetchPath((String) path)
+        }
+    }
+
+    private boolean isCollectionFetchPath(String path) {
+        PersistentEntity entity = persistentEntity
+        boolean collection = false
+        for (String name : path.split('\\.')) {
+            PersistentProperty property = entity?.getPropertyByName(name)
+            if (!(property instanceof Association) || property instanceof Embedded) {
+                return false
+            }
+            collection |= property instanceof ToMany
+            entity = ((Association) property).associatedEntity
+        }
+        return collection
     }
 
     @Override
