@@ -85,6 +85,39 @@ dependencies {
     testRuntimeOnly project(':grails-test-listener')
 }
 
+// FrameworkToolsCompleteSpec reads the -cli and -cli-standalone jar of every project of the framework that publishes
+// one, found as the BOMs find them (gradle/cli-companion-bom-constraints.gradle): by the artifact ids a project
+// exports once it is configured, which is why they are read when the configuration is resolved. Each jar is resolved
+// alone, without what it depends on, and is not on the class path of any test: the spec only reads it. The projects
+// of the test suites and of the test examples are not the framework's.
+def frameworkToolJars = configurations.register('frameworkToolJars') { Configuration jars ->
+    jars.canBeConsumed = false
+    jars.canBeResolved = true
+    jars.transitive = false
+    jars.attributes { AttributeContainer attributes ->
+        attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+        attributes.attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
+        attributes.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.JAR))
+        attributes.attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+    }
+    List<String> notTheFrameworks = rootProject.ext.testProjectsStartWith as List<String>
+    jars.withDependencies { DependencySet companions ->
+        for (Project subproject : rootProject.subprojects) {
+            if (notTheFrameworks.any { String prefix -> subproject.name.startsWith(prefix) }) {
+                continue
+            }
+            for (String companionProperty : ['cliArtifactId', 'cliStandaloneArtifactId']) {
+                def artifactId = subproject.findProperty(companionProperty)
+                if (artifactId) {
+                    ModuleDependency companion = (ModuleDependency) project.dependencies.project(path: subproject.path)
+                    companion.capabilities { it.requireCapability("${subproject.group}:${artifactId}") }
+                    companions.add(companion)
+                }
+            }
+        }
+    }
+}
+
 def isolatedTestPatterns = [
         isolatedTestsOne: [
                 'org.grails.web.util.WebUtilsTests'
@@ -106,6 +139,20 @@ def isolatedTestPatterns = [
                 'grails.test.mixin.ResourceAnnotationRestfulControllerSpec'
         ],
 ]
+
+def frameworkToolsSpec = 'org.apache.grails.tools.FrameworkToolsCompleteSpec'
+
+// A task of its own, so that the jars of the tools, which a change to any module with tools changes, are the
+// input of this one spec and not of the whole suite
+tasks.register('frameworkToolsTest', Test) {
+    group = 'verification'
+    description = 'Checks that every tool in the -cli and -cli-standalone jars of the framework has a description, hints and ' +
+            'the declarations of the arguments it reads (FrameworkToolsCompleteSpec).'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    filter.includePatterns = [frameworkToolsSpec]
+    jvmArgumentProviders.add(new FrameworkToolJars(jars: files(frameworkToolJars)))
+}
 
 def testSkippingProperties = [
         'onlyFunctionalTests',
@@ -154,8 +201,8 @@ tasks.named('isolatedTestsTwo', Test) {
 }
 
 tasks.named('test', Test) {
-    // Exclude the isolated tests from the main test task
-    filter.excludePatterns = isolatedTestPatterns.values().flatten()
+    // Exclude the isolated tests, and the spec frameworkToolsTest runs, from the main test task
+    filter.excludePatterns = isolatedTestPatterns.values().flatten() + [frameworkToolsSpec]
 }
 
 tasks.register('testAll') {
@@ -171,4 +218,17 @@ tasks.named('check') {
 tasks.withType(Groovydoc).configureEach {
     // tests do not have groovydoc
     enabled = false
+}
+
+/** Hands FrameworkToolsCompleteSpec the jars of the tools of the framework, as {@code -Dframework.tools.jars=<paths>}. */
+class FrameworkToolJars implements CommandLineArgumentProvider {
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.NAME_ONLY)
+    FileCollection jars
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-Dframework.tools.jars=${jars.files*.absolutePath.join(File.pathSeparator)}".toString()]
+    }
 }
