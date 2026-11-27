@@ -173,13 +173,8 @@ final class QueryAliasRegistrar {
     }
 
     /**
-     * Registers an implicit alias, named after the path it joins, unless this query declares an alias of that name
-     * or an enclosing query has an explicit one: an implicit alias never hides an explicit alias that is visible
-     * from the scope it is registered in, so a reference to the name still reaches the alias the user declared.
-     *
-     * @param context the context to register the alias in
-     * @param path the association path the alias joins, which is also its name
-     * @param joinType the join type of the alias
+     * Whether a path that a join type is requested for names associations, and not a property or a path through an
+     * embedded component, which have nothing to join.
      */
     private boolean isAssociationPath(String path) {
         if (path.contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
@@ -193,7 +188,8 @@ final class QueryAliasRegistrar {
                 // the rest of the path cannot be checked against the model, so it is left to the query
                 return true;
             }
-            if (!(current.getPropertyByName(token) instanceof Association<?> association)) {
+            // a join type requested through an embedded component is left alone, as with Hibernate 5
+            if (!(current.getPropertyByName(token) instanceof Association<?> association) || association instanceof Embedded) {
                 return false;
             }
             current = association.getAssociatedEntity();
@@ -201,6 +197,15 @@ final class QueryAliasRegistrar {
         return true;
     }
 
+    /**
+     * Registers an implicit alias, named after the path it joins, unless this query declares an alias of that name
+     * or an enclosing query has an explicit one: an implicit alias never hides an explicit alias that is visible
+     * from the scope it is registered in, so a reference to the name still reaches the alias the user declared.
+     *
+     * @param context the context to register the alias in
+     * @param path the association path the alias joins, which is also its name
+     * @param joinType the join type of the alias
+     */
     private void registerImplicit(JpaQueryContext context, String path, JoinType joinType) {
         AliasRegistry registry = context.getAliasRegistry();
         HibernateAlias visible = registry.getDefinition(path);

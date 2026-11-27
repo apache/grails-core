@@ -197,12 +197,12 @@ public class JpaCriteriaQueryCreator<T> {
         collectRequestedFetches(detachedCriteria, "", requested);
         Set<String> joinedCollections = new HashSet<>();
         requested.keySet().forEach(path -> collectCollectionPaths(path, joinedCollections));
-        long bags = requested.keySet().stream().map(this::bagOnPath).filter(Objects::nonNull).distinct().count();
+        long bags = requested.keySet().stream().flatMap(path -> bagsOnPath(path).stream()).distinct().count();
         // A collection fetch makes Hibernate deduplicate entity results, including unmatched null rows of a
         // right join. Load those collections separately, retaining the existing two-bag restriction.
         boolean deferForRightJoin = bags < 2 && requested.entrySet().stream().anyMatch(entry ->
                 entry.getValue() == JoinType.RIGHT && firstCollection(entry.getKey().split("\\.")) == -1);
-        for (Query.Order order : detachedCriteria.getOrders()) {
+        for (Query.Order order : sortOrders(countsList)) {
             int dot = order.getProperty().lastIndexOf('.');
             if (dot > 0) {
                 collectCollectionPaths(order.getProperty().substring(0, dot), joinedCollections);
@@ -231,7 +231,8 @@ public class JpaCriteriaQueryCreator<T> {
             if (restricts && collection >= 0) {
                 requestedJoinRestrictions.add(joinedInSubquery(query, root, tokens));
             }
-            String bag = bagOnPath(path);
+            List<String> bagsOfPath = bagsOnPath(path);
+            String bag = bagsOfPath.isEmpty() ? null : bagsOfPath.get(0);
             boolean deferred = deferForRightJoin && collection >= 0 ||
                     bags == 1 && bag != null && joinedCollections.stream().anyMatch(collectionPath -> !collectionPath.equals(bag));
             if (entitySelect) {
@@ -253,6 +254,17 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     private static final int NOT_AN_ASSOCIATION_PATH = -2;
+
+    /**
+     * The orders of the query. A count also has the orders that it cleared, which still join what they sort by.
+     */
+    private List<Query.Order> sortOrders(boolean counting) {
+        List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
+        if (counting && hibernateQuery != null) {
+            orders.addAll(hibernateQuery.getClearedOrders());
+        }
+        return orders;
+    }
 
     private static void collectRequestedFetches(DetachedCriteria<?> owner, String prefix, Map<String, JoinType> requested) {
         CriteriaVisitor.walk(owner.getCriteria(), new CriteriaVisitor() {
@@ -291,20 +303,22 @@ public class JpaCriteriaQueryCreator<T> {
         }
     }
 
-    private String bagOnPath(String path) {
+    private List<String> bagsOnPath(String path) {
+        List<String> bags = new ArrayList<>();
         PersistentEntity current = entity;
         String prefix = "";
         for (String token : path.split("\\.")) {
             if (current == null || !(current.getPropertyByName(token) instanceof Association<?> association)) {
-                return null;
+                return bags;
             }
             prefix = prefix.isEmpty() ? token : prefix + '.' + token;
             if (association instanceof ToMany && association.getType() == Collection.class) {
-                return prefix;
+                // a path through two bags fetches both of them
+                bags.add(prefix);
             }
             current = association.getAssociatedEntity();
         }
-        return null;
+        return bags;
     }
 
     /**
@@ -319,12 +333,8 @@ public class JpaCriteriaQueryCreator<T> {
                 return NOT_AN_ASSOCIATION_PATH;
             }
             if (association instanceof Embedded) {
-                // a component has no join of its own; a path goes through it to an association that it holds
-                if (i == tokens.length - 1) {
-                    return NOT_AN_ASSOCIATION_PATH;
-                }
-                current = association.getAssociatedEntity();
-                continue;
+                // a join type requested through an embedded component is left alone, as with Hibernate 5
+                return NOT_AN_ASSOCIATION_PATH;
             }
             if (association instanceof ToMany && collection < 0) {
                 collection = i;
@@ -521,11 +531,7 @@ public class JpaCriteriaQueryCreator<T> {
 
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context, boolean countOnly) {
-        List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
-        if (countOnly && hibernateQuery != null) {
-            // the orders that the count cleared still join what they sort by
-            orders.addAll(hibernateQuery.getClearedOrders());
-        }
+        List<Query.Order> orders = sortOrders(countOnly);
         boolean distinctEntities = isDistinctEntities();
         List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
         for (Query.Order order : orders) {

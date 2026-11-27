@@ -27,6 +27,7 @@ import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.Hibernate
+import org.hibernate.loader.MultipleBagFetchException
 
 import jakarta.persistence.criteria.JoinType
 
@@ -42,10 +43,12 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
                                       AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal,
                                        AssociationJoinTypePrize, AssociationJoinTypeRibbon,
                                        RequestedJoinBagTeam, RequestedJoinBagMember, RequestedJoinBagTrophy,
+                                       RequestedJoinNestedBagOwner, RequestedJoinNestedBagChild, RequestedJoinNestedBagLeaf,
+                                       RequestedJoinCompositeItem, RequestedJoinCompositeTag,
                                        AssociationSortBook, AssociationSortAuthor, RequestedJoinSortedTeam)
     }
 
-    void 'a join type requested for a path through an embedded component is applied by #description'() {
+    void 'a join type requested for a path through an embedded component is left alone by #description, as with Hibernate 5'() {
         given: 'a book with an author, and one whose component has none'
         final king = new AssociationSortAuthor(name: 'King').save(failOnError: true)
         new AssociationSortBook(title: 'It', details: new AssociationSortBookDetails(isbn: '1', author: king)).save(failOnError: true)
@@ -56,39 +59,13 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         query.call() == expected
 
         where:
-        description                              | query                                                                                                                                                 || expected
-        'a where query'                          | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER).list()*.title }                                                || ['It']
-        'the count of a where query'             | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER).count() }                                                      || 1
-        'a criteria query'                       | { AssociationSortBook.createCriteria().list { join('details.author', JoinType.INNER) }*.title }                                                     || ['It']
-        'list'                                   | { AssociationSortBook.list(fetch: ['details.author': JoinType.INNER])*.title }                                                                      || ['It']
-        'a paged list'                           | { AssociationSortBook.list(fetch: ['details.author': JoinType.INNER], max: 10).totalCount }                                                         || 1
-        'list after a left join of a longer path' | { AssociationSortBook.list(fetch: ['details.author.mentor': JoinType.LEFT, 'details.author': JoinType.INNER])*.title }                             || ['It']
-        'list before a left join of a longer path' | { AssociationSortBook.list(fetch: ['details.author': JoinType.INNER, 'details.author.mentor': JoinType.LEFT])*.title }                            || ['It']
-        'a where query with a left join'         | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.LEFT).list(sort: 'title')*.title }                                    || ['Anonymous', 'It']
-        'a left join of a longer path alone'     | { AssociationSortBook.list(fetch: ['details.author.mentor': JoinType.LEFT], sort: 'title')*.title }                                                 || ['Anonymous', 'It']
-    }
-
-    void '#operation changes only the book that a join type requested through an embedded component keeps'() {
-        given: 'a book with an author, and one whose component has none'
-        final king = new AssociationSortAuthor(name: 'King').save(failOnError: true)
-        new AssociationSortBook(title: 'It', details: new AssociationSortBookDetails(isbn: '1', author: king)).save(failOnError: true)
-        new AssociationSortBook(title: 'Anonymous', details: new AssociationSortBookDetails(isbn: '3')).save(failOnError: true, flush: true)
-        manager.session.clear()
-
-        when:
-        final changed = mutate.call(query.call())
-        manager.session.clear()
-
-        then: 'the update or the delete leaves alone the book that the list leaves out'
-        changed == 1
-        AssociationSortBook.list(sort: 'title')*.title == expected
-
-        where:
-        operation                            | query                                                                                       | mutate                                       || expected
-        'deleteAll of a where query'         | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER) }      | { criteria -> criteria.deleteAll() }          || ['Anonymous']
-        'updateAll of a where query'         | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER) }      | { criteria -> criteria.updateAll(title: 'X') } || ['Anonymous', 'X']
-        'deleteAll of a detached criteria'   | { new DetachedCriteria(AssociationSortBook).join('details.author', JoinType.INNER) }        | { criteria -> criteria.deleteAll() }          || ['Anonymous']
-        'updateAll of a detached criteria'   | { new DetachedCriteria(AssociationSortBook).join('details.author', JoinType.INNER) }        | { criteria -> criteria.updateAll(title: 'X') } || ['Anonymous', 'X']
+        description                  | query                                                                                                                       || expected
+        'a where query'              | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER).list(sort: 'title')*.title }           || ['Anonymous', 'It']
+        'the count of a where query' | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER).count() }                              || 2
+        'a criteria query'           | { AssociationSortBook.createCriteria().list { join('details.author', JoinType.INNER); order('title') }*.title }             || ['Anonymous', 'It']
+        'list'                       | { AssociationSortBook.list(fetch: ['details.author': JoinType.INNER], sort: 'title')*.title }                               || ['Anonymous', 'It']
+        'a paged list'               | { AssociationSortBook.list(fetch: ['details.author': JoinType.INNER], max: 10).totalCount }                                 || 2
+        'deleteAll'                  | { AssociationSortBook.where { title ==~ '%' }.join('details.author', JoinType.INNER).deleteAll() }                          || 2
     }
 
     void setup() {
@@ -183,8 +160,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
 
         then:
         changed == 1
-        Team.findByName('Bulk unlinked') != null
-        Team.findByName('Bulk linked') == null
+        Team.findAllByNameLike('Bulk%')*.name.sort() == (operation == 'update' ? ['Bulk unlinked', 'Bulk updated'] : ['Bulk unlinked'])
 
         where:
         operation << ['update', 'delete']
@@ -650,6 +626,58 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         'list'     | { RequestedJoinBagTeam.list(sort: 'trophies.name', fetch: [members: 'join']) }
     }
 
+    void '#api keeps the restriction on fetching two bags for a path through two bags'() {
+        given: 'an owner whose child has two leaves, and an owner without children'
+        final owner = new RequestedJoinNestedBagOwner(name: 'Full')
+        final child = new RequestedJoinNestedBagChild(name: 'Child')
+        child.addToLeaves(name: 'Leaf A').addToLeaves(name: 'Leaf B')
+        owner.addToChildren(child)
+        owner.save(failOnError: true)
+        new RequestedJoinNestedBagOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when: 'both bags on the path are counted, so neither is loaded after the query'
+        query.call()
+
+        then: 'Hibernate refuses to fetch two bags together, as for two requested bags of the queried class'
+        final IllegalArgumentException e = thrown()
+        e.cause instanceof MultipleBagFetchException
+
+        where:
+        api              | query
+        'list'           | { RequestedJoinNestedBagOwner.list(fetch: ['children.leaves': JoinType.INNER]) }
+        'a where query'  | { RequestedJoinNestedBagOwner.where { name ==~ '%' }.join('children.leaves', JoinType.INNER).list() }
+        'a left join'    | { RequestedJoinNestedBagOwner.where { name ==~ '%' }.join('children.leaves', JoinType.LEFT).list() }
+    }
+
+    void 'deleteAll of an entity with a composite identifier fails with a message for a requested join through a join table'() {
+        given:
+        new RequestedJoinCompositeItem(code: 'A', region: 'EU').addToTags(name: 'red').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when: 'the instances are deleted by their identifiers, which a composite identifier is not'
+        RequestedJoinCompositeItem.where { code == 'A' }.join('tags', JoinType.INNER).deleteAll()
+
+        then:
+        final UnsupportedOperationException e = thrown()
+        e.message.contains('composite identifier')
+    }
+
+    void 'updateAll of an entity with a composite identifier applies a requested join through a join table'() {
+        given:
+        new RequestedJoinCompositeItem(code: 'A', region: 'EU').addToTags(name: 'red').save(failOnError: true)
+        new RequestedJoinCompositeItem(code: 'A', region: 'US').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final changed = RequestedJoinCompositeItem.where { code == 'A' }.join('tags', JoinType.INNER).updateAll(label: 'changed')
+        manager.session.clear()
+
+        then: 'only the item with a tag is changed'
+        changed == 1
+        RequestedJoinCompositeItem.list(sort: 'region').collect { it.region + ':' + it.label } == ['EU:changed', 'US:null']
+    }
+
     void 'a where query joins an association with the join type that fetch requests'() {
         when:
         final results = Team.where {
@@ -1040,7 +1068,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         }
 
         expect:
-        query."$method"(fetch: [club: JoinType.LEFT]) != null
+        query."$method"(fetch: [club: JoinType.LEFT])?.name == 'Unattached First Team'
         query."$method"(fetch: [club: JoinType.INNER]) == null
 
         where:
@@ -1909,6 +1937,48 @@ class RequestedJoinBagTeam {
     String name
     Collection<RequestedJoinBagMember> members
     static hasMany = [members: RequestedJoinBagMember, trophies: RequestedJoinBagTrophy]
+}
+
+@Entity
+class RequestedJoinNestedBagOwner {
+    String name
+    Collection<RequestedJoinNestedBagChild> children
+    static hasMany = [children: RequestedJoinNestedBagChild]
+}
+
+@Entity
+class RequestedJoinNestedBagChild {
+    String name
+    Collection<RequestedJoinNestedBagLeaf> leaves
+    static belongsTo = [owner: RequestedJoinNestedBagOwner]
+    static hasMany = [leaves: RequestedJoinNestedBagLeaf]
+}
+
+@Entity
+class RequestedJoinNestedBagLeaf {
+    String name
+    static belongsTo = [child: RequestedJoinNestedBagChild]
+}
+
+@Entity
+class RequestedJoinCompositeItem implements Serializable {
+    String code
+    String region
+    String label
+    static hasMany = [tags: RequestedJoinCompositeTag]
+
+    static mapping = {
+        id composite: ['code', 'region']
+    }
+
+    static constraints = {
+        label nullable: true
+    }
+}
+
+@Entity
+class RequestedJoinCompositeTag {
+    String name
 }
 
 @Entity

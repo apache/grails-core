@@ -391,18 +391,10 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             if (requestedJoin.getValue() == null || requestedJoin.getValue() == JoinType.LEFT) {
                 continue;
             }
-            // the first association of the path, which can be inside an embedded component
-            String association = null;
-            PersistentProperty<?> property = null;
-            PersistentEntity owner = criteria.getPersistentEntity();
-            for (String token : requestedJoin.getKey().split("\\.")) {
-                property = owner != null ? owner.getPropertyByName(token) : null;
-                association = association == null ? token : association + '.' + token;
-                if (!(property instanceof Embedded<?> embedded)) {
-                    break;
-                }
-                owner = embedded.getAssociatedEntity();
-            }
+            // the first association of the path
+            String path = requestedJoin.getKey();
+            String association = path.indexOf('.') < 0 ? path : path.substring(0, path.indexOf('.'));
+            PersistentProperty<?> property = criteria.getPersistentEntity().getPropertyByName(association);
             if (property instanceof Basic) {
                 return true;
             }
@@ -424,6 +416,10 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
      */
     private int modifyByIdentifiers(Session session, QueryableCriteria source, Map<String, Object> properties) {
         PersistentEntity entity = source.getPersistentEntity();
+        if (entity.getIdentity() == null) {
+            throw new UnsupportedOperationException("Cannot apply the requested join type to an update or a delete of [" +
+                    entity.getName() + "]: the instances are updated or deleted by their identifiers, and a composite identifier is not supported there");
+        }
         HibernateQuery selection = new HibernateQuery(this, (GrailsHibernatePersistentEntity) entity);
         for (Object criterion : source.getCriteria()) {
             selection.add((Query.Criterion) criterion);
@@ -524,8 +520,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
      * instance through the association, by the side of it that has the foreign key: a one-to-one whose foreign key
      * the other entity has, such as a {@code hasOne}, is matched through the property of the other entity that
      * refers back. A collection of a basic type has no entity of its own, so a path that starts with one selects
-     * from the entity itself. An embedded component has no join of its own: the path goes through it to the
-     * association that it holds.
+     * from the entity itself. A path through an embedded component is left alone, as with Hibernate 5.
      * <p>
      * MySQL does not allow an update or a delete to select from the table that it modifies. A path that leads back
      * to the class of the entity cannot be applied there, and is rejected instead of being left to fail in the
@@ -544,15 +539,8 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         String alias = null;
         boolean selectsFromModifiedTable = false;
         PersistentEntity currentEntity = entity;
-        // the components between the entity or the last join and the next association, as a path prefix
-        String componentPath = "";
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty<?> property = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
-            if (property instanceof Embedded<?> embedded && i != last) {
-                componentPath = componentPath + tokens[i] + '.';
-                currentEntity = embedded.getAssociatedEntity();
-                continue;
-            }
             if (!(property instanceof Association<?> association) || property instanceof Embedded || (property instanceof Basic && i != last)) {
                 return null;
             }
@@ -560,8 +548,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             if (associatedEntity == null && !(association instanceof Basic)) {
                 return null;
             }
-            String attributePath = componentPath + tokens[i];
-            componentPath = "";
+            String attributePath = tokens[i];
             String joinAlias = "join" + index + '_' + i;
             if (alias != null) {
                 from.append(" INNER JOIN ").append(alias).append('.').append(attributePath).append(' ').append(joinAlias);
