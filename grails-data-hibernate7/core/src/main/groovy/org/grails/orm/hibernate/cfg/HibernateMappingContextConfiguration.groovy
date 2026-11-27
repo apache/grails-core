@@ -441,17 +441,17 @@ class HibernateMappingContextConfiguration extends Configuration
                     allContributors.addAll(parentContributors)
                     return allContributors
                 }
-                // Hibernate asks for these once the metadata is complete; the generated-class binder points the bound
-                // entities at the real classes then
-                if (generatedBinder != null && SessionFactoryBuilderFactory.isAssignableFrom(serviceContract)) {
+                if ((generatedBinder != null || queryTail != null) && SessionFactoryBuilderFactory.isAssignableFrom(serviceContract)) {
                     List<S> factories = new ArrayList<>(super.loadJavaServices(serviceContract))
-                    factories.add((S) generatedBinder)
-                    return factories
-                }
-                if (queryTail != null && SessionFactoryBuilderFactory.isAssignableFrom(serviceContract)) {
-                    // The capture observes the session factory being built, whatever observer the configuration holds.
-                    List<S> factories = new ArrayList<>(super.loadJavaServices(serviceContract))
-                    factories.add(serviceContract.cast(queryTail.sessionFactoryBuilderFactory))
+                    if (generatedBinder != null) {
+                        // Hibernate asks for these once the metadata is complete; the generated-class binder points the bound
+                        // entities at the real classes then
+                        factories.add((S) generatedBinder)
+                    }
+                    if (queryTail != null) {
+                        // The capture observes the session factory being built, whatever observer the configuration holds.
+                        factories.add(serviceContract.cast(queryTail.sessionFactoryBuilderFactory))
+                    }
                     return factories
                 }
                 if (queryTail != null && SessionFactoryServiceContributor.isAssignableFrom(serviceContract)) {
