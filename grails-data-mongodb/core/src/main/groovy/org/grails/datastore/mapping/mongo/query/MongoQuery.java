@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import groovy.lang.Closure;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -81,6 +83,7 @@ import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.query.projections.ManualProjections;
 
 /**
@@ -146,7 +149,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
             }
         });
 
-        queryHandlers.put(AssociationQuery.class, new QueryHandler<AssociationQuery>() {
+        QueryHandler<AssociationQuery> associationHandler = new QueryHandler<AssociationQuery>() {
             public void handle(EmbeddedQueryEncoder queryEncoder, AssociationQuery criterion, Document query, PersistentEntity entity) {
                 Association<?> association = criterion.getAssociation();
                 PersistentEntity associatedEntity = association.getAssociatedEntity();
@@ -159,15 +162,15 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 } else if (associatedEntity instanceof EmbeddedPersistentEntity || association instanceof Embedded) {
                     Document associatedEntityQuery = new Document();
                     populateMongoQuery(queryEncoder, associatedEntityQuery, criterion.getCriteria(), associatedEntity);
-                    for (String property : associatedEntityQuery.keySet()) {
-                        String propertyKey = getPropertyName(entity, association.getName());
-                        query.put(propertyKey + '.' + property, associatedEntityQuery.get(property));
-                    }
+                    String propertyKey = getPropertyName(entity, association.getName());
+                    prefixEmbeddedQuery(propertyKey, associatedEntityQuery, query);
                 } else {
                     throw new UnsupportedOperationException("Join queries are not supported by MongoDB");
                 }
             }
-        });
+        };
+        queryHandlers.put(AssociationQuery.class, associationHandler);
+        queryHandlers.put(ResolvedAssociationQuery.class, associationHandler);
 
         queryHandlers.put(WithinBox.class, new QueryHandler<WithinBox>() {
             public void handle(EmbeddedQueryEncoder queryEncoder, WithinBox withinBox, Document query, PersistentEntity entity) {
@@ -428,13 +431,173 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
      * @return The Mongo query
      */
     public Document getMongoQuery() {
+        // the subqueries are run first, as for a read, so that deleteAll and updateAll select the rows a list of the same query finds
+        return getMongoQuery(resolveSubqueries(criteria));
+    }
+
+    /**
+     * Runs the subqueries inside the given criteria and returns a copy of the criteria that holds their results, as
+     * MongoDB cannot evaluate a subquery itself. The criteria passed in are never changed, so a query that is executed
+     * twice runs its subqueries twice.
+     *
+     * <p>A comparison ({@code ==}, {@code !=}, {@code >}, {@code >=}, {@code <}, {@code <=}) against a subquery, such as
+     * {@code age > avg(age)}, takes the one value the subquery returns, and {@code in} and {@code notIn} take all of
+     * them. A comparison against a subquery that returns no row matches no row, as in SQL, where the comparison is
+     * unknown, and so is its negation: {@code not { age > (empty) }} matches no row either. A subquery that returns
+     * more than one row for a comparison is rejected. Subqueries inside an association block are resolved too.
+     * {@code exists}, {@code notExists} and the {@code all} and {@code some} forms are rejected with an
+     * {@link InvalidDataAccessResourceUsageException}, as they are not supported.</p>
+     */
+    private Junction resolveSubqueries(Junction criteria) {
+        return (Junction) resolveSubqueries((Criterion) criteria, false);
+    }
+
+    private Criterion resolveSubqueries(Criterion criterion, boolean negated) {
+        if (criterion instanceof Junction junction) {
+            List<Criterion> resolved = new ArrayList<>(junction.getCriteria().size());
+            boolean changed = false;
+            boolean nestedNegated = junction instanceof Negation ? !negated : negated;
+            for (Criterion nested : junction.getCriteria()) {
+                Criterion replacement = resolveSubqueries(nested, nestedNegated);
+                changed |= replacement != nested;
+                resolved.add(replacement);
+            }
+            if (!changed) {
+                return junction;
+            }
+            if (junction instanceof Disjunction) {
+                return new Disjunction(resolved);
+            }
+            if (junction instanceof Negation) {
+                Negation negation = new Negation();
+                resolved.forEach(negation::add);
+                return negation;
+            }
+            return new Conjunction(resolved);
+        }
+        if (criterion instanceof Exists || criterion instanceof NotExists) {
+            throw unsupportedSubquery(criterion.getClass().getSimpleName());
+        }
+        if (criterion instanceof In in && in.getSubquery() != null) {
+            return membership(in.getProperty(), subqueryValues(in.getSubquery()), negated);
+        }
+        if (criterion instanceof NotIn notIn) {
+            Negation negation = new Negation();
+            negation.add(membership(notIn.getProperty(), subqueryValues(notIn.getSubquery()), !negated));
+            return negation;
+        }
+        if (criterion instanceof SubqueryCriterion) {
+            throw unsupportedSubquery(criterion.getClass().getSimpleName());
+        }
+        if (criterion instanceof AssociationQuery associationQuery) {
+            Junction nested = associationQuery.getCriteria();
+            Junction resolved = (Junction) resolveSubqueries((Criterion) nested, negated);
+            if (resolved == nested) {
+                return criterion;
+            }
+            return new ResolvedAssociationQuery(associationQuery, resolved);
+        }
+        if (criterion instanceof PropertyCriterion property && property.getValue() instanceof QueryableCriteria subquery) {
+            if (!(criterion instanceof Equals || criterion instanceof NotEquals || criterion instanceof GreaterThan ||
+                    criterion instanceof GreaterThanEquals || criterion instanceof LessThan ||
+                    criterion instanceof LessThanEquals)) {
+                throw unsupportedSubquery(criterion.getClass().getSimpleName());
+            }
+            List<?> rows = subquery.list();
+            if (rows == null || rows.isEmpty() || (rows.size() == 1 && rows.get(0) == null)) {
+                // a comparison with the value of an empty subquery, or of one that returns a single null, such as the
+                // average of no rows, is unknown in SQL, and so is its negation: a row is
+                // returned only when the whole condition is true. A criterion that matches no row stands for it,
+                // or one that matches every row when an odd number of negations encloses it, so that the
+                // negation matches none
+                Criterion none = new In(property.getProperty(), Collections.emptyList());
+                if (!negated) {
+                    return none;
+                }
+                Negation every = new Negation();
+                every.add(none);
+                return every;
+            }
+            if (rows.size() > 1) {
+                throw new InvalidDataAccessResourceUsageException("The subquery compared with property '" +
+                        property.getProperty() + "' returned " + rows.size() +
+                        " rows, but a comparison needs exactly one value");
+            }
+            // an entity is compared by its identifier, as it is when it is given as the value of the comparison
+            Object value = resolveIdIfEntity(rows.get(0));
+            if (criterion instanceof Equals) {
+                return new Equals(property.getProperty(), value);
+            }
+            if (criterion instanceof NotEquals) {
+                return new NotEquals(property.getProperty(), value);
+            }
+            if (criterion instanceof GreaterThan) {
+                return new GreaterThan(property.getProperty(), value);
+            }
+            if (criterion instanceof GreaterThanEquals) {
+                return new GreaterThanEquals(property.getProperty(), value);
+            }
+            if (criterion instanceof LessThan) {
+                return new LessThan(property.getProperty(), value);
+            }
+            return new LessThanEquals(property.getProperty(), value);
+        }
+        return criterion;
+    }
+
+    /**
+     * The test that a value is one of the values a subquery selected. A null among them is never equal to a value,
+     * as in SQL, so it adds no match, which a store that matches a missing value with a null in a list has to be
+     * told. It also makes the test unknown, not false, for every value that is not in the list, and so its negation
+     * as well: a criterion that matches every row stands for it inside an odd number of negations, so that the
+     * negation matches none.
+     */
+    private Criterion membership(String property, Collection<?> values, boolean negated) {
+        if (values.stream().noneMatch(Objects::isNull)) {
+            return new In(property, values);
+        }
+        if (!negated) {
+            return new In(property, values.stream().filter(Objects::nonNull).collect(Collectors.toList()));
+        }
+        Negation every = new Negation();
+        every.add(new In(property, Collections.emptyList()));
+        return every;
+    }
+
+    private Collection<?> subqueryValues(QueryableCriteria<?> subquery) {
+        List<?> rows = subquery.list();
+        // a store may return a list that loads its elements when it is first read: a copy has all of them
+        return rows == null ? Collections.emptyList() : new ArrayList<>(rows);
+    }
+
+    private InvalidDataAccessResourceUsageException unsupportedSubquery(String form) {
+        return new InvalidDataAccessResourceUsageException("The " + form + " subquery form is not supported by " +
+                getClass().getSimpleName() + ". Select the values first and query with them, " +
+                "or use a comparison or in against a subquery.");
+    }
+
+    /**
+     * A copy of an association block that holds the criteria with their subqueries resolved. The constructor of
+     * {@link AssociationQuery} is protected, so the copy is a subclass, and it is registered with the handler of the
+     * association block.
+     */
+    private static final class ResolvedAssociationQuery extends AssociationQuery {
+
+        ResolvedAssociationQuery(AssociationQuery source, Junction resolved) {
+            super(source.getSession(), source.getEntity(), source.getAssociation());
+            this.criteria = resolved;
+        }
+    }
+
+    private Document getMongoQuery(Junction queryCriteria) {
         Document query = createQueryObject(entity);
-        populateMongoQuery((AbstractMongoSession) getSession(), query, criteria, entity);
+        populateMongoQuery((AbstractMongoSession) getSession(), query, queryCriteria, entity);
         return query;
     }
 
     @Override
-    protected List executeQuery(final PersistentEntity entity, final Junction criteria) {
+    protected List executeQuery(final PersistentEntity entity, final Junction queryCriteria) {
+        final Junction criteria = resolveSubqueries(queryCriteria);
         final AbstractMongoSession mongoSession = this.mongoSession;
         com.mongodb.client.MongoCollection<Document> collection = mongoSession.getCollection(entity);
 
@@ -452,7 +615,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 dbObject = ((FindIterable<Document>) setHint(cursor)).limit(1)
                         .first();
             } else {
-                FindIterable<Document> cursor = collection.find(getMongoQuery());
+                FindIterable<Document> cursor = collection.find(getMongoQuery(criteria));
 
                 dbObject = ((FindIterable<Document>) setHint(cursor)).limit(1)
                         .first();
@@ -706,6 +869,40 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 queryHandler.handle(queryEncoder, criterion, dbo, entity);
             } else {
                 throw new InvalidDataAccessResourceUsageException("Queries of type " + criterion.getClass().getSimpleName() + " are not supported by this implementation");
+            }
+        }
+    }
+
+    /**
+     * Rewrites a query built against an embedded entity so it applies to the owning document,
+     * qualifying each property name with the embedded property's path. Logical operators such as
+     * {@code $and} and {@code $or} must stay at the current level (a key like {@code extRef1.$and}
+     * matches nothing), so their nested documents are rewritten recursively instead.
+     */
+    private static void prefixEmbeddedQuery(String prefix, Document source, Document target) {
+        for (String key : source.keySet()) {
+            Object value = source.get(key);
+            if (key.charAt(0) == '$') {
+                if (!(value instanceof List)) {
+                    // A top-level operator whose value is not a rewritable list of clauses
+                    // (e.g. $where from a property-to-property comparison, or $text) cannot be
+                    // qualified with the embedded path - prefixing it would silently match nothing.
+                    throw new UnsupportedOperationException("Criterion [" + key +
+                            "] is not supported inside an embedded association query");
+                }
+                List<Object> rewritten = new ArrayList<>();
+                for (Object element : (List<?>) value) {
+                    if (element instanceof Document) {
+                        Document rewrittenElement = new Document();
+                        prefixEmbeddedQuery(prefix, (Document) element, rewrittenElement);
+                        rewritten.add(rewrittenElement);
+                    } else {
+                        rewritten.add(element);
+                    }
+                }
+                target.put(key, rewritten);
+            } else {
+                target.put(prefix + '.' + key, value);
             }
         }
     }

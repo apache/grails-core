@@ -936,6 +936,12 @@ With GORM for Hibernate, a where query, a detached criteria, a dynamic finder or
 - To keep the previous result of a query, remove the join type that it requests, or request `JoinType.LEFT`.
 - Check queries that store a sort with `sort()` before passing a `fetch` argument to `list` or `find`. `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])` now also returns books without an author. Request `JoinType.INNER` to keep leaving them out; nested paths follow the same rule.
 
+## Subqueries in MongoDB where queries
+
+- `where { age > avg(age) }` and the other aggregate subqueries returned no rows on MongoDB, because the subquery was compared as an object. MongoDB runs the subquery first now: `==`, `!=`, `>`, `>=`, `<`, `<=` against `avg`, `max`, `min` and `sum`, and `inList` / `notIn` against a subquery that selects a property. A `!=` against an empty subquery returned every row, and `notIn` threw; both give the SQL result now. Search the application for `where` queries with an aggregate on the right of a comparison and review what each returns.
+- A comparison against a subquery that returns more than one row, and the `exists`, `notExists`, `all` and `some` forms, throw an `InvalidDataAccessResourceUsageException` that names the form. A subquery runs on the connection of its own criteria, so for a query on another connection build the subquery with `withConnection`.
+- `deleteAll()` and `updateAll()` of such a query run the subquery too, so they select the rows a `list()` of the same query finds. `where { age != max(age) }.deleteAll()` deleted every row.
+
 # After the Upgrade
 
 ## Verification Checklist
