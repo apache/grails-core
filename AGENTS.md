@@ -71,6 +71,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > To conserve context window and maintain sharp focus, do **NOT** preload all skills.
 > Before proposing, writing, or modifying any code, inspect your target file paths and task intent against the trigger conditions below.
 > You **MUST** load only the matched skill file(s) using your file reading capability:
+> - **Changing the Grails Data layer** (`grails-datastore-core/**`, `grails-datamapping-core/**`, `grails-data-*/**`, criteria, `where`, finders, constraints, mapping, multi-datastore or multi-tenant behavior) → Read `.agents/skills/grails-datastore-developer/SKILL.md`, before the Hibernate skill
 > - **Hibernate or persistence work** (`grails-data-hibernate*/**`, `*Hibernate*`, `*Query*`, session/transaction lifecycle, domain binding) → Read `.agents/skills/hibernate-developer/SKILL.md`
 > - **Gradle build or dependency changes** (`*.gradle`, `build-logic/**`, `gradle/**`, `dependencies.gradle`, BOMs, convention plugins) → Read `.agents/skills/gradle-developer/SKILL.md`
 > - **Groovy code and Spock specifications** (`**/*.groovy`, AST transforms, closures, DSLs) → Read `.agents/skills/groovy-developer/SKILL.md`
@@ -86,6 +87,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | Skill | Trigger / File Pattern | Path | Key Focus Areas |
 |-------|------------------------|------|-----------------|
 | **hibernate-developer** | `grails-data-hibernate*/**`, `*Hibernate*`, `*Query*`, session/tx lifecycle, domain mapping | `.agents/skills/hibernate-developer/SKILL.md` | Domain binding, session & transaction lifecycle, criteria/SQM correlation, patch-line API minimalism |
+| **grails-datastore-developer** | `grails-datastore-core/**`, `grails-datamapping-core/**`, `grails-data-*/**`, criteria, `where`, finders, constraints, multi-datastore, multi-tenancy | `.agents/skills/grails-datastore-developer/SKILL.md` | Layering, the whole-surface protocol, the scope matrix to run before a push, cross-datastore and cross-version parity, testing and review |
 | **gradle-developer** | `*.gradle`, `build-logic/**`, `gradle/**`, `dependencies.gradle`, BOM platforms | `.agents/skills/gradle-developer/SKILL.md` | Gradle 9 builds, convention plugins, BOM dependency rules, build health |
 | **groovy-developer** | `**/*.groovy`, Spock specs, DSLs, metaClass | `.agents/skills/groovy-developer/SKILL.md` | Groovy 5/6 syntax, `@GrailsCompileStatic`, AST transforms, closures |
 | **java-developer** | `**/*.java`, Java interop | `.agents/skills/java-developer/SKILL.md` | Java 21 baseline features, Groovy interop, records, sealed types |

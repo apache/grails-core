@@ -1,0 +1,1 @@
+../../../.agents/skills/grails-datastore-developer/SKILL.md
