@@ -37,6 +37,13 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
 
 class ManyToOneValuesBinderSpec extends HibernateGormDatastoreSpec {
 
+    /**
+     * The classic domain binder binds an eager many-to-one that is not fetched by join with the fetch mode DEFAULT, which Hibernate
+     * resolves to a select for a proxyable target; the native binding states the select itself. Both are fetched with a select,
+     * which is what the last column of the table below checks.
+     */
+    private static final boolean CLASSIC_SUITE = Boolean.getBoolean('grails.hibernate.classicDomainBinding')
+
     void setupSpec() {
         manager.registerDomainClasses(ManyToOneValuesBinderBook, ManyToOneValuesBinderAuthor, ManyToOneValuesBinderUnproxyableAuthor,
                 ManyToOneValuesBinderLink)
@@ -104,7 +111,7 @@ class ManyToOneValuesBinderSpec extends HibernateGormDatastoreSpec {
         property    | fetchMode         | lazy  | style
         'author'    | FetchMode.SELECT  | true  | FetchStyle.SELECT
         'reviewer'  | FetchMode.SELECT  | true  | FetchStyle.SELECT
-        'publisher' | FetchMode.DEFAULT | false | FetchStyle.SELECT
+        'publisher' | (CLASSIC_SUITE ? FetchMode.DEFAULT : FetchMode.SELECT) | false | FetchStyle.SELECT
         'editor'    | FetchMode.JOIN    | false | FetchStyle.JOIN
     }
 

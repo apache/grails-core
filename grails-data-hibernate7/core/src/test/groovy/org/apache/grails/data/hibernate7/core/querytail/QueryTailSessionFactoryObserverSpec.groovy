@@ -656,7 +656,7 @@ class QueryTailSessionFactoryObserverSpec extends Specification {
         then:
         Exception captured = thrown()
         rootCause(captured).getClass() == rootCause(uncaptured).getClass()
-        rootCause(captured).message == rootCause(uncaptured).message
+        withoutLoaderIds(rootCause(captured).message) == withoutLoaderIds(rootCause(uncaptured).message)
         !file.exists()
 
         where:
@@ -705,6 +705,11 @@ class QueryTailSessionFactoryObserverSpec extends Specification {
 
     private static List<QueryTailRecord> records(File file) {
         file.readLines().collect { QueryTailRecord.parse(it) }.findAll { it != null }
+    }
+
+    /** A class loader that Hibernate or the generated-class binder creates names itself in a message by an identity hash that differs between boots. */
+    private static String withoutLoaderIds(String message) {
+        return message?.replaceAll(/@[0-9a-f]+/, '@')
     }
 
     private static Throwable rootCause(Throwable e) {
