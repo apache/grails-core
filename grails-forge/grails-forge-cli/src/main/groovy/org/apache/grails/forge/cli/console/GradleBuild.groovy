@@ -267,6 +267,24 @@ abstract class GradleBuild {
     }
 
     /**
+     * Gives a process whose output is copied into streams that keep it as one text, as those of each call
+     * of {@code grails mcp} do ({@link CommandStreams#isOneText()}), one stream for its output and its
+     * errors, which is then copied into the output of the command. From two, which threads copy apart, what
+     * the process wrote last to its errors, as the line that says why it failed, could be kept before what
+     * it had written to its output earlier and was still on its way in the pipe, and a result that keeps the
+     * end of a long output would leave out the line it is kept for.
+     *
+     * @param builder what starts the process
+     * @param streams the streams of the command
+     * @param inherited whether the process is given the output of this process itself, which it then writes to alone
+     */
+    protected static void oneStreamWhereOneText(ProcessBuilder builder, CommandStreams streams, boolean inherited) {
+        if (!inherited && streams.isOneText()) {
+            builder.redirectErrorStream(true)
+        }
+    }
+
+    /**
      * @return whether a command of this JVM waits for Gradle now, and so can be cancelled by
      * interrupting its thread. A build that was started to be left running is not waited for and is none:
      * it is not this command's to cancel, and goes on when the command is interrupted or the CLI ends

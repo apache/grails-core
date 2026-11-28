@@ -427,6 +427,9 @@ final class GradleRunner extends GradleBuild {
         } else {
             builder.redirectInput(ProcessBuilder.Redirect.INHERIT)
         }
+        // what Gradle writes is kept in the order it wrote it, where the command keeps one text: the stream of
+        // its errors is then a null stream, whose copy ends at once
+        oneStreamWhereOneText(builder, streams, inherited)
         if (isNonInteractive()) {
             // Gradle and what it starts read the end of their input at once, and are told why
             builder.redirectInput(ProcessBuilder.Redirect.from(new File(windows ? 'NUL' : '/dev/null')))

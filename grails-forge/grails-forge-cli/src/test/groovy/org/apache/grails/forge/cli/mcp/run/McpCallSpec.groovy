@@ -88,6 +88,12 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
           *) task=other ;;
         esac
         echo "start $task" >> build-calls.txt
+        if [ -f flood ]; then
+          if [ /dev/stdout -ef /dev/stderr ]; then echo "one stream"; else echo "two streams"; fi
+          yes "a line of the build" | head -n 20000
+          echo "the build failed at its end" >&2
+          exit 1
+        fi
         case $task in
           testApp)
             hold child &
@@ -388,6 +394,25 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         text(result).contains('the build failed')
         text(result).contains('Gradle did not succeed: it ended with exit code 1')
         ran(result).exitCode == 1
+    }
+
+    void "what a build that fails wrote last to its errors ends its result, after the output it wrote before, however much of it is still on its way"() {
+        given: 'a build that writes much more to its output than a pipe holds, and then, last, why it failed to its errors'
+        project()
+        serve()
+        new File(dir, 'flood').text = ''
+
+        when:
+        CallToolResult failed = mcp.client.tool('compile').call()
+        List<String> lines = text(failed).readLines()
+
+        then: 'the build was given one stream for its output and its errors, which keeps them in the order it wrote them'
+        failed.isError()
+        ran(failed).truncated == true
+        lines.contains('one stream')
+
+        and: 'so the end of the result is the end of what it wrote, and then the line of the command line'
+        lines.takeRight(3) == ['a line of the build', 'the build failed at its end', '| Error Gradle did not succeed: it ended with exit code 1']
     }
 
     void "a long output is cut in its middle, and the result says where the whole of it is"() {

@@ -114,6 +114,8 @@ final class ConsoleProgram {
         if (inherited) {
             builder.redirectOutput(ProcessBuilder.Redirect.INHERIT).redirectError(ProcessBuilder.Redirect.INHERIT)
         }
+        // what the program writes is kept in the order it wrote it, where the console keeps one text
+        GradleBuild.oneStreamWhereOneText(builder, streams, inherited)
         builder.redirectInput(readsTerminal ? ProcessBuilder.Redirect.INHERIT : ProcessBuilder.Redirect.from(new File(windows ? 'NUL' : '/dev/null')))
         Process process
         try {

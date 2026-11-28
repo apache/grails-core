@@ -253,6 +253,8 @@ final class StandaloneToolProcess {
         } else {
             builder.redirectInput(ProcessBuilder.Redirect.INHERIT)
         }
+        // what the command writes is kept in the order it wrote it, where the command line keeps one text
+        GradleBuild.oneStreamWhereOneText(builder, streams, inherited)
         if (GradleBuild.isNonInteractive()) {
             // the command reads the end of its input at once, and is told why
             builder.redirectInput(ProcessBuilder.Redirect.from(new File(windows ? 'NUL' : '/dev/null')))

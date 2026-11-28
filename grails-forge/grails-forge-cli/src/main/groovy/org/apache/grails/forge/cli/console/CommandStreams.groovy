@@ -169,6 +169,15 @@ final class CommandStreams {
     }
 
     /**
+     * @return whether these streams keep what is written to them as one text, in the order it was written,
+     * as those of {@link #capture()} do: a process that writes for the command is then given one stream for
+     * its output and its errors, so that what it wrote is kept in the order it wrote it
+     */
+    boolean isOneText() {
+        return captured != null
+    }
+
+    /**
      * @return everything that was written to the streams so far, the output and the errors in the
      * order they were written
      * @throws IllegalStateException for streams that were not made by {@link #capture()}
