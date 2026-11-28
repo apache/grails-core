@@ -794,6 +794,13 @@ GORM for MongoDB and GORM's in-memory datastore used by unit tests, lookups by i
 
 Unit tests that look up instances across tenants need the same changes as application code.
 
+## GORM for Hibernate: a sort uses a requested left join
+
+A where query, a detached criteria or a dynamic finder that requests a left join of an association, with `join('owner', JoinType.LEFT)` or `fetch: [owner: JoinType.LEFT]`, and sorts by a property of that association, as with `sort: 'owner.lastName'`, sorted with an inner join and left out the instances without the association. As of 7.0.18 the sort uses the requested left join, so those instances are returned, and the `totalCount` of a paged list counts them.
+
+- Search for `JoinType.LEFT` in calls to `join` and in `fetch` arguments of queries that also sort by a property of the same association.
+- To leave out the instances without the association, as before, request `JoinType.INNER`, or add a criterion such as `owner != null`.
+
 ## Data binding white lists
 
 Data binding white lists apply wherever a class is compiled.
@@ -849,6 +856,15 @@ Search the configuration for `useEncryptedJwt`. If it is enabled, check each poi
 
 The guide gives no setting that restores encrypted JWTs without a signature.
 
+## GORM for Hibernate: `list` sorts by every property of a sort map
+
+`list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, sorted by the last entry of the map only. As of 7.0.18 it sorts by every entry, in the order of the map. The same applies to a default sort that the mapping declares for more than one property, as in `sort author: 'asc', title: 'desc'`.
+
+- Search for `sort: [` in calls to `list`, and for a `sort` with more than one property in a `static mapping` block. The results of these calls are now sorted by every property, so the rows selected by `max` and `offset` can change.
+- To sort by one property, as before, pass that property alone.
+- An association is joined once for all the entries that sort by it. `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path` for such a sort and now work.
+- Sorting by two properties of the same collection returns fewer duplicate rows. A book with three chapters occurs three times for `Book.list(sort: ['chapters.title': 'asc', 'chapters.id': 'asc'])`, rather than nine times. Update assertions that relied on the repeated joins. No compatibility setting restores them.
+
 ## GSP tag attributes
 
 More GSP tags HTML-encode the attribute values they write.
@@ -884,6 +900,41 @@ These bugs are fixed, which changes what the browser submits or what the page co
 - `<g:radio>` encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `R&amp;D` for `R&D`. Remove any code that decoded the submitted value to undo this.
 - A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`.
 - `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`. They encoded it twice.
+
+## GORM for Hibernate: setting for a sort by an association
+
+A sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join, so it leaves out the instances whose association is `null`, and `count` and the `totalCount` of a paged list do not count them. That is unchanged by default. 7.0.18 adds the `grails.gorm.leftJoinAssociationSort` setting, default `false`. Set to `true`, the association is joined with a left join and the sort keeps those instances.
+
+- Nothing needs to change to keep the previous results.
+- Search for `sort:` arguments and `.sort(` calls whose property contains a `.`, such as `sort: 'author.name'`. If the application expects every instance from such a query, set `grails.gorm.leftJoinAssociationSort: true` in `application.yml`.
+- With the setting, the instances without the association come first or last, depending on how the database sorts nulls. To leave them out of one query, add a criterion that the association is not `null`.
+- A sort by a property of a collection, such as `sort: 'books.title'`, joins the collection with an inner join with or without the setting.
+- Explicitly setting it to `false` logs a startup warning naming Grails 9, which removes the setting. The planned default in Grails 8.1 is `true`; check the target release's compatibility settings before upgrading.
+
+## GORM for Hibernate: a join type requested for an association is always applied
+
+With GORM for Hibernate, a where query, a detached criteria, a dynamic finder or a criteria query can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, with `join('author', JoinType.INNER)`, or, on a data service method that queries by its parameters, such as `Book find(String title)`, with `@Join(value = 'author', type = JoinType.INNER)`. In a where query, a detached criteria and a dynamic finder, the requested join type was only used when the query also had criteria on the association, and a criteria query never used it. The association was otherwise fetched with an outer join, whatever join type was requested, so the query also returned the instances whose association is `null`. As of Grails 7.0.18, a requested join type other than `JoinType.LEFT` is applied whether or not anything else in the query uses the association.
+
+- Search for `JoinType.` in `fetch:` arguments, in `join(` calls and in `@Join` annotations on data service methods that query by their parameters. Methods named as dynamic finders, such as `findByTitle` or `findAllByTitleLike`, still treat `@Join` as a fetch mode and ignore its join type.
+- With `JoinType.INNER`, the instances whose association is `null`, or whose collection is empty, are no longer returned by `list`, `get` and `find`, and no longer counted by `count` or by the `totalCount` of a paged list. The association is still fetched. This also applies to a collection of a basic type, such as `static hasMany = [tags: String]`, for which the requested join type was ignored. To return these instances as before, request `JoinType.LEFT` or `'join'`.
+- `JoinType.RIGHT` is applied as well. For a to-one association, `list` returning entities keeps one `null` for each associated instance that no queried instance refers to, unless the criteria exclude that row; `count` and `totalCount` count each. A property projection still returns repeated values, including `null`, once when the query joins, so its result size can differ from the count. For a collection, a right join returns the same instances as an inner join, including when criteria use the collection.
+- A query that is used as a subquery applies the join type that it requests as well, so a subquery with `join('author', JoinType.INNER)` no longer selects the instances without an author.
+- `updateAll` and `deleteAll` apply the join type that the where query or the detached criteria requests too, so they leave out the instances that the join type leaves out of `list`: `Book.where { title ==~ 'Draft%' }.join('author', JoinType.INNER).deleteAll()` no longer deletes the drafts without an author. To update or delete those as well, as before, do not request a join type for the association, or request `JoinType.LEFT`. A sort is not applied to an update or a delete: while `grails.gorm.leftJoinAssociationSort` is off, a sort by a property of an association leaves the instances whose association is `null` out of `list`, and `updateAll` and `deleteAll` still change them. MySQL, and MariaDB before version 10.3, do not allow an update or a delete to select from the table that it modifies. With a MySQL dialect, or a MariaDB dialect older than `MariaDB103Dialect`, `updateAll` and `deleteAll` therefore select the identifiers of the instances first, and then update or delete the instances with those identifiers, when the join type is requested for a path that leads back to the queried class, such as the `parent` of a category, or that starts with a collection of a basic type.
+- A join type requested for a path through more than one association, such as `fetch: ['author.publisher': JoinType.INNER]`, was ignored unless the query had criteria on the path. Every association on the path is now joined and fetched, with the requested join type for the last one, so `JoinType.INNER` leaves out the instances without an author as well as those whose author has no publisher. When the path passes through a collection, such as `books` in `fetch: ['books.publisher': JoinType.INNER]`, the query is restricted to the instances for which the join returns a row, and counts each of them once. The collection and the other associations on the path are fetched as well, with outer joins, so the collection holds all of its elements, also the books without a publisher: a join type decides which instances a query returns, and never leaves elements out of a fetched collection. A where query and a dynamic finder return each author once, and a criteria query returns an author once for each of the books that it fetches. A `JoinType.LEFT` requested for such a path, as in `fetch: ['books.publisher': JoinType.LEFT]`, now fetches the associations on the path as well: it fetched none of them.
+- Bulk updates and deletes also honor requested join types inside subqueries, including subqueries in junctions. They select matching root identifiers first, with the join restrictions and tenant filters, then modify those identifiers in batches. Existing unsupported association criteria in bulk operations remain unsupported.
+- A query with a property projection applies the requested join type too.
+- A nested `JoinType.LEFT` request also keeps intermediate joins used only for sorting outer in where queries, detached criteria and dynamic finders. A sort through `books.publisher` with a LEFT request for that path keeps authors without books and books without a publisher, in both sort-setting modes. Explicit intermediate join types, replacement fetch modes and association criteria retain precedence. Paged collection sorts load complete collections separately.
+- A paged query loads collections on a requested join path separately when accessed, so the limited SQL rows cannot initialize an incomplete collection. The join type still restricts the root instances and their count.
+- For a collection joined only by that request, pagination now applies to root instances rather than joined collection rows. A page can contain more distinct instances than before, up to `max`. The fetch mode `'join'`, including `join('books')` without a type, still pages joined rows and can load an incomplete collection, as before. Do not treat `JoinType.LEFT` and `'join'` as interchangeable when preserving a page: they keep the same unrestricted root selection but can return different pages.
+- Check `select('author')` or `join('author')` after a requested left join, in a criteria query, a where query or a detached criteria: the left join is kept for the criteria, which can now return a book without an author. A fetch mode that replaces an inner join also applies to property projections, which can now include `null`.
+- A join type that the `fetch` argument requests is now also used for an association that the where query or the detached criteria itself has criteria or a projection on. Such an association was joined before the argument was read: with an inner join for criteria and with a left join for a projection, whatever the argument requested. `Book.where { author.name == 'Stephen King' || title == 'Anonymous' }.list(fetch: [author: JoinType.LEFT])` now also returns the book without an author that matches the title, as it already did when the join type was requested with `join('author', JoinType.LEFT)`.
+- A join type for a nested association is requested by its path. `join('author.publisher', JoinType.LEFT)` is now used for the join that criteria on `author.publisher` make, which was an inner join whatever was requested. A join type requested for an association of the queried class, such as `publisher`, is no longer used for a nested association of the same name.
+- In a criteria query the requested join type also applies to a block or alias, whether `join` appears before or after it. A requested LEFT join preserves a missing association when an alternative `or` criterion matches the root, and when a sort uses the association. A paged query loads its collections separately to keep their elements complete.
+- The requested type replaces even an explicit type on `createAlias`: `createAlias('author', 'a', CriteriaSpecification.LEFT_JOIN)` followed by `join('author', JoinType.INNER)` now leaves out books without an author, where the alias's left join kept them.
+- A paged criteria query with `join('books', JoinType.LEFT)` now pages root instances when the collection is joined only for fetching, so a page that previously repeated one author can now contain two authors. Plain `join('books')` and `fetch: [books: 'join']` still page joined rows and can repeat a root on the page, as before.
+- An unpaged criteria query whose `fetch` argument now fetches a collection can return an instance once per element, where the join type previously fetched nothing and did not repeat rows. Check assertions that compare those rows with a root-instance `totalCount`.
+- To keep the previous result of a query, remove the join type that it requests, or request `JoinType.LEFT`.
+- Check queries that store a sort with `sort()` before passing a `fetch` argument to `list` or `find`. `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])` now also returns books without an author. Request `JoinType.INNER` to keep leaving them out; nested paths follow the same rule.
 
 # After the Upgrade
 
