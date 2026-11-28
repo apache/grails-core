@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import groovy.transform.CompileStatic
 import org.grails.forge.feature.FeatureSelectionException
@@ -416,18 +417,7 @@ final class GradleRunner extends GradleBuild {
             builder.redirectInput(ProcessBuilder.Redirect.from(new File(windows ? 'NUL' : '/dev/null')))
             builder.environment().put(NON_INTERACTIVE, 'true')
         }
-        Process process
-        try {
-            process = builder.start()
-        } catch (IOException | IllegalArgumentException e) {
-            // the second is what the JVM of Windows says to a command line it will not hand to a batch file
-            failed("The Gradle wrapper ${line(wrapper)} could not be started: ${line(e.getMessage())}")
-            return 1
-        }
         AtomicBoolean stopped = new AtomicBoolean()
-        if (started != null) {
-            started.accept(new GradleBuild.Running(process.toHandle(), false, { stop(process, stopped) } as Runnable))
-        }
         AtomicBoolean said = new AtomicBoolean()
         // said once and by whoever comes first: this JVM can end before the thread of the command gets to say it
         Runnable sayStopped = {
@@ -435,14 +425,63 @@ final class GradleRunner extends GradleBuild {
                 failed(STOPPED)
             }
         } as Runnable
-        // when this JVM is ended while Gradle runs, Gradle is not left running without it; the line comes
-        // before the wait for what does not end by itself, which is then ended by force
+        // When this JVM is ended while Gradle runs, Gradle is not left running without it; the line comes before
+        // the wait for what does not end by itself, which is then ended by force. The hook is there before Gradle
+        // is, and Gradle is started while the hook holds what it reads: a JVM that is ended while the wrapper is
+        // being started stops the wrapper once it has started, and one that is ended before starts none. With the
+        // hook added after the start, a JVM ended in between ran no hook, said nothing and left Gradle running.
+        Object starting = new Object()
+        AtomicBoolean ending = new AtomicBoolean()
+        AtomicReference<Process> launched = new AtomicReference<Process>()
         Thread whenEnded = new Thread({
-            stopped.set(true)
-            sayStopped.run()
-            stop(process, stopped)
+            Process running
+            synchronized (starting) {
+                ending.set(true)
+                running = launched.get()
+            }
+            if (running != null) {
+                stopped.set(true)
+                sayStopped.run()
+                stop(running, stopped)
+            }
         } as Runnable, 'grails-gradle-stop')
-        Runtime.getRuntime().addShutdownHook(whenEnded)
+        try {
+            Runtime.getRuntime().addShutdownHook(whenEnded)
+        } catch (IllegalStateException ignored) {
+            // this JVM is being ended already: Gradle is not started
+            return 1
+        }
+        try {
+            Process process
+            synchronized (starting) {
+                if (ending.get()) {
+                    // the hook has run: this JVM is being ended, and Gradle is not started
+                    return 1
+                }
+                try {
+                    process = builder.start()
+                } catch (IOException | IllegalArgumentException e) {
+                    // the second is what the JVM of Windows says to a command line it will not hand to a batch file
+                    failed("The Gradle wrapper ${line(wrapper)} could not be started: ${line(e.getMessage())}")
+                    return 1
+                }
+                launched.set(process)
+            }
+            if (started != null) {
+                started.accept(new GradleBuild.Running(process.toHandle(), false, { stop(process, stopped) } as Runnable))
+            }
+            return waitFor(process, inherited, out, err, stopped, sayStopped)
+        } finally {
+            try {
+                Runtime.getRuntime().removeShutdownHook(whenEnded)
+            } catch (IllegalStateException ignored) {
+                // the JVM is shutting down, and the hook runs
+            }
+        }
+    }
+
+    // waits for the Gradle that was started, and says how it ended
+    private int waitFor(Process process, boolean inherited, PrintStream out, PrintStream err, AtomicBoolean stopped, Runnable sayStopped) {
         waiting()
         Thread output = inherited ? null : copy(process.getInputStream(), out)
         Thread errors = inherited ? null : copy(process.getErrorStream(), err)
@@ -475,11 +514,6 @@ final class GradleRunner extends GradleBuild {
             return 1
         } finally {
             waited()
-            try {
-                Runtime.getRuntime().removeShutdownHook(whenEnded)
-            } catch (IllegalStateException ignored) {
-                // the JVM is shutting down, and the hook runs
-            }
         }
     }
 
