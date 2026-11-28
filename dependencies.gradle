@@ -136,6 +136,10 @@ ext {
             'hibernate-validator.version'   : '8.0.6.Final',
             'jakarta-servlet-api.version'   : '6.1.0',
             'jakarta-validation-api.version': '3.1.1',
+            // Security: jedis 6.x, the line spring-boot-dependencies manages, pulls 20250107 or 20250517.
+            // 20260719 and later fix CVE-2026-59171 (GHSA-ghc9-756g-vrcv), unbounded numeric strings in
+            // JSONTokener that take super-linear time to convert.
+            'json.version'                  : '20260814',
             'junit.version'                 : '5.13.4',
             'junit-platform.version'        : '1.13.4',
             // Security: overrides spring-boot-dependencies (1.15.12). 1.16.7 is the oldest open source release that
@@ -253,6 +257,8 @@ ext {
             // Security override of the version groovy-console pulls in - see ivy.version
             'ivy'                         : "org.apache.ivy:ivy:${bomDependencyVersions['ivy.version']}",
             'jquery'                      : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
+            // Security override of the version jedis pulls in - see json.version
+            'json'                        : "org.json:json:${bomDependencyVersions['json.version']}",
             // Version override of spring-boot-dependencies - see jspecify.version
             'jspecify'                    : "org.jspecify:jspecify:${bomDependencyVersions['jspecify.version']}",
             // Security override of spring-boot-dependencies - see logback.version
