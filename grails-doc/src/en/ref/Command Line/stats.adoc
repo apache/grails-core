@@ -17,23 +17,18 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == stats
-
-
 
 === Purpose
 
-
 Displays basic statistics about the current Grails application, including number of files, line count and so on
-
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
-> grails stats
+$ grails stats
+
 +----------------------+-------+-------+
 | Name                 | Files |  LOC  |
 +----------------------+-------+-------+
@@ -44,3 +39,14 @@ Displays basic statistics about the current Grails application, including number
 | Totals               |     4 |    77 |
 +----------------------+-------+-------+
 ----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails stats
+----
+
+The command counts the source files of the project by the kind of class and runs no build. It does not follow links and does not read the lines of a file larger than 16 MiB.

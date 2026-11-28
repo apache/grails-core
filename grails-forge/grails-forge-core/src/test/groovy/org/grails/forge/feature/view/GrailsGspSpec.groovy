@@ -323,32 +323,6 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         layout.contains('<g:link controller="${c.logicalPropertyName}" namespace="${c.namespace}"')
     }
 
-    void "test the profile skeleton mirrors the forge welcome templates"() {
-        given: "the two app generators ship the same default UI from different trees"
-        final File forgeResources = new File("src/main/resources").canonicalFile
-        final File profiles = new File("../../grails-profiles").canonicalFile
-        final Map<String, String> mirrored = [
-                "gsp/index.gsp"                     : "web/skeleton/grails-app/views/index.gsp",
-                "gsp/main.gsp"                      : "web/skeleton/grails-app/views/layouts/main.gsp",
-                "gsp/error.gsp"                     : "web/skeleton/grails-app/views/error.gsp",
-                "assets/stylesheets/welcome.css"    : "web/skeleton/grails-app/assets/stylesheets/welcome.css",
-                "assets/javascripts/welcome.js"     : "web/skeleton/grails-app/assets/javascripts/welcome.js",
-        ]
-        new File(forgeResources, "i18n").listFiles({ File f -> f.name.startsWith("messages") } as FileFilter).each {
-            mirrored["i18n/" + it.name] = "base/skeleton/grails-app/i18n/" + it.name
-        }
-
-        expect: "every mirrored file is byte-identical, so create-app and forge generate the same application"
-        mirrored.every { forgePath, profilePath ->
-            final File forgeFile = new File(forgeResources, forgePath)
-            final File profileFile = new File(profiles, profilePath)
-            assert forgeFile.file, "missing forge template ${forgeFile}"
-            assert profileFile.file, "missing profile skeleton ${profileFile}"
-            assert forgeFile.bytes == profileFile.bytes, "${forgePath} has drifted from ${profilePath}"
-            true
-        }
-    }
-
     void "test default layout keeps the navbar minimal and pins the default language"() {
         when:
         final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))

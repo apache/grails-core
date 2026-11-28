@@ -48,7 +48,7 @@ $ grails compile
 
 [source,bash]
 ----
-./grailsw s2-quickstart com.mycompany.myapp User Role
+grails s2-quickstart com.mycompany.myapp User Role
 ----
 
 You can choose your names for your domain classes and package; these are just examples.
@@ -65,7 +65,7 @@ static mapping = {
 ----
 ====
 
-If you are using Spring Core version 3.1.2 or later and GORM 6.0.10 or later, the script creates this User class:
+The command creates this User class:
 
 [source, groovy]
 .`grails-app/domain/com/mycompany/myapp/User.groovy`
@@ -161,7 +161,7 @@ class UserPasswordEncoderListener {
 }
 ----
 
-Previous versions of the plugin's script manage the password encoding directly in domain class:
+Earlier versions of the plugin generated a user class that manages the password encoding itself; `s2-quickstart` no longer generates it:
 
 [source, groovy]
 .`grails-app/domain/com/mycompany/myapp/User.groovy`
@@ -224,7 +224,7 @@ WARNING: If you use this older pattern, be aware that `springSecurityService` wi
 
 include::../domainClasses/gormAutowire.adoc[]
 
-`s2-quickstart` script generates this Role too:
+The `s2-quickstart` command generates this Role too:
 
 [source, groovy]
 .`Role.groovy`
@@ -357,9 +357,9 @@ They contain the minimum needed for the plugin's default implementation of the S
 (which like everything in the plugin is customizable - see <<core-userDetailsService>>).
 ====
 
-The script has edited (or created) `grails-app/conf/application.groovy` and added the configuration for your domain classes. Make sure that the changes are correct.
+The command has added the configuration for your domain classes to `grails-app/conf/application.groovy`, or to `grails-app/conf/application.yml` when the project has no `application.groovy` (a project with neither file gets `application.groovy`). Make sure that the changes are correct.
 
-While you're looking at `application.groovy`, add this config override to make the sample app easier to work with:
+While you're looking at the configuration, add this config override to make the sample app easier to work with:
 
 [source,groovy]
 ----

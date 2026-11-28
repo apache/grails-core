@@ -1,0 +1,58 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== plugin list
+
+=== Purpose
+
+Lists the Grails plugins there are: the plugins of this release of Grails, and the plugins of the community that the Grails plugin index has. It is the link:list-plugins.html[list-plugins] command by its name among the commands of `plugin`.
+
+=== Examples
+
+[source,console]
+----
+grails plugin list
+grails plugin list security
+grails plugin list --deprecated
+grails plugin list --offline
+grails plugin list --json
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails plugin list [--deprecated] [--offline] [--json] [--plugin-index=URL] [TEXT]
+----
+
+`plugin list` and link:list-plugins.html[list-plugins] are one command with two names: the argument, the options, what is written, the JSON document of `--json` and the exit codes are those of `list-plugins`, which that page describes. Neither name is deprecated. The one difference is the command the last line names for more of one plugin, which is the one of the same kind:
+
+[source,console]
+----
+$ grails plugin list cache
+Grails plugins for Grails 9.0.0
+  Name   Coordinates                     Version  Description
+  Cache  org.apache.grails:grails-cache  9.0.0    Caches the results of service methods and of parts of views, with annotations and tags
+1 plugin: 1 of this release of Grails, with the version the Grails BOM manages, and 0 of the plugin index, with the latest version that says it is for this Grails (- where none does)
+More of one plugin: grails plugin show NAME
+----
+
+`plugin` has three commands: `plugin list`, link:plugin-find.html[plugin find], which is the list with the text it is listed by, and link:plugin-show.html[plugin show], which says what is known of one plugin. `grails plugin` without one of them is a mistake in the command line (exit code 2) that names the three.

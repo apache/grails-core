@@ -25,6 +25,8 @@ import org.gradle.work.DisableCachingByDefault
 
 import javax.inject.Inject
 
+import org.grails.gradle.plugin.core.GrailsSystemPropertyArgumentProvider
+
 @CompileStatic
 @DisableCachingByDefault(because = 'Application script tasks produce no cacheable output')
 abstract class ApplicationContextScriptTask extends JavaExec {
@@ -33,7 +35,16 @@ abstract class ApplicationContextScriptTask extends JavaExec {
     ApplicationContextScriptTask() {
         mainClass.set('grails.ui.script.GrailsApplicationScriptRunner')
         dependsOn('classes', 'findMainClass')
-        systemProperties(System.properties.findAll { it.key.toString().startsWith('grails.') } as Map<String, Object>)
+        // read when the task runs, so that a build that reuses a configuration cache entry passes its own
+        jvmArgumentProviders.add(new GrailsSystemPropertyArgumentProvider(
+                project.providers.systemPropertiesPrefixedBy(GrailsSystemPropertyArgumentProvider.PREFIX), systemProperties, true))
+    }
+
+    @Override
+    void exec() {
+        // a property the task was given as it started, also with a reused configuration cache entry, is kept
+        GrailsSystemPropertyArgumentProvider.readTaskSystemProperties(this)
+        super.exec()
     }
 
 }

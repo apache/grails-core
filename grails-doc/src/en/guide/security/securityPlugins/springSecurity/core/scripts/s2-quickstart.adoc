@@ -23,38 +23,90 @@ under the License.
 .Purpose
 
 Creates a user and role class (and optionally a requestmap class) in the specified package.
-If you specify a role-group name with the groupClassName argument, role/group classes will also be generated.
-If you specify the uiOnly flag, no domain classes are created but the plugin settings are initialized (useful with LDAP, Mock, Shibboleth, etc.)
+If you specify a role-group name with the `--groupClassName` option, role/group classes will also be generated.
+If you specify the `--uiOnly` flag, no domain classes are created but the plugin settings are initialized (useful with LDAP, Mock, Shibboleth, etc.)
+The command writes nothing when the configuration of the project already has a setting that it writes, in any environment, unless you specify `--force`.
 
 The general format is:
 
 [source,bash]
 ----
-./grailsw s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME]
+grails s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME] [--force]
+grails s2-quickstart --uiOnly [--force]
 ----
 
 .Examples
 
 [source,bash]
 ----
-./grailsw s2-quickstart com.yourapp User Role
+grails s2-quickstart com.yourapp User Role
 ----
 
 [source,bash]
 ----
-./grailsw s2-quickstart com.yourapp User Role --groupClassName=RoleGroup
+grails s2-quickstart com.yourapp User Role --groupClassName=RoleGroup
 ----
 
 [source,bash]
 ----
-./grailsw s2-quickstart com.yourapp Person Authority Requestmap
+grails s2-quickstart com.yourapp Person Authority Requestmap
 ----
 
 [source,bash]
 ----
-./grailsw s2-quickstart --uiOnly
+grails s2-quickstart --uiOnly
 ----
 
 .Description
 
-* Updates `grails-app/conf/application.groovy` with security configuration settings and creates domain classes in `grails-app/domain` unless the uiOnly flag is specified
+* Creates the domain classes in `grails-app/domain`, in the package that is given, unless the `--uiOnly` flag is specified: the user class, the role class, the class that joins them, the requestmap class when a fourth argument names it, and with `--groupClassName` the role-group class and the two classes that join it to users and to roles. The class names are given without a package.
+* Creates the password encoder listener of the user class, `<User>PasswordEncoderListener` in `src/main/groovy`, which hashes the password when a user is saved, and registers it as a bean in `grails-app/conf/spring/resources.groovy`, creating that file when the project has none. In a plugin project without `resources.groovy` the bean is added to the closure that `doWithSpring()` of the plugin class returns.
+* The bean is added to the bean definitions the application is started with. Grails runs `resources.groovy` and reads `beans` when the script has ended, so when the file assigns `beans = { ... }` more than once, the bean goes to the last of those closures. A `resources.groovy` without code, with comments or imports alone, gets a `beans = { ... }` closure with the bean.
+* When the command cannot tell which closure the application reads, it writes nothing at all, says which bean and import the closure needs, and fails: a user class without the listener as a bean would store passwords as they are given. No class, no listener and no setting is written and no file is changed, so nothing of that run is in the way of the next one: change the file so that the command can add the bean, or add the bean by hand (the command finds it there), and run the same command again, without `--force`. That is so when `resources.groovy` or the plugin class cannot be read as Groovy, when it has code but no statement `beans = { ... }` of its own, when it sets or reads `beans` in any other way (in a condition, a loop, a method or another closure, from something that is not written as a closure, such as `beans = other` or `beans = beans << { ... }`, or as `beans { ... }`), when it has a `return` outside a closure, when the closure already has a bean of the name of the listener with another class, when the changed file would not have the bean in that closure, as with a comment that runs on after the brace of the closure, and when `doWithSpring()` of the plugin class does anything but return a closure that is written there.
+* Appends the security settings to the configuration of the project, `grails-app/conf/application.groovy` or `grails-app/conf/application.yml` (see <<core-scripts>>): the names of the domain classes, `useRoleGroups` and `authority.groupAuthorityNameField` with `--groupClassName`, `requestMap.className` and `securityConfigType = 'Requestmap'` when a requestmap class is created, and the default `controllerAnnotations.staticRules` and `filterChain.chainMap`. With `--uiOnly` only the last two are written.
+* Writes nothing, and fails, when the configuration of the project already has a setting that this run would write: the settings it appends come after the ones that are there and apply in every environment. `application.groovy` and `application.yml` are both read, whichever of them the command writes to, with keys written in full, as nested blocks or maps, or as a mix of the two. A setting counts outside the environment blocks and in the block of every environment, whichever environment the command runs in: `environments.<name>` of any YAML document, and an `environments` block of `application.groovy`, also one inside another block. A rule that only `production` has therefore makes the command fail as well. Only the settings this run writes count: `--uiOnly` fails only for `controllerAnnotations.staticRules` and `filterChain.chainMap`, and other settings of the plugin, such as `rejectIfNoRule` or `logout.postOnly`, never count, in any environment. The command names each file with the keys it has, and with the environment when the keys are set in the block of one. No class, no listener, no bean and no setting is written then.
+* The command fails in the same way when it cannot read one of the files. It runs the code of `application.groovy` with the blocks of all its environments, so a block whose code fails outside its own environment, for example one that reads a file only the production servers have, makes the command fail too; write that code so that it also runs elsewhere, or use `--force`.
+* With `--force` the command writes all the same: it creates the classes and appends its settings after the ones that are there. In `application.yml` the appended document replaces the settings outside the environment blocks and those of every environment, so `production` then reads the rules the command wrote, not its own. In `application.groovy` the appended settings replace the ones outside the environment blocks, while an environment of the top-level `environments` block, which Grails applies after the whole file, keeps its own value. Merge what was there into what it appended, for example the static rules of the application into the list the command wrote, and the rules of an environment into an `environments` block for it in the appended YAML document, or into its block of `application.groovy`.
+* The command works out everything it writes before it writes any of it, and writes all of it or nothing. Besides the cases above it writes nothing, and fails, when a file of a class it creates is there already, when the folder of one cannot be made, and when `resources.groovy`, the plugin class or the configuration file cannot be written to; it names the files. With `--force` a class file that is there is kept as it is and the rest is written. The bean of the listener is registered once, also with `--force`.
+* When writing itself fails, for example because a template in `src/main/templates` of the project cannot be rendered, the command names the files it had written by then.
+* The command also fails without writing anything when it is given fewer than three arguments, a package or class name that is none, or `--salt`: that option, which generated a listener that passed a salt to `springSecurityService.encodePassword`, is no longer supported, since the password encoders of the plugin salt a password themselves.
+* More than four arguments, an option it does not have, and a value given to `--uiOnly` or `--force` are refused before the command runs, with exit code 2 and a line that names what is wrong. `grails help s2-quickstart` lists the options and the parameters the command takes.
+
+A template of the plugin is replaced by a file of the same name in `src/main/templates` of the project, for example `src/main/templates/Authority.groovy.template`.
+
+An application created with the `grails-spring-security` feature, or that has it from `grails feature add grails-spring-security`, has a user, a role and a join class and their settings already, with static rules that restrict `/user/**` to `ROLE_ADMIN`. `grails s2-quickstart com.example.auth Person Authority` fails there and says:
+
+[source,text]
+----
+The configuration of the application already has settings that s2-quickstart writes, so the command wrote nothing:
+    grails-app/conf/application.groovy: grails.plugin.springsecurity.userLookup.userDomainClassName, grails.plugin.springsecurity.userLookup.authorityJoinClassName, grails.plugin.springsecurity.authority.className, grails.plugin.springsecurity.controllerAnnotations.staticRules
+The settings it appends would replace them. To write its classes and settings all the same, run the command again with --force, then merge the settings that were there into the ones it appends.
+----
+
+Use the classes the feature created, or run the command with `--force` and merge the static rules of the feature into the ones the command appends, which replace them.
+
+A setting of one environment counts as well. With a rule that only production has in `application.yml`:
+
+[source,yaml]
+----
+environments:
+    production:
+        grails:
+            plugin:
+                springsecurity:
+                    controllerAnnotations:
+                        staticRules:
+                            - pattern: /
+                              access: [ROLE_ADMIN]
+----
+
+`grails s2-quickstart --uiOnly` fails, in whichever environment it runs, and says:
+
+[source,text]
+----
+The configuration of the application already has settings that s2-quickstart writes, so the command wrote nothing:
+    grails-app/conf/application.yml, environment production: grails.plugin.springsecurity.controllerAnnotations.staticRules
+The settings it appends would replace them. To write its settings all the same, run the command again with --force, then merge the settings that were there into the ones it appends.
+----
+
+The appended document would replace the rule in production as well, which would then read `permitAll` for `/` in place of `ROLE_ADMIN`. When the block is in `application.groovy`, the message adds that an environment of its top-level `environments` block keeps its own value, since Grails applies that block after the whole file.

@@ -1,0 +1,146 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: reloading
+default: reloading=jrebel
+build plugin: org.zeroturnaround.gradle.jrebel in the version Forge has for gradle-jrebel-plugin
+
+# web
+title: JRebel JVM Agent
+description: Adds support for class reloading with JRebel (requires separate JRebel installation)
+category: Development Tools
+documentation: https://manuals.jrebel.com/jrebel/standalone/springboot.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: reloading jrebel
+== README.md
+- ## Feature asset-pipeline-grails documentation
++ - [JRebel Gradle Plugin](https://plugins.gradle.org/plugin/org.zeroturnaround.gradle.jrebel)## Feature asset-pipeline-grails documentation
++ ## Feature jrebel documentation
++ - [Grails JRebel JVM Agent documentation](https://manuals.jrebel.com/jrebel/standalone/springboot.html)
++ 
++ 
+== build.gradle
++     id "org.zeroturnaround.gradle.jrebel" version "1.2.1"
++ tasks.named('bootRun') {
++     dependsOn(generateRebel)
++     if (project.hasProperty("rebelAgent")) {
++         jvmArgs(rebelAgent)
++     }
++ }
++ 
+== gradle.properties
++ #TODO: Replace with agent path from JRebel installation; see documentation
++ #rebelAgent=-agentpath:~/bin/jrebel/lib/jrebel6/lib/libjrebel64.dylib
+
+# rest_api
+title: JRebel JVM Agent
+description: Adds support for class reloading with JRebel (requires separate JRebel installation)
+category: Development Tools
+documentation: https://manuals.jrebel.com/jrebel/standalone/springboot.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: reloading jrebel
+== README.md
++ - [JRebel Gradle Plugin](https://plugins.gradle.org/plugin/org.zeroturnaround.gradle.jrebel)## Feature jrebel documentation
++ - [Grails JRebel JVM Agent documentation](https://manuals.jrebel.com/jrebel/standalone/springboot.html)
++ 
++ 
+== build.gradle
++     id "org.zeroturnaround.gradle.jrebel" version "1.2.1"
++ tasks.named('bootRun') {
++     dependsOn(generateRebel)
++     if (project.hasProperty("rebelAgent")) {
++         jvmArgs(rebelAgent)
++     }
++ }
++ 
+== gradle.properties
++ #TODO: Replace with agent path from JRebel installation; see documentation
++ #rebelAgent=-agentpath:~/bin/jrebel/lib/jrebel6/lib/libjrebel64.dylib
+
+# web_plugin
+title: JRebel JVM Agent
+description: Adds support for class reloading with JRebel (requires separate JRebel installation)
+category: Development Tools
+documentation: https://manuals.jrebel.com/jrebel/standalone/springboot.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: reloading jrebel
+== README.md
+- ## Feature asset-pipeline-grails documentation
++ - [JRebel Gradle Plugin](https://plugins.gradle.org/plugin/org.zeroturnaround.gradle.jrebel)## Feature asset-pipeline-grails documentation
++ ## Feature jrebel documentation
++ - [Grails JRebel JVM Agent documentation](https://manuals.jrebel.com/jrebel/standalone/springboot.html)
++ 
++ 
+== build.gradle
++     id "org.zeroturnaround.gradle.jrebel" version "1.2.1"
++ tasks.named('bootRun') {
++     dependsOn(generateRebel)
++     if (project.hasProperty("rebelAgent")) {
++         jvmArgs(rebelAgent)
++     }
++ }
++ 
+== gradle.properties
++ #TODO: Replace with agent path from JRebel installation; see documentation
++ #rebelAgent=-agentpath:~/bin/jrebel/lib/jrebel6/lib/libjrebel64.dylib
+
+# plugin
+title: JRebel JVM Agent
+description: Adds support for class reloading with JRebel (requires separate JRebel installation)
+category: Development Tools
+documentation: https://manuals.jrebel.com/jrebel/standalone/springboot.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: reloading jrebel
+== README.md
++ - [JRebel Gradle Plugin](https://plugins.gradle.org/plugin/org.zeroturnaround.gradle.jrebel)## Feature jrebel documentation
++ - [Grails JRebel JVM Agent documentation](https://manuals.jrebel.com/jrebel/standalone/springboot.html)
++ 
++ 
+== build.gradle
++     id "org.zeroturnaround.gradle.jrebel" version "1.2.1"
++ tasks.named('bootRun') {
++     dependsOn(generateRebel)
++     if (project.hasProperty("rebelAgent")) {
++         jvmArgs(rebelAgent)
++     }
++ }
++ 
+== gradle.properties
++ #TODO: Replace with agent path from JRebel installation; see documentation
++ #rebelAgent=-agentpath:~/bin/jrebel/lib/jrebel6/lib/libjrebel64.dylib
+
+# rest_api_plugin
+title: JRebel JVM Agent
+description: Adds support for class reloading with JRebel (requires separate JRebel installation)
+category: Development Tools
+documentation: https://manuals.jrebel.com/jrebel/standalone/springboot.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: reloading jrebel
+== README.md
++ - [JRebel Gradle Plugin](https://plugins.gradle.org/plugin/org.zeroturnaround.gradle.jrebel)## Feature jrebel documentation
++ - [Grails JRebel JVM Agent documentation](https://manuals.jrebel.com/jrebel/standalone/springboot.html)
++ 
++ 
+== build.gradle
++     id "org.zeroturnaround.gradle.jrebel" version "1.2.1"
++ tasks.named('bootRun') {
++     dependsOn(generateRebel)
++     if (project.hasProperty("rebelAgent")) {
++         jvmArgs(rebelAgent)
++     }
++ }
++ 
+== gradle.properties
++ #TODO: Replace with agent path from JRebel installation; see documentation
++ #rebelAgent=-agentpath:~/bin/jrebel/lib/jrebel6/lib/libjrebel64.dylib
+

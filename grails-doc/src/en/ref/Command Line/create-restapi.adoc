@@ -21,95 +21,82 @@ under the License.
 
 === Purpose
 
-The `create-restapi` command is a fundamental step in Grails application development, specifically tailored for creating Grails applications designed to serve as RESTful APIs. When invoked, this command generates a Grails application with a user-specified name and configures it to be a REST API. Subsequently, it creates a subdirectory based on the provided application name within the directory where the command is executed.
+The `create-restapi` command creates a Grails application that serves a REST API: an application with JSON views and without what is for HTML. See link:{guidePath}REST.html#restApiApplication[The REST API Application Type] in the user guide.
 
 === Usage
-
-To create a Grails RESTful API, use the following command:
 
 [source,console]
 ----
 $ grails create-restapi [OPTIONS] NAME
+$ grails create-restapi --inplace [OPTIONS] [NAME]
 ----
 
-- `NAME`: The desired name for the Grails plugin with a web layer.
+The command creates a subdirectory named after the project in the directory where it is executed, or with `--inplace` creates the project in the current directory. With `--inplace` the name can be left out: the project is then named after the current directory.
 
 === Options
 
-The `create-restapi` command accepts the following options:
+These are the options of `grails create-restapi`:
 
-- `NAME`: The desired name for the REST API application.
+- `NAME`: The name of the project, with or without a package: `com.example.bookstore` creates `bookstore` with the default package `com.example`. It can be left out with `--inplace`.
+- `-f, --features=FEATURE[,FEATURE...]`: The features to use in addition to the default ones. `--list-features` lists them.
+- `--exclude-features=FEATURE[,FEATURE...]`: The features to leave out of those the project would have by default.
+- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): The Grails Data implementation: `hibernate5`, `hibernate7`, `mongodb`, `neo4j`.
+- `-s, --servlet=Servlet Implementation`: The embedded servlet container: `tomcat`, `jetty`, `undertow`, `none`.
+- `-r, --reloading=RELOADING`: The development reloading option: `devtools`, `jrebel`, `none`.
+- `--jdk, --java-version=<javaVersion>`: The JDK version the project should target.
+- `-i, --inplace`: Create the project in the current directory, and not in a new directory named after it. Without `NAME`, the project is named after the current directory, and its default package is made from that name as from a name given without a package: `my-shop` is the project `my-shop` in the package `my.shop`. A directory whose name has a dot, or a character that cannot be part of the name of a class, such as a space, is refused: give `NAME` then.
+- `--subproject`: Create the project as a project of the Gradle build the directory is in, with the files of the application only.
+- `--list-features`: Output the available features and their descriptions. See link:list-features.html[--list-features].
+- `--feature-option=FEATURE.NAME=VALUE`: An option of a feature, which the feature pack of the feature declares as a parameter: the name of the feature, a dot, the name of the option and its value, as in `acme-audit.store=collection`. Can be given more than once. See link:{guidePath}plugins.html#forgeFeaturePackParameters[Parameters].
+- `--feature-pack-dir=DIRECTORY`, `--feature-pack-repository=URL`, `--feature-pack-sha256=COORDINATES=SHA256`, `--feature-catalog=URL`, `--list-catalog-features`, `--refresh`, `--offline`: For the feature of a plugin that has a feature pack.
+- `--preset=PRESET`: The preset the project is made from: a preset for the `rest-api` type, given as the coordinates of its artifact (`group:artifact:version`), as a jar or a directory by a path with a `/` in it, or by its name in a feature catalog. An option given on the command line is used in place of the one of the preset. See link:{guidePath}applicationTypes.html#presets[Making Applications from a Preset].
+- `-h, --help`: Show the help of the command and exit.
 
-- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include. Available options include h2, scaffolding, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, spring-boot-starter-tomcat, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, gorm-graphql, assertj, mockito, grails-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, asset-pipeline-grails, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, geb, properties, grails-spring-ai, spring-ai-openai, spring-ai-anthropic, spring-ai-ollama.
-
-- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): Specifies the Grails Data implementation to configure, with options hibernate5, hibernate7, mongodb.
-
-- `-h, --help`: Displays the help message and exits.
-
-- `-i, --inplace`: Creates a service within the current directory.
-
-- `--jdk=<javaVersion>`: Specifies the JDK version for the project.
-
-- `-s, --servlet=Servlet Implementation`: Specifies the Servlet Implementation, with choices including none, tomcat, jetty, undertow.
-
-- `-t, --test=TEST`: Specifies the test framework, with options such as junit, spock.
-
-
-These options allow you to customize your Grails REST API application according to your specific requirements and preferences.
+Each option is described in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project], and what the types of application and their features are in link:{guidePath}applicationTypes.html[Application Types, Features and Feature Packs].
 
 === Examples
 
-To illustrate its usage, here are some examples:
-
-1. Create a REST API application named "bookstore":
+1. Create a REST API application in a new `bookstore` directory:
 +
-[source,shell]
+[source,console]
 ----
-$ grails create-rest-api bookstore
+$ grails create-restapi bookstore
 $ cd bookstore
 ----
 
-2. Create a REST API application directly in the current directory:
+2. Create a REST API application with options and features:
 +
-[source,shell]
+[source,console]
+----
+$ grails create-restapi com.example.bookstore \
+    --jdk=21 \
+    --data=hibernate7 \
+    --servlet=jetty \
+    --features=asciidoctor,github-workflow-java-ci
+----
+
+3. Create a REST API application in the current directory, named after it (the project `bookstore`, in the package `bookstore`):
++
+[source,console]
 ----
 $ mkdir bookstore
 $ cd bookstore
-$ grails create-rest-api --inplace
+$ grails create-restapi --inplace
 ----
 
-3. Customize the REST API application by adding specific features (available since Grails 3.1):
+4. List the features that can be selected:
 +
-[source,shell]
+[source,console]
 ----
-$ grails create-rest-api bookstore --features github-workflow-java-ci,asciidoctor
+$ grails create-restapi --list-features
 ----
 
-4. Create a minimal Grails REST API application:
+5. Create a REST API application from the preset of an organisation, with Hibernate 7 in place of the Grails Data implementation the preset gives:
 +
-[source,shell]
+[source,console]
 ----
-grails create-rest-api minimal-api
+$ grails create-restapi com.acme.payments \
+    --preset com.acme:acme-service-preset:1.0.0 \
+    --feature-pack-repository https://repo.acme.example/maven \
+    --data hibernate7
 ----
-+
-This command will create a minimal Grails REST API application named "minimal-api" with default settings, ideal for starting a new REST API project.
-
-5. Create a REST API application with support for PostgreSQL and specific features:
-+
-[source,shell]
-----
-grails create-rest-api postgres-api --features postgres
-----
-+
-This command will generate a Grails REST API application named "postgres-api" configured to use PostgreSQL as the database. It's suitable for developing REST APIs with PostgreSQL as the data store.
-
-6. Create a REST API application with in-place development:
-+
-[source,shell]
-----
-grails create-rest-api inplace-api --inplace
-----
-+
-This command will create a Grails REST API application named "inplace-api" within the current directory, allowing for in-place development and integration with an existing project.
-
-These examples demonstrate various scenarios for using the `create-rest-api` command to create Grails REST API applications. You can customize the REST API application by specifying features, database configurations, and development options to meet your project's specific requirements.

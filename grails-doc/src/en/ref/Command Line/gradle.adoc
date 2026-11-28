@@ -1,0 +1,49 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== gradle
+
+=== Purpose
+
+Runs Gradle in the Grails project of the current directory, with the Gradle wrapper of the project.
+
+=== Examples
+
+[source,console]
+----
+grails gradle build --offline
+grails gradle grailsToolCatalog
+grails gradle publishToMavenLocal
+grails help gradle
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails gradle <<gradle arguments>>...
+----
+
+Arguments:
+
+* `gradle arguments` - The tasks to run and the options of Gradle
+
+Everything after `gradle` is given to Gradle as it is, the options too, and Gradle is given the terminal, so it shows its colors and its progress. So `grails gradle --help` is the help of Gradle, and `grails help gradle` shows the help of this command. In a Gradle build of several projects the wrapper of the root of the build is run, in the directory of the project. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.

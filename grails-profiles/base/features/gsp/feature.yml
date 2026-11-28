@@ -1,8 +1,0 @@
-description: Adds support for GSP to the project
-build:
-    plugins:
-        - org.apache.grails.gradle.grails-gsp
-dependencies:
-    - scope: implementation
-      coords: "org.apache.grails:grails-gsp"
-        

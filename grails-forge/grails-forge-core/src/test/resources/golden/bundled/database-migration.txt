@@ -1,0 +1,97 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: migration
+dependency: implementation org.apache.grails:grails-data-hibernate7-dbmigration without a version when gorm-hibernate7
+dependency: implementation org.apache.grails:grails-data-hibernate5-dbmigration without a version when not gorm-hibernate7
+
+# web
+title: Database Migration
+description: Add support for Liquibase database migrations. The Database Migration Plugin helps you manage database schema changes while developing Grails applications.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration
+thirdPartyDocumentation: https://docs.liquibase.com/home.html
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature database-migration documentation
++ - [Grails Database Migration documentation](https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration)
++ - [https://docs.liquibase.com/home.html](https://docs.liquibase.com/home.html)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5-dbmigration"
+
+# rest_api
+title: Database Migration
+description: Add support for Liquibase database migrations. The Database Migration Plugin helps you manage database schema changes while developing Grails applications.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration
+thirdPartyDocumentation: https://docs.liquibase.com/home.html
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature database-migration documentation
++ - [Grails Database Migration documentation](https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration)
++ - [https://docs.liquibase.com/home.html](https://docs.liquibase.com/home.html)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5-dbmigration"
+
+# web_plugin
+title: Database Migration
+description: Add support for Liquibase database migrations. The Database Migration Plugin helps you manage database schema changes while developing Grails applications.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration
+thirdPartyDocumentation: https://docs.liquibase.com/home.html
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature database-migration documentation
++ - [Grails Database Migration documentation](https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration)
++ - [https://docs.liquibase.com/home.html](https://docs.liquibase.com/home.html)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5-dbmigration"
+
+# plugin
+title: Database Migration
+description: Add support for Liquibase database migrations. The Database Migration Plugin helps you manage database schema changes while developing Grails applications.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration
+thirdPartyDocumentation: https://docs.liquibase.com/home.html
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature database-migration documentation
++ - [Grails Database Migration documentation](https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration)
++ - [https://docs.liquibase.com/home.html](https://docs.liquibase.com/home.html)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5-dbmigration"
+
+# rest_api_plugin
+title: Database Migration
+description: Add support for Liquibase database migrations. The Database Migration Plugin helps you manage database schema changes while developing Grails applications.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration
+thirdPartyDocumentation: https://docs.liquibase.com/home.html
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature database-migration documentation
++ - [Grails Database Migration documentation](https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration)
++ - [https://docs.liquibase.com/home.html](https://docs.liquibase.com/home.html)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5-dbmigration"
+

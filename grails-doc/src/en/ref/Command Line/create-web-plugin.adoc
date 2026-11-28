@@ -21,77 +21,74 @@ under the License.
 
 === Purpose
 
-The Grails Web Plugin simplifies the process of creating Grails plugins with a web layer. It streamlines the development of plugins that provide web-based functionality and can be easily integrated into Grails applications.
+The `create-web-plugin` command creates a Grails plugin project with a web layer, for plugins that provide web-based functionality such as controllers, views and tag libraries.
 
 === Usage
 
-To create a Grails plugin with a web layer using the Grails Web Plugin, use the following command:
-
-[source,shell]
+[source,console]
 ----
-grails create-web-plugin [OPTIONS] NAME
+$ grails create-web-plugin [OPTIONS] NAME
+$ grails create-web-plugin --inplace [OPTIONS] [NAME]
 ----
 
-- `NAME`: The desired name for the Grails plugin with a web layer.
+The command creates a subdirectory named after the project in the directory where it is executed, or with `--inplace` creates the project in the current directory. With `--inplace` the name can be left out: the project is then named after the current directory.
+
+For a plugin that needs no web layer, use link:create-plugin.html[create-plugin]. For more information on developing plugins, refer to the user guide section on link:{guidePath}plugins.html[Plugin Development].
 
 === Options
 
-Here are the available options for the `create-web-plugin` command:
+These are the options of `grails create-web-plugin`:
 
-- `-f, --features=FEATURE[,FEATURE...]`: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, grails-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties, grails-spring-ai.
+- `NAME`: The name of the project, with or without a package: `com.example.bookstore` creates `bookstore` with the default package `com.example`. It can be left out with `--inplace`.
+- `-f, --features=FEATURE[,FEATURE...]`: The features to use in addition to the default ones. `--list-features` lists them.
+- `--exclude-features=FEATURE[,FEATURE...]`: The features to leave out of those the project would have by default.
+- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): The Grails Data implementation: `hibernate5`, `hibernate7`, `mongodb`, `neo4j`.
+- `-s, --servlet=Servlet Implementation`: The embedded servlet container: `tomcat`, `jetty`, `undertow`, `none`.
+- `-r, --reloading=RELOADING`: The development reloading option: `devtools`, `jrebel`, `none`.
+- `--jdk, --java-version=<javaVersion>`: The JDK version the project should target.
+- `-i, --inplace`: Create the project in the current directory, and not in a new directory named after it. Without `NAME`, the project is named after the current directory, and its default package is made from that name as from a name given without a package: `my-shop` is the project `my-shop` in the package `my.shop`. A directory whose name has a dot, or a character that cannot be part of the name of a class, such as a space, is refused: give `NAME` then.
+- `--subproject`: Create the project as a project of the Gradle build the directory is in, with the files of the application only.
+- `--list-features`: Output the available features and their descriptions. See link:list-features.html[--list-features].
+- `--feature-option=FEATURE.NAME=VALUE`: An option of a feature, which the feature pack of the feature declares as a parameter: the name of the feature, a dot, the name of the option and its value, as in `acme-audit.store=collection`. Can be given more than once. See link:{guidePath}plugins.html#forgeFeaturePackParameters[Parameters].
+- `--feature-pack-dir=DIRECTORY`, `--feature-pack-repository=URL`, `--feature-pack-sha256=COORDINATES=SHA256`, `--feature-catalog=URL`, `--list-catalog-features`, `--refresh`, `--offline`: For the feature of a plugin that has a feature pack.
+- `--preset=PRESET`: The preset the project is made from: a preset for the `web-plugin` type, given as the coordinates of its artifact (`group:artifact:version`), as a jar or a directory by a path with a `/` in it, or by its name in a feature catalog. An option given on the command line is used in place of the one of the preset. See link:{guidePath}applicationTypes.html#presets[Making Applications from a Preset].
+- `-h, --help`: Show the help of the command and exit.
 
-- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): Specifies the Grails Data implementation to configure for the plugin. Possible values are hibernate5, hibernate7, mongodb.
-
-- `-h, --help`: Displays the help message and exits.
-
-- `-i, --inplace`: Creates a service within the current directory.
-
-- `--jdk=<javaVersion>`: Specifies the JDK version the project should target.
-
-- `--list-features`: Outputs available features and their descriptions.
-
-- `-s, --servlet=Servlet Implementation`: Specifies the Servlet Implementation to configure for the plugin. Possible values are none, tomcat, jetty, undertow.
-
-- `-t, --test=TEST`: Specifies the test framework to use for the plugin. Possible values are junit, spock.
+Each option is described in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project], and what the types of application and their features are in link:{guidePath}applicationTypes.html[Application Types, Features and Feature Packs].
 
 === Examples
 
-To create a Grails plugin with a web layer named "web-plugin-example" with specific features:
-
-[source,shell]
-----
-grails create-web-plugin web-plugin-example --features h2,views-markup
-----
-
-This command will generate a Grails web plugin project named "web-plugin-example" with the H2 database and views markup feature enabled, making it suitable for web-based plugin development.
-
-Here are additional examples for the `create-web-plugin` command:
-
-1. Create a minimal Grails web plugin:
+1. Create a plugin with a web layer in a new `bookstore` directory:
 +
-[source,shell]
+[source,console]
 ----
-grails create-web-plugin minimal-web-plugin
+$ grails create-web-plugin bookstore
+$ cd bookstore
 ----
-+
-This command will create a Grails web plugin project named "minimal-web-plugin" with default settings, suitable for starting a new web-based plugin project.
 
-2. Create a web plugin with support for PostgreSQL and specific features:
+2. Create a plugin with a web layer with options and features:
 +
-[source,shell]
+[source,console]
 ----
-grails create-web-plugin postgres-web-plugin --features postgres,views-json
+$ grails create-web-plugin com.example.bookstore \
+    --jdk=21 \
+    --data=hibernate7 \
+    --servlet=jetty \
+    --features=asciidoctor,github-workflow-java-ci
 ----
-+
-This command will generate a Grails web plugin project named "postgres-web-plugin" configured to use PostgreSQL as the database and with the "views-json" feature enabled, making it ideal for developing web-based plugins with JSON views.
 
-3. Create a web plugin with in-place development:
+3. Create a plugin with a web layer in the current directory, named after it (the project `bookstore`, in the package `bookstore`):
 +
-[source,shell]
+[source,console]
 ----
-grails create-web-plugin inplace-web-plugin --inplace
+$ mkdir bookstore
+$ cd bookstore
+$ grails create-web-plugin --inplace
 ----
-+
-This command will create a Grails web plugin project named "inplace-web-plugin" within the current directory, allowing for in-place development and integration with an existing project.
 
-For more information on developing plugins with a web layer using the Grails Web Plugin, refer to the Grails user guide section on link:{guidePath}plugins.html[Plugin Development].
+4. List the features that can be selected:
++
+[source,console]
+----
+$ grails create-web-plugin --list-features
+----

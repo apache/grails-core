@@ -1,8 +1,0 @@
-description: Packages a Grails application
-minArguments: 0
-usage: |
- package
-steps:
- - command: gradle
-   tasks:
-     - assemble

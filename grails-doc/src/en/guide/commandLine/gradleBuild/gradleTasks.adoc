@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-As mentioned previously the `grails` command uses an embedded version of Gradle and certain Grails commands that existed in previous versions of Grails map onto their Gradle equivalents. The following table shows which Grails command invoke which Gradle task:
+As mentioned previously, the commands of `grails` that build, test or run a project run the Gradle wrapper of the project. The following table shows which Gradle tasks a command runs:
 
 [format="csv", options="header"]
 |===
@@ -25,44 +25,46 @@ As mentioned previously the `grails` command uses an embedded version of Gradle 
 *Grails Command*,*Gradle Task*
 clean,clean
 compile,classes
-package,assemble
+assemble (also war and package),assemble
 run-app,bootRun
-test-app,check
+test-app,test and integrationTest
 test-app --unit,test
 test-app --integration,integrationTest
-war,assemble
+console,console
+shell,shell
+run-tool (also run-command),runTool (also runCommand)
+run-script (deprecated),runScript (deprecated)
+dependency-report,dependencies
+package-plugin,jar
+publish-plugin,publish
 |===
 
-You can invoke any of these Grails commands using their Gradle equivalents if you prefer:
+You can run any of these tasks with the Gradle wrapper of the project if you prefer:
 
 [source,bash]
 ----
-$ gradle test
+$ ./gradlew test
 ----
 
-Note however that you will need to use a version of Gradle compatible with Grails 3.1 (Gradle 2.2 or above). If you wish to invoke a Gradle task using the version of Gradle used by Grails you can do so with the `grails` command:
+Any other task is run with the wrapper too, or with the `gradle` command of `grails`, which runs the wrapper of the project the current directory is in and gives it every argument as it is:
 
 [source,bash]
 ----
 $ grails gradle compileGroovy
 ----
 
-However, it is recommended you do this via interactive mode, as it greatly speeds up execution and provides TAB completion for the available Gradle tasks:
+The `gradle` command can be given in link:commandLine.html#interactiveMode[interactive mode] as well:
 
 [source,bash]
 ----
-$ grails 
-| Enter a command name to run. Use TAB for completion:
- grails> gradle compileGroovy
+$ grails
+grails> gradle compileGroovy
  ...
 ----
 
-To find out what Gradle tasks are available without using interactive mode TAB completion you can use the Gradle `tasks` task:
+To find out what Gradle tasks are available, use the Gradle `tasks` task:
 
 [source,bash]
 ----
-gradle tasks
+$ ./gradlew tasks
 ----
-
-
-

@@ -1,0 +1,189 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+adds: testcontainers
+dependency: implementation org.mongodb:mongodb-driver-sync without a version
+
+# web
+title: MongoDB Synchronous Driver
+description: Add support for the MongoDB Synchronous Driver.
+category: Database
+documentation: https://www.mongodb.com/docs/drivers/java/sync/current/
+thirdPartyDocumentation: https://www.mongodb.com/docs/
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature mongo-sync documentation
++ - [Grails MongoDB Synchronous Driver documentation](https://www.mongodb.com/docs/drivers/java/sync/current/)
++ - [https://www.mongodb.com/docs/](https://www.mongodb.com/docs/)
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
++ 
++ 
+== build.gradle
++     implementation "org.mongodb:mongodb-driver-sync"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/devDb
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/testDb
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+
+# rest_api
+title: MongoDB Synchronous Driver
+description: Add support for the MongoDB Synchronous Driver.
+category: Database
+documentation: https://www.mongodb.com/docs/drivers/java/sync/current/
+thirdPartyDocumentation: https://www.mongodb.com/docs/
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature mongo-sync documentation
++ - [Grails MongoDB Synchronous Driver documentation](https://www.mongodb.com/docs/drivers/java/sync/current/)
++ - [https://www.mongodb.com/docs/](https://www.mongodb.com/docs/)
++ 
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.mongodb:mongodb-driver-sync"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/devDb
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+
+# web_plugin
+title: MongoDB Synchronous Driver
+description: Add support for the MongoDB Synchronous Driver.
+category: Database
+documentation: https://www.mongodb.com/docs/drivers/java/sync/current/
+thirdPartyDocumentation: https://www.mongodb.com/docs/
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature mongo-sync documentation
++ - [Grails MongoDB Synchronous Driver documentation](https://www.mongodb.com/docs/drivers/java/sync/current/)
++ - [https://www.mongodb.com/docs/](https://www.mongodb.com/docs/)
++ 
++ 
++ 
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
+== build.gradle
++     implementation "org.mongodb:mongodb-driver-sync"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/devDb
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/testDb
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+
+# plugin
+title: MongoDB Synchronous Driver
+description: Add support for the MongoDB Synchronous Driver.
+category: Database
+documentation: https://www.mongodb.com/docs/drivers/java/sync/current/
+thirdPartyDocumentation: https://www.mongodb.com/docs/
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature mongo-sync documentation
++ - [Grails MongoDB Synchronous Driver documentation](https://www.mongodb.com/docs/drivers/java/sync/current/)
++ - [https://www.mongodb.com/docs/](https://www.mongodb.com/docs/)
++ 
++ 
++ 
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
+== build.gradle
++     implementation "org.mongodb:mongodb-driver-sync"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/devDb
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+
+# rest_api_plugin
+title: MongoDB Synchronous Driver
+description: Add support for the MongoDB Synchronous Driver.
+category: Database
+documentation: https://www.mongodb.com/docs/drivers/java/sync/current/
+thirdPartyDocumentation: https://www.mongodb.com/docs/
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature mongo-sync documentation
++ - [Grails MongoDB Synchronous Driver documentation](https://www.mongodb.com/docs/drivers/java/sync/current/)
++ - [https://www.mongodb.com/docs/](https://www.mongodb.com/docs/)
++ 
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.mongodb:mongodb-driver-sync"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/devDb
++     grails:
++       mongodb:
++         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+

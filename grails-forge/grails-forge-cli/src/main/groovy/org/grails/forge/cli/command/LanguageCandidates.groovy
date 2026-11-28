@@ -27,6 +27,6 @@ import java.util.stream.Stream
 class LanguageCandidates extends ArrayList<String> {
 
     LanguageCandidates() {
-        super(Stream.of(Language.values()).map(l -> l.toString().toLowerCase()).collect(Collectors.toList()))
+        super(Stream.of(Language.values()).map(l -> l.toString().toLowerCase(Locale.ROOT)).collect(Collectors.toList()))
     }
 }

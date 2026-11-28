@@ -1,0 +1,45 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+format: 1
+kind: feature
+templateApi: 1
+name: views-markup
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+title: Markup Views
+description: Markup views are written in Groovy, end with the file extension gml and reside in the grails-app/views directory. They provide a DSL for producing output in the XML.
+category: View Rendering
+guideOfGrails: guide/theWebLayer.html
+oneOf: api-views
+adds:
+  - grails-web
+buildPlugins:
+  - id: org.apache.grails.gradle.grails-markup
+    apply: true
+dependencies:
+  - scope: implementation
+    coordinates: org.apache.grails:grails-views-markup
+files:
+  - from: index.gml.gsp
+    to: grails-app/views/application/index.gml
+  - from: _errors.gml.gsp
+    to: grails-app/views/errors/_errors.gml
+  - from: error.gml.gsp
+    to: grails-app/views/error.gml
+  - from: notFound.gml.gsp
+    to: grails-app/views/notFound.gml

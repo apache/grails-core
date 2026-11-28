@@ -19,16 +19,12 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
-import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
-import org.grails.forge.template.RenderResult
-import org.grails.forge.template.TemplateRenderer
-import org.grails.forge.template.GspTemplate
-import org.grails.forge.template.GspView
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateServiceCommand.NAME, description = 'Creates a Service Class')
@@ -57,28 +53,15 @@ class CreateServiceCommand extends CodeGenCommand {
     }
 
     @Override
-    Integer call() throws Exception {
-        final Project project = getProject(serviceName)
-        final TemplateRenderer templateRenderer = getTemplateRenderer(project)
-        final RenderResult renderResult = templateRenderer.render(new GspTemplate('grails-app/services/{packagePath}/{className}Service.groovy', GspView.of('/forge/cli/command/templates/service.gsp', [project: project])), overwrite)
-        final RenderResult specRenderResult = templateRenderer.render(new GspTemplate('src/test/groovy/{packagePath}/{className}ServiceSpec.groovy', GspView.of('/forge/cli/command/templates/serviceSpec.gsp', [project: project])), overwrite)
-        if (renderResult != null && specRenderResult != null) {
-            logRenderResult(renderResult)
-            logRenderResult(specRenderResult)
-        }
-
-        return 0
+    List<ArtefactTemplate> getTemplates() {
+        return [ArtefactTemplate.SERVICE, ArtefactTemplate.SERVICE_TEST]
     }
 
-    private void logRenderResult(RenderResult result) throws Exception {
-        if (result != null) {
-            if (result.isSuccess()) {
-                out('@|blue ||@ Rendered service class to ' + result.getPath())
-            } else if (result.isSkipped()) {
-                warning('Rendering skipped for ' + result.getPath() + ' because it already exists. Run again with -f to overwrite.')
-            } else if (result.getError() != null) {
-                throw result.getError()
-            }
-        }
+    @Override
+    Integer call() throws Exception {
+        return generate('service class', getProject(serviceName, 'Service'), [
+                'grails-app/services/{packagePath}/{className}Service.groovy': ArtefactTemplate.SERVICE,
+                'src/test/groovy/{packagePath}/{className}ServiceSpec.groovy': ArtefactTemplate.SERVICE_TEST
+        ])
     }
 }

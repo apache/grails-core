@@ -1,0 +1,183 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: database-driver
+adds: testcontainers
+adds: gorm-hibernate5 when not anyOf(gorm-hibernate5, gorm-hibernate7)
+dependency: runtimeOnly com.microsoft.sqlserver:mssql-jdbc without a version
+
+# web
+title: Microsoft SQL Server
+description: Add Microsoft SQL Server driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "com.microsoft.sqlserver:mssql-jdbc"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mssqlserver"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
++       url: jdbc:sqlserver://localhost:1433;databaseName=devDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=testDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
+== src/test/resources/container-license-acceptance.txt
++ mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04
+
+# rest_api
+title: Microsoft SQL Server
+description: Add Microsoft SQL Server driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "com.microsoft.sqlserver:mssql-jdbc"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mssqlserver"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
++       url: jdbc:sqlserver://localhost:1433;databaseName=devDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=testDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
+== src/test/resources/container-license-acceptance.txt
++ mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04
+
+# web_plugin
+title: Microsoft SQL Server
+description: Add Microsoft SQL Server driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "com.microsoft.sqlserver:mssql-jdbc"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mssqlserver"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
++       url: jdbc:sqlserver://localhost:1433;databaseName=devDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=testDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
+== src/test/resources/container-license-acceptance.txt
++ mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04
+
+# plugin
+title: Microsoft SQL Server
+description: Add Microsoft SQL Server driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "com.microsoft.sqlserver:mssql-jdbc"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mssqlserver"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
++       url: jdbc:sqlserver://localhost:1433;databaseName=devDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=testDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
+== src/test/resources/container-license-acceptance.txt
++ mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04
+
+# rest_api_plugin
+title: Microsoft SQL Server
+description: Add Microsoft SQL Server driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "com.microsoft.sqlserver:mssql-jdbc"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mssqlserver"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
++       url: jdbc:sqlserver://localhost:1433;databaseName=devDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=testDb;socketKeepAlive=true
++       url: jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
+== src/test/resources/container-license-acceptance.txt
++ mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04
+

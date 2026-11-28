@@ -22,7 +22,7 @@ under the License.
 
 The plugin provides you the option of creating an access inheritance level between "`person`" and "`authority`": the "`group`". The next three classes you will read about (including this one) are only used in a "`person`"/"`group`"/"`authority`" implementation. Rather than granting authorities directly to a "`person`", you can create a "`group`", map authorities to it, and then map a "`person`" to that "`group`". For applications that have a one or more groups of users who need the same level of access, having one or more "`group`" instances makes managing changes to access levels easier because the authorities that make up that access level are encapsulated in the "`group`", and a single change will affect all of the users.
 
-If you run the <<core-s2-quickstart>> script with the group name specified and use `com.mycompany.myapp` as your package and `RoleGroup` and `Role` as your class names, you'll generate this class:
+If you run the <<core-s2-quickstart>> command with the group name specified and use `com.mycompany.myapp` as your package and `RoleGroup` and `Role` as your class names, you'll generate this class:
 
 [source, groovy]
 .`RoleGroup.groovy`
@@ -117,7 +117,7 @@ class RoleGroupRole implements Serializable {
 }
 ----
 
-When running the <<core-s2-quickstart>> script with the group name specified, the "`person`" class will be generated differently to accommodate the use of groups. Assuming you use `com.mycompany.myapp` as your package and `User` and `RoleGroup` as your class names, the `getAuthorities()` method will be generated like so:
+When running the <<core-s2-quickstart>> command with the group name specified, the "`person`" class will be generated differently to accommodate the use of groups. Assuming you use `com.mycompany.myapp` as your package and `User` and `RoleGroup` as your class names, the `getAuthorities()` method will be generated like so:
 
 [source,groovy]
 .Listing {counter:listing}. The generated `getAuthorities()` method when using role groups
@@ -139,6 +139,6 @@ The plugin assumes the attribute `authorities` will provide the "`authority`" co
 |Whether to use "`authority group`" implementation when loading user authorities
 
 |authority.groupAuthorityNameField
-|_none_ (the <<core-s2-quickstart>> script uses the name "`authorities`")
+|_none_ (the <<core-s2-quickstart>> command uses the name "`authorities`")
 |RoleGroup class role collection property
 |====================

@@ -205,6 +205,8 @@ Also, the standard scaffold views expect model variables of the form `<propertyN
 
 Grails lets you generate a controller and the views used to create the above interface from the command line.
 
+NOTE: The commands of this section are tools of the scaffolding plugin. They only read and write files of the project, so `grails` starts each as a Java process of its own, without Gradle and without the application (they are standalone tools, in the companion `grails-scaffolding-cli-standalone` of the plugin; see xref:commandLine#creatingTools[Creating Tools]). `grails` runs them by their names; in a project the build has not compiled yet, it has the build list the tools of the application and its plugins first. `grails run-tool generate-all Book` and `./gradlew runTool -Pargs="generate-all Book"` run the same tool with the build. Each has a page in the command line reference, for example link:{commandLineRef}generate-all.html[generate-all].
+
 ===== Generating Controllers and Views
 
 To generate a controller type:
@@ -238,6 +240,44 @@ grails generate-all com.bookstore.Book
 A generated controller redirects a successful form save or update to its own `show` action, so it keeps
 working when it is renamed, for example to serve the domain class at a different URL.
 
+===== Generating JSON Views and a REST Controller
+
+In a REST API application, and in a REST API plugin, the same three commands generate for a REST resource, as the `rest-api` profile did before Grails 9. `generate-views` writes JSON views in place of GSP views, which are `index.gson`, `show.gson` and the template `_book.gson` under `grails-app/views/book`:
+
+[source,groovy]
+.grails-app/views/book/show.gson
+----
+import com.bookstore.Book
+
+model {
+    Book book
+}
+
+json tmpl.book(book)
+----
+
+`generate-controller` writes a controller with the actions `index`, `show`, `save`, `update` and `delete`, which declares `static responseFormats = ['json']` and answers with a status and the resource, the data service it uses, and a test of each. `generate-all` does both. The two tests are complete but for the places they mark with `TODO`, which ask for the valid properties of the class and for the data of the service test, and pass once those are filled in. The unit test of the controller renders the JSON view an action answered with itself (`renderView()`), because a unit test calls the action and nothing after it, and then reads the response. In an application with MongoDB, where what a test saves is not rolled back, the `cleanup()` of the service test is the place to delete it.
+
+A REST API application has these commands when it has the scaffolding plugin, which it does not have by default:
+
+[source,bash]
+----
+grails create-restapi myapi --features scaffolding
+----
+
+`grails feature add scaffolding` adds the plugin to a REST API application that is there already.
+
+A REST API application gets the standalone tools of the plugin and not the plugin itself: its build declares `grailsCliStandalone "org.apache.grails:grails-scaffolding-cli-standalone"`, where a web application declares `implementation "org.apache.grails:grails-scaffolding"`. That companion has the tools of the plugin and depends on nothing of the plugin, so nothing of the plugin is on any class path of the application: not the one it runs with or the archive it is packaged as, not those of its tests, and not the one the build runs the other tools with. The application therefore has neither the scaffolding plugin nor the GSP and fields plugins the scaffolding plugin depends on; its tests have GSP all the same, as the tests of every application do, because the testing support of Grails (`grails-testing-support-web`) depends on it. The tools that write sources work there, which are `generate-all`, `generate-controller`, `generate-views`, `generate-service` and `install-templates`. `create-scaffold-controller`, `create-scaffold-service` and `generate-scaffold-all` write classes that can extend classes of the scaffolding plugin, such as `RestfulServiceController` and `GormService`, which the running application then does not have: an application that wants those declares the plugin itself, with `implementation`, and then has GSP on its class path.
+
+The commands generate JSON views and the REST controller in an application whose features, as the record the command line keeps of an application it generated or migrated says them, have `views-json` and not `gsp`: a REST API application or a REST API plugin. An application with the feature `gsp` is given GSP views and the controller for pages, and so is one with neither feature, whatever files `grails-app/views` has. An application the command line has no record of is given GSP views when a file under `grails-app/views` ends with `.gsp`, JSON views when none does and one ends with `.gson`, and GSP views when it has neither. Neither the class path of the application nor its build file is read. An application with both kinds of views is therefore given GSP views, and `--views=json` asks for the other kind:
+
+[source,bash]
+----
+grails generate-all com.bookstore.Book --views=json
+----
+
+`--views=gsp` does the reverse, and the value can also be given as the next word (`--views json`). The templates are those of the scaffolding plugin unless the project has its own under `src/main/templates/scaffolding`, where link:{commandLineRef}install-templates.html[install-templates] writes them: `index.gson`, `show.gson` and `_domain.gson` for the views, and `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy` for the controller, the service and their tests.
+
 ===== Generating Scaffolded Controllers and Services
 
 To generate a scaffolded controller (using `@Scaffold` annotation):
@@ -259,6 +299,13 @@ To generate both a scaffolded service and controller together:
 [source,bash]
 ----
 grails generate-scaffold-all Book
+----
+
+The name is that of a domain class. A domain class of the project is found by its simple name, `Book`, or its full name, `org.bookstore.Book`, and the controller and the service are created in its package. A domain class the project has no source of, such as one of a plugin or of another project of the build, is given by its full name, which is also the package of what is created:
+
+[source,bash]
+----
+grails generate-scaffold-all org.library.Author
 ----
 
 ===== Command Options
@@ -355,5 +402,12 @@ The Grails scaffolding templates make use of the link:theWebLayer.html#fields[Fi
 ==== Customizing the Scaffolding templates
 
 
-The templates used by Grails to generate the controller and views can be customized by installing the templates with the link:{commandLineRef}install-templates.html[install-templates] command.
+The templates used by Grails to generate the controller and views can be customized by installing the templates of the scaffolding plugin into `src/main/templates/scaffolding` of the project, with the link:{commandLineRef}install-templates.html[install-templates] tool of the plugin:
+
+[source,bash]
+----
+grails run-tool install-templates
+----
+
+`grails install-templates` without `run-tool` is another command, of the command line itself: it copies the templates of the `create-*` commands and not those of scaffolding.
 

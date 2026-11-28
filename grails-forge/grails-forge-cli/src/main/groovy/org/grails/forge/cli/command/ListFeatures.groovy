@@ -27,6 +27,7 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
+import org.grails.forge.feature.database.Neo4jGormValidator
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.options.Options
 import java.util.stream.Collectors
@@ -39,12 +40,26 @@ class ListFeatures {
     private final ApplicationType applicationType
     private final OperatingSystem operatingSystem
     private final ContextFactory contextFactory
+    private final Collection<String> excludedFeatures
 
     ListFeatures(AvailableFeatures availableFeatures,
                         Options options,
                         ApplicationType applicationType,
                         @Nullable OperatingSystem operatingSystem,
                         ContextFactory contextFactory) {
+        this(availableFeatures, options, applicationType, operatingSystem, contextFactory, Collections.<String>emptyList())
+    }
+
+    /**
+     * @param excludedFeatures the names of the features that are left out of the defaults the list marks
+     */
+    ListFeatures(AvailableFeatures availableFeatures,
+                        Options options,
+                        ApplicationType applicationType,
+                        @Nullable OperatingSystem operatingSystem,
+                        ContextFactory contextFactory,
+                        Collection<String> excludedFeatures) {
+        this.excludedFeatures = excludedFeatures
         this.availableFeatures = availableFeatures
         this.options = options
         this.applicationType = applicationType
@@ -57,7 +72,8 @@ class ListFeatures {
                 Collections.emptyList(),
                 applicationType,
                 options,
-                operatingSystem
+                operatingSystem,
+                excludedFeatures
                 )
         GeneratorContext generatorContext = contextFactory.createGeneratorContext(null, featureContext, ConsoleOutput.NOOP)
 
@@ -87,6 +103,7 @@ class ListFeatures {
     }
 
     private void listFeatures(ConsoleOutput consoleOutput, Set<Feature> defaultFeatures, List<Feature> allFeatures, int width) {
+        List<String> defaultNames = defaultFeatures*.getName()
         for (Feature feature: allFeatures) {
             String name = feature.getName()
             if (feature.isPreview()) {
@@ -99,7 +116,9 @@ class ListFeatures {
                 name += ' (+)'
                 consoleOutput.out('@|blue   ' + String.format('%1$-' + width + 's', name) + feature.getDescription() + '|@')
             } else {
-                consoleOutput.out('  ' + String.format('%1$-' + width + 's', name) + feature.getDescription())
+                // a feature that no Grails BOM covers together with a feature the application has by default
+                String withoutBom = Neo4jGormValidator.notCoveredBeside(feature.getName(), defaultNames)
+                consoleOutput.out('  ' + String.format('%1$-' + width + 's', name) + feature.getDescription() + (withoutBom == null ? '' : " (${withoutBom})"))
             }
         }
     }

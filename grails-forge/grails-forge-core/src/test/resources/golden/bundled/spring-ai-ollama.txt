@@ -1,0 +1,71 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: [grails-spring-ai]
+conflicts: []
+oneOf: spring-ai-provider
+dependency: implementation org.springframework.ai:spring-ai-starter-model-ollama without a version
+
+# web
+title: Spring AI Ollama
+description: Uses models served by a local Ollama through Spring AI; no credentials needed.
+category: AI
+documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
+thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html
+visible: true
+dependentFeatures: [grails-spring-ai]
+== README.md
++ ## Feature grails-spring-ai documentation
++ - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
++ - [https://docs.spring.io/spring-ai/reference/](https://docs.spring.io/spring-ai/reference/)
++ ## Feature spring-ai-ollama documentation
++ - [Grails Spring AI Ollama documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
++ - [https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html](https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html)
++ 
++ 
++ 
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-spring-ai"
++     implementation "org.springframework.ai:spring-ai-starter-model-ollama"
++     testImplementation "org.apache.grails:grails-testing-support-ai"
+== grails-app/conf/application.yml
++ spring.ai.ollama.base-url: http://localhost:11434
+
+# rest_api
+title: Spring AI Ollama
+description: Uses models served by a local Ollama through Spring AI; no credentials needed.
+category: AI
+documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
+thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html
+visible: true
+dependentFeatures: [grails-spring-ai]
+== README.md
++ ## Feature grails-spring-ai documentation
++ - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
++ - [https://docs.spring.io/spring-ai/reference/](https://docs.spring.io/spring-ai/reference/)
++ ## Feature spring-ai-ollama documentation
++ - [Grails Spring AI Ollama documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
++ 
++ - [https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html](https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html)
++ 
++ 
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-spring-ai"
++     implementation "org.springframework.ai:spring-ai-starter-model-ollama"
++     testImplementation "org.apache.grails:grails-testing-support-ai"
+== grails-app/conf/application.yml
++ spring.ai.ollama.base-url: http://localhost:11434
+
+# web_plugin
+not for this kind of application
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+not for this kind of application
+

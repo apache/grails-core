@@ -42,6 +42,7 @@ class FactoriesCompileInput {
     static final List<String> CLI_FACTORIES_PATHS = [
             'src/main/resources/META-INF/grails-cli.factories',
             'src/cli/resources/META-INF/grails-cli.factories',
+            'src/standalone/resources/META-INF/grails-cli.factories',
     ].asImmutable()
 
     private static final String GRAILS_FACTORIES_REGISTERED = 'grailsFactoriesInputRegistered'
@@ -61,7 +62,7 @@ class FactoriesCompileInput {
     }
 
     /**
-     * For a compilation that can register commands: project sources, and the sources of a cli tier.
+     * For a compilation that can register tools: project sources, and the sources of the source sets of tools.
      */
     static void registerCliFactories(Project project, GroovyCompile task) {
         if (task.extensions.extraProperties.has(CLI_FACTORIES_REGISTERED)) {

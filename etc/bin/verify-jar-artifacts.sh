@@ -205,35 +205,24 @@ while IFS= read -r line; do
   echo "✅ Verified: ${JAR_FILE}"
 done < "${ARTIFACTS_FILE}"
 
-# check to make sure the base profile jar contains the wrapper since it's dynamically generated & copied into position as part of the build
-echo "🔍 Locating base profile jar for wrapper inspection..."
+# check to make sure the grails-forge-core jar contains the wrapper every generated application gets, since it's dynamically generated & copied into position as part of the build
+echo "🔍 Locating grails-forge-core jar for wrapper inspection..."
 cd "${DOWNLOAD_LOCATION}"
-mkdir -p "profile-wrapper-check"
-cp "${DOWNLOAD_LOCATION}/grails/etc/bin/results/first/grails-profiles-base-${VERSION}.jar" "profile-wrapper-check/base.jar"
-echo "✅ Located base profile jar, extracting ..."
-unzip "profile-wrapper-check/base.jar" -d "profile-wrapper-check"
-echo "✅ Extracted base profile jar ..."
+rm -rf "wrapper-check"
+mkdir -p "wrapper-check"
+cp "${DOWNLOAD_LOCATION}/grails/etc/bin/results/first/grails-forge-core-${VERSION}.jar" "wrapper-check/grails-forge-core.jar"
+echo "✅ Located grails-forge-core jar, extracting ..."
+unzip -q "wrapper-check/grails-forge-core.jar" -d "wrapper-check"
+echo "✅ Extracted grails-forge-core jar ..."
 
-cd "profile-wrapper-check"
-if [ ! -s "META-INF/grails-profile/skeleton/grailsw" ]; then
-  echo "❌ Missing grailsw in base profile jar"
-  exit 1
-else
-  echo "✅ Found grailsw in base profile jar"
-fi
-
-if [ ! -s "META-INF/grails-profile/skeleton/grailsw.bat" ]; then
-  echo "❌ Missing grailsw.bat in base profile jar"
-  exit 1
-else
-  echo "✅ Found grailsw.bat in base profile jar"
-fi
-
-if [ ! -s "META-INF/grails-profile/skeleton/grails-wrapper.jar" ]; then
-  echo "❌ Missing grails-wrapper.jar in base profile jar"
-  exit 1
-else
-  echo "✅ Found grails-wrapper.jar in base profile jar"
-fi
+cd "wrapper-check"
+for WRAPPER_FILE in grailsw grailsw.bat grails-wrapper.jar; do
+  if [ ! -s "grails-wrapper/${WRAPPER_FILE}" ]; then
+    echo "❌ Missing ${WRAPPER_FILE} in grails-forge-core jar"
+    exit 1
+  else
+    echo "✅ Found ${WRAPPER_FILE} in grails-forge-core jar"
+  fi
+done
 
 echo "✅✅✅ All artifacts verified successfully. ✅✅✅"

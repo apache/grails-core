@@ -22,7 +22,7 @@ Activate this skill when:
 - Running `./gradlew aggregateViolations` and interpreting the resulting `*_VIOLATIONS.md` files.
 - Fixing CodeNarc, Checkstyle, PMD, SpotBugs, or Spotless violations reported in those files.
 - Configuring code style or analysis tools across the repo (enabling/disabling tools or adjusting rule files).
-- Preparing a commit - the plugin output must be clean before merging.
+- Preparing a commit - the relevant scoped checks must pass; a full clean/aggregate run is not required for every commit.
 
 ---
 
@@ -36,6 +36,12 @@ Activate this skill when:
 | `org.apache.grails.gradle.grails-violation-aggregation` | **Root project only** | Registers `aggregateViolations` and `aggregateJacocoCoverage` tasks; writes Markdown summaries to `build/reports/violations/` |
 
 ---
+
+## Local Commit Checks
+
+Follow AGENTS.md's Local Verification guidance: run the affected module's `codeStyle` and enabled analysis tasks, with build caching and up-to-date checks enabled. Run `validateRepositoryConventions` when the change touches its inputs. Inspect the scoped XML/results; a scoped run deliberately leaves the aggregate Markdown unchanged.
+
+Do not add `clean`, `cleanViolationReports`, `--rerun-tasks`, or `--no-build-cache` merely because a commit is next. Use a fresh full aggregation only when requested or needed to diagnose a specific issue. `:grails-test-report:check` runs the root unit and integration suites and is not a report-only prerequisite for reviewing style results.
 
 ## Key Tasks
 
@@ -103,7 +109,7 @@ After running `aggregateJacocoCoverage`:
 |------|------|-----------|
 | `build/reports/violations/JACOCO_COVERAGE.md` | JaCoCo | Only when at least one subproject has a JaCoCo CSV report |
 
-All reports are inside `build/` and are excluded from version control via `.gitignore`. A clean run produces `No violations found! 🎉` in each style file. **The build must be clean before committing.**
+All reports are inside `build/` and are excluded from version control via `.gitignore`. A successful aggregate run produces `No violations found! 🎉` in each style file. **Relevant checks must pass before committing; this does not require a `clean` task or a full-repository run.**
 
 Each aggregated style or analysis report begins with `Modules analyzed:`, which names only modules that contributed data. Each file is a Markdown table grouped by module, with columns: **Class**, **Tool**, **Violation**, **Line**, **Message**.
 
@@ -234,11 +240,11 @@ The Gradle properties below are all-project or selected-project overrides for ba
 
 ## Fixing Violations Workflow
 
-1. Run `./gradlew aggregateViolations -Pgrails.code-style.ignoreFailures=true -Pgrails.code-analysis.ignoreFailures=true`
-2. Open `build/reports/violations/CODENARC_VIOLATIONS.md` and `build/reports/violations/CHECKSTYLE_VIOLATIONS.md` to see all issues by module
-3. For CodeNarc, run `./gradlew codenarcFix` to auto-fix what it can
+1. Run the affected module's `:module:codeStyle` and enabled analysis tasks. For a requested full-repository audit, use `./gradlew aggregateViolations --continue`.
+2. Inspect that run's scoped XML/results, or the aggregate Markdown reports when the aggregate tasks ran. Do not treat an older aggregate report as the result of a scoped run.
+3. For CodeNarc, use `:module:codenarcFix` only on the intended module to auto-fix what it can.
 4. Fix remaining violations manually using the table above
-5. Re-run `./gradlew aggregateViolations` and confirm files contain `No violations found! 🎉`
+5. Re-run the checks that failed and confirm they pass, keeping caching enabled for unaffected tasks. Repeat a full aggregation only when the scope calls for it.
 6. The reports are inside `build/` and do not need to be deleted before committing
 
 ---

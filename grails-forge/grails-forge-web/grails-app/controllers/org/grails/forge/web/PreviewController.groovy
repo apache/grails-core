@@ -28,6 +28,7 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.apache.grails.forge.core.state.ProjectState
 import org.grails.forge.api.GrailsForgeConfiguration
 import org.grails.forge.api.Relationship
 import org.grails.forge.api.RequestInfo
@@ -90,7 +91,9 @@ class PreviewController {
             badRequest(e.message)
             return
         }
-        PreviewDTO previewDTO = new PreviewDTO(outputHandler.project)
+        // the manifest and the lock under .grails are shown; the baseline, which repeats every file of
+        // the application, is not
+        PreviewDTO previewDTO = new PreviewDTO(outputHandler.project.findAll { String path, String content -> !ProjectState.isBaselinePath(path) })
         previewDTO.addLink(Relationship.CREATE, requestInfo.link(Relationship.CREATE, applicationType))
         previewDTO.addLink(Relationship.SELF, requestInfo.self())
         render text: jsonMapper.writeValueAsString(previewDTO), contentType: 'application/json'

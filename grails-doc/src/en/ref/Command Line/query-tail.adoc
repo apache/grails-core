@@ -32,13 +32,14 @@ link:{guidePath}conf.html#queryTail[Finding Query-Heavy Pages with query-tail].
 
 [source,groovy]
 ----
-grails run-app --query-tail         // in one terminal: run the application with capture on
+grails run-app --query-tail             // in one terminal: run the application with capture on
 
-grails query-tail                   // in another: the pages, refreshing as requests are served
-grails query-tail --statements      // the statements themselves, the most run first
-grails query-tail --page=book/show  // the statements of one page
-grails query-tail --stream          // every statement as it runs, grouped by request
-grails query-tail --all --once      // a report of everything captured so far, then exit
+grails query-tail                       // in another: the pages, as requests are served
+grails query-tail --statements          // the statements themselves, the most run first
+grails query-tail --page=book/show      // the statements of one page
+grails query-tail --stream              // every statement as it runs, grouped by request
+grails query-tail --all --once          // a report of everything captured so far, then exit
+grails help query-tail                  // the options
 ----
 
 === Description
@@ -50,6 +51,14 @@ Usage:
 grails query-tail [--statements | --stream] [--page=<controller/action>] [--top=<n>] [--all] [--once] [--file=<path>]
 ----
 
+`query-tail` is a tool of Grails Data (in its companion artifact, `grails-datamapping-core-cli`, which the Grails Gradle plugin adds to the tools of every application that has GORM). The build of the project runs it with the Gradle task `runTool`, as it runs every tool of `src/cli` of the application and its plugins:
+
+* `grails query-tail`, with the options after the name, in any directory of the project;
+* `grails run-tool query-tail`, the same;
+* `./gradlew runTool --arg=query-tail`, with each option as a further `--arg`, such as `--arg=--once`, or `./gradlew runTool -Pargs="query-tail --all --once"`.
+
+Each option is given with its two dashes: `--statements`, `--stream`, `--page=<controller/action>`, `--top=<n>`, `--all`, `--once` and `--file=<path>`. A value follows `=` or is the next word: `--top=10` and `--top 10` are the same. The command declares these options, so `grails help query-tail` lists them, and it is refused any other, with exit code 2, before it runs. `grails query-tail --help` shows the same help and runs nothing; given to the Gradle task, as `./gradlew runTool --arg=query-tail --arg=--help`, `--help` is refused as an option the command does not have. The build is no terminal, so the summary is written as plain text again each time it changes and is not redrawn in place: `--once` and `--stream` read best.
+
 Without options the command follows the capture and shows the pages, the ones running the most
 statements per request first: for each page how many requests were seen, the average and the
 highest number of statements per request, the total, and the statement that repeated most within a
@@ -60,13 +69,15 @@ Arguments:
 * `statements` - Rank the statements themselves instead of the pages that run them, with how often each ran and on how many pages.
 * `stream` - Print every statement as it runs, with a header for each request, instead of a summary. A request that comes back after another interrupted it is headed as continued.
 * `page` - Only the statements of one page, given as `controller/action` or as a controller name; implies `--statements`, or filters the stream when `--stream` is given. A namespaced controller's pages match without the namespace as well as with it, and the page of a GraphQL operation, such as `graphql/index (query BookList)`, matches the page it ran on as well as its own name.
-* `top` - How many rows to show, or `0` for all of them. Defaults to 30.
+* `top` - How many rows to show, or `0` for all of them. Defaults to 30. A value that is not a whole number is refused before the command runs, with exit code 2; a negative one is refused by the command.
 * `all` - Read what the application has run so far, not only what it runs from now on.
 * `once` - Print the summary of what has been captured and exit, which with `--all` is a report of the whole run so far.
-* `file` - The capture file, a relative one read against the application directory, as the application reads `grails.gorm.queryTail.file`. Defaults to the one the application writes, `build/query-tail/capture.log` or the file `grails.gorm.queryTail.file` names. A build directory moved in `build.gradle` is followed by the application, which the Grails Gradle plugin hands it as `grails.project.target.dir`, but not by this command, which runs outside Gradle, unless the command is started with the same property, as with `JAVA_OPTS=-Dgrails.project.target.dir=out grails query-tail`: otherwise name the file in `grails.gorm.queryTail.file` or give it here.
+* `file` - The capture file, a relative one read against the application directory, as the application reads `grails.gorm.queryTail.file`. Defaults to the one the application writes, `build/query-tail/capture.log` or the file `grails.gorm.queryTail.file` names. A build directory moved in `build.gradle` is followed by the application and by this command: the Grails Gradle plugin hands `grails.project.target.dir` to both, since the build runs both.
 
-The command does not start the application, and it is not a reason to boot it: it runs without
-the application context and only reads the capture file. When there is no capture yet it waits for
+The command does not start the application, and it is not a reason to boot it: it is a tool that
+the build runs without the application (it declares `startsApplication = false`, see link:{guidePath}commandLine.html#creatingTools[Creating Tools]), so the task makes no
+application context for it, opens no data source and runs no `BootStrap`, and it only reads the capture file. The task compiles the
+application first, as it does for every tool of `src/cli`. When there is no capture yet it waits for
 one and says how to start the application so that it writes one. When the application restarts,
 the command starts over with the new run. Statements run outside a web request, by a scheduled job
 for example, are shown under the thread that ran them, after the pages of requests, and the thread

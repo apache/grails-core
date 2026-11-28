@@ -17,54 +17,30 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == war
-
-
 
 === Purpose
 
-
-The `war` command creates a Web Application Archive (WAR) file which can be deployed on any Java EE compliant application server.
-
+The `war` command creates the archive of the project for deployment. It is another name of link:assemble.html[assemble].
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
 grails war
-grails test war
-grails -Dgrails.env=staging war
+grails war --clean
+grails war -Dgrails.env=staging
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
-----
-grails <<environment>>* war <<arguments>>*
-----
 
-
-By default the `war` command creates a web application archive (WAR) file using the application name and version number. The `war` command is different from most commands since it runs in the production environment by default instead of development, but like any script the environment can be specified using the standard convention:
-
-[source,groovy]
+[source,console]
 ----
-grails test war
-grails dev war
-grails prod war
+grails war [--clean] [-Dname=value]... [-- <<gradle arguments>>]
 ----
 
-You can also specify a custom environment:
+`war` runs the Gradle task `assemble` for the production environment. Another environment is given as `-Dgrails.env=NAME` after the command (`war -Dgrails.env=staging`); an environment in front of the command, as in `grails test war` of earlier versions, is refused. `--clean` runs `clean` first. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.
 
-[source,groovy]
-----
-grails -Dgrails.env=UAT war
-----
-
-Once the WAR has been created you can deploy it to your container using its standard WAR deployment process.
-
-NOTE: Grails 2.x `war` command allowed you to supply the argument `nojars` - which packaged the WAR with no jar files. In Grails 3.x, this argument is no longer available. Instead, you may use Gradle capabilities to generate a WAR without jar files. One option would be to set your dependencies as `providedCompile` and `providedRuntime`. Those two configurations have the same scope as the respective compile and runtime configurations, except that they are not added to the WAR archive. Check https://docs.gradle.org/current/userguide/war_plugin.html[Gradle WAR Plugin] documentation for more information.
+See link:assemble.html[assemble] for the archives the command creates.

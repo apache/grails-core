@@ -1,0 +1,176 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: data-nosql
+default: data=mongodb
+adds: testcontainers
+dependency: implementation org.apache.grails:grails-data-mongodb without a version
+dependency: implementation org.apache.grails:grails-data-mongodb-embedded without a version
+
+# web
+title: Grails Data for MongoDB
+description: Configure Grails Data for using MongoDB.
+category: Database
+documentation: null
+thirdPartyDocumentation: https://grails.apache.org/docs/latest/grails-data/mongodb/manual/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature gorm-mongodb documentation
++ - [https://grails.apache.org/docs/latest/grails-data/mongodb/manual/](https://grails.apache.org/docs/latest/grails-data/mongodb/manual/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-mongodb"
++     implementation "org.apache.grails:grails-data-mongodb-embedded"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
+== grails-app/conf/application.yml
++ environments:
++   development:
++     grails:
++       mongodb:
++         url: mongodb://embedded/devDb
++   test:
++     grails:
++       mongodb:
++         url: mongodb://embedded/testDb
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+
+# rest_api
+title: Grails Data for MongoDB
+description: Configure Grails Data for using MongoDB.
+category: Database
+documentation: null
+thirdPartyDocumentation: https://grails.apache.org/docs/latest/grails-data/mongodb/manual/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature gorm-mongodb documentation
++ - [https://grails.apache.org/docs/latest/grails-data/mongodb/manual/](https://grails.apache.org/docs/latest/grails-data/mongodb/manual/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-mongodb"
++     implementation "org.apache.grails:grails-data-mongodb-embedded"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
+== grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++ environments:
++   development:
++     grails:
++       mongodb:
++         url: mongodb://embedded/devDb
++   test:
++     grails:
++       mongodb:
++         url: mongodb://embedded/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+
+# web_plugin
+title: Grails Data for MongoDB
+description: Configure Grails Data for using MongoDB.
+category: Database
+documentation: null
+thirdPartyDocumentation: https://grails.apache.org/docs/latest/grails-data/mongodb/manual/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature gorm-mongodb documentation
++ - [https://grails.apache.org/docs/latest/grails-data/mongodb/manual/](https://grails.apache.org/docs/latest/grails-data/mongodb/manual/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-mongodb"
++     implementation "org.apache.grails:grails-data-mongodb-embedded"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
+== grails-app/conf/application.yml
++ environments:
++   development:
++     grails:
++       mongodb:
++         url: mongodb://embedded/devDb
++   test:
++     grails:
++       mongodb:
++         url: mongodb://embedded/testDb
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+
+# plugin
+title: Grails Data for MongoDB
+description: Configure Grails Data for using MongoDB.
+category: Database
+documentation: null
+thirdPartyDocumentation: https://grails.apache.org/docs/latest/grails-data/mongodb/manual/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature gorm-mongodb documentation
++ - [https://grails.apache.org/docs/latest/grails-data/mongodb/manual/](https://grails.apache.org/docs/latest/grails-data/mongodb/manual/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-mongodb"
++     implementation "org.apache.grails:grails-data-mongodb-embedded"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
+== grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++ environments:
++   development:
++     grails:
++       mongodb:
++         url: mongodb://embedded/devDb
++   test:
++     grails:
++       mongodb:
++         url: mongodb://embedded/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+
+# rest_api_plugin
+title: Grails Data for MongoDB
+description: Configure Grails Data for using MongoDB.
+category: Database
+documentation: null
+thirdPartyDocumentation: https://grails.apache.org/docs/latest/grails-data/mongodb/manual/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature gorm-mongodb documentation
++ - [https://grails.apache.org/docs/latest/grails-data/mongodb/manual/](https://grails.apache.org/docs/latest/grails-data/mongodb/manual/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-mongodb"
++     implementation "org.apache.grails:grails-data-mongodb-embedded"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
+== grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++ environments:
++   development:
++     grails:
++       mongodb:
++         url: mongodb://embedded/devDb
++   test:
++     grails:
++       mongodb:
++         url: mongodb://embedded/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
+

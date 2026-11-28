@@ -24,6 +24,11 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Stack;
@@ -335,18 +340,31 @@ public class GrailsConsole implements ConsoleLogger {
 
     /**
      * Prepares a history file to be used by the LineReader. This file
-     * will live in the home directory of the user.
+     * will live in the home directory of the user. A file that does not exist
+     * yet is created readable and writable by its owner only, where the file
+     * system has POSIX permissions: what is typed at the console can be a secret.
      */
     protected History prepareHistory() throws IOException {
         File file = new File(System.getProperty("user.home"), HISTORYFILE);
         if (!file.exists()) {
             try {
-                file.createNewFile();
+                createOwnerOnly(file.toPath());
             } catch (IOException ignored) {
                 // can't create the file, so no history for you
             }
         }
         return file.canWrite() ? new DefaultHistory() : null;
+    }
+
+    // As JLine creates a history file itself, which warns, each time it saves the history, of an existing
+    // one that others can read: a file created with the permissions the umask leaves would be one.
+    private static void createOwnerOnly(Path path) throws IOException {
+        try {
+            Files.createFile(path, PosixFilePermissions.asFileAttribute(
+                    EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)));
+        } catch (UnsupportedOperationException noPosixPermissions) {
+            Files.createFile(path);
+        }
     }
 
     public boolean isWindows() {
@@ -364,6 +382,16 @@ public class GrailsConsole implements ConsoleLogger {
             }
         }
         return instance;
+    }
+
+    /**
+     * @return whether there is a console: {@link #getInstance()} creates one when there is none, with
+     * the terminal, the line reader and the history file of an interactive console, which is not
+     * what a caller wants that only asks in order to put the console back afterwards
+     * @since 9.0
+     */
+    public static synchronized boolean hasInstance() {
+        return instance != null;
     }
 
     public static synchronized void removeInstance() {

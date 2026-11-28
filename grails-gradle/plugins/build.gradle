@@ -145,23 +145,11 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-cli-library'
             implementationClass = 'org.grails.gradle.plugin.commands.GrailsCliLibraryGradlePlugin'
         }
-        grailsProfile {
-            displayName = 'Grails Profile Gradle Plugin'
-            description = 'A plugin that is capable of compiling a Grails profile into a JAR file for distribution'
-            id = 'org.apache.grails.gradle.grails-profile'
-            implementationClass = 'org.grails.gradle.plugin.profiles.GrailsProfileGradlePlugin'
-        }
         grailsWeb {
             displayName = 'Grails Web Gradle Plugin'
             description = 'Adds web specific extensions'
             id = 'org.apache.grails.gradle.grails-web'
             implementationClass = 'org.grails.gradle.plugin.web.GrailsWebGradlePlugin'
-        }
-        grailsProfilePublish {
-            displayName = 'Grails Profile Publish Plugin'
-            description = 'A plugin for publishing profiles'
-            id = 'org.apache.grails.gradle.grails-publish-profile'
-            implementationClass = 'org.grails.gradle.plugin.profiles.GrailsProfilePublishGradlePlugin'
         }
         grailsExploded {
             displayName = 'Grails Exploded Plugin'
@@ -203,4 +191,39 @@ apply {
 // there is no way to make one from inside a test: an environment is inherited, not written.
 tasks.named('test') {
     environment 'GRAILS_TRAINING_LEFTOVER', ''
+}
+
+// The functional specs run their builds with TestKit, in Gradle daemons of their own: the JaCoCo agent of the
+// test JVM sees none of the plugin code that runs there, which is most of it. When a coverage report is asked
+// for by its full name, the daemons are started with the agent as well (GradleSpecification writes it into the
+// gradle.properties of the TestKit directory, the way the Gradle documentation describes) and write
+// build/jacoco/testKit.exec, which jacocoAggregateReport reads with every other *.exec of the module. The agent
+// goes into the daemons only, through org.gradle.jvmargs: an environment variable such as JAVA_TOOL_OPTIONS
+// would also reach the test JVM, which carries the agent already, and a second agent fails there with a LinkageError.
+// An ordinary build starts the daemons as before.
+Set<String> coverageTasks = ['jacocoAggregateReport', 'jacocoTestReport'] as Set
+boolean coverageRequested = gradle.startParameter.taskNames.any { String requested ->
+    coverageTasks.contains(requested.substring(requested.lastIndexOf(':') + 1))
+}
+if (coverageRequested) {
+    // the agent is a file inside the artifact the JaCoCo plugin resolves; the daemons need it as a file of its own
+    TaskProvider<Sync> testKitCoverageAgent = tasks.register('testKitCoverageAgent', Sync) { Sync it ->
+        it.from(zipTree(configurations.named('jacocoAgent').map { Configuration agent -> agent.singleFile })) {
+            include 'jacocoagent.jar'
+        }
+        it.into(layout.buildDirectory.dir('testkit-coverage-agent'))
+    }
+    tasks.named('test', Test).configure { Test it ->
+        Provider<String> agentPath = testKitCoverageAgent.map { Sync sync -> new File(sync.destinationDir, 'jacocoagent.jar').absolutePath }
+        Provider<RegularFile> executionData = layout.buildDirectory.file('jacoco/testKit.exec')
+        it.inputs.files(testKitCoverageAgent).withPropertyName('testKitCoverageAgent').withPathSensitivity(PathSensitivity.NONE)
+        it.outputs.file(executionData).withPropertyName('testKitExecutionData')
+        // the daemons append to the file, so what an earlier run left is removed first, as the plugin does with test.exec
+        File executionDataFile = executionData.get().asFile
+        it.doFirst { executionDataFile.delete() }
+        it.jvmArgumentProviders.add({
+            ["-Dgrails.testkit.coverage.agent=${agentPath.get()}".toString(),
+             "-Dgrails.testkit.coverage.destfile=${executionData.get().asFile.absolutePath}".toString()]
+        } as CommandLineArgumentProvider)
+    }
 }

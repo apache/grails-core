@@ -486,6 +486,129 @@ class Book {
         e.cause != null
     }
 
+    def "the source with a member has every line it had, with its line ending, and the new lines where they belong: #how"() {
+        given:
+        def property = PropertyDefinition.builder().name('isbn').type('String').nullable(true).build()
+
+        expect:
+        modifier.withMember('Book.groovy', source, property) == expected
+
+        where:
+        how                             | source                                                                                              || expected
+        'no line ending at the end'     | 'class Book {\n    String title\n}'                                                                 || 'class Book {\n    String title\n    String isbn\n\n    static constraints = {\n        isbn nullable: true\n    }\n}'
+        'the line endings of Windows'   | 'class Book {\r\n    String title\r\n\r\n    static constraints = {\r\n    }\r\n}\r\n'             || 'class Book {\r\n    String title\r\n    String isbn\r\n\r\n    static constraints = {\r\n        isbn nullable: true\r\n    }\r\n}\r\n'
+        'tabs'                          | 'class Book {\n\tString title\n}\n'                                                                 || 'class Book {\n\tString title\n\tString isbn\n\n\tstatic constraints = {\n\t\tisbn nullable: true\n\t}\n}\n'
+        'a method with a local String'  | 'class Book {\n    String title\n\n    String label() {\n        String text = title\n        text\n    }\n}\n' || 'class Book {\n    String title\n    String isbn\n\n    static constraints = {\n        isbn nullable: true\n    }\n\n    String label() {\n        String text = title\n        text\n    }\n}\n'
+        'a block on one line'           | 'class Book {\n    String title\n    static constraints = { title blank: false }\n}\n'             || 'class Book {\n    String title\n    String isbn\n    static constraints = {\n        title blank: false\n        isbn nullable: true\n    }\n}\n'
+        'the block above the property'  | 'class Book {\n    static constraints = {\n    }\n    String title\n}\n'                           || 'class Book {\n    static constraints = {\n        isbn nullable: true\n    }\n    String title\n    String isbn\n}\n'
+        'a class on one line'           | 'class Book {}\n'                                                                                   || 'class Book {\n    String isbn\n\n    static constraints = {\n        isbn nullable: true\n    }\n}\n'
+        'an abstract class with a block' | 'abstract class Book {\n    static constraints = {\n    }\n}\n'                                    || 'abstract class Book {\n    String isbn\n    static constraints = {\n        isbn nullable: true\n    }\n}\n'
+        'a brace in a comment'          | 'class Book {\n    String title // }\n\n    static mapping = {\n        table \'b{\'\n    }\n}\n'   || 'class Book {\n    String title // }\n    String isbn\n\n    static constraints = {\n        isbn nullable: true\n    }\n\n    static mapping = {\n        table \'b{\'\n    }\n}\n'
+        'another class before it'       | 'class Shelf {\n    String room\n}\n\nclass Book {\n    String title\n}\n'                         || 'class Shelf {\n    String room\n}\n\nclass Book {\n    String title\n    String isbn\n\n    static constraints = {\n        isbn nullable: true\n    }\n}\n'
+    }
+
+    def "a private field is added as a property is"() {
+        given:
+        def field = new FieldDefinition(name: 'secret', type: 'String', nullable: true, accessModifier: FieldDefinition.AccessModifier.PRIVATE)
+
+        expect:
+        modifier.withMember('Book.groovy', 'class Book {\n    String title\n\n    static constraints = {\n    }\n}\n', field) ==
+                'class Book {\n    String title\n    private String secret\n\n    static constraints = {\n        secret nullable: true\n    }\n}\n'
+    }
+
+    def "the imports of the annotations follow the package where the class follows it directly, and are not added where a star import has them"() {
+        given:
+        def property = PropertyDefinition.builder().name('isbn').type('String').nullable(false)
+                .constraintStyle(AbstractMemberDefinition.ConstraintStyle.JAKARTA).build()
+
+        expect:
+        modifier.withMember('Book.groovy', 'package example\nclass Book {\n}\n', property) ==
+                'package example\n\nimport jakarta.validation.constraints.NotNull\n\nclass Book {\n    @NotNull\n    String isbn\n}\n'
+        modifier.withMember('Book.groovy', 'import jakarta.validation.constraints.*\n\nclass Book {\n}\n', property) ==
+                'import jakarta.validation.constraints.*\n\nclass Book {\n    @NotNull\n    String isbn\n}\n'
+    }
+
+    def "a source the member cannot be added to line by line is refused, and the file is what it was: #reason"() {
+        given:
+        createDomainDir()
+        def domainFile = tempDir.resolve('grails-app/domain/Book.groovy').toFile()
+        domainFile.bytes = bytes
+        def property = PropertyDefinition.builder().name('isbn').type('String').nullable(true).build()
+
+        when:
+        modifier.addProperty(domainFile, property)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains(reason)
+        domainFile.bytes == bytes
+
+        where:
+        bytes                                                                           || reason
+        'class Book {\n    static constraints = Shared.rules\n}\n'.bytes               || 'the constraints of the class are not a block that is written in it'
+        'class Book { String title }\n'.bytes                                           || 'the class is written on one line'
+        'class Book {\n    String title }\n'.bytes                                      || 'the property title is on the line the class begins or ends with'
+        'println 1\n'.bytes                                                             || 'the file declares no class'
+        'class Book {\n    String title\n'.bytes                                        || "Failed to parse domain class 'Book.groovy'"
+        'class Book {\n    String café\n}\n'.getBytes('ISO-8859-1')                || "'Book.groovy' is not text in UTF-8"
+    }
+
+    def "classes of one name are named by their paths in the project"() {
+        given:
+        createDomainFile('com/foo', 'Book', 'package com.foo\nclass Book {\n}')
+        createDomainFile('com/bar', 'Book', 'package com.bar\nclass Book {\n}')
+
+        when:
+        modifier.findDomainFile(tempDir.toFile(), 'Book')
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "Multiple domain classes found with name 'Book': grails-app/domain/com/bar/Book.groovy, grails-app/domain/com/foo/Book.groovy. " +
+                'Please specify the fully qualified class name.'
+    }
+
+    def "a constraint that cannot be told from the kind of member says which members it is for"() {
+        when:
+        PropertyDefinition.builder().name('pages').type('Integer').blank(false).build()
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "The 'blank' constraint is only applicable to String properties"
+    }
+
+    def "a member is not written into #what, which has no properties"() {
+        given:
+        def property = PropertyDefinition.builder().name('isbn').type('String').nullable(true).build()
+
+        when:
+        modifier.withMember('Book.groovy', source, property)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "Cannot add 'isbn' to 'Book.groovy': Book is an interface, and an interface has no properties. The file was not changed."
+
+        where:
+        what                         | source
+        'an interface'               | 'interface Book {\n}\n'
+        'an interface with a method' | 'interface Book {\n    String label()\n}\n'
+        'an annotation type'         | '@interface Book {\n}\n'
+    }
+
+    def "a member that begins a class is indented as what the class has, of whatever kind: #what"() {
+        given:
+        def property = PropertyDefinition.builder().name('isbn').type('String').nullable(true).build()
+
+        expect:
+        modifier.withMember('Book.groovy', source, property) == expected
+
+        where:
+        what              | source                                                       || expected
+        'an inner enum'   | 'class Book {\n\tenum Kind { NOVEL, ESSAY }\n}\n'           || 'class Book {\n\tString isbn\n\n\tstatic constraints = {\n\t\tisbn nullable: true\n\t}\n\n\tenum Kind { NOVEL, ESSAY }\n}\n'
+        'an inner class'  | 'class Book {\n  static class Chapter {\n    String heading\n  }\n}\n' || 'class Book {\n  String isbn\n\n  static constraints = {\n    isbn nullable: true\n  }\n\n  static class Chapter {\n    String heading\n  }\n}\n'
+        'a constructor'   | 'class Book {\n\tBook() {\n\t}\n}\n'                      || 'class Book {\n\tString isbn\n\n\tstatic constraints = {\n\t\tisbn nullable: true\n\t}\n\n\tBook() {\n\t}\n}\n'
+        'a method'        | 'class Book {\n\tString label() {\n\t\t\'x\'\n\t}\n}\n'    || 'class Book {\n\tString isbn\n\n\tstatic constraints = {\n\t\tisbn nullable: true\n\t}\n\n\tString label() {\n\t\t\'x\'\n\t}\n}\n'
+    }
+
     // Helper methods
 
     private void createDomainDir() {

@@ -407,6 +407,23 @@ class CommandLineParserSpec extends Specification {
             thrown ParseException
     }
 
+    void "Test that the raw arguments are the arguments as they were given, whatever is read from them"() {
+        given:
+            String[] given = ['greet', 'a b', '', ' padded ', '"quoted"', "it's", '--name=Alice Smith', 'line one\nline two', '-x', 'the value of x'] as String[]
+
+        when:
+            def cl = new CommandLineParser().parse(given)
+
+        then: "the vector is kept"
+            cl.rawArguments == given
+
+        and: "what is read from it is trimmed, without the empty argument and the surrounding quotes, with dashes as options"
+            cl.optionValue('x') == 'the value of x'
+            cl.commandName == 'greet'
+            cl.remainingArgs == ['a b', 'padded', 'quoted', "it's", 'line one\nline two']
+            cl.optionValue('name') == 'Alice Smith'
+    }
+
     void "An option value keeps every equals sign after the first, for #arguments"() {
         when:
         def parser = new CommandLineParser()

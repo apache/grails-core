@@ -23,102 +23,74 @@ under the License.
 
 The `create-plugin` command creates a Grails plugin project.
 
-=== Examples
+=== Usage
 
-[source,groovy]
+[source,console]
 ----
-grails create-plugin simple
+$ grails create-plugin [OPTIONS] NAME
+$ grails create-plugin --inplace [OPTIONS] [NAME]
 ----
 
-=== Description
+The command creates a subdirectory named after the project in the directory where it is executed, or with `--inplace` creates the project in the current directory. With `--inplace` the name can be left out: the project is then named after the current directory.
 
-Creates a Grails plugin project. A Grails plugin project is just like an application project except it contains a plugin descriptor and can be packaged as a plugin and installed into other applications.
+A Grails plugin project is just like an application project except it contains a plugin descriptor and can be packaged as a plugin and installed into other applications. `create-plugin` creates a plugin without a web layer and without a servlet container; link:create-web-plugin.html[create-web-plugin] creates one with a web layer, and link:create-rest-api-plugin.html[create-rest-api-plugin] one with a REST API.
 
 Plugins are not just useful for plugin developers, but also as a way to modularize large Grails applications. Refer to the section on link:{guidePath}plugins.html[Plugin Development] in the user guide for more information on developing plugins for Grails.
 
-Usage:
-
-[source,groovy]
-----
-grails create-plugin <<name>>
-----
-
-
-
-== Grails Forge `create-plugin`
-
-=== Description
-
-The `create-plugin` command is used to create a Grails plugin project. A Grails plugin project is similar to an application project but includes a plugin descriptor and can be packaged as a plugin to be installed into other Grails applications.
-
-Plugins are not only valuable for plugin developers but also serve as a means to modularize large Grails applications. They allow you to encapsulate functionality and easily reuse it across different projects. To learn more about developing plugins for Grails, refer to the section on link:{guidePath}plugins.html[Plugin Development] in the Grails user guide.
-
-=== Usage
-
-To create a Grails plugin, use the following command:
-
-[source,shell]
-----
-grails create-plugin [OPTIONS] NAME
-----
-
-- `NAME`: The desired name for the Grails plugin.
-
-Options include specifying features, configuring the Grails Data implementation, selecting a servlet implementation, choosing a test framework, setting the JDK version, and more. You can tailor your Grails plugin to your specific requirements using these options.
-
 === Options
 
-Here are the available options for the create-plugin command:
+These are the options of `grails create-plugin`:
 
-- -f, --features=FEATURE[,FEATURE...]: Specifies the features to include in the plugin. Available options include h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, assertj, mockito, grails-undertow,  github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties, grails-spring-ai.
-- -d, --data=Grails Data Implementation (-g, --gorm are legacy aliases): Specifies the Grails Data implementation to configure for the plugin. Possible values are hibernate5, hibernate7, mongodb.
-- -h, --help: Displays the help message and exits.
-- -i, --inplace: Creates a service within the current directory.
-- --jdk=<javaVersion>: Specifies the JDK version the project should target.
-- -s, --servlet=Servlet Implementation: Specifies the Servlet Implementation to configure for the plugin. Possible values are none, tomcat, jetty, undertow.
-- -t, --test=TEST: Specifies the test framework to use for the plugin. Possible values are junit, spock.
+- `NAME`: The name of the project, with or without a package: `com.example.bookstore` creates `bookstore` with the default package `com.example`. It can be left out with `--inplace`.
+- `-f, --features=FEATURE[,FEATURE...]`: The features to use in addition to the default ones. `--list-features` lists them.
+- `--exclude-features=FEATURE[,FEATURE...]`: The features to leave out of those the project would have by default.
+- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): The Grails Data implementation: `hibernate5`, `hibernate7`, `mongodb`, `neo4j`.
+- `-s, --servlet=Servlet Implementation`: The embedded servlet container: `tomcat`, `jetty`, `undertow`, `none`.
+- `-r, --reloading=RELOADING`: The development reloading option: `devtools`, `jrebel`, `none`.
+- `--jdk, --java-version=<javaVersion>`: The JDK version the project should target.
+- `-i, --inplace`: Create the project in the current directory, and not in a new directory named after it. Without `NAME`, the project is named after the current directory, and its default package is made from that name as from a name given without a package: `my-shop` is the project `my-shop` in the package `my.shop`. A directory whose name has a dot, or a character that cannot be part of the name of a class, such as a space, is refused: give `NAME` then.
+- `--subproject`: Create the project as a project of the Gradle build the directory is in, with the files of the application only.
+- `--list-features`: Output the available features and their descriptions. See link:list-features.html[--list-features].
+- `--feature-option=FEATURE.NAME=VALUE`: An option of a feature, which the feature pack of the feature declares as a parameter: the name of the feature, a dot, the name of the option and its value, as in `acme-audit.store=collection`. Can be given more than once. See link:{guidePath}plugins.html#forgeFeaturePackParameters[Parameters].
+- `--feature-pack-dir=DIRECTORY`, `--feature-pack-repository=URL`, `--feature-pack-sha256=COORDINATES=SHA256`, `--feature-catalog=URL`, `--list-catalog-features`, `--refresh`, `--offline`: For the feature of a plugin that has a feature pack.
+- `--preset=PRESET`: The preset the project is made from: a preset for the `plugin` type, given as the coordinates of its artifact (`group:artifact:version`), as a jar or a directory by a path with a `/` in it, or by its name in a feature catalog. An option given on the command line is used in place of the one of the preset. See link:{guidePath}applicationTypes.html#presets[Making Applications from a Preset].
+- `-h, --help`: Show the help of the command and exit.
+
+Each option is described in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project], and what the types of application and their features are in link:{guidePath}applicationTypes.html[Application Types, Features and Feature Packs].
 
 === Examples
 
-To create a Grails plugin named "example-plugin" with specific features:
-
-[source,shell]
-----
-grails create-plugin example-plugin --features h2,gorm-hibernate5,asciidoctor
-----
-
-This command will generate a Grails plugin project named "example-plugin" with the specified features, making it ready for development and integration into other Grails applications.
-
-Here are additional examples for the `create-plugin` command:
-
-1. Create a minimal Grails plugin:
-
+1. Create a plugin in a new `bookstore` directory:
 +
-[source,shell]
+[source,console]
 ----
-grails create-plugin minimal-plugin
+$ grails create-plugin bookstore
+$ cd bookstore
 ----
-+
-This command will create a Grails plugin project named "minimal-plugin" with the default settings, suitable for starting a new plugin project from scratch.
 
-2. Create a plugin with MongoDB support:
-
+2. Create a plugin with options and features:
 +
-[source,shell]
+[source,console]
 ----
-grails create-plugin mongodb-plugin --data=mongodb
+$ grails create-plugin com.example.bookstore \
+    --jdk=21 \
+    --data=hibernate7 \
+    --servlet=jetty \
+    --features=asciidoctor,github-workflow-java-ci
 ----
-+
-This command will generate a Grails plugin project named "mongodb-plugin" configured to use MongoDB as the Grails Data implementation.
 
-3. Create a plugin with embedded H2 database and view support:
-
+3. Create a plugin in the current directory, named after it (the project `bookstore`, in the package `bookstore`):
 +
-[source,shell]
+[source,console]
 ----
-grails create-plugin h2-views-plugin --features h2,views-markup
+$ mkdir bookstore
+$ cd bookstore
+$ grails create-plugin --inplace
 ----
-+
-This command will create a Grails plugin project named "h2-views-plugin" with the H2 database and views markup feature enabled, making it useful for projects that require an embedded database and view rendering capabilities.
 
-These additional examples showcase different use cases for the `create-plugin` command, such as creating minimal plugins, customizing Grails Data implementations, and enabling specific features to meet project requirements.
+4. List the features that can be selected:
++
+[source,console]
+----
+$ grails create-plugin --list-features
+----

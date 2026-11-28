@@ -17,50 +17,68 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == list-plugins
-
-
 
 === Purpose
 
-
-Lists the available plugins
-
+Lists the Grails plugins there are: the plugins of this release of Grails, and the plugins of the community that the Grails plugin index has. The command is also there as link:plugin-list.html[plugin list], and with the text to list by as link:plugin-find.html[plugin find].
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
 grails list-plugins
+grails list-plugins security
+grails list-plugins --deprecated
+grails list-plugins --offline
+grails list-plugins --json
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails list-plugins
-grails list-plugins -repository=myRepository
+grails list-plugins [--deprecated] [--offline] [--json] [--plugin-index=URL] [TEXT]
 ----
 
-Lists the plugins that are installable. Note: This command can take a while to execute depending in your internet connectivity. Typical output looks like this:
+Arguments:
 
-[source,groovy]
+* `TEXT` - Lists only the plugins that have this text in their name, their coordinates or their description, in whichever case.
+
+Options:
+
+* `--deprecated` - Lists the plugins the plugin index says are deprecated as well.
+* `--offline` - Asks nothing of the network: only the plugins of this release of Grails are listed, and those of a plugin index that is a file.
+* `--plugin-index=URL` - The plugin index to read in the place of that of Grails. The address is `https`, or `file:` for a file; `none` is for no plugin index.
+* `--json` - Writes the list as one JSON document for a tool to read.
+
+The command works in the directory of a project and outside one. Each plugin is listed with its name, its coordinates (`group:artifact`), a version and one line that says what it is for, in the order of the names:
+
+[source,console]
 ----
-| Available Plugins
-* asset-pipeline
-* cache
-* cache-ehcache
-* fields
-* geb
-* hibernate
-* mongodb
-* quartz
-* scaffolding
+$ grails list-plugins cache
+Grails plugins for Grails 9.0.0
+  Name   Coordinates                     Version  Description
+  Cache  org.apache.grails:grails-cache  9.0.0    Caches the results of service methods and of parts of views, with annotations and tags
+1 plugin: 1 of this release of Grails, with the version the Grails BOM manages, and 0 of the plugin index, with the latest version that says it is for this Grails (- where none does)
+More of one plugin: grails plugin-info NAME
 ----
 
-If you require more info about a plugin you can use the link:plugin-info.html[plugin-info] command.
+The plugins come from two lists:
+
+* The *plugins of this release of Grails* are the plugins the framework itself publishes. The command line has their list in itself, so they are listed without the network, and their version is the one the Grails BOM of this release manages.
+* The *plugins of the community* are those of the Grails plugin index, the file `grails-plugins-index.json` of https://github.com/apache/grails-plugins-metadata, which is also what the https://grails.apache.org/plugins.html[plugin portal] shows. It is read from the network each time the command runs. The version of such a plugin is its latest release whose descriptor says it is for this version of Grails, and `-` when no version says so. A plugin whose descriptor allows every later Grails (`3.0.0 > *`) is listed with a version although it may never have been built for this one: `plugin-info` shows the range.
+
+When the plugin index cannot be read, because there is no network, the server does not answer within 20 seconds, or what it answers is no plugin index, the command says so in a warning, lists the plugins of this release of Grails, and ends with exit code 0.
+
+The plugin index is named by the `--plugin-index` option, else by the `GRAILS_PLUGIN_INDEX` environment variable, else it is the plugin index of Grails. An address that is neither `https` nor `file:`, or that has a user, a password or a query, is refused. Only `list-plugins` and link:plugin-info.html[plugin-info] read the plugin index of Grails; no other command asks the network for it. A plugin index that `GRAILS_PLUGIN_INDEX` names is also the feature catalog of the `create-` commands, see link:{guidePath}plugins.html#forgeFeaturePacks[Adding a Feature to Application Creation].
+
+What the plugin index says is shown as text: it is not run, a plugin is not downloaded, and control characters are taken out of every name and description before it is written to the terminal.
+
+With `--json` the document has `format` (1), `grailsVersion`, `pluginIndex` (its `address`, whether it was `read`, and the `problem` when it was not), `notes`, `deprecatedNotListed` and `plugins`, each with `name`, `coordinates`, `version`, `description`, `ofGrails`, `deprecated` and `featurePacks`, the names of the features of the feature packs the plugin index records for the plugin that an application of this Grails is created with. The last line of the list says how many plugins have such a feature, when any has.
+
+For more about one plugin use the link:plugin-info.html[plugin-info] command.
+
+`list-plugins` and link:plugin-list.html[plugin list] are one command with two names, and neither is deprecated: `grails plugin list` takes the same argument and options and writes the same list, and names `plugin show` in the place of `plugin-info` in its last line. link:plugin-find.html[plugin find] `TEXT` is `list-plugins TEXT`.

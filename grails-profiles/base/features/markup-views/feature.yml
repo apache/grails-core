@@ -1,7 +1,0 @@
-description: Adds support for Markup Views to the project
-build:
-    plugins:
-        - org.apache.grails.gradle.grails-markup 
-dependencies:
-    - scope: implementation
-      coords: "org.apache.grails:grails-views-markup"

@@ -77,13 +77,19 @@ class Gradle implements BuildFeature {
 
         configureDefaultGradleProps(generatorContext)
         generatorContext.addTemplate('gitignore', new GspTemplate('.gitignore', GspView.of('/forge/feature/build/gitignore.gsp', [:])))
+        // the wrapper scripts are the same bytes on every clone, whatever Git is set to do with line endings
+        generatorContext.addTemplate('gitattributes', new GspTemplate('.gitattributes', GspView.of('/forge/feature/build/gitattributes.gsp', [:])))
         generatorContext.addTemplate('projectProperties', new GspTemplate('gradle.properties', GspView.of('/forge/feature/build/gradle/templates/gradleProperties.gsp', [properties: generatorContext.getBuildProperties().getProperties()])))
 
-        generatorContext.addTemplate('gradleWrapperProperties', new GspTemplate(WRAPPER_PROPS, GspView.of('/forge/feature/build/gradle/templates/gradleWrapperProperties.gsp', [project: generatorContext.getProject(), gradleBuild: build, coordinateResolver: coordinateResolver, features: generatorContext.getFeatures()])))
+        generatorContext.addTemplate('gradleWrapperProperties', new GspTemplate(WRAPPER_PROPS, GspView.of('/forge/feature/build/gradle/templates/gradleWrapperProperties.gsp', [project: generatorContext.getProject(), gradleBuild: build, coordinateResolver: coordinateResolver, features: generatorContext.getFeatures(), gradleVersion: VersionInfo.getGradleVersion(), gradleDistributionSha256Sum: VersionInfo.getGradleDistributionSha256Sum()])))
     }
 
     private void configureDefaultGradleProps(GeneratorContext generatorContext) {
         generatorContext.getBuildProperties().put('version', '0.1')
+        if (generatorContext.getOptions().isSubproject()) {
+            // Gradle reads these in the root of a build only, and the build the application is put into has its own
+            return
+        }
         generatorContext.getBuildProperties().put('org.gradle.caching', 'true')
         generatorContext.getBuildProperties().put('org.gradle.configuration-cache', 'true')
         generatorContext.getBuildProperties().put('org.gradle.daemon', 'true')

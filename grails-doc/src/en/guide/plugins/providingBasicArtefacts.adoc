@@ -18,131 +18,58 @@ under the License.
 ////
 
 
-==== Add Command Line Commands
+==== Add Tools to the Command Line
 
+A plugin adds _tools_ to the `grails` command of every application that depends on it: classes that the application runs by their names, as `grails dbm-update` and `grails generate-all Book`. They are written as in an application, in two folders whose difference is what a tool can use and how it is run:
 
-A plugin can add new commands to the Grails interactive shell in one of two ways. First, using the link:{commandLineRef}create-script.html[create-script] you can create a code generation script which will become available to the application. The `create-script` command will create the script in the `src/main/scripts` directory:
-
-[source,groovy]
-----
-+ src/main/scripts     <-- additional scripts here
- + grails-app
-      + controllers
-      + services
-      + etc.
-----
-
-Code generation scripts can be used to create artefacts within the project tree and automate interactions with Gradle.
-
-When the plugin also applies `org.apache.grails.gradle.grails-plugin-cli` (see
-<<pluginCliArtifact,Ship plugin commands as a companion `-cli` artifact>> below), files under `src/main/scripts`
-(including `*.groovy`, `*.yml`, and `*.json` multi-step commands) are packaged into the companion
-`-cli` jar as `META-INF/commands` and are **not** copied into the runtime plugin jar. That keeps
-command-only resources off `runtimeClasspath`, `bootJar`, and `bootWar` while still making them
-discoverable through `grailsCliClasspath`. Plugins that do **not** publish a companion keep the
-historical behavior and continue to ship `src/main/scripts` in the runtime jar so unmigrated
-Grails 7 plugins remain discoverable under `legacyCommandSupport`.
-
-If you want to create a new shell command that interacts with a loaded Grails application instance then you should use the `create-command` command:
+* `src/cli/groovy` for a tool that uses the classes of the application, and by default the running application: its beans, GORM and its configuration. The build of the application runs it, with the Gradle task `runTool`. Write one with `grails create-tool NAME`.
+* `src/standalone/groovy` for a tool that only reads and writes files of the project, such as one that renders a template of the plugin into the application. The `grails` command runs it as a Java process of its own, without Gradle and without the application, also while the application does not compile. It has the tool API and its own libraries, and nothing of the plugin. Write one with `grails create-tool --standalone NAME`.
 
 [source,groovy]
+.src/cli/groovy/com/example/myplugin/cli/AuditReportTool.groovy
 ----
-$ grails create-command MyExampleCommand
-----
+package com.example.myplugin.cli
 
-This will create a file called `grails-app/commands/PACKAGE_PATH/MyExampleCommand.groovy` that extends link:{api}org/apache/grails/core/cli/ApplicationCommand.html[ApplicationCommand]:
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolSupport
 
-[source,groovy]
-----
-import org.apache.grails.core.cli.*
+class AuditReportTool implements ApplicationTool, ToolSupport {
 
-class MyExampleCommand implements ApplicationCommand {
+    String description = 'Prints an audit report'
 
-  boolean handle(ExecutionContext ctx) {
-      println "Hello World"
-      return true
-  }
+    AuditService auditService
+
+    boolean handle() {
+        auditService.report().each { println it }
+        return true
+    }
 }
 ----
 
-An `ApplicationCommand` has access to the `GrailsApplication` instance and is subject to autowiring like any other Spring bean.
+A tool of `src/cli` has the application context in `applicationContext`, and is autowired like any other Spring bean. One that declares `boolean skipBootstrap = true` is run without the `BootStrap` classes of the application, and one that declares `boolean startsApplication = false` without the application at all, with the classes of the application on its class path.
 
 [[pluginCliArtifact]]
-===== Ship plugin commands as a companion `-cli` artifact
+===== The companion artifacts
 
-Commands are only ever executed by the CLI, so a plugin should keep them off the application
-runtime classpath. Publish them as a companion artifact under the plugin's coordinate with a `-cli`
-suffix by applying the `org.apache.grails.gradle.grails-plugin-cli` Gradle plugin:
+Tools are only ever run from the command line, so they are not in the jar of the plugin. Every Grails plugin publishes them beside the plugin, in a companion artifact for each folder that has a tool: `<artifact>-cli` for `src/cli` and `<artifact>-cli-standalone` for `src/standalone`. `-cli` depends on the plugin; `-cli-standalone` never does. No line of the build of the plugin is needed for it: the Grails plugin Gradle plugin applies `org.apache.grails.gradle.grails-plugin-cli`, which builds the companions, with each tool registered as it is compiled, names the companions in the manifest of the plugin's jar, and, with the Grails publish plugin, publishes them with the plugin.
 
-[source,groovy]
-.build.gradle
-----
-plugins {
-    id 'org.apache.grails.gradle.grails-plugin'
-    id 'org.apache.grails.gradle.grails-plugin-cli'
-}
-
-cliArtifact {
-    automaticModuleName = 'org.example.myplugin.cli'
-}
-----
-
-Place the command sources in `src/cli/groovy` (not `grails-app/commands`, which is compiled into
-the runtime plugin jar). The plugin creates the `cli` source set as a feature variant, puts the
-`grails-core-cli` command contract and the plugin's own runtime classes on its compile classpath,
-and registers compiled commands automatically in `META-INF/grails-cli.factories` inside the cli
-jar. It also advertises the companion coordinate through the `Grails-Cli-Artifact` manifest
-attribute of the runtime jar — the Grails Gradle plugin scans an application's dependency graph
-for this attribute and adds each advertised artifact to `grailsCli`, so applications only declare
-the runtime plugin:
+An application that depends on the plugin gets both companions in the scopes `grailsCli` and `grailsCliStandalone`, and with them the tools and the Gradle task of each, such as `./gradlew auditReport`:
 
 [source,groovy]
 .build.gradle
 ----
 dependencies {
-    implementation 'org.example:my-plugin'   // org.example:my-plugin-cli follows automatically
+    implementation 'com.example:my-plugin:1.0.0'   // my-plugin-cli and my-plugin-cli-standalone follow automatically
 }
 ----
 
-When the Grails publish plugin (`org.apache.grails.gradle.grails-publish`) is applied, the
-companion is published alongside the plugin as `org.example:my-plugin-cli` with its own pom,
-sources, and javadoc. See the
-xref:commandLine#creatingCustomCommands[Creating Custom Commands] section for the complete
-workflow.
+The scripts of `src/main/scripts` of a plugin, which are deprecated (see xref:commandLine#creatingCustomScripts[Creating Custom Scripts]), are packaged into the `-cli` companion as `META-INF/commands`, and not into the jar of the plugin.
 
-You can also inform Grails to skip the execution of `Bootstrap.groovy` files with a simple property in your command:
+The tools of a plugin of Grails 8 are in `grails-app/commands`. That folder is compiled with `src/cli` and published in the `-cli` companion, where Grails 8 put it into the jar of the plugin, so the plugin publishes the companion with its next release. The folder is deprecated: move its classes to `src/cli/groovy`, as they are. A plugin released for Grails 7, whose commands implement `grails.dev.commands.ApplicationCommand`, needs a release for Grails 9: Grails 9 does not run those commands.
 
-[source,groovy]
-----
-class MyExampleCommand implements ApplicationCommand {
+xref:commandLine#creatingTools[Creating Tools] has the details: what each folder can use, how a tool is named, how its libraries are declared (`cliImplementation`, `standaloneImplementation`), the `cliArtifact` block that names the companions, how an application takes the standalone tools of a plugin without the plugin, and how a plugin gives `grails run-app` an option of its own, as `--query-tail` of Grails Data does.
 
-  boolean skipBootstrap = true
-
-  boolean handle(ExecutionContext ctx) {
-      ...
-  }
-}
-----
-
-For each `ApplicationCommand` present Grails will create a shell command and a Gradle task to invoke the `ApplicationCommand`. In the above example you can invoke the `MyExampleCommand` class using either:
-
-[source,groovy]
-----
-$ grails my-example
-----
-
-Or
-
-[source,groovy]
-----
-$ gradle myExample
-----
-
-The Grails version is all lower case hyphen separated and excludes the "Command" suffix.
-
-The main difference between code generation scripts and `ApplicationCommand` instances is that the latter has full access to the Grails application state and hence can be used to perform tasks that interactive with the database, call into GORM etc.
-
-In Grails 2.x Gant scripts could be used to perform both these tasks, from Grails 3.x+ code generation and interacting with runtime application state has been cleanly separated.
+The main difference between a tool of `src/cli` and one of `src/standalone` is that the first can use the state of the application, its database and GORM, and the second can run before the application compiles. In Grails 2.x Gant scripts could be used to perform both these tasks; from Grails 3.x on, code generation and interacting with runtime application state are separated.
 
 
 ==== Adding a new grails-app artifact (Controller, Tag Library, Service, etc.)

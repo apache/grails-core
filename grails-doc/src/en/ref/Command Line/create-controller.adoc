@@ -21,32 +21,49 @@ under the License.
 
 === Purpose
 
-
 The `create-controller` command creates a controller and associated unit test for the given base name.
 
 === Examples
 
+[source,console]
 ----
-grails create-controller
 grails create-controller Book
-grails create-controller org.bookstore.book
+grails create-controller org.bookstore.Book
 ----
 
 === Description
 
+Usage:
 
-Creates a new controller with an empty default action. The argument is optional, but if you don't include it the command will ask you for the name of the controller.
+[source,console]
+----
+grails create-controller [-f] <<name>>
+----
+
+Creates a new controller with an empty default action: `grails-app/controllers/<package>/<Name>Controller.groovy`, and its test `src/test/groovy/<package>/<Name>ControllerSpec.groovy`. It is a command of every project.
+
+In a REST API application or REST API plugin the controller declares JSON as the one format it responds in, as `create-restful-controller` and `create-domain-resource` do:
+
+[source,groovy]
+----
+class BookController {
+
+    static responseFormats = ['json']
+
+    def index() {
+
+    }
+}
+----
+
+Without the declaration, `respond` chooses among every format the application has a MIME type for. Add a format to the list when the controller is to respond in it; `xml` needs the `grails-xml` module. In every other project the controller declares no formats. `install-templates` copies the template of the kind of project it runs in.
 
 A link:{guidePath}theWebLayer.html#controllers[controller] is responsible for handling incoming web requests and performing actions such as redirects, rendering views and so on.
 
-The name of the controller can include a Java package, such as `org.bookstore` in the final example above, but if one is not provided a default is used. So the second example will create the file `grails-app/controllers/<appname>/BookController.groovy` whereas the last one will create `grails-app/controllers/org/bookstore/BookController.groovy` directory. Note that the first letter of the controller name is always upper-cased when determining the class name.
+The name is needed: the command does not ask for one. It can include a package, such as `org.bookstore` in the last example above; without one, the class goes into the default package of the project. The first letter of the name is made upper case.
 
-If you want the command to default to a different package for controllers, provide a value for `grails.project.groupId` in the link:{guidePath}conf.html#config[runtime configuration].
+Options:
 
-Note that this command is just for convenience and you can also create controllers in your favourite text editor or IDE if you choose.
+* `-f`, `--force` - Replace a file that is there already. Without it the command writes nothing when one of its files exists, says which, and ends with exit code 1.
 
-Usage:
-[source,groovy]
-----
-grails create-controller <<name>>
-----
+See "Creating Classes with the `grails` Command" in link:{guidePath}commandLine.html[The Command Line] for the names the command takes, what it does when a file is there already, and how a project replaces the template.

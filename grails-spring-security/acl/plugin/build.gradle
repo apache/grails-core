@@ -34,9 +34,41 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.security.acl.cli'
+    // this framework module wires the dependencies of its tools with project dependencies below
+    defaultDependencies = false
+}
+
 dependencies {
 
     implementation platform(project(':grails-bom'))
+
+    // the tools, which all run as a process of their own: published as the companion -cli-standalone, which is
+    // compiled against the tool API and nothing of the plugin
+    standaloneImplementation platform(project(':grails-bom'))
+    standaloneApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+
+    standaloneCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
+    // the companion -cli, which has no tools of its own: the plugin, the tool API and the standalone tools, so that a
+    // build that names it has every tool
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+    cliApi(project(project.path)) {
+        capabilities {
+            requireCapability("${project.group}:${project.name}-cli-standalone")
+        }
+    }
 
     implementation 'org.springframework.boot:spring-boot-starter-logging'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
@@ -53,7 +85,6 @@ dependencies {
     implementation project(':grails-gsp')
     implementation project(':grails-layout')
     console project(':grails-console')
-    profile project(':grails-profiles-web-plugin')
     runtimeOnly project(':grails-services')
     runtimeOnly project(':grails-domain-class')
     testImplementation project(':grails-testing-support-datamapping')
@@ -66,6 +97,12 @@ dependencies {
     api project(':grails-spring-security')
     api project(':grails-spring-security-compat')
     api 'org.springframework.security:spring-security-acl'
+}
+
+// the templates the tools render are in the companion of the tools as well as in the plugin: the same staged
+// directory the plugin's jar has them from
+sourceSets.named('standalone') { SourceSet standalone ->
+    standalone.output.dir([builtBy: tasks.named('copyTemplates')], layout.buildDirectory.dir('grails/plugin-templates'))
 }
 
 apply {

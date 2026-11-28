@@ -58,8 +58,8 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 9. **Test via public APIs** - Tests must exercise behavior through the same APIs an end user calls; never invoke internal implementations, package-private methods, or bypass the public surface directly
 10. **Always review and extend tests** - Review existing unit and functional tests before making changes; every code change must include new or enhanced tests that cover the affected behavior
 11. **Every code touch must update all tests for the changed class** - When a class is modified, find and update every test that covers it — unit, integration, and TCK. Do not leave any existing test out of sync with the new code.
-12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean aggregateViolations :grails-test-report:check --continue` from the root. The root `clean` runs `cleanViolationReports`, which deletes the analyzer reports and aggregate reports so every module is re-analyzed; without it, analyzers for unchanged modules stay UP-TO-DATE and their previous results are aggregated. Ensure the Checkstyle, CodeNarc, and `REPOSITORY_CONVENTIONS` reports have no issues, and ensure PMD and SpotBugs reports have no issues for their enabled projects. Enable PMD or SpotBugs per project through the `grailsCodeAnalysis` extension in that module's `build.gradle`; the `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties are baseline-run overrides. Disabled tools report their disabled status, not a clean result. Also review the test result reports under `grails-test-report/build/reports/tests/` and ensure there are no failures. `--continue` is required: the aggregate Markdown reports are written only by the aggregate lane, so without it a failing analyzer stops the build before the report that explains the failure is produced. Running an analyzer task directly, such as `./gradlew :grails-core:checkstyleMain`, produces only that task's own XML report and deliberately leaves the aggregate Markdown untouched, so a partial run can never overwrite an authoritative full-repository report.
-13. **Mandatory test coverage** - Any class touched in a commit MUST be covered with tests that verify all behavior. You must run ALL tests in the affected module(s) and ensure they pass before committing.
+12. **Scoped, cache-enabled commit checks** - A local commit does not require a clean build or a repository-wide test run. Run the checks relevant to the change from the owning build, using module-qualified tasks and keeping Gradle's build cache and up-to-date checks enabled. Accept `UP-TO-DATE` and `FROM-CACHE` for unchanged task inputs. Do not routinely add `clean`, `cleanViolationReports`, `--rerun-tasks`, `--no-build-cache`, or `DO_NOT_CACHE_TESTS=1`; use them only for an explicit fresh-run request or a specific stale-output, cache, or flaky-test investigation, scoped to the affected tasks. `:grails-test-report:check` depends on the repository's unit and integration test tasks: it is not a report-only check and is not a local commit gate. Reserve full-repository verification for CI, an explicit request, or a demonstrated cross-cutting need; explain the scope before starting it. Review the relevant test, style and enabled analysis results and fix failures in the changed behavior. A documentation-only instruction edit needs a diff/consistency check, not a framework build. See [Local Verification](#local-verification).
+13. **Test the affected behavior** - Add or update regression coverage for code changes and run the tests that exercise that behavior through public APIs. Start with the affected specifications and relevant unit, CLI, integration or TCK tasks; broaden to full module suites when shared behavior or unresolved failures warrant it. Do not rerun unrelated modules merely because their commits arrived in an upstream merge. Reuse completed verification where the tested code and inputs still apply; let Gradle's input checks determine cache validity. After integrating already-tested branches, focus on conflict resolutions and interactions between the changes rather than automatically repeating every prior suite. Report exactly what ran, what was cached, and what remains unverified.
 14. **The BOM must manage the latest version** - `validateDependencyVersions` enforces that the BOM (`dependencies.gradle`) manages a version `>=` every transitively-resolved version. When it fails, **bump the version in `dependencies.gradle`** so the BOM wins — never silence it with `allowedBomOverrides` or an exclusion unless there is an explicit, documented conflict or an agreed-upon workaround. See [Dependency Management](#dependency-management).
 15. **GitHub Actions must use ASF-approved references** - Every third-party action SHA must appear in the ASF allowlist; `actions/*` use the full tag of their latest release and `apache/*` use version or branch references, never SHAs. See [GitHub Actions](#github-actions).
 16. **Workflows cache Gradle through one policy** - Every `setup-gradle` step takes `cache-read-only` from `.github/actions/gradle-cache-policy`; never write `true` or `false` there, never cache `~/.gradle` with `actions/cache`, and never pass `cache-writer` outside the core build. See [Gradle caching](#gradle-caching).
@@ -80,7 +80,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - **Merging standalone plugin repositories into monorepo** → Read `.agents/skills/mono-repo-integration/SKILL.md`
 > - **Grails application upgrade guidance** (8.x to 9 breaking changes, changes between 9.x releases, Groovy 6, invokedynamic) → Read `.agents/skills/grails-upgrade/SKILL.md`
 > - **Using AI models from a Grails application** (`grails-spring-ai`, Spring AI providers, `ChatClient`, streaming, scripted models in tests) → Read `.agents/skills/grails-ai-developer/SKILL.md`
-> - **Grails web application development** (controllers, views, GORM models, taglibs, services, web MVC) → Read `.agents/skills/grails-developer/SKILL.md`
+> - **Grails web application development** (controllers, views, GORM models, taglibs, services, web MVC, the `grails` command line of an application: `create-app`, `run-app`, `test-app`, `feature add`) → Read `.agents/skills/grails-developer/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
@@ -95,7 +95,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **mono-repo-integration** | Merging standalone Grails plugin repos | `.agents/skills/mono-repo-integration/SKILL.md` | Monorepo integration, subproject wiring, BOM registration |
 | **grails-upgrade** | Upgrading applications from Grails 8.x to 9, and between 9.x releases | `.agents/skills/grails-upgrade/SKILL.md` | Application upgrade guide, changes of each release, Groovy 6 baseline, invokedynamic compilation |
 | **grails-ai-developer** | `grails-spring-ai`, Spring AI providers, `ChatClient`, streamed answers | `.agents/skills/grails-ai-developer/SKILL.md` | Using AI models from an application: providers, chat client, streaming, testing |
-| **grails-developer** | Controllers, views, GORM models, taglibs, services, web MVC | `.agents/skills/grails-developer/SKILL.md` | Web applications, REST APIs, GORM, controllers, views, plugins |
+| **grails-developer** | Controllers, views, GORM models, taglibs, services, web MVC, `grails`/`grailsw` commands | `.agents/skills/grails-developer/SKILL.md` | Web applications, REST APIs, GORM, controllers, views, plugins, the command line of an application |
 
 ## Repository Conventions
 
@@ -170,7 +170,7 @@ All managed dependency versions live in `dependencies.gradle` (the single source
 
 **Testing**: `grails-testing-support-core`, `grails-testing-support-web`, `grails-geb`
 
-**Other**: `grails-bom` (dependency management), `grails-doc`, `grails-shell-cli`, `grails-forge`
+**Other**: `grails-bom` (dependency management), `grails-doc`, `grails-forge` (the `grails` command line is `grails-forge/grails-forge-cli`, its launcher `grails-forge/grails-cli`)
 
 ## Artefact Types
 
@@ -266,6 +266,20 @@ class MyService { }
 - Clear artefacts: `grailsApplication.artefactInfo.clear()`
 - Use `@Shared` for fields that should be reused by multiple feature methods in a Spec
 
+## Local Verification
+
+Use the smallest set of checks that covers the change. For example, from the owning build:
+
+```bash
+./gradlew :module:test --tests 'pkg.AffectedSpec' :module:codeStyle --continue
+```
+
+Include the relevant CLI, integration, TCK or enabled analysis tasks when the change affects them. Run `validateRepositoryConventions` when changing files it validates, such as workflow references or skill metadata. Preserve task outputs and the shared local build cache across worktrees so Gradle can reuse results for identical inputs. Tests are cached at the task level, not selected automatically by individual changed methods; a changed runtime classpath can legitimately invalidate an entire test task.
+
+Once the relevant checks pass, proceed to the commit. Repeating them needs a new change, a failure or an unresolved concern. Cache bypasses used for a targeted regression or reproducibility experiment must not become flags on every subsequent verification command.
+
+For an explicitly requested full-repository check, `./gradlew clean aggregateViolations :grails-test-report:check --continue` remains available. `clean` removes outputs and analyzer reports; with caching enabled, eligible tasks can restore matching results. This is a broad verification run, not the default pre-commit command. Checkstyle, CodeNarc and repository-conventions reports must be clean, as must PMD and SpotBugs for projects where they are enabled; a disabled tool is not a clean result. Use `--continue` so aggregate reports are written even when an analyzer fails. A scoped analyzer run writes its own XML report and intentionally does not refresh the authoritative aggregate Markdown reports; inspect the scoped result rather than treating an old aggregate report as evidence of the current run.
+
 ## Build Commands
 
 PMD and SpotBugs are enabled per project. Opt the clean module in from its `build.gradle`:
@@ -349,11 +363,11 @@ Why it is this way:
 ## Pull Request Guidelines
 
 1. **Fork & branch** from the target release branch (e.g., `7.0.x`)
-2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
-3. **Run code style checks**: `./gradlew codeStyle`
-4. **Run dependency health checks**: `./gradlew buildHealth`
-5. **Clean violations**: Before committing, run `./gradlew clean aggregateViolations` from the root. Ensure the Checkstyle, CodeNarc, and `REPOSITORY_CONVENTIONS` reports have no issues, and ensure PMD and SpotBugs reports have no issues for their enabled projects. Enable PMD and SpotBugs per project through `grailsCodeAnalysis` in each module's `build.gradle`; the `-Pgrails.code-analysis.enabled.pmd[.projects]` and `-Pgrails.code-analysis.enabled.spotbugs[.projects]` properties are overrides. Disabled tools report their disabled status, not a clean result.
-6. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission.
+2. **Run relevant tests** before submitting, with caching enabled and without a routine clean or forced rerun; follow [Local Verification](#local-verification).
+3. **Run affected code style checks**: use `:module:codeStyle` from the owning build.
+4. **Check dependency health when relevant**: use `buildHealth` for dependency or classpath changes, or when requested, rather than for every commit.
+5. **Review relevant reports**: fix failures in the scoped test, style and enabled analysis results. Run repository-conventions validation when applicable. A full aggregate run is not a prerequisite for every local commit.
+6. **Verify regression coverage**: cover changed behavior and integration points. Expand the test scope when evidence warrants it, not merely to repeat completed verification.
 7. **Squash commits** into a single meaningful commit message
 8. **Reference issues** in PR description (e.g., "Fixes #1234")
 

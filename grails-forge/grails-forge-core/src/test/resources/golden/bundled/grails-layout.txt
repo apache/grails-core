@@ -1,0 +1,39 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: gsp-layout
+dependency: implementation org.apache.grails:grails-layout without a version
+
+# web
+title: GSP SiteMesh 2 Layouts
+description: Adds support for legacy SiteMesh 2 based GSP layouts (grails-layout) instead of SiteMesh 3
+category: View Rendering
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
+-     implementation "org.apache.grails:grails-sitemesh3"
++     implementation "org.apache.grails:grails-layout"
+
+# rest_api
+not for this kind of application
+
+# web_plugin
+title: GSP SiteMesh 2 Layouts
+description: Adds support for legacy SiteMesh 2 based GSP layouts (grails-layout) instead of SiteMesh 3
+category: View Rendering
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
+-     implementation "org.apache.grails:grails-sitemesh3"
++     implementation "org.apache.grails:grails-layout"
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+not for this kind of application
+

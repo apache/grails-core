@@ -56,7 +56,6 @@ class SpringSecurityCasGrailsPlugin extends Plugin {
     def organization = [name: 'Grails', url: 'https://grails.apache.org/']
     def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
     def scm = [url: 'https://github.com/apache/grails-core']
-    def profiles = ['web']
 
     @CompileDynamic
     Closure doWithSpring() {

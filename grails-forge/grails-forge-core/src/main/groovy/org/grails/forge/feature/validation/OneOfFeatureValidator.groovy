@@ -24,26 +24,25 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.OneOfFeature
 import org.grails.forge.options.Options
-import java.util.stream.Collectors
 
 @Component
 @CompileStatic
 class OneOfFeatureValidator implements FeatureValidator {
 
     private void validate(Set<Feature> features) {
-        Set<Class<?>> oneOfFeatures = features.stream()
-                .filter(feature -> feature instanceof OneOfFeature)
-                .map { (OneOfFeature) it }
-                .map(OneOfFeature::getFeatureClass)
-                .collect(Collectors.toSet())
-
-        for (Class<?> featureClass: oneOfFeatures) {
-            List<String> matches = features.stream()
-                    .filter(feature -> featureClass.isAssignableFrom(feature.getClass()))
-                    .map(Feature::getName)
-                    .collect(Collectors.toList())
-            if (matches.size() > 1) {
-                throw new IllegalArgumentException(String.format('There can only be one of the following features selected: %s', matches))
+        Map<String, List<String>> selectedByGroup = new TreeMap<>()
+        for (Feature feature : features) {
+            if (feature instanceof OneOfFeature) {
+                String group = ((OneOfFeature) feature).getGroup()
+                if (group == null || group.isBlank()) {
+                    throw new IllegalArgumentException("The feature ${feature.getName()} names no exclusive group")
+                }
+                selectedByGroup.computeIfAbsent(group) { String key -> new ArrayList<String>() }.add(feature.getName())
+            }
+        }
+        for (List<String> selected : selectedByGroup.values()) {
+            if (selected.size() > 1) {
+                throw new IllegalArgumentException(String.format('There can only be one of the following features selected: %s', selected.toSorted()))
             }
         }
     }

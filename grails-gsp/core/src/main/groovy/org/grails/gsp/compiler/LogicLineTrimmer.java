@@ -33,9 +33,8 @@ import java.util.regex.Pattern;
  * whatever it looks like.</p>
  *
  * <p>The line break of a removed line is moved inside the line's last construct, just after its
- * opening delimiter, rather than dropped, to retain source line breaks. Existing scanner limitations
- * around comments can still affect reported line numbers. LF and CRLF are recognized as line endings;
- * a lone CR is not.</p>
+ * opening delimiter, rather than dropped, to retain source line breaks, so that an error is reported
+ * on the line of the page it is on. LF and CRLF are recognized as line endings; a lone CR is not.</p>
  */
 final class LogicLineTrimmer {
 

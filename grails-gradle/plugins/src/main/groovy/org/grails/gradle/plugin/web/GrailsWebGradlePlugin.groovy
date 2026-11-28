@@ -18,17 +18,13 @@
  */
 package org.grails.gradle.plugin.web
 
-import javax.inject.Inject
-
 import groovy.transform.CompileStatic
 
 import org.gradle.api.Project
 import org.gradle.process.CommandLineArgumentProvider
-import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
 import grails.util.Environment
 import org.grails.gradle.plugin.commands.GrailsCliGradlePlugin
-import org.grails.gradle.plugin.util.ClasspathUtils
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
 
@@ -42,11 +38,6 @@ import org.grails.gradle.plugin.core.GrailsGradlePlugin
 class GrailsWebGradlePlugin extends GrailsGradlePlugin {
 
     private static final String URL_MAPPINGS_REPORT = 'urlMappingsReport'
-
-    @Inject
-    GrailsWebGradlePlugin(ToolingModelBuilderRegistry registry) {
-        super(registry)
-    }
 
     @Override
     void apply(Project project) {
@@ -62,10 +53,7 @@ class GrailsWebGradlePlugin extends GrailsGradlePlugin {
 
     private void registerUrlMappingsTask(Project project) {
         project.tasks.register(URL_MAPPINGS_REPORT, ApplicationContextCommandTask) { task ->
-            task.classpath = ClasspathUtils.buildClasspath(
-                    project,
-                    'runtimeClasspath', GrailsCliGradlePlugin.GRAILS_CLI_CLASSPATH_CONFIGURATION
-            )
+            task.classpath = GrailsCliGradlePlugin.toolClasspath(project)
             task.systemProperty(
                     Environment.KEY,
                     System.getProperty(

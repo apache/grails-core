@@ -1,0 +1,78 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: applicationType=web|web-plugin
+adds: gsp when applicationType=web|web-plugin
+dependency: implementation org.apache.grails:grails-scaffolding without a version when applicationType=web|web-plugin
+dependency: grailsCliStandalone org.apache.grails:grails-scaffolding-cli-standalone without a version when applicationType=rest-api|rest-api-plugin
+
+# web
+title: Scaffolding
+description: The Scaffolding Plugin simplifies generating CRUD interfaces for domain classes. It is useful for rapid prototyping and creates basic data management user interfaces with minimal manual code.
+category: Other
+documentation: https://grails.apache.org/docs/VERSION/guide/scaffolding.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature scaffolding documentation
++ - [Grails Scaffolding documentation](https://grails.apache.org/docs/VERSION/guide/scaffolding.html)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-scaffolding"
+
+# rest_api
+title: Scaffolding
+description: The Scaffolding Plugin simplifies generating CRUD interfaces for domain classes. It is useful for rapid prototyping and creates basic data management user interfaces with minimal manual code.
+category: Other
+documentation: https://grails.apache.org/docs/VERSION/guide/scaffolding.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature scaffolding documentation
++ - [Grails Scaffolding documentation](https://grails.apache.org/docs/VERSION/guide/scaffolding.html)
++ 
++ 
+== build.gradle
++     grailsCliStandalone "org.apache.grails:grails-scaffolding-cli-standalone"
+
+# web_plugin
+title: Scaffolding
+description: The Scaffolding Plugin simplifies generating CRUD interfaces for domain classes. It is useful for rapid prototyping and creates basic data management user interfaces with minimal manual code.
+category: Other
+documentation: https://grails.apache.org/docs/VERSION/guide/scaffolding.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature scaffolding documentation
++ - [Grails Scaffolding documentation](https://grails.apache.org/docs/VERSION/guide/scaffolding.html)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-scaffolding"
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+title: Scaffolding
+description: The Scaffolding Plugin simplifies generating CRUD interfaces for domain classes. It is useful for rapid prototyping and creates basic data management user interfaces with minimal manual code.
+category: Other
+documentation: https://grails.apache.org/docs/VERSION/guide/scaffolding.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature scaffolding documentation
++ - [Grails Scaffolding documentation](https://grails.apache.org/docs/VERSION/guide/scaffolding.html)
++ 
++ 
+== build.gradle
++     grailsCliStandalone "org.apache.grails:grails-scaffolding-cli-standalone"
+

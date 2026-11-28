@@ -22,7 +22,7 @@ under the License.
 
 The typical approach to mapping the relationship between "`person`" and "`group`" is a many-to-many. In a standard implementation, users have multiple roles, and roles are shared by multiple users. In a group implementation, users have multiple groups, and groups are shared by multiple users. For the same reason we would use a join class between "`person`" and "`authority`", we should use one between "`person`" and "`group`". Please note that when using groups, there should not be a join class between "`person`" and "`authority`", since "`group`" resides between the two.
 
-If you run the <<core-s2-quickstart>> script with the group name specified, this class will be generated for you, so you don't need to deal with the details of mapping it. Assuming you choose `com.mycompany.myapp` as your package, and `User` and `RoleGroup` as your class names, you'll generate this class:
+If you run the <<core-s2-quickstart>> command with the group name specified, this class will be generated for you, so you don't need to deal with the details of mapping it. Assuming you choose `com.mycompany.myapp` as your package, and `User` and `RoleGroup` as your class names, you'll generate this class:
 
 [source, groovy]
 .`UserRoleGroup.groovy`

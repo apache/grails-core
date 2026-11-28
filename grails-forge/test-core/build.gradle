@@ -29,6 +29,9 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails.forge'
 
+// McpGeneratedApplicationSpec starts grails mcp from the jar the Grails wrapper downloads: its task is read below
+evaluationDependsOn(':grails-cli')
+
 configurations.register('generateConfig')
 configurations.configureEach {
     resolutionStrategy {
@@ -58,6 +61,9 @@ dependencies {
 
     testRuntimeOnly 'org.objenesis:objenesis'
     testImplementation 'org.apache.groovy:groovy-test'
+    // the client McpGeneratedApplicationSpec drives grails mcp with: the SDK's own, at the version grails-bom manages
+    testImplementation 'io.modelcontextprotocol.sdk:mcp'
+    testImplementation 'org.apache.groovy:groovy-json'
 }
 
 ext {
@@ -66,4 +72,34 @@ ext {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}
+
+tasks.named('test', Test).configure { Test test ->
+    // The Gradle API jar of TestKit has, besides the classes of Gradle, the file in which Groovy reads its own
+    // version, and it is that of the Groovy 4 Gradle runs on. Groovy takes the first such file on the class path.
+    // Generating an application compiles the templates of the feature packs, the compiler then loads the global
+    // transform of Spock from this class path, and Spock refuses a Groovy that says it is version 4. So the
+    // Groovy of the specs comes first.
+    FileCollection declared = test.classpath
+    test.classpath = declared.filter { File jar -> jar.name ==~ /groovy-\d.*\.jar/ } + declared
+}
+
+// McpGeneratedApplicationSpec runs grails mcp as the program the Grails wrapper starts, the jar with everything in it.
+// The content of the jar is the input; its path is given apart from the inputs so that it is in no cache key.
+TaskProvider<Jar> cliAllJar = project(':grails-cli').tasks.named('shadowJar', Jar)
+tasks.named('test', Test).configure { Test test ->
+    test.inputs.files(cliAllJar).withPropertyName('cliAllJar').withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> cliAllJarPath = cliAllJar.flatMap { Jar jar -> jar.archiveFile }.map { RegularFile file -> file.asFile.absolutePath }
+    test.jvmArgumentProviders.add({ ["-Dgrails.cli.all.jar=${cliAllJarPath.get()}".toString()] } as CommandLineArgumentProvider)
+}
+
+// FeaturePackTasksSpec runs the tasks of the Grails Gradle plugin that check and test the feature pack of a
+// plugin with the Forge of this build, as a plugin gets it from a repository: the class path of the Forge
+// module without its tests, which that module writes to a file for its own specs.
+tasks.named('test', Test).configure { Test test ->
+    test.dependsOn(':grails-forge-core:writePackCheckClasspath')
+    String forgeClasspathFile = rootProject.layout.projectDirectory.file('grails-forge-core/build/pack-check/classpath.txt').asFile.absolutePath
+    test.jvmArgumentProviders.add({
+        ["-Dforge.packCheck.classpathFile=${forgeClasspathFile}".toString()]
+    } as CommandLineArgumentProvider)
 }

@@ -97,7 +97,6 @@ class SpringSecurityAclGrailsPlugin extends Plugin {
     def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
     def scm = [url: 'https://github.com/apache/grails-core']
     def loadAfter = ['springSecurityCore']
-    def profiles = ['web']
 
     private beanTypeResolver
 

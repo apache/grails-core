@@ -21,12 +21,11 @@ under the License.
 
 === Purpose
 
-
 The `create-job` command creates a new scheduled job for the given base name.
-
 
 === Examples
 
+[source,console]
 ----
 grails create-job Scheduled
 grails create-job com.example.Scheduled
@@ -34,17 +33,17 @@ grails create-job com.example.Scheduled
 
 === Description
 
-
-Creates a new Quartz scheduled job with an empty 'execute' method. The argument is required.
-
-The name of the job can include a Java package, such as `com.example` in the last example above, but if one is not provided a default is used. So the first example will create the file `grails-app/jobs/<appname>/ScheduledJob.groovy` whereas the second one will create `grails-app/jobs/com/example/ScheduledJob.groovy`. Note that the first letter of the job name is always upper-cased when determining the class name.
-
-If you want the command to default to a different package for jobs, provide a value for `grails.project.groupId` in the link:{guidePath}conf.html#config[runtime configuration].
-
-Note that this command is just for convenience and you can also create jobs in your favourite text editor or IDE if you choose.
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails create-job <<name>>
+grails create-job [-f] <<name>>
 ----
+
+Creates a new Quartz scheduled job with an empty `execute` method, `grails-app/jobs/<package>/<Name>Job.groovy`. It is a command of a project with the `grails-quartz` feature: one that was created with it, or that it was added to with `grails feature add grails-quartz`, which is also what makes it a command where the dependency on the plugin was written into `build.gradle` by hand. An application that has no record gets one from `grails project migrate`, which finds the feature in the build. The name is required. Before Grails 9 the job was also written by a script of the Quartz plugin, which the plugin no longer has: the command needs the record of the project to list the feature, not the plugin on a class path, and it does not start the application or its build.
+
+The name of the job can include a Java package, such as `com.example` in the last example above; without one, the class goes into the default package of the project. So the second example creates `grails-app/jobs/com/example/ScheduledJob.groovy`. The first letter of the name is made upper case. A name that ends with `Job` is taken without it: `create-job NightlyJob` and `create-job Nightly` both write `NightlyJob.groovy`.
+
+The file is written from the template `Job.groovy`, which a project can replace with its own under `src/main/templates/Job.groovy`, the location the template of the Quartz plugin had. The template names what it wants as `${className}` and `${packageName}`; it is text in which those names are replaced and is not run as a Groovy template, so code between `<%` and `%>` and expressions that are more than a name are refused. When the file is there already the command writes nothing and ends with exit code 1, unless `-f` or `--force` is given.
+
+See "Creating Classes with the `grails` Command" in link:{guidePath}commandLine.html[The Command Line] for the names it takes and for the templates of a project.

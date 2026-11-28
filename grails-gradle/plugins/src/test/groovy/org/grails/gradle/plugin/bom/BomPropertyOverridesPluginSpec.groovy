@@ -76,6 +76,37 @@ class BomPropertyOverridesPluginSpec extends Specification {
         extension.boms.get() == ['org.example:a:1.0.0', 'org.example:b:2.0.0', 'org.example:c:3.0.0']
     }
 
+    def "extension excludeConfiguration() names configurations that are left as they are"() {
+        given:
+        def project = ProjectBuilder.builder().build()
+        project.plugins.apply(BomPropertyOverridesPlugin)
+        def extension = project.extensions.getByType(BomPropertyOverridesExtension)
+
+        expect:
+        extension.excludedConfigurations.get().isEmpty()
+
+        when:
+        extension.excludeConfiguration('toolA', 'toolB')
+        extension.excludeConfiguration('toolA')
+
+        then:
+        extension.excludedConfigurations.get() == ['toolA', 'toolB'] as Set
+    }
+
+    def "detectDeclaredBoms leaves out the platforms of excluded configurations"() {
+        given:
+        def project = ProjectBuilder.builder().build()
+        project.plugins.apply('java')
+        project.configurations.create('tool')
+        project.dependencies.add('implementation', project.dependencies.platform('org.example:test-bom:1.0.0'))
+        project.dependencies.add('tool', project.dependencies.platform('org.example:tool-bom:3.0.0'))
+
+        expect:
+        BomPropertyOverridesPlugin.detectDeclaredBoms(project.configurations) ==
+                ['org.example:test-bom:1.0.0', 'org.example:tool-bom:3.0.0'] as Set
+        BomPropertyOverridesPlugin.detectDeclaredBoms(project.configurations, ['tool'] as Set) == ['org.example:test-bom:1.0.0'] as Set
+    }
+
     def "detectDeclaredBoms finds regular platform() dependencies"() {
         given:
         def project = ProjectBuilder.builder().build()

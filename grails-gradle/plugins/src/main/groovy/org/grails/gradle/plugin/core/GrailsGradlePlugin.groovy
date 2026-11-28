@@ -32,6 +32,7 @@ import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.DefaultTask
 import org.gradle.api.Action
 import org.gradle.api.GradleException
+import org.gradle.api.InvalidUserDataException
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -72,7 +73,6 @@ import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
-import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 import org.grails.gradle.plugin.bom.BomPropertyOverridesExtension
 import org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin
 import org.grails.gradle.plugin.commands.GrailsCliGradlePlugin
@@ -80,13 +80,13 @@ import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
 import org.grails.gradle.plugin.exploded.ExplodedDisambiguationRule
 import org.grails.gradle.plugin.exploded.GrailsExplodedPlugin
 import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
+import org.apache.grails.gradle.model.cli.JvmOptions
 import org.apache.grails.gradle.plugin.aot.AotCacheExtension
 import org.apache.grails.gradle.plugin.aot.ExtractApplicationTask
 import org.apache.grails.gradle.plugin.aot.GenerateNativeMetadataTask
 import org.apache.grails.gradle.plugin.aot.NativeMetadataExtension
 import org.apache.grails.gradle.plugin.aot.TraceNativeMetadataTask
 import org.apache.grails.gradle.plugin.aot.TrainAotCacheTask
-import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.springframework.boot.gradle.dsl.SpringBootExtension
@@ -94,7 +94,6 @@ import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootArchive
 import org.springframework.boot.gradle.tasks.run.BootRun
-import javax.inject.Inject
 
 /**
  * The main Grails gradle plugin implementation
@@ -103,6 +102,14 @@ import javax.inject.Inject
  */
 @CompileStatic
 class GrailsGradlePlugin implements Plugin<Project> {
+
+    /**
+     * The configuration a build declared its profile in until Grails 9. It refuses every dependency
+     * and is not a supported dependency configuration.
+     */
+    public static final String REMOVED_PROFILE_CONFIGURATION = 'profile'
+
+    private static final String UPGRADE_NOTES_URL = 'https://grails.apache.org/docs/latest/guide/upgrading.html'
 
     private static final String NATIVE_IMAGE_PLUGIN = 'org.graalvm.buildtools.native'
     private static final String NATIVE_IMAGE_NEEDS_INDY = 'A native image needs every Groovy class compiled with ' +
@@ -148,16 +155,13 @@ class GrailsGradlePlugin implements Plugin<Project> {
      */
     private final Map<String, Closure<String>> grailsCompilerConfigScripts = new ConcurrentHashMap<>()
 
+    /** Whether the {@code profile} configuration of the project is the one of this plugin, which refuses dependencies. */
+    private boolean rejectsProfileDependencies
+
     List<Class<Plugin>> basePluginClasses = [IntegrationTestGradlePlugin] as List<Class<Plugin>>
-    List<String> excludedGrailsAppSourceDirs = ['migrations', 'assets']
+    // grails-app/commands is compiled with the source set of the tools, src/cli, and is not of the application
+    List<String> excludedGrailsAppSourceDirs = ['migrations', 'assets', 'commands']
     List<String> grailsAppResourceDirs = ['views', 'i18n', 'conf', 'migrations']
-    private final ToolingModelBuilderRegistry registry
-
-    @Inject
-    GrailsGradlePlugin(ToolingModelBuilderRegistry registry) {
-        this.registry = registry
-    }
-
     void apply(Project project) {
 
         project.pluginManager.apply(GroovyPlugin)
@@ -174,7 +178,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
         excludeDependencies(project)
 
-        configureProfile(project)
+        rejectProfileDependencies(project)
 
         registerGrailsExtension(project)
 
@@ -183,8 +187,6 @@ class GrailsGradlePlugin implements Plugin<Project> {
         configureGroovy(project)
 
         configureMicronaut(project)
-
-        registerToolingModelBuilder(project, registry)
 
         applyBasePlugins(project)
 
@@ -276,6 +278,11 @@ class GrailsGradlePlugin implements Plugin<Project> {
             // "build"/"target" output-directory names. Reuses the same CommandLineArgumentProvider
             // pattern as forked test/run tasks (see configureForkSettings).
             c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
+
+            // The transformations of Grails make a logger of SLF4J, and a class path without a binding, as that of
+            // src/standalone, had SLF4J say so in three lines for every compilation. Every compilation of the project
+            // has the same arguments, so that they share their worker JVMs.
+            c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsCompilerSlf4jProvider())
 
             // Publish the grails { compileStatic { controllers / services / tagLibs } } opt-ins to the
             // compiler worker JVM as system properties so CompileStaticArtefactInjector can stamp
@@ -484,38 +491,45 @@ ${importStatements}
         String slf4jPreventExclusion = project.findProperty('slf4jPreventExclusion')
         if (!slf4jPreventExclusion || slf4jPreventExclusion != 'true') {
             project.configurations.configureEach { Configuration configuration ->
+                if (isToolClasspathOfItsOwn(configuration.name)) {
+                    return
+                }
                 configuration.exclude(group: 'org.slf4j', module: 'slf4j-simple')
             }
         }
     }
 
-    protected void configureProfile(Project project) {
-        if (!project.configurations.names.contains(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME)) {
-            project.configurations.register(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME).configure { Configuration profileConfiguration ->
-                profileConfiguration.description = 'Configuration that allows for finding profile artifacts so commands, scripts, and other helpers can be found by the Grails Shell'
-                profileConfiguration.canBeConsumed = false
-                profileConfiguration.canBeResolved = true
-                profileConfiguration.transitive = true
-
-                profileConfiguration.defaultDependencies { DependencySet deps ->
-                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty('grails.profile') ?: getDefaultProfile()}:${project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion}" as String
-                    project.logger.info('No Grails profile is defined for project {}, defaulting to: {}', project.name, defaultProfileCoordinates)
-                    deps.add(
-                            project.dependencies.create(defaultProfileCoordinates)
-                    )
-                }
-
-                profileConfiguration.resolutionStrategy.eachDependency { details ->
-                    if (details.requested.group == 'org.apache.grails.profiles' && !details.requested.version) {
-                        String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
-                        project.logger.info('Dependency: {}:{} did not define a version, defaulting to grails version {}', details.requested.group, details.requested.name, grailsVersion)
-
-                        details.useVersion(grailsVersion)
-                        details.because('Grails Profile defined without a version, defaulting to configured Grails Version')
-                    }
-                }
+    /**
+     * Registers the {@code profile} configuration, whose only purpose is to refuse a dependency: until
+     * Grails 9 a build declared the profile of the project in it. Nothing resolves or consumes the
+     * configuration, and it is not a supported place for dependencies. A listener of the dependency set
+     * rather than a check after the project is evaluated, so the build fails at the line that declares the
+     * dependency, and a dependency added through a provider is seen too, because a set that is listened to
+     * realizes what is added to it. A build that has a {@code profile} configuration of its own before this
+     * plugin is applied keeps it as it is.
+     */
+    protected void rejectProfileDependencies(Project project) {
+        if (project.configurations.names.contains(REMOVED_PROFILE_CONFIGURATION)) {
+            return
+        }
+        rejectsProfileDependencies = true
+        String owner = project.displayName
+        project.configurations.register(REMOVED_PROFILE_CONFIGURATION) { Configuration configuration ->
+            configuration.description = 'Removed in Grails 9, which has no profiles. A dependency declared here fails the build.'
+            configuration.canBeConsumed = false
+            configuration.canBeResolved = false
+            configuration.dependencies.whenObjectAdded { Dependency dependency ->
+                throw new InvalidUserDataException(removedProfileMessage(dependency, owner))
             }
         }
+    }
+
+    private static String removedProfileMessage(Dependency dependency, String owner) {
+        String notation = [dependency.group, dependency.name, dependency.version].findAll().join(':')
+        "Grails 9 has no profiles: remove the 'profile' dependency '${notation}' from the build of ${owner}. " +
+                'Nothing reads it, and the profiles are not published for Grails 9. ' +
+                'See "The Grails Shell and the Profiles Are Not Published, and a Build Cannot Declare a Profile" ' +
+                "in the Grails 9 upgrade notes: ${UPGRADE_NOTES_URL}"
     }
 
     protected void applyDefaultPlugins(Project project) {
@@ -539,8 +553,7 @@ ${importStatements}
      *       The platform is contributed lazily, through {@link Configuration#withDependencies},
      *       when a configuration's dependencies are first observed. It therefore never counts
      *       against the {@link Configuration#defaultDependencies} that other plugins use to
-     *       populate an otherwise empty configuration on demand (such as this plugin's
-     *       {@code profile} configuration). Dedicated tool and annotation-processor
+     *       populate an otherwise empty configuration on demand. Dedicated tool and annotation-processor
      *       classpaths, including {@code jacocoAgent} and {@code jacocoAnt}, are excluded.
      *       Exactly one Grails BOM is ever applied; the BOMs are split by integration
      *       (default / hibernate / micronaut), so the plugin never layers two of them.</li>
@@ -621,12 +634,16 @@ ${importStatements}
             // defaultDependencies actions first - and only while the configuration holds no
             // dependencies at all - then the withDependencies actions. A platform added eagerly
             // counts as a declared dependency and silently disables the defaults other plugins
-            // rely on, such as this plugin's own profile configuration (#16335).
+            // rely on (#16335).
             // Registering through configureEach also covers configurations that plugins create
             // after this callback has run.
             DependencyHandler dependencyHandler = project.dependencies
             project.configurations.configureEach { Configuration configuration ->
                 if (!configuration.canBeDeclared || isExcludedFromBomPlatform(configuration.name)) {
+                    return
+                }
+                if (rejectsProfileDependencies && configuration.name == REMOVED_PROFILE_CONFIGURATION) {
+                    // The platform would be refused as a profile dependency.
                     return
                 }
                 configuration.withDependencies { DependencySet dependencies ->
@@ -732,7 +749,7 @@ ${importStatements}
         // (default / hibernate / micronaut), so a project must select a single variant.
         // If the build declares a Grails BOM by hand - for example a Micronaut application
         // declaring enforcedPlatform(grails-micronaut-bom), or an application generated by
-        // Grails Forge / a profile that declares platform(grails-bom) directly - honor that
+        // Grails Forge that declares platform(grails-bom) directly - honor that
         // selection instead of the configured default, and fail fast if more than one distinct
         // Grails BOM is declared.
         Set<String> declaredBoms = declaredGrailsBoms(project)
@@ -800,7 +817,18 @@ ${importStatements}
         name == 'checkstyle' || name == 'codenarc' || name == 'pmd' ||
                 name == 'spotbugs' || name == 'spotbugsPlugins' ||
                 name == 'jacocoAgent' || name == 'jacocoAnt' ||
-                name == 'annotationProcessor' || name.endsWith('AnnotationProcessor')
+                name == 'annotationProcessor' || name.endsWith('AnnotationProcessor') ||
+                isToolClasspathOfItsOwn(name)
+    }
+
+    /**
+     * Whether the configuration is the class path of a tool this plugin starts in a JVM of its own,
+     * which has the versions the tool was published with and none the project chooses for itself:
+     * Forge, which checks the feature pack of a plugin with the Groovy and the platform of the Grails it
+     * belongs to.
+     */
+    static boolean isToolClasspathOfItsOwn(String name) {
+        name == GrailsPluginGradlePlugin.FORGE_PACK_TOOLING_CONFIGURATION
     }
 
     protected void applySpringBootPlugin(Project project) {
@@ -808,10 +836,6 @@ ${importStatements}
         if (!springBoot) {
             project.plugins.apply(SpringBootPlugin)
         }
-    }
-
-    protected String getDefaultProfile() {
-        'web'
     }
 
     @CompileDynamic
@@ -934,6 +958,9 @@ ${importStatements}
         if (groovyVersion) {
             project.logger.lifecycle('Warning: groovy.version is defined, Grails Gradle Plugin will force all groovy dependencies to version {}.', groovyVersion)
             project.configurations.configureEach { Configuration configuration ->
+                if (isToolClasspathOfItsOwn(configuration.name)) {
+                    return
+                }
                 configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
                     String group = details.requested.group
                     if (group == 'org.apache.groovy') {
@@ -942,11 +969,6 @@ ${importStatements}
                 }
             }
         }
-    }
-
-    @CompileStatic
-    protected void registerToolingModelBuilder(Project project, ToolingModelBuilderRegistry registry) {
-        registry.register(new GrailsClasspathToolingModelBuilder())
     }
 
     @CompileStatic
@@ -1043,16 +1065,11 @@ ${importStatements}
 
     protected <T extends JavaForkOptions & DefaultTask> void configureForkSettings(Project project, String grailsVersion) {
         def systemPropertyConfigurer = { String defaultGrailsEnv, T task ->
-            def map = System.properties.findAll { entry ->
-                entry.key?.toString()?.startsWith('grails.')
-            }
-            for (key in map.keySet()) {
-                def value = map.get(key)
-                if (value) {
-                    def sysPropName = key.toString().substring(7)
-                    task.systemProperty(sysPropName, value.toString())
-                }
-            }
+            // -Dgrails.server.port=9090 on the command line of the build reaches the JVM as server.port. The
+            // properties are read when the task runs: read here they were written into the configuration cache
+            // entry, which a later build that gave another property reused without it
+            GrailsSystemPropertyArgumentProvider.addTo((Task) task,
+                    project.providers.systemPropertiesPrefixedBy(GrailsSystemPropertyArgumentProvider.PREFIX))
 
             task.systemProperty(Metadata.APPLICATION_NAME, project.name)
             task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))
@@ -1081,20 +1098,21 @@ ${importStatements}
                     project.providers.gradlePropertiesPrefixedBy(QUERY_TAIL_PROPERTY_PREFIX), [QUERY_TAIL_ENABLED]))
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
-            if (task.minHeapSize == null) {
-                task.minHeapSize = '768m'
-            }
-            if (task.maxHeapSize == null) {
-                task.maxHeapSize = '768m'
-            }
+            // -Xms768m -Xmx768m where the options of the task do not name the heap, read once build.gradle has set them
+            // and as the task starts: the JVM refuses an initial heap above the maximum
+            GrailsDefaultHeapProvider.addTo((Task) task, project.providers)
 
             // Copy GRAILS_FORK_OPTS into the fork. Or use GRAILS_OPTS if no fork options provided
             // This allows run-app etc. to run using appropriate settings and allows users to provided
             // different FORK JVM options to the build options.
+            // The options are separated by any run of white space, as a shell separates them: an empty argument, which
+            // two spaces in a row or a leading space gave, is taken by the JVM for the name of its main class, and ends
+            // it before the application starts. Quotes are not read: an option cannot hold a space.
             def envMap = System.getenv()
             String opts = envMap.GRAILS_FORK_OPTS ?: envMap.GRAILS_OPTS
-            if (opts) {
-                task.jvmArgs(opts.split(' '))
+            List<String> forkJvmArgs = opts ? opts.split(/\s+/).findAll { String arg -> !arg.isEmpty() } : []
+            if (forkJvmArgs) {
+                task.jvmArgs(forkJvmArgs)
             }
         }
 
@@ -1358,13 +1376,16 @@ ${importStatements}
     }
 
     /**
-     * Configures JVM arguments required for compatibility with Java 23+.
+     * Configures JVM arguments required for compatibility with Java 22+.
      *
-     * <p>Java 24 introduced restrictions on native access ({@code JEP 472}) that cause
-     * warnings from libraries such as hawtjni (used by JLine) and Netty that call
-     * {@code System.loadLibrary} or declare native methods. The
-     * {@code --enable-native-access=ALL-UNNAMED} flag suppresses these warnings and
-     * will become mandatory in a future JDK release when the default changes to deny.</p>
+     * <p>From Java 22 on, code that calls a restricted method of the foreign function API
+     * without native access has the JVM warn ({@code JEP 454}), as JLine, the terminal library
+     * of the console of Grails, does where it uses that API; Java 24 added the same for
+     * libraries such as hawtjni and Netty that call {@code System.loadLibrary} or declare
+     * native methods ({@code JEP 472}). The {@code --enable-native-access=ALL-UNNAMED} flag
+     * suppresses these warnings and will become mandatory in a future JDK release when the
+     * default changes to deny. The options and the versions they are given from are those of
+     * {@link JvmOptions}, which the {@code grails} command line gives a tool it starts too.</p>
      *
      * <p>Java 23 began terminal deprecation of {@code sun.misc.Unsafe} memory-access
      * methods ({@code JEP 471/498}). Netty 4.1.x uses {@code Unsafe.allocateMemory}
@@ -1395,9 +1416,9 @@ ${importStatements}
     private void applyCompatArgs(Project project, JavaForkOptions task, String taskName) {
         int targetVersion = resolveTargetJavaVersion(project)
 
-        if (targetVersion >= 24) {
-            task.jvmArgs('--enable-native-access=ALL-UNNAMED')
-            project.logger.info("Grails: adding --enable-native-access=ALL-UNNAMED to ${taskName} for Java ${targetVersion} compatibility")
+        for (String option : JvmOptions.of(targetVersion)) {
+            task.jvmArgs(option)
+            project.logger.info("Grails: adding ${option} to ${taskName} for Java ${targetVersion} compatibility")
         }
 
         if (targetVersion >= 23) {

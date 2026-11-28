@@ -19,18 +19,24 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
-import org.grails.forge.application.Project
+import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
-import org.grails.forge.template.RenderResult
-import org.grails.forge.template.TemplateRenderer
-import org.grails.forge.template.GspTemplate
-import org.grails.forge.template.GspView
 import picocli.CommandLine
 
+/**
+ * {@code create-controller}: a controller with an empty default action, and its test. In a REST API
+ * application or REST API plugin the controller names JSON as the one format it responds in, as the
+ * controller the command of that profile wrote did, and as {@code create-restful-controller} and
+ * {@code create-domain-resource} do; without it {@code respond} negotiates every format the
+ * application has a MIME type for.
+ *
+ * @since 9.0
+ */
 @CommandLine.Command(name = CreateControllerCommand.NAME, description = 'Creates a Grails Controller')
 @CompileStatic
 class CreateControllerCommand extends CodeGenCommand {
@@ -57,28 +63,21 @@ class CreateControllerCommand extends CodeGenCommand {
     }
 
     @Override
-    Integer call() throws Exception {
-        final Project project = getProject(controllerName)
-        TemplateRenderer templateRenderer = getTemplateRenderer(project)
-        final RenderResult controllerRenderResult = templateRenderer.render(new GspTemplate('grails-app/controllers/{packagePath}/{className}Controller.groovy', GspView.of('/forge/cli/command/templates/controller.gsp', [project: project])), overwrite)
-        final RenderResult controllerSpecRenderResult = templateRenderer.render(new GspTemplate('src/test/groovy/{packagePath}/{className}ControllerSpec.groovy', GspView.of('/forge/cli/command/templates/controllerSpec.gsp', [project: project])), overwrite)
-        if (controllerRenderResult != null && controllerSpecRenderResult != null) {
-            logRenderResult(controllerRenderResult)
-            logRenderResult(controllerSpecRenderResult)
-        }
-
-        return 0
+    List<ArtefactTemplate> getTemplates() {
+        return [controller(), ArtefactTemplate.CONTROLLER_TEST]
     }
 
-    private void logRenderResult(RenderResult result) throws Exception {
-        if (result != null) {
-            if (result.isSuccess()) {
-                out('@|blue ||@ Rendered controller to ' + result.getPath())
-            } else if (result.isSkipped()) {
-                warning('Rendering skipped for ' + result.getPath() + ' because it already exists. Run again with -f to overwrite.')
-            } else if (result.getError() != null) {
-                throw result.getError()
-            }
-        }
+    // the template of the controller this project gets; a project has its own of either at the same place
+    private ArtefactTemplate controller() {
+        ApplicationType type = config?.getApplicationType()
+        return type != null && type.isRestApi() ? ArtefactTemplate.REST_CONTROLLER : ArtefactTemplate.CONTROLLER
+    }
+
+    @Override
+    Integer call() throws Exception {
+        return generate('controller', getProject(controllerName, 'Controller'), [
+                'grails-app/controllers/{packagePath}/{className}Controller.groovy': controller(),
+                'src/test/groovy/{packagePath}/{className}ControllerSpec.groovy': ArtefactTemplate.CONTROLLER_TEST
+        ])
     }
 }

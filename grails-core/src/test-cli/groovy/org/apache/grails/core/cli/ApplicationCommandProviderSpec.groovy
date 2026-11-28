@@ -31,6 +31,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import org.apache.grails.core.testing.support.LogCapture
 import org.springframework.core.Ordered
 
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 import spock.lang.Specification
@@ -284,7 +285,7 @@ class ApplicationCommandProviderSpec extends Specification {
         failure << [new StackOverflowError(), new OutOfMemoryError()]
     }
 
-    def "reports each legacy command plugin once without loading its command classes"() {
+    def "says of each plugin with commands of Grails 7 once, by its jar, that Grails 9 does not run them, without loading them"() {
         given:
         URL firstPlugin = createFactoryJar('first-plugin.jar',
                 'grails.dev.commands.ApplicationCommand=missing.FirstLegacyCommand')
@@ -292,22 +293,22 @@ class ApplicationCommandProviderSpec extends Specification {
                 'grails.dev.commands.ApplicationCommand=missing.SecondLegacyCommand')
         useFactoryResources([firstPlugin, secondPlugin], true)
         logCapture = new LogCapture(ApplicationCommandDiagnostics)
+        String first = tempDir.resolve('first-plugin.jar').toFile().path
+        String second = tempDir.resolve('second-plugin.jar').toFile().path
 
         when:
         ApplicationContextCommandRegistry registry = new ApplicationContextCommandRegistry()
 
-        then:
-        registry.missingCommandHint == 'Grails 7 commands were detected; set grails { legacyCommandSupport = true } or upgrade the plugin.'
+        then: 'the hint has one line for each plugin, and names neither the bridge of Grails 8 nor how to turn it on'
+        registry.missingCommandHint.readLines() == [
+                "${first} has commands of Grails 7, which Grails 9 does not run: use a version of the plugin for Grails 9".toString(),
+                "${second} has commands of Grails 7, which Grails 9 does not run: use a version of the plugin for Grails 9".toString(),
+        ]
+        !registry.missingCommandHint.contains('legacyCommandSupport')
         !((TrackingFactoryClassLoader) factoryClassLoader).legacyCommandClassLoaded
-        List<ILoggingEvent> errors = logCapture.events.findAll {
-            it.level == Level.ERROR && it.formattedMessage.contains('ships Grails 7 commands')
-        }
-        errors.size() == 2
-        errors.count { it.formattedMessage.contains('first-plugin.jar') } == 1
-        errors.count { it.formattedMessage.contains('second-plugin.jar') } == 1
-        errors.every {
-            it.formattedMessage.contains('set grails { legacyCommandSupport = true } or upgrade the plugin.')
-        }
+
+        and: 'and each is a warning of the log'
+        logCapture.events.findAll { it.level == Level.WARN }*.formattedMessage == registry.missingCommandHint.readLines()
     }
 
     def "does not report legacy command diagnostics when no legacy factory key exists"() {
@@ -321,7 +322,7 @@ class ApplicationCommandProviderSpec extends Specification {
 
         then:
         registry.missingCommandHint == null
-        !logCapture.events.any { it.formattedMessage.contains('ships Grails 7 commands') }
+        !logCapture.events.any { it.formattedMessage.contains('has commands of Grails 7') }
     }
 
     def "reports a malformed factory resource and continues command discovery"() {
@@ -405,10 +406,10 @@ class ApplicationCommandProviderSpec extends Specification {
         ApplicationContextCommandRegistry registry = new ApplicationContextCommandRegistry()
 
         then:
-        registry.missingCommandHint != null
+        registry.missingCommandHint == 'memory:legacy-plugin/META-INF/grails.factories has commands of Grails 7, which Grails 9 does not run: ' +
+                'use a version of the plugin for Grails 9'
         logCapture.events.any {
-            it.level == Level.ERROR && it.formattedMessage.contains(
-                    'Plugin memory:legacy-plugin/META-INF/grails.factories ships Grails 7 commands')
+            it.level == Level.WARN && it.formattedMessage == registry.missingCommandHint
         }
     }
 
@@ -426,7 +427,7 @@ class ApplicationCommandProviderSpec extends Specification {
 
         then:
         registry.missingCommandHint == null
-        !logCapture.events.any { it.formattedMessage.contains('ships Grails 7 commands') }
+        !logCapture.events.any { it.formattedMessage.contains('has commands of Grails 7') }
     }
 
     def "does not report missing support when a factory-key provider fails to contribute commands"() {
@@ -443,7 +444,31 @@ class ApplicationCommandProviderSpec extends Specification {
 
         then:
         registry.missingCommandHint == null
-        !logCapture.events.any { it.formattedMessage.contains('ships Grails 7 commands') }
+        !logCapture.events.any { it.formattedMessage.contains('has commands of Grails 7') }
+    }
+
+    @Unroll
+    def "a command is found by the name its class gives, which the build lists it by, and by its name when no class gives that name: #lookedFor"() {
+        given: 'commands whose names are not the names their classes give, as the catalog of a build lists a command without a descriptor'
+        URL plugin = createFactoryJar(
+                'class-named-commands.jar',
+                'example.OtherFactory=example.OtherImplementation',
+                "${ApplicationCommand.name}=${AUnorderedCollisionCommand.name},${ZOrderedCollisionCommand.name}," +
+                        "${ClassGivenCommand.name},${RunsAsClassGivenCommand.name}")
+        useFactoryResources([plugin])
+
+        expect:
+        new ApplicationContextCommandRegistry().findCommand(lookedFor)?.getClass() == found
+
+        where: 'the name a class gives is the one the catalog lists the command by'
+        lookedFor                                                       || found
+        'ordered-collision'                                             || ZOrderedCollisionCommand
+        ToolDescriptor.conventionName(ZOrderedCollisionCommand.name)   || ZOrderedCollisionCommand
+        ToolDescriptor.conventionName(AUnorderedCollisionCommand.name) || AUnorderedCollisionCommand
+        'something-else'                                                || ClassGivenCommand
+        'class-given'                                                   || ClassGivenCommand
+        'runs-as-class-given'                                           || RunsAsClassGivenCommand
+        'no-such-command'                                               || null
     }
 
     private URL createFactoryJar(String name, String legacyFactories, String cliFactories = null) {
@@ -574,6 +599,33 @@ class AUnorderedCollisionCommand implements ApplicationCommand {
     @Override
     String getName() {
         'ordered-collision'
+    }
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        true
+    }
+}
+
+// runs as something-else; the name its class gives is the name of another command
+class ClassGivenCommand implements ApplicationCommand {
+
+    @Override
+    String getName() {
+        'something-else'
+    }
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        true
+    }
+}
+
+class RunsAsClassGivenCommand implements ApplicationCommand {
+
+    @Override
+    String getName() {
+        'class-given'
     }
 
     @Override

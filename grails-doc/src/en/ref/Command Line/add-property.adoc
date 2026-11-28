@@ -1,0 +1,100 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== add-property
+
+=== Purpose
+
+The `add-property` command adds a property to a domain class of the project, with its constraints.
+
+=== Examples
+
+[source,console]
+----
+grails add-property Book title
+grails add-property Book pages:Integer --nullable
+grails add-property org.bookstore.Book isbn:String --not-blank --max-size 20
+grails add-property Book author:Author --not-nullable --constraint-style jakarta
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails add-property <<domain class>> <<property>>[:<<type>>] [--nullable | --not-nullable] [--blank | --not-blank]
+                    [--max-size=<<size>>] [--min-size=<<size>>] [--constraint-style=<<style>>]
+----
+
+Arguments:
+
+* `domain class` - The name of a domain class under `grails-app/domain`, with or without its package. When two domain classes have the name, the command names both and changes neither: give the name with its package.
+* `property` - The name of the property, which begins with a lower case letter and has only letters and digits, and after a colon its type, which begins with an upper case letter, as `String`, `Integer`, `Author`, `List<String>` or `java.time.LocalDate`. Without a type the property is a `String`.
+
+Options:
+
+* `--nullable`, `--not-nullable` - The `nullable` constraint of the property, `true` or `false`.
+* `--blank`, `--not-blank` - The `blank` constraint, for a `String` property.
+* `--max-size=SIZE`, `--min-size=SIZE` - The `maxSize` and `minSize` constraints, for a `String` property.
+* `--constraint-style=STYLE` - How the constraints are written: `grails` (the default) writes them into the `constraints` block of the class, `jakarta` writes Jakarta Validation annotations on the property (`@NotNull`, `@NotBlank`, `@Size`) with their imports, and `both` writes both. A constraint that allows something (`--nullable`, `--blank`) has no annotation.
+
+With the class
+
+[source,groovy]
+----
+package org.bookstore
+
+class Book {
+    String title
+
+    static constraints = {
+        title blank: false
+    }
+}
+----
+
+`grails add-property Book isbn --nullable --max-size 20` writes
+
+[source,groovy]
+----
+package org.bookstore
+
+class Book {
+    String title
+    String isbn
+
+    static constraints = {
+        title blank: false
+        isbn nullable: true, maxSize: 20
+    }
+}
+----
+
+The property is written after the last property or field of the class, and after the line the class begins with in a class that has none. Its constraint is the last entry of the `constraints` block of the class; a class without one gets a block after the property, and a block that is written on one line, as `static constraints = {}`, is opened. The class is parsed for this, so a method that returns a `String`, a brace in a comment or in a text, and another class in the same file are not in the way. Every line of the file is kept as it is: the lines that are added have the line endings and the indentation of the file, and a file that does not end with a line ending does not end with one afterwards.
+
+The command writes nothing, says why in one line and ends with exit code 1 when
+
+* the property specification is no name with a type, or a constraint is given that the type does not have,
+* the class has a property or a field of that name,
+* there is no domain class of the name, in which case it names link:create-domain-class.html[create-domain-class],
+* the class cannot be parsed, or the file is not text in UTF-8,
+* the class is written in a way the lines cannot be added to: on one line, with its last property on the line of its closing brace, or with `constraints` that are not a block written in the class (as `static constraints = Shared.rules`) when the property has a constraint.
+
+It is a command of every project, and can be given in any directory of the project.

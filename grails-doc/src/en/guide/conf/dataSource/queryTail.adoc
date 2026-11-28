@@ -32,15 +32,19 @@ It takes two terminals. In the first, start the application with capture turned 
 grails run-app --query-tail
 ----
 
-or, with Gradle, `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`. In the second, follow the
-capture and use the application:
+or, with Gradle, `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`. `--query-tail` is an option
+Grails Data declares for `run-app` (in its command line artifact, `grails-datamapping-core-cli`):
+it is one of `run-app` once a build has compiled the project, as `grails compile` does, and
+`grails help run-app` then lists it; it starts the application with the system property
+`grails.gorm.queryTail.enabled=true`. In the second terminal, follow the capture and use the
+application:
 
 [source,shell]
 ----
 grails query-tail
 ----
 
-The summary refreshes as requests are served:
+`query-tail` is a tool of Grails Data, which the build of the project runs with the Gradle task `runTool`: `./gradlew runTool --arg=query-tail` is the same without the `grails` command, with each option as a further `--arg`. `grails run-tool query-tail` runs it too. The tool is one the build runs without the application (it declares `startsApplication = false`, see xref:commandLine#creatingTools[Creating Tools]): nothing of the application is started for it, no data source is opened and `BootStrap` does not run, so it can follow an application that is running without being a second one. The summary is written again as requests are served:
 
 ----
 query-tail build/query-tail/capture.log  312 statements in 14 requests  (refreshes as statements run; Ctrl-C to stop)
@@ -63,7 +67,7 @@ so far and exits, which is also how to look at what an integration test run exec
 [source,shell]
 ----
 ./gradlew integrationTest -Pgrails.gorm.queryTail.enabled
-grails query-tail --all --once
+./gradlew runTool --arg=query-tail --arg=--all --arg=--once
 ----
 
 The Grails Gradle plugin names one run for each build and hands it to every test JVM the build
@@ -337,10 +341,10 @@ statements as one GORM builds does, reading the capture settings from `grails.go
 other datastores may be configured with.
 An application started by Gradle writes under the build directory the
 build configures, even one moved with `layout.buildDirectory`, which the Grails Gradle plugin hands
-the application as `grails.project.target.dir`. The `grails` command runs outside Gradle, so it
-looks under `build` unless it is started with the same property, as with
-`JAVA_OPTS=-Dgrails.project.target.dir=out grails query-tail`; with a moved build directory, pass that
-property, set `grails.gorm.queryTail.file`, which both sides read, or pass `--file`. An application that configures its own Hibernate `StatementInspector`,
+the application as `grails.project.target.dir`. The `query-tail` tool is run by the same build, through
+the Gradle task `runTool`, and is handed the same property, so it looks where the application
+writes. Run in another way, without that property, it looks under `build`: set
+`grails.gorm.queryTail.file`, which both sides read, or pass `--file`. An application that configures its own Hibernate `StatementInspector`,
 with `hibernate.session_factory.statement_inspector`, by its class or by a name registered with
 Hibernate's strategy selector, or in a `hibernate.configClass`, keeps it: Hibernate runs it as it
 does without the capture, and the capture records the statement it returns, without its values. SQL is counted at JDBC execution: a

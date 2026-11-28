@@ -21,20 +21,24 @@ under the License.
 ==== Distributing Plugins in the Grails Central Plugin Repository
 
 
-The preferred way to distribute plugin is to publish to the official Grails Central Plugin Repository. This will make your plugin visible to the link:{commandLineRef}list-plugins.html[list-plugins] command:
-
-[source,groovy]
-----
-grails list-plugins
-----
-
-which lists all plugins that are in the central repository. Your plugin will also be available to the link:{commandLineRef}plugin-info.html[plugin-info] command:
-
-[source,groovy]
-----
-grails plugin-info [plugin-name]
-----
-
-which prints extra information about it, such as its description, who wrote, etc.
+The preferred way to distribute plugin is to publish to the official Grails Central Plugin Repository. The plugins that are published there and listed in the Grails plugin index are what the https://grails.apache.org/plugins.html[plugin portal] shows and what the `grails list-plugins` and `grails plugin-info` commands find.
 
 NOTE: If you have created a Grails plugin and want it to be listed on the https://grails.apache.org/plugins.html[plugin portal] website, please submit a pull request on https://github.com/apache/grails-plugins-metadata
+
+===== Finding Plugins
+
+`grails list-plugins` lists the Grails plugins there are, and takes a text to look for, as in `grails list-plugins security`. `grails plugin-info NAME` says more of one: its versions, its license, where its documentation and sources are, and the dependency to add to `build.gradle`. The same commands are `grails plugin list`, `grails plugin find security` and `grails plugin show NAME`:
+
+[source,console]
+----
+$ grails plugin-info cache
+...
+* Feature: cache. In the directory of an application: grails feature add cache
+* Definition:
+
+dependencies {
+    implementation 'org.apache.grails:grails-cache'
+}
+----
+
+The plugins of the Grails release itself are known to the commands without the network. The plugins of everyone else come from the plugin index, the file `grails-plugins-index.json` of https://github.com/apache/grails-plugins-metadata: a plugin is found by these commands once it is listed there. A plugin that is not listed, such as one of a repository of your own, is described when it is given by its coordinates and the repository is named in `GRAILS_REPO_URL`: `grails plugin-info com.example:example-audit`. See xref:commandLine#findingPlugins[Finding Plugins] in the command line chapter and the reference of link:{commandLineRef}list-plugins.html[list-plugins] and link:{commandLineRef}plugin-info.html[plugin-info].

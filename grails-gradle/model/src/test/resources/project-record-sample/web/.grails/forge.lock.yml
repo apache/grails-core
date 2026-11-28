@@ -1,0 +1,80 @@
+format: 1
+manifest:
+  sha256: 653ee61681bb45c41c4da6b065387a386016e9b2711481e3174bd11a80551c54
+generator:
+  name: grails-forge
+  version: 9.0.0-SNAPSHOT
+  sha256: ab9acc8be5be70e353889945306b3c5f5b16154107444d11c28c9ac18249b7f1
+grailsVersion: 9.0.0-SNAPSHOT
+templateApi: 1
+applicationType: web
+options:
+  jdk: 21
+  servlet: tomcat
+  data: hibernate5
+  reloading: devtools
+lineEndings: preserve
+features:
+- name: app-name
+  source: bundled-pack
+- name: asset-pipeline-grails
+  source: bundled-pack
+- name: base
+  source: framework
+- name: gorm-hibernate5
+  source: bundled-pack
+- name: grails-application
+  source: framework
+- name: grails-dependencies
+  source: framework
+- name: grails-gorm-testing-support
+  source: bundled-pack
+- name: grails-gradle-plugin
+  source: bundled-pack
+- name: grails-project-settings
+  source: framework
+- name: grails-url-mappings
+  source: bundled-pack
+- name: grails-web
+  source: bundled-pack
+- name: grails-web-testing-support
+  source: bundled-pack
+- name: grails-wrapper
+  source: framework
+- name: gsp
+  source: bundled-pack
+- name: h2
+  source: bundled-pack
+- name: logback
+  source: bundled-pack
+- name: mockito
+  source: bundled-pack
+- name: scaffolding
+  source: bundled-pack
+- name: sitemesh3
+  source: bundled-pack
+- name: spock
+  source: bundled-pack
+- name: spring-boot-autoconfigure
+  source: bundled-pack
+- name: spring-boot-devtools
+  source: bundled-pack
+- name: spring-boot-starter
+  source: bundled-pack
+- name: spring-boot-starter-tomcat
+  source: bundled-pack
+- name: spring-resources
+  source: bundled-pack
+- name: geb-with-testcontainers
+  source: bundled-pack
+- name: gradle
+  source: framework
+- name: readme
+  source: framework
+- name: yaml
+  source: framework
+parameters: {}
+baselineIndex:
+  sha256: 8c52f83b5a4322fa3cf07a589df09d607a2d1bec08bf0238b22c7658434c3a25
+seal:
+  sha256: 591ecb6cf6596a706a343696884958f6c6e200341bc2818fadcaa042f9b32c8a

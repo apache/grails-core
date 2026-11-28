@@ -17,24 +17,28 @@
  *  under the License.
  */
 
-// Declares the companion cli artifact constraints (`<artifactId>-cli`) directly on this BOM's api
-// configuration. Companion artifacts are additional publications of existing projects, so the
-// subproject enumeration in the BOM build scripts cannot see them — each applying project instead
-// exports its companion coordinate via the `cliArtifactId` extra property, which only exists once
-// that project has been evaluated, hence the lazy `withDependencies` mutation window.
+// Declares the constraints of the companion artifacts with the tools of a plugin (`<artifactId>-cli`,
+// `<artifactId>-cli-standalone`) directly on this BOM's api configuration. Companion artifacts are
+// additional publications of existing projects, so the subproject enumeration in the BOM build
+// scripts cannot see them — each applying project instead exports the coordinate of each companion
+// it publishes via an extra property (`cliArtifactId`, `cliStandaloneArtifactId`: the names
+// ToolBuildNames of grails-gradle-model holds), which only exists once that project has been
+// evaluated, hence the lazy `withDependencies` mutation window.
 //
 // These constraints are declared DIRECTLY on every BOM (base and each derived BOM), not merely
 // inherited through `platform(project(':grails-base-bom'))`. enforcedPlatform() enforces only a
 // platform's direct constraints, not the ones it inherits via platform(), so without this an app
 // that pins versions through `enforcedPlatform(grails-bom)` would receive the unversioned
-// `*-cli` dependencies that auto-provisioning adds and fail to resolve them.
+// `*-cli` and `*-cli-standalone` dependencies that auto-provisioning adds and fail to resolve them.
 configurations.named('api').configure { apiConfiguration ->
     apiConfiguration.withDependencies {
         for (Project subproject : rootProject.subprojects) {
-            def cliArtifactId = subproject.findProperty('cliArtifactId')
-            if (cliArtifactId) {
-                apiConfiguration.dependencyConstraints.add(
-                        project.dependencies.constraints.create("${subproject.group}:${cliArtifactId}:${projectVersion}"))
+            for (String companionProperty : ['cliArtifactId', 'cliStandaloneArtifactId']) {
+                def companionArtifactId = subproject.findProperty(companionProperty)
+                if (companionArtifactId) {
+                    apiConfiguration.dependencyConstraints.add(
+                            project.dependencies.constraints.create("${subproject.group}:${companionArtifactId}:${projectVersion}"))
+                }
             }
         }
     }

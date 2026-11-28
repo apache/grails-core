@@ -21,7 +21,6 @@ package org.grails.forge.feature.github.workflows
 
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
-import org.grails.forge.feature.github.workflows.plain.PlainGithubWorkflowFeature
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.BuildTool
 import org.grails.forge.options.DevelopmentReloading
@@ -37,7 +36,7 @@ class PlainGithubWorkflowSpec extends ApplicationContextSpec implements CommandO
         when:
         def output = generate(ApplicationType.WEB,
                 new Options(DevelopmentReloading.DEVTOOLS),
-                [PlainGithubWorkflowFeature.NAME])
+                ['github-workflow-java-ci'])
         def workflow = output[".github/workflows/${workflowName}"]
 
         then:
@@ -56,7 +55,7 @@ class PlainGithubWorkflowSpec extends ApplicationContextSpec implements CommandO
         when:
         def output = generate(ApplicationType.WEB,
                 new Options(DevelopmentReloading.DEVTOOLS, version),
-                [PlainGithubWorkflowFeature.NAME])
+                ['github-workflow-java-ci'])
         def workflow = output['.github/workflows/gradle.yml']
 
         then:

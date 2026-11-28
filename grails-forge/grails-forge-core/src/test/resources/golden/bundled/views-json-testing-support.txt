@@ -1,0 +1,57 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: applicationType=rest-api|rest-api-plugin
+dependency: testImplementation org.apache.grails:grails-testing-support-views-gson without a version
+
+# web
+title: views-json-testing-support
+description: views-json-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in no application of this kind
+
+# rest_api
+title: views-json-testing-support
+description: views-json-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+
+# web_plugin
+title: views-json-testing-support
+description: views-json-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in no application of this kind
+
+# plugin
+title: views-json-testing-support
+description: views-json-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in no application of this kind
+
+# rest_api_plugin
+title: views-json-testing-support
+description: views-json-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+

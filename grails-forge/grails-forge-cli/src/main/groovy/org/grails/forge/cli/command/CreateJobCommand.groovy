@@ -19,16 +19,12 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
-import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
-import org.grails.forge.feature.other.GrailsQuartz
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
-import org.grails.forge.template.RenderResult
-import org.grails.forge.template.GspTemplate
-import org.grails.forge.template.GspView
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateJobCommand.NAME, description = 'Creates a new Quartz scheduled job')
@@ -53,7 +49,12 @@ class CreateJobCommand extends CodeGenCommand {
 
     @Override
     boolean applies() {
-        return config.getFeatures().contains(GrailsQuartz.FEATURE_NAME)
+        return config.getFeatures().contains('grails-quartz')
+    }
+
+    @Override
+    List<ArtefactTemplate> getTemplates() {
+        return [ArtefactTemplate.JOB]
     }
 
     @Override
@@ -61,25 +62,10 @@ class CreateJobCommand extends CodeGenCommand {
         if (!applies()) {
             throw new IllegalArgumentException('Please first select Grails Quartz Plugin')
         }
-        final Project project = getProject(jobName)
-        final RenderResult result = getTemplateRenderer(project)
-            .render(new GspTemplate('grails-app/jobs/{packagePath}/{className}Job.groovy', GspView.of('/forge/cli/command/templates/job.gsp', [project: project])), overwrite)
-        if (result != null) {
-            logRenderResult(result)
-        }
-
-        return 0
-    }
-
-    private void logRenderResult(RenderResult result) throws Exception {
-        if (result != null) {
-            if (result.isSuccess()) {
-                out('@|blue ||@ Rendered job to ' + result.getPath())
-            } else if (result.isSkipped()) {
-                warning('Rendering skipped for ' + result.getPath() + ' because it already exists. Run again with -f to overwrite.')
-            } else if (result.getError() != null) {
-                throw result.getError()
-            }
-        }
+        // as the script of the Quartz plugin did: a name that ends with Job is taken without it,
+        // unless Job is all there is of the name of the class
+        return generate('job', newArtefact(jobName, 'Job'), [
+                'grails-app/jobs/{packagePath}/{className}Job.groovy': ArtefactTemplate.JOB
+        ])
     }
 }

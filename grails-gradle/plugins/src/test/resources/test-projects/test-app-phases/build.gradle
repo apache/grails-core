@@ -1,0 +1,52 @@
+plugins {
+    id 'java'
+    id 'org.apache.grails.gradle.grails-integration-test'
+}
+
+// The build has no repositories: JUnit is given as the jars of the specification that runs this build.
+dependencies {
+    testImplementation files(providers.gradleProperty('junitClasspath').get().split(File.pathSeparator).toList())
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed'
+    }
+}
+
+// a phase the project adds, as the Grails Gradle plugin has them
+testPhases {
+    create('functionalTest')
+}
+
+// and a Test task that is none of those and whose name does not end in Test: the functional tests again
+tasks.register('smoke', Test) {
+    testClassesDirs = sourceSets.functionalTest.output.classesDirs
+    classpath = sourceSets.functionalTest.runtimeClasspath
+}
+
+// a debugger is not attached in a test: the JVMs listen and do not wait
+def debugPort = providers.gradleProperty('debugPort')
+tasks.withType(Test).configureEach {
+    if (debugPort.present) {
+        debugOptions.port = debugPort.get() as Integer
+        debugOptions.suspend = false
+    }
+    def debugged = debugOptions.enabled
+    def name = it.name
+    doFirst {
+        println "debug of ${name}: ${debugged.get()}"
+    }
+}
+
+// a test task the build script skips with an onlyIf (-PskipPhase=NAME) or turns off (-PdisablePhase=NAME)
+def skipPhase = providers.gradleProperty('skipPhase')
+def disablePhase = providers.gradleProperty('disablePhase').getOrElse('')
+tasks.withType(Test).configureEach {
+    def name = it.name
+    onlyIf { skipPhase.getOrElse('') != name }
+    if (disablePhase == name) {
+        enabled = false
+    }
+}

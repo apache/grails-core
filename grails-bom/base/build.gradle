@@ -17,6 +17,7 @@
  *  under the License.
  */
 
+import org.apache.grails.buildsrc.PomVersions
 import org.apache.grails.gradle.tasks.bom.ExtractDependenciesTask
 import org.apache.grails.gradle.tasks.bom.ExtractedDependencyConstraint
 import org.apache.grails.gradle.tasks.bom.PropertyNameCalculator
@@ -44,6 +45,9 @@ ext {
     isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
     // This BOM publishes the application versions; validateBomProperties fails for any of them no entry uses
     bomVersionProperties = bomDependencyVersions
+    // The extra properties a project has, with the artifact id as the value, for each companion with tools it
+    // publishes (`<artifactId>-cli`, `<artifactId>-cli-standalone`): the names ToolBuildNames of grails-gradle-model holds
+    companionArtifactIdProperties = ['cliArtifactId', 'cliStandaloneArtifactId']
     // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
     gradleBuildProjects = [
             'grails-gradle-plugins':'org.apache.grails',
@@ -85,7 +89,7 @@ dependencies {
                 continue
             }
 
-            boolean publishedProject = subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish-profile') || subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
+            boolean publishedProject = subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
             if (!publishedProject) {
                 continue
             }
@@ -128,9 +132,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
         rootProject.subprojects.each { p ->
             artifactIdMappings[p.name] = p.findProperty('pomArtifactId') ?: p.name
 
-            String cliArtifactId = p.findProperty('cliArtifactId')
-            if (cliArtifactId) {
-                artifactIdMappings[cliArtifactId] = cliArtifactId
+            for (String companionProperty : project.ext.companionArtifactIdProperties) {
+                String companionArtifactId = p.findProperty(companionProperty)
+                if (companionArtifactId) {
+                    artifactIdMappings[companionArtifactId] = companionArtifactId
+                }
             }
         }
 
@@ -140,7 +146,6 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
 
         artifactIdMappings
     })
-    it.forcedGroupPrefixes.set(['org.apache.grails.profiles': 'grails-profile'])
     it.projectCoordinateProperties.set(project.provider {
         Map<String, String> projectCoordinates = [:]
 
@@ -149,9 +154,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
             String baseVersionName = artifactId.replaceAll('[.]', '-')
             projectCoordinates["${p.group}:${ artifactId}:${p.version}" as String] = baseVersionName
 
-            String cliArtifactId = p.findProperty('cliArtifactId')
-            if (cliArtifactId) {
-                projectCoordinates["${p.group}:${cliArtifactId}:${p.version}" as String] = cliArtifactId
+            for (String companionProperty : project.ext.companionArtifactIdProperties) {
+                String companionArtifactId = p.findProperty(companionProperty)
+                if (companionArtifactId) {
+                    projectCoordinates["${p.group}:${companionArtifactId}:${p.version}" as String] = companionArtifactId
+                }
             }
         }
 
@@ -164,6 +171,35 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
 
     it.dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'), project.tasks.named('generatePomFileForMavenPublication'))
 }
+
+// The MCP Java SDK moves with Spring AI: spring-ai-mcp depends on it directly and no BOM it imports manages it
+String springAiVersion = bomDependencyVersions['spring-ai-bom.version']
+String managedMcpSdkVersion = bomDependencyVersions['mcp-bom.version']
+Provider<String> springAiMcpSdkVersion = provider {
+    Configuration pom = configurations.detachedConfiguration(
+            dependencies.create("org.springframework.ai:spring-ai-mcp:${springAiVersion}@pom"))
+    pom.transitive = false
+    PomVersions.read(pom.singleFile).dependencies
+            .find { it.groupId == 'io.modelcontextprotocol.sdk' && it.artifactId == 'mcp' }?.version ?: ''
+}
+def validateMcpSdkVersion = tasks.register('validateMcpSdkVersion') { Task task ->
+    task.group = 'verification'
+    task.description = 'Validates that mcp-bom.version is the MCP Java SDK version the managed Spring AI release depends on.'
+    task.inputs.property('springAiMcpSdkVersion', springAiMcpSdkVersion)
+    task.doLast {
+        String sdkVersion = springAiMcpSdkVersion.get()
+        if (!sdkVersion) {
+            throw new GradleException("spring-ai-mcp ${springAiVersion} names no io.modelcontextprotocol.sdk:mcp version: " +
+                    'check how Spring AI depends on the MCP Java SDK and update validateMcpSdkVersion')
+        }
+        if (sdkVersion != managedMcpSdkVersion) {
+            throw new GradleException("Spring AI ${springAiVersion} depends on the MCP Java SDK ${sdkVersion}, " +
+                    "but dependencies.gradle manages ${managedMcpSdkVersion}: set mcp-bom.version to ${sdkVersion}")
+        }
+    }
+}
+tasks.named('check') { Task task -> task.dependsOn(validateMcpSdkVersion) }
+tasks.withType(GenerateMavenPom).configureEach { GenerateMavenPom task -> task.dependsOn(validateMcpSdkVersion) }
 
 def validateNoSnapshotDependencies = tasks.register('validateNoSnapshotDependencies')
 validateNoSnapshotDependencies.configure { Task it ->
@@ -199,15 +235,16 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
 // to the other projects, so it reads what it needs of them from this provider
 Provider<PropertyNameCalculator> bomPropertyNames = provider {
     PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
-    propertyNameCalculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
     propertyNameCalculator.addProjects(rootProject.subprojects)
     for (String gradleArtifactId : project.ext.gradleBuildProjects) {
         propertyNameCalculator.addProject('org.apache.grails.gradle', gradleArtifactId, project.version as String, gradleArtifactId)
     }
     for (Project p : rootProject.subprojects) {
-        String cliArtifactId = p.findProperty('cliArtifactId')
-        if (cliArtifactId) {
-            propertyNameCalculator.addProject(p.group as String, cliArtifactId, p.version as String, cliArtifactId)
+        for (String companionProperty : project.ext.companionArtifactIdProperties) {
+            String companionArtifactId = p.findProperty(companionProperty)
+            if (companionArtifactId) {
+                propertyNameCalculator.addProject(p.group as String, companionArtifactId, p.version as String, companionArtifactId)
+            }
         }
     }
     propertyNameCalculator

@@ -63,6 +63,7 @@ class YamlSpec extends ApplicationContextSpec implements CommandOutputFixture {
         output["grails-app/conf/application.yml"].contains '''\
 info:
   app:
+    grailsVersion: '@info.app.grailsVersion@'
     name: '@info.app.name@'
 '''
         output["grails-app/conf/bootstrap.yml"] == '''\

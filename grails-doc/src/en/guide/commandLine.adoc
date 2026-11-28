@@ -17,64 +17,84 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails 3.0's command line system differs greatly from previous versions of Grails and features APIs for invoking Gradle for build related tasks, as well as performing code generation.
+Grails has one command line, the `grails` command. It creates projects, creates the classes of a project, adds features to a project and runs the build of a project, which is a https://gradle.org[Gradle] build. A generated project also has the Grails wrapper, `grailsw`, which downloads the command line of the version of Grails the project is on and takes the same commands.
 
 When you type:
 
-[source,groovy]
+[source,console]
 ----
-grails <<command name>>
-----
-
-Grails searches the https://central.sonatype.com/[profile repository] based on the profile of the current application. If the profile is for a web application then commands are read from the web profile and the base profile which it inherits from.
-
-Since command behavior is profile specific the web profile may provide different behavior for the `run-app` command then say a profile for running batch applications.
-
-When you type the following command:
-
-[source,groovy]
-----
-grails run-app
+$ grails <<command name>>
 ----
 
-It will first search the application, and then the profile for commands:
+the command is looked for among the commands of the command line itself, then among the tools the application and its plugins bring, and then among the scripts in `src/main/scripts` of the project (see "Tools of the Application and its Plugins" below). Which commands there are depends on the directory: outside a project there are the commands that create one, and in a project there are also the commands that work on it.
 
-* `PROJECT_HOME/src/main/scripts/run-app.groovy`
-* `&lt;profile&gt;/commands/run-app.groovy`
-* `&lt;profile&gt;/commands/run-app.yml`
+To get a list of the commands of the current directory, type:
 
-To get a list of all commands and some help about the available commands type:
-
-[source,bash]
+[source,console]
 ----
-grails help
+$ grails help
 ----
 
-which outputs usage instructions and the list of commands Grails is aware of:
+which shows how the command line is used and lists the commands with one line each:
 
-[source,bash]
+[source,console]
 ----
-grails <<environment>>* <<target>> <<arguments>>*'
-
-| Examples:
-$ grails dev run-app
-$ grails create-app books
-
-| Available Commands (type grails help 'command-name' for more info):
-| Command Name                          Command Description
-----------------------------------------------------------------------------------------------------
-clean                                   Cleans a Grails application's compiled sources
-compile                                 Compiles a Grails application
+Usage: grails [-hvVx] [--non-interactive] [--plain-output] [COMMAND]
+...
+Commands:
+  create-app              Creates an application
+  create-webapp           Creates an application; another name of create-app
+  create-plugin           Creates a Grails plugin
+  create-web-plugin       Creates a Grails plugin with a web layer
+  create-rest-api-plugin  Creates a Grails plugin with a REST API
+  create-restapi          Creates a REST API application
 ...
 ----
 
+`grails help NAME` and `grails NAME --help` show how the command `NAME` is used. If the command line is new to you, xref:commandLine#tour[A Tour from Install to Maintaining a Project] goes through it once from beginning to end before the sections that describe each part. Without a command, `grails` starts xref:commandLine#interactiveMode[interactive mode] in a project and shows the help elsewhere.
+
+An AI coding agent drives the same command line through `grails mcp`, which its MCP client starts in the directory of the project: the agent gets the commands of that directory and the tools of the application and its plugins as tools of its own, and each call runs the command a person would type, under the same rules. See xref:commandLine#mcp[Driving Grails from an AI Agent].
+
 NOTE: Refer to the Command Line reference in the Quick Reference menu of the reference guide for more information about individual commands
 
-=== Arguments
+Before Grails 9 there were two command lines, the Grails shell with its profiles and the Grails Forge CLI, and the `grails` command started one of them. The command line of Grails 9 is the one that was the Grails Forge CLI. This guide calls it the `grails` command or the command line, and keeps the name Grails Forge for the generator of projects and for its website. See "Commands of Earlier Versions" below for the commands of the shell, and link:applicationTypes.html#profilesReplaced[What Became of Profiles].
 
-The `grails` command is a front to a `gradle` invocation, because of this there can be unexpected side-effects.
-For example, when executing `grails -Dapp.foo=bar run-app` the `app.foo` system property won't be available to your application. This is because `bootRun` in your `build.gradle` configures the system properties.
-To make this work you can simply append all `System.properties` to `bootRun` in `build.gradle` like:
+=== The Environment and System Properties
+
+The commands that run the build of a project take the environment and system properties after their name, as `-Dname=value`:
+
+[source,console]
+----
+$ grails run-app -Dgrails.env=test
+$ grails assemble -Dgrails.env=staging
+----
+
+This holds for the commands of `grails` itself. A tool of the application or of a plugin (see "Tools of the Application and its Plugins" below) takes everything after its name as its own arguments, so a `-Dgrails.env=NAME` there does not select an environment. The tool runs in `development`, which is what `Environment.current` says in it and the environment of the application started around it, and is given the option among its arguments: `executionContext.commandLine.systemProperties` has it, and `args` does not. Before the build starts a warning on the standard error says so and names the way to run it in another environment, which is to give the environment to `run-tool` in front of the name of the tool:
+
+[source,console]
+----
+$ grails audit-report -Dgrails.env=production
+| Running the tool audit-report of com.example:my-plugin-cli:1.0.0, with the Gradle task runTool
+| Warning -Dgrails.env=... after the name of audit-report is given to the tool as an argument, and the tool runs for the environment development. To run it for another environment, name it before the tool: grails run-tool -Dgrails.env=production audit-report
+$ grails run-tool -Dgrails.env=production audit-report
+----
+
+The same holds for `run-tool` itself: after the name of the tool it runs, `-Dgrails.env=NAME` is an argument of that tool, and is not warned of. A script of the application (see xref:commandLine#creatingCustomScripts[Creating Custom Scripts]) is given `-Dgrails.env=NAME` after its name as an argument as well, which the script can read; it runs in the environment of the build, and nothing is said of it.
+
+An environment in front of the command, as in `grails test run-app` or `grails prod war` of earlier versions, is refused with exit code 2: what follows `grails` is the name of a command, and `test` and `prod` are none. The refusal ends with a line that says where the environment is given now and the command line to type, with `run-tool` in front of a tool of the application or of a plugin, as above. `dev`, `prod` and `test`, which the Grails shell read there, and `development` and `production` are answered this way, and none of them is read as the short form of a command; `test` alone, which was also another name of `test-app`, is answered with that (see "Commands of Earlier Versions" below):
+
+[source,console]
+----
+$ grails prod war
+There is no command prod. Did you mean: project?
+prod in front of a command named the environment production in the Grails shell. The environment now follows the command as -Dgrails.env=production. Type: grails war -Dgrails.env=production
+Usage: grails [-hvVx] [--non-interactive] [--plain-output] [COMMAND]
+Run 'grails help' for the commands
+----
+
+An option of a command in front of its name is a mistake in the command line as well.
+
+A `-D` option is a system property of the build. `bootRun` in your `build.gradle` configures the system properties of the application, so for the application to see such a property, append all `System.properties` to `bootRun` in `build.gradle` like:
 
 [source,groovy]
 ----
@@ -108,54 +128,135 @@ bootRun{
 }
 ----
 
+=== JVM Options, Memory and Environment Variables
 
-=== Non-interactive mode
+Three Java virtual machines are involved when a command of `grails` builds or runs a project, and each takes its JVM options (memory settings such as `-Xmx`, system properties, a proxy) from a different place.
 
+[cols="2,3,4"]
+|===
+|JVM |What runs in it |Where its options come from
 
-When you run a script manually, and it prompts you for information, you can answer the questions and continue running the script. But when you run a script as part of an automated process, for example a continuous integration build server, there's no way to "answer" the questions. So you can pass the `--non-interactive` switch to the script command to tell Grails to accept the default answer for any questions, for example whether to install a missing plugin.
+|The `grails` command
+|The command line itself: creating a project, the `create-*` commands, `feature add`, the interactive mode
+|The environment variables `GRAILS_OPTS` and `JAVA_OPTS`, for example `export GRAILS_OPTS="-Xmx512m -Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"`. The Grails wrapper (`grailsw`) reads `GRAILSW_OPTS` and `JAVA_OPTS` for the JVM that downloads and starts the command line. The Java that is used is that of `JAVA_HOME`, or the `java` on the path.
 
-For example:
+|The build
+|Gradle, which the commands that build, test and run a project start through the Gradle wrapper of the project, or in interactive mode ask for the build through the Gradle Tooling API (see link:commandLine.html#howGradleIsRun[How the `grails` Command Runs Gradle])
+|`org.gradle.jvmargs` in the `gradle.properties` of the project, for example `org.gradle.jvmargs=-Xmx2g`, whichever way the build is started. A `-Dname=value` after the name of a command is a system property of this JVM. The options of `GRAILS_OPTS` are not given to it, in interactive mode either: a build that is run through the Tooling API is given no system property of the JVM of `grails`. The build reads the variable only to give its options to the application and the tests.
 
-[source,groovy]
+|The application and the tests
+|The application that `run-app` starts, and the tests of `test-app`
+|The build of the project: `jvmArgs`, `maxHeapSize` and `systemProperty` of the `bootRun` task and of the test tasks in `build.gradle`, as shown above, and the options of the environment variable `GRAILS_OPTS`, which the Grails Gradle plugin gives to the application, to the tools of the application and to the tests, with either way of running the build. `GRAILS_FORK_OPTS`, when it is set, is given in the place of `GRAILS_OPTS`, so that the application can have other options than the `grails` command. `org.gradle.jvmargs` does not reach the application.
+|===
+
+The Grails Gradle plugin separates the options of `GRAILS_OPTS` and `GRAILS_FORK_OPTS` at spaces, tabs and line breaks, however many stand together, and does not read quotes, so an option whose value has a space in it is set in `build.gradle`. For `bootRun`, the tools of the application and the other `JavaExec` tasks, an `-Xms`, `-Xmx` or `-Dname=value` of the variable wins over `minHeapSize`, `maxHeapSize` and `systemProperty` of the task in `build.gradle`; for a test task, `minHeapSize`, `maxHeapSize` and `systemProperty` of the task win over the variable. Any other option comes before the `jvmArgs` of the task, and the JVM takes the last value it is given.
+
+The plugin starts the application and the tests with a heap of 768 MB, `-Xms768m -Xmx768m`, where their options do not name the heap themselves. The options of a task name the maximum with `maxHeapSize`, or with an `-Xmx` or `-XX:MaxHeapSize=` in its `jvmArgs` or in `GRAILS_OPTS` (`GRAILS_FORK_OPTS` when that is set), and the initial heap with `minHeapSize`, or with an `-Xms`, `-XX:InitialHeapSize=` or `-XX:MinHeapSize=` there; a value that a `doFirst` of the task sets as the task starts counts too.
+
+* Where the options name a maximum, the plugin gives no heap at all, and the JVM chooses an initial heap below that maximum itself: with `GRAILS_OPTS="-Xmx512m"` the application and the tests start with at most 512 MB. Set `minHeapSize = '768m'` beside a `maxHeapSize` of your own to keep the initial heap of the plugin.
+* Where they name only the initial heap, the plugin gives only its maximum, `-Xmx768m`, or the initial heap that is named when that is larger: `-Xms1g` alone starts the JVM with `-Xms1g -Xmx1g`. The JVM refuses an initial heap above its maximum, and the plugin never gives it one.
+
+In a test task, give the maximum with `maxHeapSize` or `-Xmx`: Gradle gives the JVM of a test task that has no `maxHeapSize` an `-Xmx512m` of its own, after the `jvmArgs` of the task, so that an `-XX:MaxHeapSize=` there does not take effect.
+
+An option that is meant for the `grails` command alone reaches the application too. Give the application options of its own in `GRAILS_FORK_OPTS`, or set the memory of the `grails` command in `JAVA_OPTS`, which the plugin does not give to the application:
+
+[source,bash]
 ----
-grails war --non-interactive
+export GRAILS_OPTS="-Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"
+export GRAILS_FORK_OPTS="-Xmx2g -Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"
 ----
 
+The scripts that start the command line (`grails` and `grails.bat`, and `grailsw` and `grailsw.bat` of the Grails wrapper) give its JVM one option of their own when they are started with a command: `-XX:TieredStopAtLevel=1`. A command is a short-lived process, and most of its time is the start of the JVM and the loading of classes. With the option the just-in-time compiler of the JVM stops at its first compiler (C1) and never starts the optimizing one (C2), which makes a command 15 to 20 percent faster and takes three quarters off the processor time of `create-app`. The price is that code which runs for long is significantly slower without the optimizing compiler. That does not matter for a command, and it does not reach a build, the tests or the application, which run in the other two JVMs of the table and are not given the option. Interactive mode and `grails mcp`, the two cases in which the JVM of `grails` runs for long, are not given it either: the scripts leave the option out when they are started without an argument, or with `--plain-output` alone (also given more than once), which is how interactive mode is started, and when the first argument that does not begin with `-` is `mcp`, as in `grails mcp` and `grails --plain-output mcp`. Any other argument, `--non-interactive` among them, is a command line that runs one command and ends, and is given the option. The option comes before the ones of `GRAILS_OPTS` and `JAVA_OPTS`, and the JVM takes the last value it is given, so the default of the JVM is restored with:
 
-
-The Grails Forge New Command-Line Interface (CLI) has undergone significant changes compared to its previous versions, primarily focusing on code generation. One notable alteration is the removal of APIs for invoking Gradle for tasks related to building using Gradle Tooling APIs. This shift in responsibility aligns with the framework's evolution and its integration with the Gradle build system.
-
-=== Accessing the Grails CLI
-
-The Grails CLI (Command Line Interface) can be swiftly and effortlessly accessed by simply typing the following command into your terminal or command prompt:
-
-[source,shell]
+[source,bash]
 ----
-grails
+export GRAILS_OPTS="-XX:TieredStopAtLevel=4"     # for grails
+export GRAILSW_OPTS="-XX:TieredStopAtLevel=4"    # for the Grails wrapper
 ----
 
-This command allows developers to quickly initiate the Grails CLI and begin working with the framework, making it an easy entry point for those looking to start their Grails projects.
+For the same reason the command line loads the classes it is about to use on a second thread while the command starts, where the computer has more than one processor. This changes nothing a command does or writes, and the JVM ends with the command whether that thread is done or not. It is turned off with the system property `grails.cli.preload`:
 
-The New Grails CLI! is the preferred method for initiating new Grails projects. This command-line interface offers various options for creating projects, enabling you to select your preferred build tools, test frameworks, GORM implementation, and more. Additionally, the CLI provides commands for generating essential components like controllers and domain classes.
+[source,bash]
+----
+export GRAILS_OPTS="-Dgrails.cli.preload=false"
+----
+
+The port of the application is an option of `run-app`: `grails run-app --port=8081`. The Grails environment of a project is `-Dgrails.env=NAME` after the name of the command, and where that is not given it is the command's own, such as `development` for `run-app`, `test` for `test-app` and `production` for `assemble`. The command line does not read the environment variable `GRAILS_ENV`, which is how an application that is started with `java -jar` or in a container is given its environment; see link:conf.html#environments[Environments].
+
+The command line and the Grails wrapper are compiled for Java 21, which an earlier Java cannot load. Before the scripts start Java, they read its version from the `release` file of its installation, `$JAVA_HOME/release` or that of the `java` on the path (through its links), which starts no JVM and costs nothing measurable. An earlier version is refused with a message that names the Java and the version that is needed, instead of the `UnsupportedClassVersionError` the JVM would end with, and exit code 1:
+
+[source,console]
+----
+$ ./grailsw --version
+
+ERROR: grailsw needs Java 21 or later, and JAVA_HOME (/opt/java/jdk-17.0.18) is Java 17.0.18.
+
+Please set the JAVA_HOME variable in your environment to the location of
+a Java 21 or later installation.
+----
+
+A JDK 8 that has no `release` file is told by its `rt.jar`. A Java whose installation the scripts cannot find, such as `/usr/bin/java` of macOS when `JAVA_HOME` is not set, is started as before.
+
+These are the environment variables the command line and the Grails wrapper read or set:
+
+[cols="2,5"]
+|===
+|Variable |Meaning
+
+|`JAVA_HOME`
+|The Java installation that runs the command line and the Grails wrapper, Java 21 or later. Without it the `java` on the path is used.
+
+|`GRAILS_OPTS`, `JAVA_OPTS`
+|JVM options of the `grails` command. They come after the option the script sets itself for a command (`-XX:TieredStopAtLevel=1`, see above), so a value given here is the one the JVM uses. The Grails Gradle plugin also gives the options of `GRAILS_OPTS` to the application and the tests that the build of a project starts, unless `GRAILS_FORK_OPTS` is set, whose options it gives them instead; see the table of the three JVMs above.
+
+|`GRAILSW_OPTS`
+|JVM options of the Grails wrapper, which come after that option in the same way.
+
+|`GRAILS_REPO_URL`
+|Maven repositories to use ahead of the default ones: by the Grails wrapper to find the command line, and in a project that is generated, in its build.
+
+|`GRAILS_WRAPPER_HOME`
+|The directory the Grails wrapper keeps the command line in, in the place of `.grails/wrapper` in the home directory of the user.
+
+|`GRAILS_WRAPPER_ALLOWED_TYPES`
+|The kinds of release the Grails wrapper may use, for example `SNAPSHOT,RC`.
+
+|`GRAILS_SAFE_DIRECTORY`
+|Directories of projects that are used although another user owns them; see "Commands of a project, in every directory of it" below.
+
+|`GRAILS_FORGE_CATALOG`
+|The catalogs of features of plugins the create commands read, separated by semicolons, or `none`. When it is set, it is read in the place of `GRAILS_PLUGIN_INDEX` by those commands.
+
+|`GRAILS_PLUGIN_INDEX`
+|The plugin index, one `https` or `file:` address, or `none`: what `list-plugins` and `plugin-info` read, and the feature catalog of the create commands when `GRAILS_FORGE_CATALOG` names none. The `--plugin-index` and `--feature-catalog` options of those commands come first. See <<findingPlugins,Finding Plugins>>.
+
+|`GRAILS_GRADLE_RUNNER`
+|How the commands run Gradle. `auto`, or no value: a command line that runs one command starts the Gradle wrapper of the project as a process, and interactive mode runs its builds through the Gradle Tooling API. `process`: every command starts the wrapper, in interactive mode too, which is the way out when a build does not run through the Tooling API. `tooling-api`: the commands that are a build are run through the Tooling API by a command line that runs one command as well. With any other value no build is run. See link:commandLine.html#howGradleIsRun[How the `grails` Command Runs Gradle].
+
+|`GRAILS_CLI_DIAGNOSTICS`
+|When `true`, the command line says on its error output how it runs each command: which way it runs Gradle and why, whether it made a connection to Gradle or reused one, whether it loaded its classes ahead, and whether the project generator runs and compiled templates. See link:commandLine.html#gradleRunnerDiagnostics[Seeing How a Command Runs].
+
+|`GRAILS_LIST_TOOLS`
+|When `false`, a name that is none of the commands of a project is refused at once, and `grails` does not run the build to list the tools of the application and its plugins for it. With any other value, or not set, it does. `GRAILS_LIST_COMMANDS`, the name of earlier builds of Grails 9, is no longer read. See "Tools of the Application and its Plugins" below.
+
+|`GRAILS_NON_INTERACTIVE`
+|Set to `true` by the command line for the build it starts when `--non-interactive` was given, so that a tool of the application or a script knows that nothing may wait for what a user types. The command line itself does not read it.
+
+|`NO_COLOR`
+|When set, the command line writes no colors.
+|===
 
 === The Grails Forge Website
 
-You can also begin your Grails application without the need to install the Grails CLI by visiting https://start.grails.org/[the Grails Forge website]. This web-based platform allows you to initiate Grails projects conveniently, bypassing the installation of the CLI.
+You can also begin your Grails application without the need to install the `grails` command by visiting https://start.grails.org/[the Grails Forge website]. It creates projects from the same application types and features as the `create-` commands.
 
-=== Understanding the New Grails Command-line Interface (CLI)
+=== The Record of a Project
 
-Once the Grails CLI has been successfully installed, you can activate it using the "grails" command. For example:
+A project generated by Grails 9 is recognizable by its `.grails` directory, which records how it was generated (see xref:commandLine#creatingProject[Creating a Grails Project]). The code generation commands read the application type, the default package and the features from there.
 
-[source,shell]
-----
-grails create-app myapp
-----
+A project generated by an earlier version has a "grails-forge-cli.yml" file at its root instead, with the application type, the default package and the features of the project. Before that the file was "grails-cli.yml", which is read as well. Grails 9 does not write this file. It reads one only for a project that has no `.grails` directory or whose `.grails` directory cannot be used. In a project with a `.grails` directory, a "grails-forge-cli.yml" that is there is not followed, and the commands warn when the two do not agree.
 
-A Grails framework CLI project is recognizable by the presence of the "grails-forge-cli.yml" file, which is automatically generated at the project's root if it was created using the CLI. This file contains information about the project's profile, default package, and other variables.
-
-The file was previously "grails-cli.yml", and that filename is backwards compatible for Grails Forge CLI.
-
-Here is an example of a "grails-forge-cli.yml" configuration for a default Grails web application:
+Here is an example of the "grails-forge-cli.yml" of a default Grails web application that an earlier version generated:
 
 [source,yaml]
 ----
@@ -193,7 +294,843 @@ features:
   - yaml
 ----
 
-This "grails-forge-cli.yml" configuration sets the default values for various aspects of the Grails web application, including the application type, default package, test framework, source language, build tool, GORM implementation, servlet implementation, and a list of enabled features.
+This "grails-forge-cli.yml" configuration records the application type, default package, source language, build tool, GORM implementation, servlet implementation, and the list of enabled features the application was generated with. In a project that was generated by an earlier version, which has no `.grails` directory, it is what sets these values for the code generation commands. In a project generated by Grails 9 the same is in `.grails/project.yml` and `.grails/forge.lock.yml`.
+
+An application that was created with the Grails shell of an earlier version has neither a `.grails` directory nor a "grails-forge-cli.yml". The commands that build and run it are there, but the code generation commands are not, and say that the project has no record that is read. link:{commandLineRef}project-migrate.html[project migrate] writes the record for such an application: it works out the type, the name, the default package and the features from the files of the project, says what it found and what it assumed, and writes the `.grails` directory and nothing else. The code generation commands are there afterwards, and so is `feature add`: the record has a copy of every file this version generates for an application of the type, the options and the features that were found, and a feature is added against it, with what the application has otherwise kept as a change of yours. For an application that an earlier version of Grails 9 generated, `project migrate` moves its record to the version that runs, after which `feature add` and `project regenerate` work with it. See "The record of an application that was not generated by Grails 9" in xref:commandLine#creatingProject[Creating a Grails Project], and link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] for the steps of an upgrade.
+
+=== Commands of a project, in every directory of it
+
+The commands that work on a project (the `create-*` code generation commands, `add-property`, `feature add`, `project show`, `project regenerate`, `project migrate`, `project health` and `gradle`) can be given in any directory of the project, not only in the one at its top. The project is the nearest directory, from the current one upwards, that has a `grails-app` directory, a `.grails` directory (with or without its `project.yml` and `forge.lock.yml`), a `grails-forge-cli.yml` or a `grails-cli.yml`. Its record is read there and the files are written there, so `create-controller Book` given in `grails-app/views` creates the same `grails-app/controllers/.../BookController.groovy` as when it is given at the top of the project, and the paths the commands report are relative to the project. The templates of the project are the ones under `src/main/templates` at its top too, which is also where `install-templates` copies them, wherever in the project the command is given. The search does not go above the root of the Git repository the directory is in, and stops at the first project it finds: in a project that lies inside another one, the commands are those of the inner project, and when the inner project has no record there are no code generation commands, rather than those of the project around it.
+
+=== In a Gradle Build of Several Projects
+
+A Grails application can be one project of a larger Gradle build: beside other applications, beside libraries, any number of directories below the root of the build. The commands work there as they do in an application that is a build of its own.
+
+[source]
+----
+acme/
+  settings.gradle        include 'apps:shop', 'apps:admin', 'libs:core'
+  gradlew
+  apps/shop/             a Grails application
+  apps/admin/            another one
+  libs/core/             a library, no Grails project
+----
+
+The root of the build is the nearest directory above the project that has a `settings.gradle` or a `settings.gradle.kts`, which is where Gradle itself takes the build to be; like the search for the project, the search does not go above the root of the Git repository. A project whose directory has settings of its own is a build of its own, also when another build includes it with `includeBuild`.
+
+* In the directory of an application or anywhere below it, every command is a command of that application: `create-controller` writes into it, `stats` counts it, `feature add` changes it, `run-app` starts it and `stop-app` stops it and no other. In `apps/shop`, or in `apps/shop/grails-app/views`, `run-app` is the application `shop`.
+* The Gradle that runs is the wrapper of the root of the build, since the build decides which Gradle it is built with. A wrapper that was left in the directory of the application is not run while the root has one.
+* The commands that are a Gradle build name their tasks by the path of the project: `compile` in `apps/shop` runs `:apps:shop:classes`, `run-app` runs `:apps:shop:bootRun`, `test-app` runs `:apps:shop:testApp`, which is the test phases of that project and of no other. So the task of this project runs, and not the task of the same name of a project beside it or below it. A project that is itself the root of a build, which a `settings.gradle` or `settings.gradle.kts` in its directory makes it, has its tasks named as those of the root (`:classes`, `:bootRun`, `:runTool`) for the same reason: Gradle runs a task that is named without a path in every project of the build that has one of the name, so a plugin that the settings of an application include would be compiled, run or given the tool with the application. The path is the one the directories give, which is the path of a project that is included by its directory (`include 'apps:shop'`). The settings are what Gradle takes for them: a file of that name, or a symbolic link that leads to a file, which Gradle follows. A link that leads to nothing is no settings file, for Gradle and for `grails`, and the project is then a part of the build above it.
+* Gradle checks that path before it runs anything: in front of the tasks it is given an init script, `.grails/run/project-path.gradle` in the project, which fails the build before any project is configured when the project Gradle made for that path is not in the directory of the project. The project compared is the one Gradle made once the settings were read and every callback they register had run, so settings that move projects in a callback, such as `gradle.settingsEvaluated { ... }`, are checked as settings that move them directly are. A build can give the directory another path, and the path to another directory (`project(':shop').projectDir = file('apps/shop')` together with `project(':apps:shop').projectDir = file('legacy/shop')`): Gradle would then run the tasks of the other project, which can be another application whose tests pass. Instead nothing is run, and Gradle says which project the directory is and how to run its task:
++
+[source]
+----
+The Grails command line ran Gradle for the project in /work/acme/apps/shop and named its tasks by the path its directories give, :apps:shop, but in this build the project in that directory is :shop (and :apps:shop is the project in /work/acme/legacy/shop). Nothing was run, so that no task of another project runs in its place. Run the task of this project by its path yourself, as in: grails gradle :shop:testApp
+----
++
+A directory that the settings do not include is refused as well: Gradle itself says that the directory is not part of the build before the script is asked, and the command adds the line that includes it (`include 'apps:shop'`). A project that is the root of a build of its own is checked too, since its settings can put the root project in another directory (`rootProject.projectDir`). `gradle`, which names no project, is not checked: it runs Gradle as it is, also in such a build. The script is written to `.grails/run`, which only you can write to, when it is not there as it is to be; it is the same for every build of the project, so the configuration cache of Gradle is reused, and it adds no time to a build that could be measured. A build that reuses an entry of the configuration cache runs no script: Gradle reuses only an entry that a build which passed the check stored, and not once the settings have changed. Because it is an option of Gradle, it comes before what follows `--`, which can end the options of Gradle with a `--` of its own (`grails compile -- -- helpful` runs the task `helpful` after `classes`). When it cannot be written, the command says why and runs nothing.
+* `gradle` runs Gradle in the directory of the project with the arguments as they are, so an unqualified task name is, as always with Gradle, the task of that project and of the projects below it.
+* A root above the current directory is used under the rule for a project above it: its directory, its `settings.gradle`, its wrapper script and the jar and properties of the wrapper have to be your own, and the directory must not be writable by everybody. `GRAILS_SAFE_DIRECTORY` names a root that is to be used all the same.
+
+At the root of the build, or in a directory of it that is in no Grails project, such as `libs/core`:
+
+* `gradle` works, because Gradle does: at the root, `gradle build` builds every project.
+* A command of a project is not run from there for one of the projects, and there is no option that names the project: this is a limitation for now. The command does not guess which project is meant; it names the Grails projects of the build, says to run it in the directory of the one that is meant, and ends with exit code 1:
++
+[source]
+----
+| Error compile is a command of a Grails project; /work/acme is the root of a Gradle build and is no Grails project itself. The Grails projects of the build: apps/admin, apps/shop. Run the command in the directory of the one that is meant, as in: cd apps/admin
+----
++
+The projects are looked for by the names of directories only, five directories deep, not inside `build`, `out`, `target`, `node_modules` or a directory whose name begins with a dot, and at most ten are named.
+
+To create an application in an existing build, see the `--subproject` option of the `create-` commands.
+
+=== Short forms of commands
+
+The name of a command can be shortened to the first letters of its words, or to the start of each of its words:
+
+[source,console]
+----
+$ grails ra                      <1>
+$ grails cdc Book                <2>
+$ grails ccon Book               <3>
+$ grails cA com.example.myapp    <4>
+$ grails f a grails-quartz       <5>
+----
+<1> `run-app`
+<2> `create-domain-class`
+<3> `create-controller`: more of the second word, which `cc` is short for as well
+<4> `create-app`: the start of every word after the first in upper case, as the Grails shell took it
+<5> `feature add`: the command of a command has a short form too
+
+A short form is read in the following order, and the first reading that fits a command is the one that counts:
+
+. The name of a command, or another name it has, is that command, also when it happens to be the short form of another one. `run` and `stop` are other names of `run-app` and `stop-app`, as in the Grails shell.
+. At the top of the command line, a name a command of the Grails shell had that is gone or has another name now, such as `test`, `open` or `list-profiles`, is answered with what there is in its place (see <<commandsOfEarlierVersions,Commands of Earlier Versions>>) and is never read as a short form.
+. The rule the Grails shell went by: the form is cut into parts before every upper-case letter and at every hyphen, there have to be as many parts as the name has words, and each part is the start of its word, whatever its case. `cA`, `creA`, `creat-app` and `CA` are all `create-app`. A form of lower-case letters only is one part, so here it is the start of the name of a command of one word: `h` is `help`, `cl` is `clean`.
+. A form of lower-case letters only that starts no such name is read as the first letters of the words of a name: `ra` is `run-app`, `sa` is `stop-app`, `cdc` is `create-domain-class`.
+. Failing that, a form of lower-case letters only is cut into as many parts as the name has words, each part the start of its word and the parts in the order of the words: `runa`, `rapp` and `runapp` are `run-app`, `ccon` is `create-controller`.
+
+A short form is looked up among the commands of `grails` itself first, then among the commands the features of the project give it, then among the tools of the application and its plugins, and the first of the three that has a command or a tool it fits is the one that counts: `cdc` stays `create-domain-class` in a project where a feature has a `create-domain-check`.
+
+Upper case and hyphens say where the words begin, so a form that has them is read by the rule of the Grails shell alone. A short form has nothing but letters and hyphens in it. A form is read against the other names of a command as well, so `w` is `war` and so `assemble`, except another name that is the first word of the name of its command: `run` and `stop` are short for nothing, as the Grails shell read no short form of them, because what starts `run` starts `run-script` and `run-tool` too. Some forms and what they are:
+
+[cols="2,3,5"]
+|===
+|Typed |Command |Why
+
+|`ra`, `rA`, `RA`, `r-a`
+|`run-app`
+|The first letters of the words.
+
+|`runa`, `rapp`, `runapp`
+|`run-app`
+|More of a word, or of every word.
+
+|`cdc`, `cDC`
+|`create-domain-class`
+|The first letters of the words.
+
+|`crc`
+|`create-restful-controller`
+|The first letters of the words come before every other cut, although `cr` and `c` start the words of `create-controller` too.
+
+|`h`, `he`
+|`help`
+|The start of the name of a command of one word.
+
+|`w`, `wa`
+|`assemble`
+|The start of `war`, another name of `assemble`.
+
+|`st`
+|`stats`
+|The start of the name of a command of one word. `stop`, another name of `stop-app`, is short for nothing.
+
+|`r`, `ru`, `sto`
+|none
+|`run` and `stop` are names of `run-app` and `stop-app` only when they are typed whole: `ru` starts `run-script` and `run-tool` as much as `run`.
+
+|`cTo`, `cto`
+|none
+|`create-tool` has no short form, and `cT` and `ct` are `create-taglib`: the tool is only run when it is typed with its whole name.
+
+|`Ra`
+|none
+|An upper-case letter starts a word, so `Ra` is one part, and no command of one word starts with it.
+
+|`fa`
+|none
+|A short form stands for one name: `f a` is `feature add`, and no command has two words that start with `f` and `a`.
+|===
+
+* When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits, each with the shortest form of lower-case letters that fits it alone, and ends with exit code 2: `co is short for more than one command: compile (com), console (con)`. Type more of the name, or that form. Where the Grails shell ran the first command that fits, `grails` asks. In a project this happens with the short forms that come to mind first: `s` fits `stats` and `shell`, `co` fits `compile` and `console`, and `c` fits `compile`, `clean` and `console`. `create-tool` has no short form: it is only ever typed with its whole name, so `cT` and `ct` are `create-taglib` as in Grails 8, `cTo` and `cto` are no command, and `cC` and `cc` are `create-controller`. `run-tool` has them: `rt` and `rc` are `run-tool`.
+* The help of a command, `grails help NAME` and `NAME --help`, ends its description with the shortest form that is that command, as `Short form: ra` for `run-app` and `Short form: f a` for `feature add`. Which form that is depends on the commands of the directory: it is worked out when the help is shown.
+* Only the name of a command is ever looked at, never what follows it: in `create-app cA` the application is called `cA`, and everything after `gradle` reaches Gradle as it was typed.
+* What stands where a command is expected and is neither a command nor the short form of one is refused with exit code 2, together with the commands that are most like it, one line that shows how the command line is used, and `Run 'grails help' for the commands`. The commands it nearly is the short form of come first: one letter more, one less, one other or two the other way round, the first letter kept, so `grails rn` offers `run-app`, `run-script` and `run-tool`, and `grails Ra` offers `run-app`. The same holds for every mistake in the use of a command: what is wrong, the one line of the usage of that command, and where its help is. The help itself is shown by `help` and `--help`. After `--help` or `--version` (`-h`, `-V`) it is not looked at: `grails --help anything` shows the help.
+
+=== Help
+
+`grails help NAME` shows how the command `NAME` is used, for every command there is in the current directory, and the name can be shortened too. Without a name, `help` lists the commands there are:
+
+[source,console]
+----
+$ grails help
+$ grails help create-app
+$ grails help feature add
+$ grails help gradle
+$ grails help audit-report
+----
+
+`help` never runs anything to answer: not the build of the project, and not the command it describes. That holds for the tools of the application and its plugins and for the scripts of the application as well, which it describes from what the build listed of them (see "Tools of the Application and its Plugins" below): their description, where they come from, and how they are run, and for a tool that declares them its options and parameters, as for a command of `grails`.
+
+Every command of `grails` itself also shows its help when it is given `--help` (`-h`): `grails create-app --help` is `grails help create-app`. Three kinds of commands give everything after their name to something else, and `--help` with it, so for them `--help` is not the help of `grails`:
+
+* `gradle --help` is the help of Gradle. `help gradle` is the help of the `gradle` command.
+* `run-tool NAME --help` gives `--help` to the tool `NAME`: a tool that declares no option and no parameter runs with it, and one that declares them refuses it as an option it does not have.
+* `NAME --help`, for a tool of the application or of a plugin that declares no option and no parameter, or for a script of the application, runs that tool with `--help` as its argument: what it does with it is up to the tool, and the build is started for it unless it is a standalone tool. `help NAME` is the way to ask about such a tool. A tool that declares its options or parameters answers `NAME --help` with the help of the command line, as `help NAME` does, and runs nothing; so does `-h`, unless the tool declares `-h` itself.
+
+In a project, `help` lists the commands and the tools of the project as well, in every directory of it. A command there is not ends `help` with exit code 2.
+
+The usage of every command is laid out for a width of 100 columns, and the list of commands shows the first sentence of the description of each.
+
+`help --json` writes the commands of the current directory as one JSON document on one line of the standard output, and nothing else, for an editor or another tool to read:
+
+[source,json]
+----
+{
+  "format": 1,
+  "complete": true,
+  "diagnostics": [],
+  "projectDirectory": "/home/me/myapp",
+  "options": [
+    { "names": ["--plain-output"], "arity": "0", "type": "boolean", "label": null, "required": false, "description": "Write plain text for a program to read: no colour or other terminal markup, and no progress display of Gradle.",
+      "repeatable": false, "split": null, "choices": null, "default": null }
+  ],
+  "commands": [
+    {
+      "name": "create-controller",
+      "aliases": [],
+      "description": "Creates a Grails Controller",
+      "project": true,
+      "origin": "built-in",
+      "options": [
+        { "names": ["-f", "--force"], "arity": "0", "type": "boolean", "label": null, "required": false, "description": "Whether to overwrite existing files",
+          "repeatable": false, "split": null, "choices": null, "default": null }
+      ],
+      "parameters": [
+        { "label": "CONTROLLER-NAME", "arity": "1", "type": "string", "description": "The name of the controller to create", "repeatable": false, "split": null, "choices": null }
+      ],
+      "relations": [],
+      "commands": []
+    }
+  ]
+}
+----
+
+`run-app` has, among others, the option `{ "names": ["--ready-timeout"], "arity": "1", "label": "SECONDS", ..., "default": "300" }` and the rule `{ "kind": "exclusive", "members": ["--detach", "--foreground"], "required": false }`; the `--servlet` option of `create-app` has `"choices": ["tomcat", "jetty", "undertow", "none"]`.
+
+[cols="1,3"]
+|===
+| Member | Meaning
+
+| `format`
+| The version of the document, `1`. It changes only when a reader of the earlier version would misread the document; members can be added without it changing, so a reader ignores the members it does not know.
+
+| `complete`, `diagnostics`
+| `complete` is `false` when not every command of the directory could be found, and `diagnostics` then says why, one line each: that the record of the project cannot be used, or that the project above the current directory is not your own and is not used (see the section on running Gradle with the `grails` command), in which cases the code generation commands are missing. `diagnostics` can also have a line when `complete` is `true`: a warning about a record that is used, for example that `grails-forge-cli.yml` was changed and no longer says what `.grails` says. In a project, `complete` is also `false` while the build has not listed the tools of the application and its plugins, may list them differently now, or could not list every one of them, as when the runtime class path of the project does not resolve (see the section on the tools of the application and its plugins below); a tool of the application that is not there because the `grails` command has a command by its name is a line of `diagnostics` and leaves `complete` as it is.
+
+| `projectDirectory`
+| The directory of the project the current directory is in, or `null` outside a project.
+
+| `options` of the document
+| The options the command line itself takes in front of a command, described like the options of a command: `--plain-output` and `--non-interactive` among them (see the next section).
+
+| `commands`
+| The commands, and in a project the tools, in the order `help` lists them. `name` is what is typed, `aliases` are other names of the command, `description` is one line of plain text, `project` says whether the command works on a project and cannot be used outside one, `origin` says where the command comes from (`built-in` for the commands of the command line itself, `feature:` and the name of the feature for a `create-` command a feature of the project gives, which comes after the commands of the command line itself), and `commands` holds the commands of the command, described in the same way. The tools of the application and its plugins come after the commands of `grails`, in the same list, so that a program that completes what can be typed has one list. Their `origin` is `application`, the coordinates `group:artifact:version` of the artifact the tool comes from, or `file:` and the name of a jar; they also have `target`, `startsApplication`, `registration` and, where something of the tool is deprecated, `deprecated`. `target` and `startsApplication` say how the tool is run: `target` `application` is a tool the build runs, with the application started around it when `startsApplication` is `true` and without it when it is `false`, and `target` `standalone` is a tool the `grails` command line starts as a Java process of its own, without Gradle, whose `startsApplication` is `false`. `registration` is as the build of the project says it, and `deprecated` lists `type` for a class that implements `ApplicationCommand` or `GrailsApplicationCommand` and `folder` for a tool in `grails-app/commands` (see xref:commandLine#creatingTools[Creating Tools]). A script of the application comes after them, with the `origin` `application`, the `target` `application`, `startsApplication` `false`, because the build runs it without the application, the `registration` `script` and an empty `description`. A tool also has what it declares, as the members `options`, `parameters`, `hints` and `readsInput` below say, and `incomplete` where the compiler found something it does not declare. The members of a tool come in this order: `name`, `aliases`, `description`, `project`, `origin`, `target`, `startsApplication`, `registration`, `deprecated` where it is there, then `options`, `parameters`, `hints` (the four booleans of `@ToolHints`), `readsInput` (`true` for a tool that reads what is typed) and `incomplete` (which of `description`, `arguments` and `hints` the tool lacks), each only where it says something, and `commands`.
+
+| `deprecatedNames`
+| The names of a command of `grails` that still work and are deprecated: `["run-command"]` on `run-tool`, whose `aliases` have it as well, and `["run-script"]` on `run-script`, which is deprecated itself. The command line warns that the name is deprecated when one is typed. A command that has no deprecated name has no `deprecatedNames`. `run-command` is no entry of `commands` of its own. A program that completes what can be typed offers the name of the command and not these.
+
+| `options`
+| The options of the command: all the `names` of an option, the `label` of its value (`null` for an option that takes none), whether it is `required`, its `arity`, and what the members below say of it. The options are sorted by name, in every language: by the longest name of each without its hyphens, ignoring case. A tool of the application or of a plugin has the `options` and `parameters` it declares with `@ToolOption` and `@ToolParameter` (see xref:commandLine#creatingTools[Creating Tools]), with every member a command's have and its options in the same order, and no `relations`; a tool that declares none has neither, and takes whatever it is given. An option of `run-app` that the application or one of its plugins declares has three members more: `origin`, the artifact that declares it or `application`, `property`, the property of the application it sets, and for a switch `value`, what it sets the property to (see link:commandLine.html#declaredRunAppOptions[Options the application and its plugins declare]).
+
+| `repeatable`
+| Whether an option or a parameter can be given more than once, each time with a value that is added to those before, as `--features` and `-D` can.
+
+| `split`
+| The text that separates several values given in one, as `","` for `--features cache,postgres`; `null` for an option or a parameter that takes one value each time it is given.
+
+| `choices`
+| Every value an option or a parameter takes, where those are all it takes, as for `--servlet`, `--data`, `--reloading` and the `--type` of `project migrate`; `null` where any value is taken. The features are never listed here, because the generator knows them and the document is written without it: `--list-features` of the create commands and `feature list` list them.
+
+| `caseInsensitive`
+| `true` where an option or a parameter of a tool of the application or of a plugin takes its `choices` in any case, as `--views` of `generate-views` takes `JSON` for `json`. It follows `choices`, and is there only where it is `true`.
+
+| `default`
+| For an option that takes a value, the value the command declares it has when it is not given, as `"300"` for `--ready-timeout` of `run-app`; `null` where the command declares none, and for an option that takes no value. A default that depends on the project, as the environment of a command that runs the build, is said in the description.
+
+| `type`
+| The type of the value an option or a parameter takes, as a program that offers or checks a value goes by it: `boolean` for an option that takes no value, `map` for an option whose values are `name=value` pairs, as those of `-D`, and otherwise `string`, `integer` or `number`. A value of an enum is a `string`, with its `choices`. It follows `arity`. `grails mcp` makes the type of each property of the input schema of a tool from it (see xref:commandLine#mcp[Driving Grails from an AI Agent]).
+
+| `parameters`
+| What the command takes besides options, in the order it is given, each with its `label`, `arity`, `repeatable`, `split`, `choices` and `type`, and `caseInsensitive` where it is `true`.
+
+| `hints`
+| What a tool of the application or of a plugin says it does, where it declares it with `@ToolHints`: the four booleans `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint` (see xref:commandLine#creatingTools[Creating Tools]). A tool without `hints` is taken to have the most cautious ones: it changes something, may destroy something, does not give the same result twice, and reaches beyond the project.
+
+| `readsInput`
+| `true` for a tool of the application or of a plugin that declares that it reads what is typed: `--non-interactive` refuses it, and `grails mcp` does not offer it.
+
+| `incomplete`
+| What the compiler found that a tool of the application or of a plugin does not declare, as a list of `description`, `arguments` (it reads its arguments without declaring them) and `hints`. `help NAME` says so, and `grails mcp` adds a sentence to the description of the tool.
+
+| `relations`
+| The rules the command holds its options and parameters to beyond what each takes, which it refuses a command line that breaks as a mistake (exit code 2). Each has a `kind` and its `members`, an option by its longest name or a parameter by its label. With the `kind` `exclusive` at most one of the members is given, and exactly one when `required` is `true`: `--detach` and `--foreground` of `run-app`, or `--output` and `--diff` of `project regenerate`. With the `kind` `requires`, a member is given only together with every one of `requires`: `--force` of `project regenerate` with `--output`. A command without such rules has an empty list.
+
+| `arity`
+| How many values are taken, as text: one number (`"0"`, `"1"`), or a least and a most number with `..` between them (`"0..1"`), where `*` stands for any number (`"1..*"`).
+|===
+
+[[shellCompletion]]
+=== Completion in a Shell
+
+The binary distribution has a completion script for bash and zsh, `bin/grails_completion`. Loaded into the shell, it completes on the TAB key the commands of `grails` itself, the commands of a project among them, their options, the values of an option that takes one of a few (`--servlet`, `--data`, `--reloading`, `--type`), and the names of features for `--features` of the create commands and for `feature add`, `feature diff`, `feature show` and `feature info`. Load it in the file the shell reads when it starts. SDKMAN sets `GRAILS_HOME` to the version in use; with the zip of the distribution it is the directory it was unpacked to.
+
+In bash, in `~/.bashrc`:
+
+[source,bash]
+----
+source "$GRAILS_HOME/bin/grails_completion"
+----
+
+In zsh, in `~/.zshrc`, through the support zsh has for completion scripts of bash:
+
+[source,bash]
+----
+autoload -U +X compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+source "$GRAILS_HOME/bin/grails_completion"
+----
+
+The script is written when the distribution is built, so it knows the commands and the features of that version of Grails and nothing of a project: it does not offer the tools of the application and its plugins or the `create-` commands a feature of the project gives it, and it offers to `feature add` every feature of Grails, also one the project has already. The interactive console completes from the project of the current directory: there `feature add` is offered the features the project does not have, and the tools of the application and its plugins, and the commands of its features, are completed by their names. There is no completion script for other shells, such as fish or PowerShell.
+
+=== Output for a Program, and Running Without a User
+
+Two options belong to the command line itself and not to one command. They are given in front of the command, and are accepted after the name of a command too:
+
+[source,console]
+----
+$ grails --plain-output --non-interactive compile
+$ grails test-app --plain-output
+----
+
+[cols="1,3"]
+|===
+| Option | What it does
+
+| `--plain-output`
+| Everything is written as plain text, line by line: no colour and no other markup of a terminal, in the help, in the messages (`\| Error`, `\| Warning`) and in what a command reports. Gradle is run with `--console=plain`, so it shows no progress display and writes every line once; when the command line names a console itself, as in `gradle build --console=rich`, that one is used.
+
+| `--non-interactive`
+| Nothing waits for what a user types. Without a command the help is shown and the interactive console is not started. `shell`, which reads what is typed until it is left, and `console`, which opens a window and stays with it, are refused with exit code 2, and so is a tool of the application or of a plugin that declares that it reads what is typed (`readsInput`, see xref:commandLine#creatingTools[Creating Tools]), with the line `NAME reads what is typed, and --non-interactive gives it nothing to read`. Every build the command line starts is given an input that has ended in place of the input of the command line, so a build, a test, a script or a tool of the application that reads its input reads its end at once and does not wait; and it is told through the environment variable `GRAILS_NON_INTERACTIVE`, which is `true` for it and for what it starts, so that a tool or a script of your own can ask nothing where it would ask.
+|===
+
+Without `--plain-output` the output is plain as well wherever it is not a terminal, such as a file or a pipe, and when the environment variable `NO_COLOR` is set. The option is for the cases in which that cannot be relied on: a program that reads the output through a terminal of its own.
+
+The options are not taken after `gradle`, after the name of a tool of the application or of a plugin, after the name of the tool that `run-tool` runs, or after `--`: everything there is given to Gradle or to the tool as it was typed. `grails --plain-output gradle build` and `grails run-tool --plain-output NAME` are the forms for those.
+
+In front of the name of a command only the options of the command line itself are taken: these two, `-h`, `-V`, `-x` (`--stacktrace`) and `-v` (`--verbose`). An option of a command, such as `-Dname=value`, belongs after the name of that command and is a mistake in front of it. The forms with one dash the Grails shell took there, `-version`, `-verbose`, `-stacktrace`, `-plain-output` and `-non-interactive`, are refused with exit code 2 and a line that says what is typed now, as `grails has no option -version since Grails 9: --version or -V shows the version, and -v is --verbose`. `-x` in front of a tool of the application or of a script asks the build for the full stack trace, as it does for the commands that are a build; `-v` in front of one of those, or of `gradle`, changes nothing, because what follows their names is all they pass on: give Gradle its own options after `gradle`.
+
+==== What a Command Starts
+
+The help, `help --json`, the version, the refusal of a command there is not or of a mistake in the command line, the commands that run the build of the project (`gradle`, `compile`, `clean`, `test-app`, `run-app` and the others) and the commands that create the classes of an application start nothing but the command line itself. Only the commands that generate from the features of Grails, or list or look up those features, start the project generator, when they run: `create-app` and the other commands that create an application, their `--help`, `help` with their name and `--list-features`, which list the features, `feature add`, `feature list`, `feature find`, `feature show`, `feature diff`, `project regenerate`, and `project migrate` once it has found the project and nothing refuses it. So the commands of the first kind answer at once, and they keep working when the generator cannot be started; a command that needs it then says so in one line and ends with exit code 1. Most of the time of a command of the second kind goes to starting the generator, so the command line loads the classes of the generator ahead on a second thread when it is given one of these commands by its name, as described under JVM Options, Memory and Environment Variables above.
+
+`grails mcp` starts nothing but the command line itself either: it reads the commands of its directory as `help --json` does, and answers its client at once. Like interactive mode, it keeps what its calls start for the whole session: the first call that runs a build opens one connection to Gradle, through the Gradle Tooling API, and the first call that needs the generator starts it, and the calls after them use both. See xref:commandLine#mcp[Driving Grails from an AI Agent].
+
+After a mistake in the command line of a command that creates an application, one line shows how the command is used, and the features are not listed: `--list-features` and `--help` have them.
+
+`help --json` never lists the features in the description of `--features`, for the same reason: a tool asks `--list-features` for them.
+
+==== Starting the Command Line from a Tool
+
+An IDE, a script or a build that starts the Grails command line itself, without the `grails` script of the distribution, uses the artifact `org.apache.grails:grails-cli` of the version of Grails with its dependencies, and the class the `Main-Class` attribute of the manifest of its jar names: `org.apache.grails.forge.cli.GrailsCli`. A tool that starts more than one version of Grails reads the name from the manifest rather than keeping it. The dependencies are on Maven Central, except `org.gradle:gradle-tooling-api`, with which the command line runs Gradle: Gradle publishes it to its own repository, `https://repo.gradle.org/gradle/libs-releases`.
+
+As a program, the JVM ends with the exit code of the command:
+
+[source,console]
+----
+$ java -cp <the class path of org.apache.grails:grails-cli> org.apache.grails.forge.cli.GrailsCli --plain-output --non-interactive help --json
+----
+
+In a JVM of your own, a program calls `execute`, which returns the exit code. The program is compiled against the artifact that has the class, `org.apache.grails.forge:grails-forge-cli` of the version of Grails, whose jar has the module name `org.apache.grails.forge.cli`. `GrailsCli` is written in Groovy, so Groovy comes with it onto the class path the program is compiled against. `org.apache.grails:grails-cli` has `grails-forge-cli` among its dependencies at run time only: its own class, which the Grails wrapper starts, needs nothing but the JDK, and a program that is compiled against `grails-cli` does not find `GrailsCli`.
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.gradle.org/gradle/libs-releases' } // org.gradle:gradle-tooling-api
+}
+
+dependencies {
+    implementation "org.apache.grails.forge:grails-forge-cli:{version}"
+}
+----
+
+[source,groovy]
+----
+int exitCode = org.apache.grails.forge.cli.GrailsCli.execute('--plain-output', 'create-app', 'com.example.myapp')
+----
+
+`grails-forge-cli` brings `org.slf4j:slf4j-nop` at run time, so that the command line logs nothing through SLF4J. A program that has an SLF4J provider of its own excludes that module, so that SLF4J finds one provider.
+
+`grails-forge-cli` also brings the MCP Java SDK (`io.modelcontextprotocol.sdk:mcp`), which `grails mcp` serves the protocol with, and what the SDK needs: Reactor (`io.projectreactor`) and Jackson 3 (`tools.jackson`). Their versions are those the Grails BOM manages, which are the ones an application that uses Spring AI gets. Nothing else of the command line uses them, so a program that never runs `mcp` can leave the three groups out:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+dependencies {
+    implementation("org.apache.grails.forge:grails-forge-cli:{version}") {
+        exclude group: 'io.modelcontextprotocol.sdk'
+        exclude group: 'io.projectreactor'
+        exclude group: 'tools.jackson'
+    }
+}
+----
+
+`mcp` cannot be run through `execute` in any case, since it needs the standard input and output of a process of its own: it is refused there with exit code 1.
+
+Started this way the command line is called `grails` in its help, and takes the commands of this chapter as they are given here. Without a command it starts the interactive console in a Grails project and shows the help elsewhere, and always the help with `--non-interactive`. `execute` runs one command line at a time, in the current directory of the JVM, and writes to the standard output and the standard error of the JVM.
+
+A program that calls `execute` in a JVM of its own passes `--non-interactive`: without it, a command line that names no command starts the interactive console in the JVM of the caller, on its terminal. Where that happens all the same, the interrupt of the terminal does not end the JVM as it does for the `grails` program: the console ends when the command that runs has ended, and `execute` returns 130. When `execute` returns, the JVM is as it was: the system properties that starting the project generator sets (`grails.env` among them) are put back unless the program has changed them in the meantime, no shutdown hook is left, and `picocli.ansi`, which `--plain-output` sets for the run, has the value it had, or the one the program gave it during the run. A start of the generator that failed has set `grails.env` to `production` before it failed, which the generator always runs as: that is put back as soon as the start has failed, unless something else has set it again, so a command that fails for that reason leaves the environment as it was too. What the interactive console started for its session has ended: the applications that `run-app` started there without `--detach` are stopped before `execute` returns, and those that `run-app --detach` started go on, as they do after the `grails` program has ended.
+
+The exit code says what happened:
+
+[cols="1,4"]
+|===
+| Exit code | Meaning
+
+| `0`
+| The command did what it was asked to.
+
+| `2`
+| The command line was wrong: a command there is not, a short form of more than one command, an option or a value the command does not take, features that cannot be had together, an argument that a tool which declares its options and parameters does not take, a tool that reads what is typed under `--non-interactive`. The standard error says what was wrong, then in one line how the command is used, then how to see its help (`Run 'grails help create-app' for the options`); the whole help is shown by `help` and `--help` only.
+
+| `1`
+| Any other failure, with one line on the standard error that says why: a build that failed, a directory that is no project, a file that cannot be written, a generator that cannot be started. Every command that works on a project says the same outside one, whether it builds, creates a class or adds a feature: `create-controller is a command of a Grails project; there is none in /home/me or above it`.
+|===
+
+[[changeResultsForAProgram]]
+==== The Result of `feature add` and `project regenerate` for a Program
+
+A tool that checks whether a project still is what was generated, or what adding a feature would do to it, gives `--json` to the two commands that compare a project with its record: `feature add --dry-run --json` and `project regenerate --diff --json`. The command then writes one JSON document on one line of the standard output, and nothing else: no line for a person, and nothing on the standard error. The document says what the command came to as an `outcome` and a `reason`, which tell apart what the exit code does not: a comparison that found changes, a merge that has conflicts, a record of the project that cannot be used, and a command that failed. `--json` is taken with `--dry-run` or `--diff` only; given without it, or `feature add --json` with `--diff`, it is a mistake in the command line, which is said on the standard error with exit code 2 and no document, as is an option the command does not have.
+
+[source,json]
+----
+{"format":1,"command":"feature add","projectDirectory":"/home/me/shop","outcome":"changes","reason":null,"message":null,"hasChanges":true,"applicable":true,
+ "requested":["postgres"],"alreadyPresent":[],"added":["postgres","testcontainers"],"replaced":["h2"],
+ "replacements":["postgres replaces h2, the default of the group database-driver"],"lostFeatures":[],"changedOptions":[],
+ "files":[{"path":"README.md","action":"update","reason":null,"details":[]},{"path":"build.gradle","action":"update","reason":null,"details":[]},
+          {"path":"grails-app/conf/application.yml","action":"update","reason":null,"details":[]},
+          {"path":"src/test/resources/application-test.yml","action":"add","reason":null,"details":[]}],"notes":[],"instructions":[]}
+----
+
+The document is written on one line; it is shown on several here. Both documents begin with the same members, always in the same order, and every member is always there: one that does not apply is `null`.
+
+[cols="1,3"]
+|===
+| Member | Meaning
+
+| `format`
+| The version of the document, `1`. It changes only when a reader of the earlier version would misread the document; members can be added at the end without it changing, so a reader ignores the members it does not know.
+
+| `command`
+| `feature add` or `project regenerate`.
+
+| `projectDirectory`
+| The directory of the project the current directory is in, or `null` when there is none.
+
+| `outcome`
+| What the command came to, one of the outcomes below.
+
+| `reason`
+| Why, as one of the reasons below, for every outcome but `no-changes` and `changes`, for which it is `null`.
+
+| `message`
+| The line the command says to a person without `--json`, for every outcome but `no-changes` and `changes`, for which it is `null`. It is for a person: a tool goes by the `outcome` and the `reason`.
+
+| `hasChanges`
+| Whether there is something to change: for `feature add`, whether the change would write any file of the project, the record under `.grails` included; for `project regenerate`, whether any file is not as it was generated. `null` when the command did not get as far as the comparison.
+
+| `files`
+| The files, each with its `path` in the project, exactly as it is there, with `/` between the directories: a character that a terminal acts on is written as a JSON escape, never replaced. `null` when the command did not get as far as the comparison. What each has besides is said below.
+|===
+
+[cols="1,3"]
+|===
+| Outcome | Meaning, and the exit code
+
+| `no-changes`
+| The comparison was made and there is nothing to do: `feature add` names only features the application has, or `project regenerate` finds every file as it was generated. Exit code 0.
+
+| `changes`
+| The comparison was made and there are changes: `feature add` would make them, or `project regenerate` lists files that are not as generated. Exit code 0 for `feature add` and 1 for `project regenerate`, as without `--json`.
+
+| `conflicts`
+| `feature add` only: the comparison was made and at least one file cannot be written without losing what the project has. The files with the action `conflict` say why. Exit code 1.
+
+| `refused`
+| What was asked cannot be done to this project: see the reason. Exit code 2 for the reasons that are a mistake in the command line (`contradictory-request`, `replace-required`, `required-by-another-feature`, `plugin-coordinates`, `feature-selection`), 1 for the others.
+
+| `invalid-record`
+| The record of the project under `.grails` is missing, cannot be read, or does not give the project it records. Exit code 1.
+
+| `failed`
+| The command failed while it worked: a file of the project cannot be read, or something went wrong that it does not know. Exit code 1.
+|===
+
+The exit code is always the one the command ends with without `--json`, so a script that only looks at it does what it did before. It does not tell the outcomes apart; the document does.
+
+[cols="1,1,3"]
+|===
+| Reason | Outcome | Meaning
+
+| `no-project`
+| `refused`
+| There is no Grails project in the current directory or above it.
+
+| `untrusted-project`
+| `refused`
+| The project above the current directory is not your own and is not used; the message says why.
+
+| `contradictory-request`
+| `refused`
+| Two or more features that were named are of one exclusive group, of which an application has one; whatever the application has, and with `--replace` too.
+
+| `replace-required`
+| `refused`
+| A feature would take the place of one that was asked for by name, and `--replace` was not given.
+
+| `required-by-another-feature`
+| `refused`
+| A feature would take the place of one that another feature of the application requires.
+
+| `plugin-coordinates`
+| `refused`
+| A program gave the coordinates of a plugin where the name of a feature is taken. `feature add` itself takes the plugin by its coordinates and adds its feature, and does not end with this reason.
+
+| `preset-not-added`
+| `refused`
+| A preset was given to add its feature: an application is made from a preset when it is created.
+
+| `feature-selection`
+| `refused`
+| The features cannot be had together, or one of them does not exist for the type of the application: the rules of the `create-` commands.
+
+| `changes-option`
+| `refused`
+| A feature would change an option the application was created with. The document has what it would come to: `files`, `changedOptions` and `lostFeatures`.
+
+| `removes-requested-feature`
+| `refused`
+| A feature would take out a feature that was asked for by name, and not by taking its place in an exclusive group. The document has what it would come to, as for `changes-option`.
+
+| `untracked-record`
+| `refused`
+| The record was written by `project migrate` for an application that was there, without a baseline (`generationState: untracked`), because the command could not work out what it needs for one. `project migrate --force` writes it with a baseline once it is told.
+
+| `other-generator`
+| `refused`
+| Another version of Grails generated the project. The message names `project migrate`, which moves the record of an earlier version to the version that runs, or the later version that generated it.
+
+| `pack-missing`
+| `refused`
+| The application has the feature of a feature pack that is not part of Grails, or was made from a preset, and that pack was not given again (`--feature-pack-dir`), or its jar could not be fetched again by the coordinates and the SHA-256 of the record. The message names each such pack with its digest.
+
+| `pack-differs`
+| `refused`
+| A feature pack that was given again is not the one the application was generated with: its digest is another, it is a directory where the record has a jar or the other way round, or the application has no feature of it.
+
+| `interrupted-change`
+| `refused`
+| An earlier change of the project was interrupted and is undone by the next `feature add` without `--dry-run`.
+
+| `conflicts`
+| `conflicts`
+| See the outcome.
+
+| `no-record`
+| `invalid-record`
+| The project has no record under `.grails`.
+
+| `unreadable-record`
+| `invalid-record`
+| The record is not complete, cannot be read, was changed by hand, or a file of the baseline is missing or not what was generated.
+
+| `baseline-differs`
+| `invalid-record`
+| Generated again from its record, the application does not have the files of the baseline. The usual reason is another value of `GRAILS_REPO_URL` than when the project was created.
+
+| `record-differs`
+| `invalid-record`
+| Generated again from its record, the application does not have that very record.
+
+| `not-regenerable`
+| `invalid-record`
+| The generator fails on the record.
+
+| `unreadable-file`
+| `failed`
+| A file or a directory of the project cannot be read; the message names it.
+
+| `error`
+| `failed`
+| Any other failure, as a generator that cannot be started.
+|===
+
+`feature add --dry-run --json` has these members after `hasChanges`:
+
+[cols="1,3"]
+|===
+| Member | Meaning
+
+| `applicable`
+| Whether the change can be made: `true` for the outcomes `no-changes` and `changes`, when `feature add` without `--dry-run` makes the change the document describes, as long as the files are not changed in the meantime and the record of the change can be kept in your home directory. `false` for every other outcome.
+
+| `requested`
+| The features that were named and that the application does not have, which would be added.
+
+| `alreadyPresent`
+| The features that were named and that the application has.
+
+| `added`
+| Every feature the application would gain: those of `requested`, and the features they require.
+
+| `replaced`, `replacements`
+| The features the added ones would take the place of, and a line for each that says which feature replaces it.
+
+| `lostFeatures`, `changedOptions`
+| For the outcome `refused` with `changes-option` or `removes-requested-feature`: the features the application would lose, and the options that would change, as `--data hibernate7 in the place of hibernate5`. Empty otherwise.
+
+| `files`
+| Every file the features would write, change or cannot change, sorted by its path. `action` is what would be done to it, as without `--json`: `add`, `update`, `merge` (the file was changed in the project too, and keeps those changes), `keep` (the project has the file as the features make it already), `remove`, `leave` (in an application whose record `project migrate` wrote: the features change a file the application does not have, which is not written; `reason` and `details` say what was left out) or `conflict`. `reason` says why a file is a conflict, and is `null` for the others; `details` are the lines that are said under the file: for a conflict, the lines of both sides and what to do.
+
+| `notes`
+| What the features said while the application was generated with them, a line each; usually nothing.
+
+| `instructions`
+| What the feature packs of the features in `added` say is to be done once the features are added: for each such feature its name, as `feature`, and the `text`, which the command shows after it added the features. Empty when none of them says anything.
+
+|===
+
+The `requested` to `instructions` members of `feature add` are `null` when the command did not get as far as working out the change. `project regenerate --diff --json` has `files` only after `hasChanges`, each with its `path` and its `status`: `added` for a file the generator did not write, `removed` for a generated file that is not there any more, and `changed` for one with other content, sorted by the path. What the `.gitignore` the project was generated with leaves out is not looked at, and neither is `.git`, as without `--json`.
+
+==== In a Project of an Earlier Version of Grails
+
+This command line works with projects of Grails 9 and later: Grails 9 is the first version it came with, and the build of an earlier project does not have what its commands run. In a project whose `gradle.properties` names a major version before 9 as `grailsVersion`, the commands of a project are not run: `compile`, `test-app`, `run-app`, `gradle`, the commands that create classes, `feature add`, `project show` and the tools of the application and its plugins end with exit code 1 and one line, on the standard error:
+
+[source,console]
+----
+| Error This project is on Grails 8.1.2 (gradle.properties), and the command line of Grails 9 works with projects of Grails 9 and later. Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, as the upgrade notes of the Grails guide describe; project migrate, which writes the record the commands of a project read, and project health, which says what the upgrade notes still ask of the project, are the commands of a project that run here
+----
+
+Nothing of the project is run, read for a command or written. Four things are run there all the same: `grails --version`; the commands that create another application; link:{commandLineRef}project-migrate.html[project migrate], which writes the record of the project as a step of its upgrade, before or after `grailsVersion` is changed; and link:{commandLineRef}project-health.html[project health], which reads the project and says what Grails 9 asks of it. `help` is shown, with the line in front of it as a warning, and `help --json` has it in `diagnostics`. A project that has a `.grails` directory is held to the same rule: the record does not make it a project of Grails 9. The Grails wrapper of a project (`./grailsw`) starts the command line of the version the project is on, so it is the installed `grails` of a later version that meets such a project. The version is read as Gradle reads it: from the `gradle.properties` of the project, or for a project of a build of several from that of the build above it (the directory with `settings.gradle`), and where a file names it twice, the last one.
+
+A project of Grails 9 or later on a command line of a later major version is used. The commands that write into it what the later version has (`create-controller` and the other commands that create classes, `add-property`, `install-templates`) and `help` first warn, once in the interactive console, that what they create is written for the version of the command line, unless the project has the record of this generator under `.grails`.
+
+These lines, and what there is to say about the record of a project (`grails-forge-cli.yml`, `.grails`), are written to the standard error, so that they are never among what a command writes to the standard output.
+
+[[toolsOfTheApplication]]
+=== Tools of the Application and its Plugins
+
+[[_commands_of_the_application_and_its_plugins]]
+An application and its plugins can add _tools_ to the `grails` command: classes of the project, or of a plugin, that are run by their names (see xref:commandLine#creatingTools[Creating Tools]). In a project, the `grails` command has each of them by the name the tool has, as it has its own commands:
+
+[source,console]
+----
+$ grails greet "Alice Smith" --loud
+$ grails audit-report
+$ grails help
+...
+Tools of the application and its plugins:
+  audit-report  Writes the audit report (com.example:my-plugin-cli:1.0.0)
+  greet         Greets someone (application)
+$ grails help greet
+----
+
+How a tool is run depends on the folder it was written in:
+
+[cols="2,3,3,3"]
+|===
+| | A tool of `src/cli` | A tool of `src/cli` with `startsApplication = false` | A standalone tool, of `src/standalone`
+
+| `grails NAME`
+| The Gradle task `runTool`, with the application started around the tool
+| The Gradle task `runTool`, without the application
+| A Java process of its own, without Gradle and without the application
+
+| `grails run-tool NAME`, `./gradlew runTool --arg=NAME`
+| The same
+| The same
+| The Gradle task `runTool`, without the application
+
+| `grails help NAME`
+| A tool of its origin, which runs in the application
+| A tool of its origin, which the build runs without the application
+| A tool of its origin, which runs as a process of its own, without Gradle and without the application
+|===
+
+`grails run-tool NAME` runs the same tool, and is the form for an environment in front of the name, as in `grails run-tool -Dgrails.env=production audit-report` (a tool takes everything after its name as its own), and for a script that should not depend on the list of the tools described below. `./gradlew runTool --arg=NAME` is what both run, without the `grails` command. See link:{commandLineRef}run-tool.html[run-tool]. `grails run-command NAME` and `./gradlew runCommand` of Grails 8 still run every tool, after a warning that they are deprecated.
+
+The build of the project lists the tools: the Gradle task `grailsToolCatalog` writes them to `.grails/cache/tool-catalog.json`, and every build that compiles the project runs it after `classes`, so `grails compile`, `run-app`, `test-app` and `assemble`, `./gradlew build` and a build from an IDE leave the list current. The task is up to date when nothing it reads has changed, so a build in which nothing changed costs nothing more. The `grails` command reads the file and runs nothing to read it, so that `help` and the commands of `grails` itself never start a build.
+
+A name that is none of the commands and tools there are, in a project whose list is missing or may be out of date (see below), has `grails` run the task once, with the Gradle wrapper of the project as for every build, after one line that says so, and look for the name again:
+
+[source,console]
+----
+$ grails greet
+| Listing the tools of the application and its plugins, of which greet may be one, with the Gradle task grailsToolCatalog
+...
+| Running the tool greet of the application, with the Gradle task runTool
+----
+
+In a checkout that was never built, the first tool of the application or of a plugin that is typed therefore lists the tools, which compiles the project, and then runs. A name that is still none of them is refused as any other, with exit code 2 and a line that says that the build has just listed the tools; with a list that is current, a mistyped name is refused at once and no build is started. A build that fails while it lists ends the command with exit code 1 after what Gradle said, and nothing is run. No build is started for `help`, `help NAME`, `--help` or `--version` in front of a name, for a command of `grails` itself, outside a project, in a project without a Gradle wrapper, for what cannot be the name of a command, or for a name the Grails shell had for a command that is gone or has another name now (see "Commands of Earlier Versions" below). `--help` after a name is an argument of a tool that declares no option and no parameter, and asks for the help of one that does, as below; either way `grails greet --help` lists the tools as `grails greet` does. With the environment variable `GRAILS_LIST_TOOLS` set to `false`, a name that is none of the commands is refused at once without a build: a check of the names that a script or a continuous integration job types.
+
+The file is in the directory of the project and not in its build directory. A build can move its build directory (`layout.buildDirectory = ...` in `build.gradle` or `build.gradle.kts`, also for every project of a build at once), and where it is cannot be known without running the build; so the task writes the file to that one place whatever the build directory is, and the `grails` command reads it there and nowhere else. In a build of several projects each Grails project has a file of its own, in its own directory, and `grails gradle grailsToolCatalog` in the directory of the build writes all of them by hand. `clean` does not delete the file. `.grails/cache` holds a `.gitignore` that keeps it out of a commit, as the `.gitignore` of a generated application does: what is in it is of one machine.
+
+* `help` lists the tools after the commands of `grails`, each with where it comes from, `help NAME` shows one of them from that list, without starting the build or the tool (`NAME --help` does the same for a tool that declares its options or parameters, and gives `--help` to a tool that declares none, which runs it), and `help --json` describes them. They have short forms too, after the commands of `grails`: a short form is first looked for among the commands of the command line itself, and is one of the tools of the application and its plugins only when it fits none of those. So what a plugin calls a tool never changes what `cA`, `ra` or `comp` means, and never makes it fit two commands. The forms of lower-case letters are read for them as for the others: `hw` is a tool `hello-world` of a plugin, also when it is typed before the build has listed the tools, which the build then does.
+* Before a tool is started, one line on the standard error says which tool is run, where it comes from and how: `| Running the tool greet of the application, with the Gradle task runTool`. A name that was mistyped into the name of a tool of a plugin is seen there before anything runs. `run-tool greet` says the same line, and is the same build to Gradle as `greet`: both give Gradle the same arguments (the task, the file of the arguments, `-Dgrails.env=development`), so a build with the configuration cache configures once for the two.
+* Everything after the name of the tool is given to the tool as it is, each argument as the one argument it is: spaces, quotes, a leading dash and line breaks are kept, and no option of `grails` is read from it, so `-x` and `--stacktrace` after the name are the tool's, and so is `--help` for a tool that declares nothing. Not given are the character U+0000, more than 4095 arguments, or more than 1 MiB of them; the command line refuses those with exit code 2.
+* A tool that declares its options and parameters (see "Options and Parameters" in xref:commandLine#creatingTools[Creating Tools]) is held to them: an option it does not declare, a value given to a switch, a required option or parameter that is missing, a value that is not of its type and one argument too many are refused with exit code 2 and one line, as `| Error audit-report: --sinse is not one of its options. grails help audit-report shows its options`. Where the list of the tools is current the command line checks this before anything is started for the tool, and no build is run; where the list may be out of date, the tool itself refuses such arguments, with the same line, when it is started. `help NAME` shows its options and parameters, and interactive mode completes them. `NAME --help`, and `-h` unless the tool declares `-h`, shows the same help and runs nothing; a tool cannot declare `--help`. `-Dname=value` after the name is a system property of the tool. A tool that declares none takes whatever it is given, as above.
+* A tool that declares that it reads what is typed (`readsInput`) is refused under `--non-interactive` with exit code 2, since nothing can be typed there: `NAME reads what is typed, and --non-interactive gives it nothing to read`, then how the command is used. Otherwise it is given the terminal: a tool of `src/cli` is run with the Gradle wrapper, also in interactive mode, and not through the connection to Gradle that interactive mode keeps, which gives a build no input.
+* A tool of `src/cli` runs in the application, or without it when it says `startsApplication = false` (its help says which), started by the Gradle task `runTool` of the project, with the Gradle wrapper of the project and everything that holds for the `gradle` command. The arguments are handed to Gradle in a file that only you can read, `.grails/run/command-args-0.json` in the project, which is deleted when the tool ends, fails or is cancelled; `.grails/run` holds a `.gitignore` that keeps it out of a commit. The file has the same name every time, so a build with the configuration cache configures once for a tool and reuses that whatever the arguments are the next time. When two tools run at once the second takes the next number, up to sixteen, and a file that a tool left behind because it was killed is removed by the next one. The exit code is 0 when the tool succeeded and 1, after one line, when it failed or Gradle did.
+* A standalone tool is not run by Gradle at all: `grails` starts a Java process for it, with the class path the last build of the project wrote down in `.grails/cache/standalone-tools.json`, after the line `| Running the tool create-report of the application, as a process of its own, without Gradle`. The arguments are handed to the process in the same file only you can read, the process is given the input and the output of `grails` (an input that has ended with `--non-interactive`, which it is also told through the environment variable `GRAILS_NON_INTERACTIVE`; `--plain-output` and `--stacktrace` in front of the name reach it as `grails.console.enable.terminal=false` and `grails.full.stacktrace=true`), it is ended with what it started when the tool is cancelled, in the interactive console too, and the exit code is 0 when the tool succeeded and 1, after one line, when it did not. The Java is the one `JAVA_HOME` names, and without it the one that runs `grails`, as for the Gradle wrapper. When the file is missing or older than what it is made from, `grails` first runs the Gradle task `grailsStandaloneTools` once, after a line that says why, and then starts the process; when nothing has changed, no build is started, also while the application does not compile. When the file or what it names is not yours alone, nothing is started and one line says why. `run-tool NAME` runs such a tool with Gradle, as it runs every tool. See "A Standalone Tool" and "The Class Path of Standalone Tools" in xref:commandLine#creatingTools[Creating Tools].
+* A tool in the deprecated folder `grails-app/commands`, or one whose class implements the deprecated `ApplicationCommand` or `GrailsApplicationCommand`, runs as before, after a warning on the standard error that names what to change (see "Tools Written for Grails 8" in xref:commandLine#creatingTools[Creating Tools]). `help` lists it with `deprecated` after where it comes from, as `data-import  Imports the orders (application, deprecated)`, and `help NAME` says what of it is deprecated.
+* `create-tool` writes a tool into `src/cli/groovy`, or with `--standalone` into `src/standalone/groovy`, and says how it is run: `| Run it with: grails greet`. Its source is newer than the list, so typing its name lists the tools again and runs it.
+* The same file lists the options the application and its plugins declare for `run-app`, as its member `commandOptions`: see link:commandLine.html#declaredRunAppOptions[Options the application and its plugins declare]. An option of the file that is not as the task writes one is not an option of `run-app`, and `help` says how many are not used; what the task itself left out of the declarations is among the lines it says, which `help` shows, and does not make `complete` `false`, which is about the tools.
+* While there is no `.grails/cache/tool-catalog.json`, the project has no tools yet. `help` and `help --json` say so, and how the tools are listed, and start no build: they answer at once. `help NAME` of a tool that is not listed yet is refused with the same line, as is a name when no build can be run to list the tools.
+* A file that is older than `build.gradle`, `build.gradle.kts`, `settings.gradle`, `settings.gradle.kts` or `gradle.properties`, than a `.groovy` or `.java` file or a directory anywhere below `src/cli`, `src/standalone` or `grails-app/commands` (a tool is written into the directory of its package), or than a `.json` file or a directory below `META-INF/grails-tools`, where the compiler writes the descriptors of the tools, of `build/classes/groovy/main`, `build/classes/groovy/cli` or `build/classes/groovy/standalone` (in a build that keeps its build directory where it is), is still used, and `help` and `help --json` say that the tools may have changed; a name that is none of the commands has them listed again, as above. The task holds itself to the same rule: a build that compiles the project writes a file that is older than one of these files again, also where what it lists is the same, so that after a build `grails` takes the list for current. One of these files that is a symbolic link counts with the time of the file the link leads to, for `grails` and for the task alike: a change to that file is noticed, when the link itself was made is not, and a link that leads to no file is no file. A link to a directory below those folders is not followed. `gradle grailsToolCatalog --rerun` writes the file again in any case. A change that none of these files shows, such as a new version of a plugin from a version catalog or a changed description, is noticed by the next build that compiles the project.
+* The file is read as something that anything in the build may have written. A file that is a link, is behind a link, is not a plain file, has more than 512 KiB, or is not the JSON document of format `1` the task writes is not used at all: the project then has no tools, a name that is none of the commands is refused without a build, and one line says what is wrong with the file without repeating anything of it and how to write it again.
+* A build that compiles the project does not need the class path the tools run with, so it does not fail when that does not resolve, as when a dependency of the runtime class path is not found or two versions of one module are both required. The task then lists the tools of what resolves, and a line of the file says which class path did not resolve completely and what Gradle could not resolve in it, which the build also prints as a warning; `./gradlew dependencies --configuration runtimeClasspath` shows why. `help` and `help --json` show the line, `complete` is `false`, a name that is none of the commands is refused at once with a line that says the list is not complete and that `help` says why, and link:{commandLineRef}project-health.html[project health] advises with `tool-catalog.incomplete`. Running a tool, or the application, with that class path fails until the dependencies are corrected; the next build that compiles the project then lists the tools again.
+* One tool in the file that is not as the task writes one (a name that is not lower case with single hyphens, a description of more than one line, a name another tool has) is left out alone, and the others are used. `help` and `help --json` say which, by its place in the file, and `complete` is `false`. Where a tool comes from can be any name a jar or a project has: it is only shown, as text, in the help of the tool as in the list; a file cannot give `built-in` or, in other letters, `application` as where a tool comes from. The task writes no file that is not read: at most 512 tools, the first by name, in at most 512 KiB, and it says in its diagnostics how many it left out.
+
+==== When a tool has the name of a command of `grails`
+
+A command of `grails` keeps its name, the other names it has and the short forms of its name. A tool of the application or of a plugin that is called `install-templates`, `war` (another name of `assemble`), `stop` (another name of `stop-app`), `stat` (short for `stats`) or `ra` (short for `run-app`) is therefore not run by that name. This is never silent: `help` and `help --json` name the tool, where it comes from and what has the name, and typing the name runs the command of `grails` after one warning line on the standard error. The tool is still run with `run-tool`:
+
+[source,console]
+----
+$ grails install-templates
+| Warning install-templates is a command of the CLI itself (built-in), so the tool install-templates of org.apache.grails:grails-scaffolding-cli-standalone:9.0.0 is not a command here. That one is run with: grails run-tool install-templates
+$ grails run-tool install-templates
+----
+
+==== Scripts of the application
+
+The scripts in `src/main/scripts` of a project are run by their names in the same way, listed after the tools the build lists and marked `(script of the application)`. A script is run by the build of the project, through the Gradle task `runScriptCommand`, and never by the `grails` command, which only reads the names of the files. Script commands are deprecated: the scripts a project has still run, with a warning said once that names tools, and no command creates a new one. A new one is a tool that `create-tool` writes. See xref:commandLine#creatingCustomScripts[Creating Custom Scripts] for the rules and for what a script has where the build runs it.
+
+[[findingPlugins]]
+=== Finding Plugins
+
+Two commands say which Grails plugins there are, in the directory of a project and outside one:
+
+[source,console]
+----
+grails list-plugins
+grails list-plugins security
+grails plugin-info spring-security
+----
+
+Each of the two is also a command of `plugin`: link:{commandLineRef}plugin-list.html[plugin list] is `list-plugins`, and link:{commandLineRef}plugin-show.html[plugin show], which is `plugin info` too, is `plugin-info`. They are one command with two names each, with the same arguments, options and output, and neither name is deprecated. link:{commandLineRef}plugin-find.html[plugin find] `TEXT` is the list with the text it lists by, which it requires: without the text it is a mistake in the command line (exit code 2). No two of the names start with the same letter, so one letter is short for each: `pl l`, `pl f`, `pl s` and `pl i`.
+
+[source,console]
+----
+grails plugin list
+grails plugin find security
+grails plugin show spring-security
+----
+
+link:{commandLineRef}list-plugins.html[list-plugins] lists the plugins with their coordinates, the version for this Grails and one line of description each, and takes a text to list only the plugins that have it in their name, coordinates or description. link:{commandLineRef}plugin-info.html[plugin-info] says what is known of one plugin, which is named as the list names it or by its coordinates as `group:artifact`: its versions, license, documentation, issue tracker and sources, the line for the `dependencies` block of `build.gradle` (without a version when the Grails BOM manages the plugin), the feature that `grails feature add` adds it with, where there is one, and the feature of the xref:plugins#forgeFeaturePacks[feature pack] an application can be created with, where the plugin index records one, with the command lines that create such an application.
+
+The plugins of this release of Grails, which the framework itself publishes, are known to the command line without the network, with the versions the Grails BOM manages. The plugins of the community are read from the Grails plugin index, `grails-plugins-index.json` of https://github.com/apache/grails-plugins-metadata, which the https://grails.apache.org/plugins.html[plugin portal] shows too. By default these two commands are the only ones that read it. When it cannot be read they say so and answer with the plugins of this release; `--offline` asks nothing of the network to begin with.
+
+The `GRAILS_PLUGIN_INDEX` environment variable, or the `--plugin-index` option of the two commands, names another plugin index: an `https` address, a `file:` address, or `none` for no index. A plugin index the variable names is also the feature catalog of the `create-` commands, so that the feature `plugin-info` names for a plugin of it is selected by its name, unless `--feature-catalog` or `GRAILS_FORGE_CATALOG` names another catalog; the plugin index nobody named is not. The feature packs an index records are read in the same way by all of these commands, as xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation] describes, so what `plugin-info` says a plugin offers is what an application is created with. Each command line it shows for a pack creates the application with that plugin in that version when it is typed as it is shown, in the same environment: it is the create command of a type of application the pack is for, and names the plugin, the catalog and the repository wherever the create command would otherwise take others. `plugin-info` also asks Maven repositories for the versions of a plugin and for the description a plugin publishes beside its jar: those of `GRAILS_REPO_URL`, then Maven Central, then the repository the plugin index names for the plugin. What is read is shown as text with the control characters taken out, within a limit of size and time, and nothing of it is run or installed. Both commands have `--json` for a tool.
+
+[[commandsOfEarlierVersions]]
+=== Commands of Earlier Versions
+
+The Grails shell and its profiles of Grails 8 and earlier had commands that the `grails` command does not have under the name they had. link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] says what else differs for the commands that are kept, and its link:upgrading.html#cliMappingGrails8[note 55] has a table of every command line of Grails 8, the commands that are kept among them, with what it is in Grails 9. When one of these names is typed, the command line refuses it as it refuses anything that is no command, with exit code 2, and adds one line that says what there is in its place:
+
+[source,console]
+----
+$ grails list-profiles
+There is no command list-profiles
+list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails help lists the create commands, and each lists its features with --list-features
+Usage: grails [-hvVx] [--non-interactive] [--plain-output] [COMMAND]
+Run 'grails help' for the commands
+----
+
+In a project the first line may name the commands that are most like what was typed, and a line about the tools of the application may stand before the line of this table.
+
+The same line is added for a command that the `grails` command has in projects of some kinds only, when it is typed in a project of another kind: `create-restful-controller` in an application that is no REST API application, `create-job` in a project without the `grails-quartz` feature, `publish-plugin` in a project that is no plugin. Only the name of a command, exactly as it was, is looked up; nothing is run for it. Such a name is never read as a short form: `test` is answered with its line also in a project that has a command `test-tool`, which `tt` is short for.
+
+Outside a project these commands are not mistakes: `create-controller`, `install-templates` and the others that write into a project, and `package-plugin` and `publish-plugin`, are known by their names everywhere and end with exit code 1 and the line every command of a project has there, `create-controller is a command of a Grails project; there is none in /home/me or above it`. The ones that write into a project are not in the list of `help` outside a project, which says in its last line that a project has more commands; they are found by their short forms there as in a project, show their help with `--help`, and answer a mistake in their use with exit code 2 like every command. A command of a project that is not given what it needs, such as `run-tool` without a name, says outside a project that it is a command of a project, with exit code 1, before anything is said of what is missing. A command says so by the name that was typed: `war` for `assemble`.
+
+[cols="2,2,5"]
+|===
+|Command |Was a command of |Now
+
+|`create-command`
+|the base profile, where it wrote a command of the application into `grails-app/commands`, and the profile for writing profiles
+|replaced: `create-tool NAME`, which writes a tool of the application into `src/cli/groovy`, and `create-tool --standalone NAME`, which writes one into `src/standalone/groovy` (see xref:commandLine#creatingTools[Creating Tools]). The classes a project has in `grails-app/commands` still run; the folder is deprecated, and no command writes into it.
+
+|`create-creator-command`
+|the profile for writing profiles
+|removed: Profiles are replaced by application types, features and feature packs (see xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation]). No command creates any of these.
+
+|`create-feature`
+|the profile for writing profiles
+|removed: As `create-creator-command`.
+
+|`create-generator-command`
+|the profile for writing profiles
+|removed: As `create-creator-command`.
+
+|`create-gradle-command`
+|the profile for writing profiles
+|removed: As `create-creator-command`.
+
+|`create-profile`
+|the shell
+|removed: As `create-creator-command`.
+
+|`create-script`
+|the base profile
+|replaced: `create-tool NAME`, which writes a tool of the application, a class in `src/cli/groovy`. Script commands are deprecated: the scripts a project has in `src/main/scripts` and the scripts of plugins still run, and no command creates a new one.
+
+|`create-tag-lib`
+|the web profile, where it is written as another name of `create-taglib` in a place the shell did not read
+|replaced: `create-taglib`. The name never was a command of the shell either.
+
+|`create-template`
+|the profile for writing profiles
+|removed: As `create-creator-command`.
+
+|`exit`
+|the shell, in interactive mode
+|replaced: `exit` ends the interactive mode of the `grails` command as well. Outside the interactive mode it is no command.
+
+|`generate-all`
+|the REST API profile
+|a tool of a plugin: `generate-all` of the scaffolding plugin (see "Tools of the Application and its Plugins" above for how the tool of a plugin is run here). In a REST API application or REST API plugin with the `scaffolding` feature it generates the REST controller and the JSON views the profile command generated; see link:{commandLineRef}generate-all.html[generate-all].
+
+|`generate-controller`
+|the REST API profile
+|a tool of a plugin: `generate-controller` of the scaffolding plugin; as `generate-all`.
+
+|`generate-views`
+|the REST API profile
+|a tool of a plugin: `generate-views` of the scaffolding plugin; as `generate-all`.
+
+|`install`
+|the plugin profile and the profile for writing profiles
+|replaced: `gradle publishToMavenLocal`. `install` is still answered, by saying so; it installs nothing and ends with exit code 1.
+
+|`list-profiles`
+|the shell
+|replaced: `help` lists the create commands, one for each type of application, and each of them lists its features with `--list-features`.
+
+|`open`
+|the shell
+|no replacement: removed. Open the file with the command of the operating system (`open` on macOS, `xdg-open` on Linux, `start` on Windows), which interactive mode runs after `!`, as in `!open FILE`, or from your editor: a test report, for example, is `build/reports/tests/test/index.html`.
+
+|`profile-info`
+|the shell
+|replaced: `create-app --list-features`, and the same option of the other create commands.
+
+|`query-tail`
+|a script command of Grails Data in earlier builds of Grails 9; Grails 8 has no `query-tail`
+|a tool of a plugin: `query-tail` of Grails Data, which the build of the project runs without starting the application (see "Tools of the Application and its Plugins" above for how the tool of a plugin is run here).
+
+|`quit`
+|the shell, in interactive mode
+|replaced: `quit` ends the interactive mode of the `grails` command as well, as `exit` does. Outside the interactive mode it is no command.
+
+|`test`
+|the base profile, another name of `test-app`; in front of another command the shell read it as the environment
+|replaced: `test-app`. In front of another command, as in `grails test run-app`, the environment follows the command now: `grails run-app -Dgrails.env=test`.
+
+|`update-cli-config`
+|the Grails Forge CLI of Grails 7, which told to run it in a warning and did not have it
+|replaced: link:{commandLineRef}project-migrate.html[project migrate] writes the record of an application whose `grails-forge-cli.yml` or `grails-cli.yml` names a profile. The name never was a command.
+
+|===
+
+Every other command of the shell and of the profiles is a command of `grails` under its name: the commands that create a project, the `create-*` commands of a project, `add-property`, `run-app` with `run`, `stop-app` with `stop`, `test-app`, `compile`, `clean`, `assemble` with `war` and `package`, `console`, `shell`, `run-command`, which is another name of `run-tool` and is deprecated, `run-script`, `dependency-report`, `stats`, `bug-report`, `package-plugin`, `publish-plugin`, `list-plugins`, `plugin-info`, `gradle` and `help`. `sh`, another name of `shell` in the shell, is what is short for `shell` here.
+
+Outside a project the shell also ran a loose Groovy script with Spring Boot, as `grails run app.groovy`, which has no replacement (note 38 of link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9]). `run` is `run-app` now, which takes no such argument: `grails run app.groovy` is refused with exit code 2, and the refusal says that a script is run in a Grails project with `run-script`, the application started around it: `grails run-script app.groovy`.
 
 === Grails Default Package Configuration
 
@@ -214,6 +1151,225 @@ grails create-app com.example.myapp
 ----
 
 In this case, "com.example" becomes the default package for your project.
+
+Each part of the package becomes a directory of the sources, and the name of the application a directory and part of the names of files. A part that is one of the names Windows keeps for devices, such as `aux` in `com.aux.myapp`, is therefore refused, as is such a name for the application itself: the project could not be checked out on Windows. Those names are `con`, `prn`, `aux`, `nul`, `conin$`, `conout$`, `clock$`, and `com` or `lpt` followed by one digit, which can also be a superscript `¹`, `²` or `³`, in any case of letters. A name with a control character, a slash or a backslash, and a name for the application that not every file system takes for a directory (one with `:`, `*`, `?`, `"`, `<`, `>` or `|` in it, or with a space or a dot at its end), are refused as well, as mistakes in the command line.
+
+[[creatingClassesWithGrails]]
+=== Creating Classes with the `grails` Command
+
+In the directory of a project the `grails` command has commands that write a class of the application, most of them with a test beside it. Which commands there are depends on the type of the application and on its features, as recorded in the project:
+
+[cols="2,4,2"]
+|===
+|Command |Writes |In
+
+|`create-controller <name>`
+|`grails-app/controllers/<package>/<Name>Controller.groovy` and `src/test/groovy/<package>/<Name>ControllerSpec.groovy`; in a REST API application or REST API plugin the controller declares `static responseFormats = ['json']`
+|every project
+
+|`create-service <name>`
+|`grails-app/services/<package>/<Name>Service.groovy` and `src/test/groovy/<package>/<Name>ServiceSpec.groovy`
+|every project
+
+|`create-domain-class <name>`
+|`grails-app/domain/<package>/<Name>.groovy` and `src/test/groovy/<package>/<Name>Spec.groovy`
+|every project
+
+|`create-taglib <name>`
+|`grails-app/taglib/<package>/<Name>TagLib.groovy` and `src/test/groovy/<package>/<Name>TagLibSpec.groovy`
+|every project
+
+|`create-interceptor <name>`
+|`grails-app/controllers/<package>/<Name>Interceptor.groovy` and `src/test/groovy/<package>/<Name>InterceptorSpec.groovy`
+|every project
+
+|`create-job <name>`
+|`grails-app/jobs/<package>/<Name>Job.groovy`
+|a project with the `grails-quartz` feature
+
+|`create-unit-test <name>`
+|`src/test/groovy/<package>/<Name>Spec.groovy`
+|every project
+
+|`create-integration-test <name>`
+|`src/integration-test/groovy/<package>/<Name>Spec.groovy`
+|web applications, REST API applications, web plugins and REST API plugins
+
+|`create-functional-test <name>`
+|`src/integration-test/groovy/<package>/<Name>Spec.groovy`: in a REST API application or REST API plugin a test that calls the running application over HTTP, in a web application or web plugin a Geb test that opens the home page in a browser
+|REST API applications and REST API plugins, and web applications and web plugins with the `geb-with-testcontainers` feature, which a web application has by default, or the `geb-with-local-browsers` feature
+
+|`create-restful-controller <domain class>`
+|`grails-app/controllers/<package>/<Name>Controller.groovy`, a controller that extends `RestfulController` for the domain class
+|REST API applications and REST API plugins
+
+|`create-domain-resource <name>`
+|`grails-app/domain/<package>/<Name>.groovy`, a domain class with `@Resource`, and `src/test/groovy/<package>/<Name>Spec.groovy`
+|REST API applications and REST API plugins
+
+|`create-tool <name>`
+|`src/cli/groovy/<package>/<Name>Tool.groovy`, a tool of the project; with `--standalone`, `src/standalone/groovy/<package>/<Name>Tool.groovy`, a standalone tool (see xref:commandLine#creatingTools[Creating Tools])
+|every project
+|===
+
+A feature can add commands of the same kind. A feature pack, of Grails or of a plugin, declares them with the templates they write from, and in a project whose record has the feature they are commands of `grails` like those above: `create-<name> <class>`, listed by `help` with the name of the feature, with `-f` and the same rules for names and files. Their templates are files of the project under `src/main/templates/features/<feature>`. See xref:plugins#forgeFeaturePackArtefacts[Commands That Create Classes] in the chapter on feature packs.
+
+`create-script`, which wrote a script command into `src/main/scripts`, and `create-command`, which wrote a class into `grails-app/commands`, are removed: script commands are deprecated, and what an application adds to the command line is a tool that `create-tool` writes (see <<commandsOfEarlierVersions,Commands of Earlier Versions>>).
+
+[source,shell]
+----
+$ grails create-unit-test BookFormatter
+$ grails create-domain-resource org.bookstore.Book
+$ grails create-tool data-import
+----
+
+The name is the name of a class, with or without its package; without one, the class goes into the default package of the project, and a tool of a plugin into a package of the jar the plugin publishes it in (see xref:commandLine#toolsOfAPlugin[Tools of a Plugin]). Its first letter is made upper case, and a name with hyphens such as `data-import` becomes `DataImport`. Every one of these commands holds the name to what the name of a new class can be, and refuses anything else as a mistake in the command line (exit code 2) before they write a file: the name and each part of the package have to be identifiers of Java, a package is given with dots and never as a path (a name with `/`, `\` or `:` is refused), and a control character, a name of more than 200 characters and a name Windows keeps for a device (see above) are refused too. The letters of a name are written in the composed form of Unicode (NFC), in which an accented letter is one character. Before Grails 9 `create-controller`, `create-service`, `create-domain-class`, `create-taglib`, `create-interceptor` and `create-job` took any text for a name and made directories and a file of it; a name they accepted and now refuse is a path, a name with a space or another character no identifier has, a package with a hyphen, a name that starts or ends with a hyphen, the name of a file such as `a.B.groovy`, and a device name of Windows where it would name a directory or a file, such as `aux.Book`. `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-restful-controller`, `create-domain-resource` and `create-tool` also take a name that already ends with what they add to it: `create-unit-test BookSpec` writes `BookSpec.groovy`, `create-tool ImportTool` writes `ImportTool.groovy`, and `create-restful-controller BookController` writes the controller of `Book`. A name that ends with `.groovy` or `.java` in lower case, as `Book.groovy`, is refused: the name of the class is given, not the name of its file (`shop.Groovy` is the class `Groovy` in the package `shop`). A name Windows keeps for a device is refused where a directory or a file would be named by it: `create-domain-class con` would write `Con.groovy` and is refused, `create-controller con` writes `ConController.groovy`, and `aux.Book` is refused by every command for its package. The first letter has to be one that has a capital, and a hyphen stands between two words.
+
+A command writes all of its files or none. A file that is there already is not replaced: the command then writes nothing, not the other file either, says which file is in the way and ends with exit code 1. With `-f` or `--force` it replaces what is there. Before Grails 9 `create-controller`, `create-service`, `create-domain-class`, `create-taglib`, `create-interceptor` and `create-job` kept such a file with a warning, wrote the other file and ended with exit code 0.
+
+The files are written into the project and nowhere else. A project can come from a repository someone else made, and such a repository can have a link where a directory of the sources is expected. So a command, `install-templates` included, writes a file only when every directory from the project down to the file is a directory: when one of them is a link, also one that leads to another directory of the same project, or a file, or is there under a name written differently (`Example` where `example` is asked for, on a file system that takes one for the other), the command writes nothing, says which step of the path is in the way and ends with exit code 1. A link in the place of the file itself is replaced by the file when the command is forced, and never written through; a directory in the place of the file is left alone. A file that is replaced is moved aside under another name first and has its name again, with its content, its mode and its other names, when the command cannot write all of its files; when something cannot be taken back, the command says which file is now what. The file is aside under the name `.<name of the file>.grails-aside-<digits>` in its directory. When a command is ended from outside before it has finished, such a file can be left and be all there is of what the file was: a later command that would write that file says so with both names, writes nothing and ends with exit code 1, until the file has its name back or is removed. It is not put back by itself, since only the user knows whether the file as it was or the one that was being written is wanted. Every message names a file by its path in the project.
+
+==== Templates of the Project
+
+Every file these commands write comes from a template, and a project can have its own: a template under `src/main/templates` of the project is used in place of the one the `grails` command has. The command says so when it uses one.
+
+[cols="3,2,1"]
+|===
+|Template under `src/main/templates` |Command |Syntax
+
+|`artifacts/Controller.groovy`, `testing/Controller.groovy`
+|`create-controller`
+|tokens
+
+|`artifacts/Service.groovy`, `testing/Service.groovy`
+|`create-service`
+|tokens
+
+|`artifacts/DomainClass.groovy`, `testing/DomainClass.groovy`
+|`create-domain-class`
+|tokens
+
+|`artifacts/TagLib.groovy`, `testing/TagLib.groovy`
+|`create-taglib`
+|tokens
+
+|`artifacts/Interceptor.groovy`, `testing/Interceptor.groovy`
+|`create-interceptor`
+|tokens
+
+|`Job.groovy`
+|`create-job`
+|names in braces
+
+|`testing/Generic.groovy`
+|`create-unit-test`
+|tokens
+
+|`testing/Integration.groovy`
+|`create-integration-test`
+|tokens
+
+|`testing/Functional.groovy`
+|`create-functional-test`, in a REST API application or REST API plugin
+|tokens
+
+|`FunctionalSpec.groovy`
+|`create-functional-test`, in a project with a Geb feature
+|names in braces
+
+|`artifacts/RestfulController.groovy`
+|`create-restful-controller`
+|tokens
+
+|`artifacts/Resource.groovy`, `testing/Resource.groovy`
+|`create-domain-resource`
+|tokens
+
+|`artifacts/Tool.groovy`; `artifacts/Command.groovy` of a project of Grails 8, with a warning
+|`create-tool`
+|tokens
+
+|`artifacts/StandaloneTool.groovy`
+|`create-tool --standalone`
+|tokens
+|===
+
+`artifacts/Controller.groovy` is one template in every project, as it was in every profile. The one the `grails` command has for a REST API application or REST API plugin declares `static responseFormats = ['json']`, so that the controller responds in JSON only as the classes of `create-restful-controller` and `create-domain-resource` do, and the one for every other project declares no formats; `install-templates` copies the one of the project it runs in.
+
+The locations are those the templates had before Grails 9, in a profile, in the Quartz plugin and in the Geb plugin, and so are the two ways of writing a name, so a template that only names what it wants can be put under `src/main/templates` as it is. No template is run: a template is text in which names are replaced. The shell ran `Job.groovy` and `FunctionalSpec.groovy` as Groovy templates; a template that relied on that, with code or with an expression that is more than a name, has to be written without.
+
+In a template with tokens these are replaced, and everything else, a `$`, `${...}` and `<% %>` included, is written as it is:
+
+[cols="1,3"]
+|===
+|Token |Replaced by
+
+|`@artifact.package@`
+|The package declaration, `package org.bookstore` and the end of its line. Put it on a line of its own. For a class without a package, the token and the end of its line are left out.
+
+|`@artifact.package.name@`
+|The package, `org.bookstore`
+
+|`@artifact.package.path@`
+|The package as a path, `org/bookstore`
+
+|`@artifact.name@`
+|The name of the class without what the command adds to it: `Book` for `BookController`
+
+|`@artifact.propertyName@`
+|That name as a property: `book`
+|===
+
+A token that starts with `@artifact.` and is none of these is a mistake in the template, and the command fails.
+
+[source,groovy]
+.src/main/templates/artifacts/Controller.groovy
+----
+@artifact.package@
+import groovy.transform.CompileStatic
+
+@CompileStatic
+class @artifact.name@Controller {
+
+    def index() { }
+}
+----
+
+`Job.groovy` and `FunctionalSpec.groovy` name what they want in braces, as the templates of the Quartz plugin and of the Geb plugin did: `${className}`, `${simpleName}`, `${propertyName}`, `${modelName}`, `${packageName}`, `${packagePath}`, `${fullName}` and `${lowerCaseName}` are replaced. A `$` that is to be written is written `\$`, and a backslash `\\`. A line that is only `package ${packageName}` is left out for a class without a package.
+
+[source,groovy]
+.src/main/templates/Job.groovy
+----
+package ${packageName}
+
+class ${className}Job {
+
+    static triggers = {
+        cron name: '${propertyName}', cronExpression: '0 0 3 * * ?'
+    }
+
+    def execute() {
+    }
+}
+----
+
+Everything a Groovy template would evaluate is a mistake in this template, and the command fails with the line it is on: code between `<%` and `%>` or `<%=` and `%>`, an expression in braces that is more than one of the names (`${className.toLowerCase()}`), a name without braces (`$className`) and any other use of a backslash. Templates with logic are not supported.
+
+A template is read only from inside the project, and only under the very names of its location: one that is a link, or is below a link, that leads out of the project is refused, and so are a template of more than 256 KiB, one that is not text in UTF-8 or has a NUL character, and one that is no file. A byte order mark at the start of a template is not written. A template that cannot be rendered fails the command with one line that names the template and the line: `The template src/main/templates/Job.groovy cannot be rendered: line 3: ...`. In each of these cases the command writes nothing, ends with exit code 1 and does not fall back to the template of the `grails` command.
+
+`install-templates` copies the templates the `grails` command has for the commands of the project into `src/main/templates`, as a starting point for your own:
+
+[source,shell]
+----
+$ grails install-templates
+| Copied template to src/main/templates/artifacts/Command.groovy
+| Copied template to src/main/templates/artifacts/Controller.groovy
+...
+----
+
+The templates of the commands a feature gives the project are not among these. They are under `src/main/templates/features/<feature>/`, written there when the application was generated with the feature or the feature was added, and they are the only templates those commands have: change them in place. A template of them that is missing is not written again by `install-templates`; the command that needs it names the path, and the file comes back from version control or from the copy under `.grails/baseline/files`. All of them use the `@artifact.name@` tokens.
+
+It lists each file it writes. A template the project already has is kept and named; with `-f` or `--force` it is replaced. The templates of the scaffolding plugin under `src/main/templates/scaffolding` are a different set, which this command does not write: `grails run-tool install-templates` copies those.
 
 === Gradle Build Tool
 

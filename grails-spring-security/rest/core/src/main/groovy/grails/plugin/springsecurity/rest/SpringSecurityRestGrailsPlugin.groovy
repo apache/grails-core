@@ -83,8 +83,6 @@ class SpringSecurityRestGrailsPlugin extends Plugin {
     String authorEmail = ''
     String description = 'Implements authentication for REST APIs based on Spring Security. It uses a token-based workflow'
 
-    def profiles = ['web']
-
     // URL to the plugin's documentation
     String documentation = 'https://grails.apache.org/documentation.html'
 

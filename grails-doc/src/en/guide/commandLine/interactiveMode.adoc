@@ -17,84 +17,172 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Interactive mode is a feature of the Grails command line which keeps the JVM running and allows for quicker execution of commands. To activate interactive mode type 'grails' at the command line and then use TAB completion to get a list of commands:
+When you execute the `grails` command without a command in a Grails project, the command line enters interactive mode. In this mode it functions like a shell, allowing you to run multiple commands without starting the command line again for each. This is particularly useful when working with code-generation commands (such as `create-controller`) or exploring what the command line has.
 
-image::interactive-output.png[]
-
-If you need to open a file whilst within interactive mode you can use the `open` command which will TAB complete file paths:
-
-image::interactive-open-cmd.png[]
-
-Even better, the `open` command understands the logical aliases 'test-report' and 'dep-report', which will open the most recent test and dependency reports respectively. In other words, to open the test report in a browser simply execute `open test-report`. You can even open multiple files at once: `open test-report test/unit/MyTests.groovy` will open the HTML test report in your browser and the `MyTests.groovy` source file in your text editor.
-
-TAB completion also works for class names after the `create-*` commands:
-
-image::interactive-complete-class.png[]
-
-If you need to run an external process whilst interactive mode is running you can do so by starting the command with a !:
-
-image::interactive-run-external.png[]
-
-Note that with ! (bang) commands, you get file path auto completion - ideal for external commands that operate on the file system such as 'ls', 'cat', 'git', etc.
-
-To exit interactive mode enter the `exit` command. Note that if the Grails application has been run with `run-app` normally it will terminate when the interactive mode console exits because the JVM will be terminated. An exception to this would be if the application were running in forked mode which means the application is running in a different JVM. In that case the application will be left running after the interactive mode console terminates. If you want to exit interactive mode and stop an application that is running in forked mode, use the `quit` command. The `quit` command will stop the running application and then close interactive mode.
-
-
-With Grails Forge, when you execute the `grails -t forge` command, the Grails Command Line Interface (CLI) enters interactive mode. In this mode, it functions like a shell, allowing you to run multiple CLI commands without the need to re-initialize the CLI runtime. This mode is particularly useful when working with code-generation commands (such as `create-controller`), creating multiple projects, or exploring various CLI features.
-
-One of the advantages of interactive mode is the availability of tab-completion. You can simply press the TAB key to view possible options for a given command or flag. Here's an example of the available options in interactive mode:
-
-The Grails Shell CLI (`grails`) supports interactive tab-completion and most developer commands. However, advanced configuration flags are only available via the Forge CLI (`grails -t forge`).
-Here's an example of the available options in interactive mode:
-
-[source,shell]
+[source,console]
 ----
-grails>
---help                --verbose             -V                    -v                    create-app            create-domain-class   create-restapi        create-webapp
---stacktrace          --version             -h                    -x                    create-controller     create-plugin         create-web-plugin
+$ cd myapp
+$ grails
+grails> create-controller Book
+grails> create-domain-class Book
+grails> exit
 ----
+
+Outside a project, `grails` without a command shows the help, and with `--non-interactive` it shows the help everywhere.
+
+* Every command of the current directory can be given at the prompt, with its options, as it is given after `grails` on the command line. A line that starts with `#` is ignored.
+* A line that starts with `!` runs the rest of the line in the shell of the operating system, as `!git status` does, and `!` alone runs the last command again. See link:commandLine.html#interactiveModePrograms[Running a Program of the Operating System] below.
+* `exit` or `quit`, alone on its line, leaves interactive mode, as do the end of the input (Ctrl-D) and the interrupt of the terminal (Ctrl-C) at the prompt. Ctrl-C while a command runs Gradle stops Gradle and returns to the prompt, and Ctrl-C while the program of a `!` line runs is the program's.
+* The commands that build, test and run the tools of the project (`compile`, `test-app`, `assemble`, `run-tool` and the others that are a Gradle build) are run through the Gradle Tooling API in interactive mode, where a command line of its own starts the Gradle wrapper. They ask Gradle for the build through one connection, which is made for the first of them and closed when interactive mode is left:
+** *It is fast.* Nothing is started for a build after the first, so a build that Gradle has little to do for is back at the prompt in about 50 milliseconds, where starting the wrapper takes about 350.
+** *Gradle writes plain text*, without its colors and its display of progress, and a line for every task.
+** *A build does not read what you type*: what is typed is the next line of the prompt. A tool of the application that asks a question declares `readsInput` (see xref:commandLine#creatingTools[Creating Tools]), and interactive mode then runs it with the Gradle wrapper and the terminal, so that it reads what you type; a tool that asks without declaring it is run by its name, as `grails NAME`, in a terminal of its own.
+** *Ctrl-C cancels the build* and returns to the prompt; the Gradle daemon stays for the next build.
+** `gradle`, `shell` and `run-app` start the Gradle wrapper there as everywhere, and `GRAILS_GRADLE_RUNNER=process` has every command do so. See link:commandLine.html#howGradleIsRun[How the `grails` Command Runs Gradle].
+* `run-app` returns to the prompt once the application answers on its port and leaves it running, so that other commands can be given; `stop-app` stops it, and so does leaving interactive mode, before `grails` returns: like `stop-app`, it waits up to 30 seconds until nothing answers on the port of the application any more, also where a Gradle daemon runs the application. An application that `run-app --detach` started goes on after interactive mode, until `stop-app`. See link:commandLine.html#gradleBuild[Building with Gradle].
+* `test-app --continuous` runs the tests again on every change until Ctrl-C cancels it, and returns to the prompt then.
+* What interactive mode tells you to type, after a mistake or in a warning, is what its prompt takes: `Run 'help' for the commands` where a command line of its own says `Run 'grails help' for the commands`, and `To list them now: gradle grailsToolCatalog` where it says `To list them now: grails gradle grailsToolCatalog`. The prompt takes the commands themselves, and refuses `grails` in front of them as a command there is not.
+
+NOTE: The interactive mode of the Grails shell of earlier versions had the command `open`, which opened a file with the program of the desktop. Interactive mode does not have it: a file is opened with the program of the operating system that opens files, through `!` (`!open FILE` on macOS, `!xdg-open FILE` on Linux, `!start FILE` on Windows). `exit` and `quit` leave it as they left the Grails shell, and `!` is kept, and runs its line through the shell now. Its prompt is `grails>`, and it does not say `Enter a command name to run. Use TAB for completion:` when it starts. See "Commands of Earlier Versions" in xref:commandLine[The Command Line].
+
+One of the advantages of interactive mode is the availability of tab-completion. You can simply press the TAB key to view possible options for a given command or flag. The commands that are completed are those of the current directory as it is after the last command: once a command has made the directory a project, or has added a feature that brings a command, the commands of the project are completed without leaving interactive mode. After `feature add`, the names of the features the project does not have are completed. A shell outside interactive mode completes the commands of `grails` with the completion script of the distribution: see "Completion in a Shell" in xref:commandLine[The Command Line].
+
+[[interactiveModePrograms]]
+==== Running a Program of the Operating System
+
+A line that starts with `!` runs the rest of the line as a command line of the operating system, as the interactive mode of the Grails shell of earlier versions did, and returns to the prompt when it has ended:
+
+[source,console]
+----
+grails> !git status --short
+ M grails-app/controllers/myapp/BookController.groovy
+grails> !ls grails-app/domain/myapp | wc -l
+       3
+grails> !grep -rl TODO grails-app
+| Exit code 1
+grails> exit
+----
+
+* *The line goes to your shell as it was typed.* The shell is the one the `SHELL` environment variable names, when it names one by its absolute path, and `/bin/sh` otherwise, which is given the line with `-c`; on Windows it is the command interpreter that `ComSpec` names, `cmd.exe`, given the line with `/d /s /c`. Quotes, variables, patterns such as `*.groovy`, pipes and redirections are those of that shell, and a backslash is the shell's to read. The shell runs the line as it runs a script, so the aliases and functions of your interactive shell are not there.
+* *It runs in the current directory of interactive mode*, the directory `grails` was started in, with the environment `grails` was started with. A `cd` or a variable that the line sets ends with the line.
+* *The program has the terminal.* What it writes is shown as it writes it, it reads what you type, so an editor or a program that asks a question works, and Ctrl-C goes to the program, which ends or does what it does with Ctrl-C; interactive mode waits for the program to end and asks for the next line.
+* *An exit code other than 0 is shown* in one line, `| Exit code 1`. On Linux and macOS a program that Ctrl-C ended has the exit code 130.
+* *`!` alone runs the last command again*, as it did in the Grails shell: the last line that was a command of interactive mode, and not one that started with `!`. Before the first command it says that there is none to run again. Nothing else that follows `!` refers to the history: `!!` gives `!` to the shell.
+* *The line is in the history* of interactive mode, which the arrow keys go through, and after the name of the program the TAB key completes the paths of the files of the current directory.
+* *In lines that are piped into `grails`*, a line that starts with `!` is run as when it is typed, but the input of the program is empty: the lines after it are lines of interactive mode, and none of them is read by the program.
+* *It is a line of interactive mode only.* On a command line of its own, `grails '!ls'` is refused as a command there is not, with exit code 2, and nothing is run.
+
+The line runs with your rights, as it does when you type it in your shell: interactive mode runs what you type, and what is piped into it. Pipe into `grails` only lines you would run in a shell.
 
 == Help and Information
 
-You can access general usage information for Grails commands using the help flag associated with a specific command.
+You can access general usage information for Grails commands using the help flag associated with a specific command, or with the `help` command followed by the name of the command (`help create-app`); `help` alone lists the commands. The names of commands can be shortened in interactive mode as on the command line: `cA` is `create-app` there too.
 
 [source,shell]
 ----
 grails> create-app -h
-Usage: grails create-app [-hivVx] [--list-features] [-d=Grails Data Implementation] [--jdk=<javaVersion>]
-                         [-s=Servlet Implementation] [-t=TEST] [-f=FEATURE[,FEATURE...]]... [NAME]
+Usage: grails create-app [-hivVx] [--list-catalog-features] [--list-features] [--non-interactive]
+                         [--offline] [--plain-output] [--refresh] [--subproject] [-d=Grails Data
+                         Implementation] [--jdk=<javaVersion>] [-r=RELOADING] [-s=Servlet
+                         Implementation] [--exclude-features=FEATURE[,FEATURE...]]... [-f=FEATURE[,
+                         FEATURE...]]... [--feature-catalog=URL]...
+                         [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]...
+                         [--feature-pack-sha256=COORDINATES=SHA256]... [NAME]
 Creates an application
-      [NAME]            The name of the application to create.
+      [NAME]              The name of the application to create.
+  -d, -g, --data, --gorm=Grails Data Implementation
+                          Which Grails Data implementation to configure (-g, --gorm are legacy
+                            aliases). Possible values: hibernate5, hibernate7, mongodb, neo4j.
+      --exclude-features=FEATURE[,FEATURE...]
+                          The features to leave out of those the application would have by default,
+                            which --list-features marks (with this option, as they are without what
+                            is left out). A feature that is selected, that a feature of the
+                            application requires or that the application cannot be without cannot
+                            be left out.
   -f, --features=FEATURE[,FEATURE...]
-                        The features to use. Possible values: h2, scaffolding, gorm-hibernate5,
-                          gorm-hibernate7, spring-boot-starter-jetty, spring-boot-starter-tomcat,
-                          micronaut-http-client, cache-ehcache, hibernate-validator, postgres,
-                          mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb,
-                          gorm-graphql, assertj, mockito, grails-undertow,
-                          github-workflow-java-ci, jrebel, testcontainers, sqlserver,
-                          grails-console, views-markup, asset-pipeline-grails, views-json,
-                          gorm-neo4j, asciidoctor, grails-web-console,
-                          logbackGroovy, mongo-sync, shade, geb, properties,
-                          grails-spring-ai, spring-ai-openai, spring-ai-anthropic,
-                          spring-ai-ollama
-  -d, --data, -g, --gorm=Grails Data Implementation
-                        Which Grails Data implementation to configure (-g, --gorm are legacy
-                          aliases). Possible values: hibernate5, hibernate7, mongodb.
-  -h, --help            Show this help message and exit.
-  -i, --inplace         Create a service using the current directory
+                          The features to use. Possible values: asciidoctor, asset-pipeline-grails,
+                            cache, cache-ehcache, database-migration, geb-with-local-browsers,
+                            geb-with-testcontainers, github-workflow-java-ci, gorm-async,
+                            gorm-graphql, gorm-hibernate5, gorm-hibernate7, gorm-mongodb,
+                            gorm-neo4j, gradle-build-src, gradle-settings-file,
+                            grails-compile-static, grails-layout, grails-micronaut, grails-quartz,
+                            grails-spring-ai, grails-spring-security, grails-spring-security-ui,
+                            grails-startup-progress, grails-web-console, gsp, h2,
+                            hibernate-validator, logback-config, micronaut-http-client, mockito,
+                            mongo-sync, mongodb-testing-support, mysql, openapi, postgres,
+                            properties, scaffolding, shade, spock, spring-ai-anthropic,
+                            spring-ai-ollama, spring-ai-openai, spring-boot-starter-security,
+                            spring-boot-virtual-threads, sqlserver, testcontainers, views-json,
+                            views-markup
+      --feature-catalog=URL
+                          A feature catalog, in which a name given to --features that is neither a
+                            feature of Grails nor that of a feature pack that was given is looked
+                            up: the catalog says which plugin has the feature, in which version,
+                            with which SHA-256, and can name a repository to take it from, and the
+                            feature pack of that plugin is then used. A pack is code: name a
+                            catalog only when you trust whoever writes it as you would trust the
+                            plugins themselves. The address is https, or file: for a file; none is
+                            for no catalog. Without the option, the catalogs of the
+                            GRAILS_FORGE_CATALOG environment variable are read, else the plugin
+                            index the GRAILS_PLUGIN_INDEX environment variable names, and without
+                            either none. Can be given more than once.
+      --feature-pack-dir=DIRECTORY
+                          A directory that holds a feature pack (feature.yml and its templates
+                            directory), whose feature can then be selected like one of the
+                            framework. For trying a pack out before it is published. A pack adds
+                            dependencies, build plugins, build script code and files to the
+                            application: use a pack only when you trust where it comes from. Can be
+                            given more than once.
+      --feature-pack-repository=URL
+                          A Maven repository to take the feature pack of a plugin from, when the
+                            plugin is given to --features by its coordinates, as group:artifact:
+                            version. The address is https, or file: for a directory. When the
+                            option is given, only the repositories it names are asked; without it,
+                            those of GRAILS_REPO_URL and then Maven Central are. Can be given more
+                            than once.
+      --feature-pack-sha256=COORDINATES=SHA256
+                          The SHA-256 the jar of a plugin that is given to --features by its
+                            coordinates has to have, as group:artifact:version=sha256. A jar with
+                            another one is refused before it is opened. Can be given more than once.
+  -h, --help              Show this help message and exit.
+  -i, --inplace           Create the application in the current directory, and not in a new
+                            directory named after it. Without NAME, the application is named after
+                            the current directory.
       --jdk, --java-version=<javaVersion>
-                        The JDK version the project should target
-      --list-features   Output the available features and their descriptions
+                          The JDK version the project should target
+      --list-catalog-features
+                          Output the features of the feature catalogs that can be selected by their
+                            name, with the plugin and the version each would be taken from
+      --list-features     Output the available features and their descriptions
+      --non-interactive   Never wait for what a user types: without a command the help is shown and
+                            the interactive console is not started, and a command that reads what
+                            is typed is refused.
+      --offline           Ask nothing of the network: a feature catalog is read from its copy on
+                            this computer or from a file, and the feature pack of a plugin is taken
+                            from a repository that is a directory, or from the copy of its jar that
+                            is kept on this computer since it was last fetched
+      --plain-output      Write plain text for a program to read: no colour or other terminal
+                            markup, and no progress display of Gradle.
+  -r, --reloading=RELOADING
+                          Which development reloading option to use. Possible values: devtools,
+                            jrebel, none.
+      --refresh           Read each feature catalog anew, and not the copy of it that is kept on
+                            this computer for a day, and fetch the jar of each plugin whose feature
+                            pack is used, and not the copy of it that is kept on this computer
   -s, --servlet=Servlet Implementation
-                        Which Servlet Implementation to configure. Possible values: none, tomcat,
-                          jetty, undertow.
-  -t, --test=TEST       Which test framework to use. Possible values: junit, spock.
-  -v, --verbose         Create verbose output.
-  -V, --version         Print version information and exit.
-  -x, --stacktrace      Show full stack trace when exceptions occur.
+                          Which Servlet Implementation to configure. Possible values: tomcat,
+                            jetty, undertow, none.
+      --subproject        Create the application as a project of the Gradle build the directory is
+                            in: only the files of the application are written, and not those of the
+                            root of a build (the Gradle wrapper, the settings, the Grails wrapper),
+                            which that build has. The settings of the build are not changed: the
+                            command says which line includes the application.
+  -v, --verbose           Create verbose output.
+  -V, --version           Print version information and exit.
+  -x, --stacktrace        Show full stack trace when exceptions occur.
 ----
 
-You can also obtain a list of available features by using the --list-features flag with any of the create commands.
+You can also obtain a list of available features by using the `--list-features` flag with any of the create commands. The output below is shortened: `...` stands for the categories that are left out.
 
 [source,shell]
 ----
@@ -103,75 +191,43 @@ Available Features
 (+) denotes the feature is included by default
   Name                                Description
   ----------------------------------  ---------------
-  AI
-  grails-spring-ai                    Integrates Spring AI: a chat client over the provider of your choice, chat responses streamed from controller actions, and scripted models for tests.
-  spring-ai-anthropic                 Uses Anthropic Claude models through Spring AI, with the API key taken from the ANTHROPIC_API_KEY environment variable.
-  spring-ai-ollama                    Uses models served by a local Ollama through Spring AI; no credentials needed.
-  spring-ai-openai                    Uses OpenAI models through Spring AI, with the API key taken from the OPENAI_API_KEY environment variable.
-
-  API
-  gorm-graphql                        Generates a GraphQL schema based on entities in GORM.
-
-  CI/CD
-  github-workflow-java-ci [PREVIEW]   Adds a Github Actions Workflow to Build and Test Grails Application
-
-  Cache
-  cache                               The Grails Cache plugin provides powerful and easy to use caching functionality to Grails applications and plugins.
-  cache-ehcache                       The Grails Cache Ehcache plugin extends the Cache plugin and uses Ehcache as the storage provider for cached content.
-
-  Client
-  micronaut-http-client               Adds support for the Micronaut HTTP client
-
-  Configuration
-  properties                          Creates a properties configuration file
+  ...
 
   Database
-  database-migration                  Adds support for Liquibase database migrations. The Database Migration plugin helps you manage database changes while developing Grails applications.
+  database-migration                  Add support for Liquibase database migrations. The Database Migration Plugin helps you manage database schema changes while developing Grails applications.
+  gorm-async                          Adds the asynchronous programming model for Grails Data, including the AsyncEntity trait and the async namespace.
   gorm-hibernate5 (+)                 Configure Grails Data for using Hibernate 5.
   gorm-hibernate7                     Configure Grails Data for using Hibernate 7.
   gorm-mongodb                        Configure Grails Data for using MongoDB.
-  gorm-neo4j                          Configures GORM for Neo4j for Groovy applications
-  h2 (+)                              Adds the H2 driver and default config
-  mongo-sync                          Adds support for the MongoDB Synchronous Driver
-  mysql                               Adds the MySQL driver and default config
-  postgres                            Adds the PostgresSQL driver and default config
-  sqlserver                           Adds the SQL Server driver and default config
-  testcontainers                      Use Testcontainers to run a database or other software in a Docker container for tests
+  gorm-neo4j                          Configure GORM for using Neo4j
+  h2 (+)                              Add the H2 database with default configuration. H2 is a lightweight in-memory database, perfect for development and testing.
+  mongo-sync                          Add support for the MongoDB Synchronous Driver.
+  mysql                               Add MySQL driver and default configuration
+  postgres                            Add PostgresSQL driver and default configuration.
+  sqlserver                           Add Microsoft SQL Server driver and default configuration.
 
-  Development Tools
-  assertj                             AssertJ fluent assertions framework
-  hamcrest                            Hamcrest matchers for JUnit
-  jrebel                              Adds support for class reloading with JRebel (requires separate JRebel installation)
-
-  Documentation
-  asciidoctor                         Adds support for creating Asciidoctor documentation
-
-  Logging
-  logbackGroovy                       Gives you the ability to use groovy to configure logback instead of XML.
-
-  Management
-  grails-web-console                  A web-based Groovy console for interactive runtime application management and debugging
+  ...
 
   Other
-  geb (+)                             This plugins configure Geb for the Grails framework to write automation tests.
-  grails-console (+)                  Starts the Grails console, which is an extended version of the regular Groovy console.
-  scaffolding (+)                     The Grails® framework Scaffolding plugin replicates much of the functionality from Grails 2, but uses the fields plugin instead.
+  grails-quartz                       Add Quartz framework integration to provide job scheduling capabilities.
+  scaffolding (+)                     The Scaffolding Plugin simplifies generating CRUD interfaces for domain classes. It is useful for rapid prototyping and creates basic data management user interfaces with minimal manual code.
+  spock (+)                           Spock is a testing, specification, and mocking framework for JVM developers that emphasizes readability and clarity. By blending BDD concepts and Groovy's concise syntax, Spock helps teams write tests that are easy to understand and enjoyable to maintain.
 
-  Packaging
-  shade                               Adds the ability to build a Fat/Shaded JAR
+  ...
 
-  Server
-  spring-boot-starter-jetty           spring-boot-starter-jetty
-  spring-boot-starter-tomcat (+)      spring-boot-starter-tomcat
-  grails-undertow                     grails-undertow
+  Testing
+  geb-with-local-browsers             Configures Geb to run functional tests against browsers installed on your machine. Selenium Manager downloads the WebDriver binary that matches each browser.
+  geb-with-testcontainers (+)         This plugins configure Geb for Grails framework to write automation tests that run with Testcontainers.
+  mockito (+)                         Mockito test mocking framework for JUnit
+  mongodb-testing-support             Adds Grails MongoDB testing support with Testcontainers for unit and integration tests.
+  testcontainers                      Leverage Testcontainers to run databases and other services in Docker containers during testing.
 
-  Validation
-  hibernate-validator                 Adds support for the Hibernate Validator
-  mockito                             Mockito test mocking framework for JUnit
+  ...
 
   View Rendering
-  asset-pipeline-grails (+)           The Asset-Pipeline is a plugin used for managing and processing static assets in JVM applications primarily via Gradle (however not mandatory). Read more at https://github.com/wondrify/asset-pipeline
-  grails-gsp (+)                      grails-gsp
+  asset-pipeline-grails (+)           Asset Pipeline is used for managing and processing static assets (such as JavaScript, CSS and image files) in Grails applications. Read more at https://github.com/wondrify/asset-pipeline.
+  grails-layout                       Adds support for legacy SiteMesh 2 based GSP layouts (grails-layout) instead of SiteMesh 3
+  gsp (+)                             GSP (Groovy Server Pages) is the server-side view technology used in Grails. It is designed to be familiar to developers with experience in ASP or JSP, while providing a more flexible, expressive, and intuitive way to build web pages.
   views-json                          JSON views are written in Groovy, end with the file extension gson and reside in the grails-app/views directory. They provide a DSL for producing output in the JSON format.
   views-markup                        Markup views are written in Groovy, end with the file extension gml and reside in the grails-app/views directory. They provide a DSL for producing output in the XML.
 ----

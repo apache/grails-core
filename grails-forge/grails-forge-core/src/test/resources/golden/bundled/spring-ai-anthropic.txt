@@ -1,0 +1,67 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: [grails-spring-ai]
+conflicts: []
+oneOf: spring-ai-provider
+dependency: implementation org.springframework.ai:spring-ai-starter-model-anthropic without a version
+
+# web
+title: Spring AI Anthropic
+description: Uses Anthropic Claude models through Spring AI, which reads the API key from the ANTHROPIC_API_KEY environment variable.
+category: AI
+documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
+thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/api/chat/anthropic-chat.html
+visible: true
+dependentFeatures: [grails-spring-ai]
+== README.md
++ ## Feature grails-spring-ai documentation
++ - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
++ - [https://docs.spring.io/spring-ai/reference/](https://docs.spring.io/spring-ai/reference/)
++ ## Feature spring-ai-anthropic documentation
++ - [Grails Spring AI Anthropic documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
++ - [https://docs.spring.io/spring-ai/reference/api/chat/anthropic-chat.html](https://docs.spring.io/spring-ai/reference/api/chat/anthropic-chat.html)
++ 
++ 
++ 
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-spring-ai"
++     implementation "org.springframework.ai:spring-ai-starter-model-anthropic"
++     testImplementation "org.apache.grails:grails-testing-support-ai"
+
+# rest_api
+title: Spring AI Anthropic
+description: Uses Anthropic Claude models through Spring AI, which reads the API key from the ANTHROPIC_API_KEY environment variable.
+category: AI
+documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
+thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/api/chat/anthropic-chat.html
+visible: true
+dependentFeatures: [grails-spring-ai]
+== README.md
++ ## Feature grails-spring-ai documentation
++ - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
++ - [https://docs.spring.io/spring-ai/reference/](https://docs.spring.io/spring-ai/reference/)
++ ## Feature spring-ai-anthropic documentation
++ - [Grails Spring AI Anthropic documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
++ 
++ - [https://docs.spring.io/spring-ai/reference/api/chat/anthropic-chat.html](https://docs.spring.io/spring-ai/reference/api/chat/anthropic-chat.html)
++ 
++ 
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-spring-ai"
++     implementation "org.springframework.ai:spring-ai-starter-model-anthropic"
++     testImplementation "org.apache.grails:grails-testing-support-ai"
+
+# web_plugin
+not for this kind of application
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+not for this kind of application
+

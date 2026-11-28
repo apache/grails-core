@@ -80,9 +80,11 @@ conf:
   dependencyResolution: Dependency Resolution
 commandLine:
   title: The Command Line
+  tour: A Tour from Install to Maintaining a Project
   interactiveMode: Interactive Mode
   creatingCustomScripts: Creating Custom Scripts
-  creatingCustomCommands: Creating Custom Commands
+  creatingTools: Creating Tools
+  mcp: Driving Grails from an AI Agent
   creatingProject: Creating a Grails Project
   reusingGrailsScripts: Re-using Grails scripts
   gradleBuild:
@@ -91,22 +93,12 @@ commandLine:
     gradleTasks: Working with Gradle Tasks
     gradlePlugins: Grails plugins for Gradle
     gradleConfigurationCache: Using the Gradle Configuration Cache
-profiles:
-  title: Application Profiles
-  standardProfiles:
-    title: Standard Profiles
-    webProfile: Web Profile
-    restAPIProfile: REST API Profile
-    pluginProfile: Plugin Profile
-    webPluginProfile: Web Plugin Profile
-    restAPIPluginProfile: REST API Plugin Profile
-    profileProfile: Profile Profile
-  creatingProfiles: Creating Profiles
-  profileInheritance: Profile Inheritance
-  publishingProfiles: Publishing Profiles
-  profileStructure: Understanding Profiles
-  profileCommands: Creating Profile Commands
-  profileFeatures: Creating Profile Features
+applicationTypes:
+  title: Application Types, Features and Feature Packs
+  applicationFeatures: The Features of an Application
+  customizingGeneration: Customizing What a New Application Gets
+  presets: Making Applications from a Preset
+  profilesReplaced: What Became of Profiles
 GORM:
   title: Object Relational Mapping (GORM)
   quickStartGuide:
@@ -240,7 +232,7 @@ REST:
     restControllersStepByStep: Implementing REST Controllers Step by Step
     generatingRestControllers: Generating a REST controller using scaffolding
   callingRestServices: Calling REST Services with HttpClient
-  restProfile: The REST Profile
+  restApiApplication: The REST API Application Type
   openApi: OpenAPI Descriptions
   jsonViews:
     title: JSON Views
@@ -398,6 +390,7 @@ plugins:
   addingDynamicMethodsAtRuntime: Adding Dynamic Methods at Runtime
   participatingInAutoReloadEvents: Participating in Auto Reload Events
   understandingPluginLoadOrder: Understanding Plugin Load Order
+  forgeFeaturePacks: Adding a Feature to Application Creation
   artefactApi:
     title: The Artefact API
     queryingArtefacts: Asking About Available Artefacts
@@ -420,6 +413,7 @@ cache:
       title: Cache Annotations
       cacheUnitTests: Unit Testing
     cacheManager: The CacheManager
+  cacheEhcache: Ehcache through JCache
   cacheTags: Caching Tags
   grailsCacheAdminService:
     title: The Cache Admin Service

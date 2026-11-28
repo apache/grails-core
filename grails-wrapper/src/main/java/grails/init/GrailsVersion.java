@@ -105,7 +105,7 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
                 if (grailsVersion == null) {
                     // the only time this version isn't defined is when it comes from a non-jar file, which should
                     // only be in development of the wrapper
-                    System.out.println("Detected running from a non-jar file, assuming local grails-core development...");
+                    System.err.println("Detected running from a non-jar file, assuming local grails-core development...");
                     return new LinkedHashSet<>(List.of(GrailsReleaseType.SNAPSHOT));
                 }
 
@@ -173,7 +173,7 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
         try {
             return new GrailsVersion(overrideGrailsVersion);
         } catch (Exception e) {
-            System.out.println("An invalid Grails Version [" + overrideGrailsVersion + "] was specified in " + PREFERRED_GRAILS_VERSION_ENV);
+            System.err.println("An invalid Grails Version [" + overrideGrailsVersion + "] was specified in " + PREFERRED_GRAILS_VERSION_ENV);
             e.printStackTrace();
             System.exit(1);
         }
@@ -201,14 +201,14 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
         }
         grailsVersion = grailsVersion.trim();
         if (grailsVersion.isEmpty()) {
-            System.out.println("A blank Grails Version was specified in gradle.properties for key [" + GRAILS_VERSION_PROPERTY + "]");
+            System.err.println("A blank Grails Version was specified in gradle.properties for key [" + GRAILS_VERSION_PROPERTY + "]");
             System.exit(1);
         }
 
         try {
             return new GrailsVersion(grailsVersion);
         } catch (Exception e) {
-            System.out.println("An invalid Grails Version [" + grailsVersion + "] was specified in gradle.properties");
+            System.err.println("An invalid Grails Version [" + grailsVersion + "] was specified in gradle.properties");
             e.printStackTrace();
             System.exit(1);
         }

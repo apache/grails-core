@@ -168,22 +168,21 @@ features: []
         config.reloading == null  // Not set in YAML, will be null
     }
 
-    void "test minimal valid reloading configuration"() {
-        given:
+    void "a file with a way of reloading and nothing of the application is not a configuration"() {
+        given: 'the commands ask a configuration for the package, the type and the features of the application'
         String yamlContent = '''
 reloading: devtools
 '''
         File yamlFile = new File(tempDir.toFile(), "grails-forge-cli.yml")
         yamlFile.text = yamlContent
-        ConsoleOutput consoleOutput = ConsoleOutput.NOOP
+        List<String> warnings = []
 
         when:
-        CodeGenConfig config = CodeGenConfig.load(beanContext, tempDir.toFile(), consoleOutput)
+        CodeGenConfig config = CodeGenConfig.load(beanContext, tempDir.toFile(), recording(warnings))
 
         then:
-        config != null
-        config.reloading.name() == "DEVTOOLS"
-        config.applicationType == null  // Only reloading specified
+        config == null
+        warnings == ['grails-forge-cli.yml: defaultPackage is missing; the commands that create the classes of an application are not there without it']
     }
 
     void "test case-sensitive reloading deserialization requires lowercase"() {
@@ -197,15 +196,30 @@ features: []
 '''
         File yamlFile = new File(tempDir.toFile(), "grails-forge-cli.yml")
         yamlFile.text = yamlContent
-        ConsoleOutput consoleOutput = ConsoleOutput.NOOP
+        List<String> warnings = []
 
         when:
-        CodeGenConfig config = CodeGenConfig.load(beanContext, tempDir.toFile(), consoleOutput)
+        CodeGenConfig config = CodeGenConfig.load(beanContext, tempDir.toFile(), recording(warnings))
 
-        then:
-        // Enum.valueOf is case-sensitive. Values like "DevTools" do not match DEVTOOLS.
-        // This documents the YAML format requirement: reloading: devtools
-        thrown(IllegalArgumentException)
+        then: 'the value is written in lowercase, reloading: devtools; another spelling is said to be none, and the file is not used'
+        config == null
+        warnings == ["grails-forge-cli.yml: reloading is not a way an application reloads, but 'DevTools'; " +
+                             'the commands that create the classes of an application are not there without it']
+    }
+
+    private static ConsoleOutput recording(List<String> warnings) {
+        return new ConsoleOutput() {
+            @Override
+            void out(String message) { }
+            @Override
+            void err(String message) { }
+            @Override
+            void warning(String message) { warnings << message }
+            @Override
+            boolean showStacktrace() { false }
+            @Override
+            boolean verbose() { false }
+        }
     }
 
     void "test reloading field preserved through round-trip serialization"() {

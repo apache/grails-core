@@ -85,6 +85,8 @@ dependencies {
     }
     cliCompileOnly 'org.springdoc:springdoc-openapi-starter-webmvc-api'
     cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+    // GenerateOpenApiDeclaredArgumentsSpec runs the command as the runTool task does, with the class that runs a tool
+    testCliRuntimeOnly project(':grails-console')
 
     api 'org.slf4j:slf4j-api'
 

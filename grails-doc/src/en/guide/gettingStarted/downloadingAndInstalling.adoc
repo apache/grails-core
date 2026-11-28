@@ -21,76 +21,26 @@ There are many ways to create a Grails application.
 The best way is to use either https://start.grails.org[start.grails.org] or use the Grails CLI via https://sdkman.io[SDKMAN].
 SDKMAN greatly simplifies installing and managing multiple Grails versions.
 
-=== Types of command-line interface (CLI)
+=== The `grails` Command
 
-Historically, Grails had one CLI - `grails shell`, until `grails forge` was introduced in Grails 6.
+Grails has one command line, `grails`. It creates projects from application types and features, creates the classes of a project (controllers, domain classes, services and so on), adds features to a project, and runs the build of a project through Gradle (`run-app`, `test-app`, `assemble` and the other commands of that kind). `grails help` lists the commands there are in the current directory, and xref:commandLine[The Command Line] describes them.
 
-==== Grails Shell CLI
-The historical `grails shell` CLI has been a core part of the Grails Framework since its inception, providing command-line tools for project creation, code generation, and application management.
-Nearly all historical references to the `grails` or `grailsw` commands pertain to `grails shell` functionality.
-The `grails shell` CLI relies on Profiles, consisting of skeleton directories and YAML-based configurations for application generation.
-However, this approach is less flexible than the feature-rich application generation capabilities of `grails forge`.
-The Grails Wrapper is a lightweight script (`grailsw`) and the accompanying JAR file is designed to bootstrap and load the CLI within a Grails Application.
-The `grails shell` CLI provides most of the same application generation functionality provided by `grails forge`.
-Importantly, it can also run scripts, such as `run-app` that call Gradle and/or your Grails Application.
-Most Grails plugins still include Grails Scripts that execute within `grails shell` CLI and have not yet been migrated to Gradle tasks.
-IntelliJ IDEA's Grails plugin depends on `grails shell` for code generation and Grails command execution.
-Extending application generation in the grails shell CLI is straightforward: developers can create a Custom Profile and reference it as a Maven dependency, which is generally simpler than customizing `grails forge`.
+The same generator is behind https://start.grails.org[start.grails.org], which creates a project without anything being installed.
 
-==== Restoration of Grails Shell CLI
-In Grails 6.0.0, `grails shell` CLI was removed and replaced with `grails forge` CLI.
-However, in Grails 6.2.1, the grails shell CLI, along with Grails Profiles and the Wrapper were restored, empowering users to choose their preferred CLI and reclaiming functionalities that had not yet been fully transitioned to the `grails forge` CLI combined with Gradle tasks.
-
-==== Grails Shell CLI and Gradle
-Certain `grails shell` CLI commands overlap with Gradle tasks.
-
-For Gradle these use a variety of Gradle tasks provided by Gradle, Spring Boot, Grails or a Grails Plugin.
-
-Partial list, for illustration purposes:
+Many commands of `grails` are a Gradle build of the project, and those can be run with Gradle as well:
 
 [options="header,autowidth"]
 |===
-| grails shell CLI  | Gradle | Integration
+| `grails` | Gradle
 
-| `./grails run-app` | `./gradlew bootRun` | run-app is a Grails Script from the Base Grails Profile commands directory and ultimately calls the Gradle bootRun task
-| `./grails test run-app` | `./gradlew bootRun -Dgrails.env=test` | run-app is a Grails Script from the Base Grails Profile commands directory and ultimately calls the Gradle bootRun task
-| `./grails package` | `./gradlew assemble -Dgrails.env=prod` | package is a YAML file from the Base Grails Profile commands directory which is converted by YamlCommandFactory, when Grails CLI starts, into a Grails Command which ultimately calls the Gradle assemble task
-| `./grails generate-all org.bookstore.Author` | `./gradlew runCommand -Pargs="generate-all org.bookstore.Author"` | None. The Grails Script GenerateAll.groovy and the Grails Command GenerateAllCommand.groovy both come from the Scaffolding Plugin and have duplicate functionality
-| `./grails dbm-update` | `./gradlew dbmUpdate` | Both are provided by DbmUpdateCommand.groovy in the database migration plugin
-| `./grails dbm-generate-changelog person-domain.groovy` | `./gradlew dbmGenerateChangelog -Pargs="person-domain.groovy"` | Both are provided by DbmGenerateChangelogCommand.groovy in the database migration plugin
-| `./grails s2-quickstart com.yourapp User Role` | `./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"` | None. The Grails Script s2-quickstart.groovy and the Grails Command S2QuickstartCommand.groovy both come from the Grails Spring Security Core Plugin and have duplicate functionality
-
+| `grails run-app` | `./gradlew bootRun`
+| `grails run-app -Dgrails.env=test` | `./gradlew bootRun -Dgrails.env=test`
+| `grails test-app` | `./gradlew test integrationTest`
+| `grails assemble` | `./gradlew assemble -Dgrails.env=production`
+| `grails dbm-update` | `./gradlew runTool -Pargs="dbm-update"`, or `./gradlew dbmUpdate`
 |===
 
-Additional details on these commands are covered in other sections of Grails documentation.
-
-==== Grails Forge CLI
-In Grails 6, `grails forge` was introduced to replace the application generation features of `grails shell` CLI, while forcing the transition of all other historical CLI functionality directly to Gradle tasks.
-This new CLI offers a superior architecture for application generation, particularly when incorporating multiple features, and starts and generates applications faster than the `grails shell` CLI.
-`grails forge` also powers https://start.grails.org[start.grails.org] and the "New Grails Project" feature in JetBrains' IntelliJ IDEA via the Grails Plugin.
-Unfortunately, in Grails 6, but corrected for 7, the grails forge CLI was invoked using the historical `grails` command, which confused users due to its markedly different feature set and architecture.
-The `grails forge` CLI is dedicated solely to initial application generation and the subsequent creation of components such as domains, controllers, services, interceptors, and tag libraries, which is all it can do.
-This CLI is entirely offline with precompiled templates and does not run or use Gradle or your Grails Application.
-With the `grails forge` CLI, the goal was to transition all other historical capabilities provided by the `grails shell` CLI to Gradle tasks.
-Although some advancements have been made in this transition, substantial work is still outstanding.
-The `grails forge` can be extended by forking the repository and hosting your own Grails Application Forge internally, which is generally more complex than extending `grails shell` with a custom profile.
-
-==== Both CLIs exist in Grails {grailsMajorVersion}
-For the reasons listed above, Grails {grailsMajorVersion} includes both CLIs and a combined delegating CLI that can invoke either CLI.  `grails-shell`, `grails-profiles`, `grails-wrapper` and `grails-forge` projects are now all part of the grails-core project and are released together.
-
-Grails {grailsMajorVersion} provides the following commands in any Grails install:
-
-1. `grails-forge-cli` - the forge cli that was shipped as `grails` initially in Grails 6. This CLI has both interactive completion & bash autocompletion.
-Long term, we intend to fold the legacy shell functions into it - including the ability to create custom commands & supporting a custom layout.
-2. `grails-shell-cli` - the legacy shell cli that IntelliJ uses.
-This CLI has only interactive completion.
-Historically, this shell has not had autocompletion.
-3. `grails` - a new, delegating shell application that will call either `grails-shell-cli` or `grails-forge-cli`.
-By default, `./grails` uses `grails-shell-cli` for backwards compatibility.
-To use `grails-forge-cli`, pass the `-t` or `--type` argument:
-[source,console]
-$ ./grails -t forge
-
+NOTE: Before Grails 9 an installation had three commands: `grails-shell-cli`, the Grails shell with its profiles, `grails-forge-cli`, and `grails`, which started one of the two according to its `-t` option or the `GRAILS_PREFERRED_SHELL` environment variable. Grails 9 has the `grails` command only, without that option, and no profiles: see link:applicationTypes.html#profilesReplaced[What Became of Profiles] and link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9].
 
 === Install with SDKMAN
 
@@ -105,7 +55,7 @@ You can also specify a version
 $ sdk install grails {version}
 
 You can find more information about SDKMAN usage on the https://sdkman.io/usage/[SDKMAN Docs].
-After installing, all three CLI commands: `grails`, `grails-shell-cli`, and `grails-forge-cli` will be available.
+After installing, the `grails` command will be available.
 
 === Manual installation
 
@@ -116,7 +66,7 @@ Then add the bin directory to your system path.
 
 ==== Unix/Linux
 
-** This can be done by adding `export PATH="$PATH:/path/to/grails/bin"` to your profile
+** This can be done by adding `export PATH="$PATH:/path/to/grails/bin"` to the startup file of your shell, such as `~/.bashrc` or `~/.zshrc`
 
 ==== Windows
 ** Copy the path to the bin directory inside the grails folder you have downloaded, for example,
@@ -141,10 +91,34 @@ If Grails is working correctly you should now be able to type `grails --version`
 Grails Version: {version}
 ----
 
+The `bin` directory also has `grails_completion`, a completion script for bash and zsh that completes the commands of `grails`, their options and the names of features on the TAB key once the shell loads it. Installed with SDKMAN, it is `$GRAILS_HOME/bin/grails_completion`. See "Completion in a Shell" in link:commandLine.html[The Command Line] for how to load it.
+
 === Grails Wrapper
 
-The original CLI binaries can be quite large.
-When installing via SDKMAN or via a download, we include a single shadowJar that contains both shells and the associated scripts to invoke them.
-However, when a project is generated, we also include a wrapper `grailsw` that can be checked into source control.
-This wrapper will download the CLI's to `~/.grails/wrapper/myGrailsVersion` and invoke them when calling `grailsw`.
-It is meant to be a light weight option if SDKMAN is not available.
+A generated project includes a wrapper, `grailsw` (with `grailsw.bat` and `grails-wrapper.jar`), that can be checked into source control.
+The wrapper downloads the command line of the version of Grails the project is on, the `grailsVersion` of its `gradle.properties`, to `~/.grails/wrapper` and starts it, so `./grailsw` takes the commands `grails` takes.
+The environment variable `GRAILS_WRAPPER_HOME` names another directory than `~/.grails` for the downloads. Unless it is told to, the wrapper keeps nothing in the project. If you name the `.grails` directory of a project, which also holds the record of how the project was generated, the downloads are in `.grails/wrapper`: add that directory to `.gitignore` to keep them out of version control.
+It is meant to be a lightweight option if SDKMAN is not available, and it gives everyone who works on the project the command line of the same version.
+
+The wrapper only downloads the command line and starts it. It starts the class `org.apache.grails.cli.DelegatingShellApplication` of the jar it downloaded, which every `grails-cli` jar since Grails 7 has, and that class starts the command line of its jar, the class the `Main-Class` attribute of the manifest of the jar names. So the wrapper of one version starts the command line of another, earlier or later, without being replaced, and nothing in `grails-wrapper.jar` has to change when the command line does. Before it starts the class, the wrapper of Grails 9 and later sets the system property `grails.wrapper.version` to its version; the command line then runs the command it is given and nothing else. The wrapper of Grails 7 and 8 sets nothing, and the command line of Grails 9 replaces that wrapper first, see below.
+
+Everything the wrapper says itself, about a download, a repository or an update, is written to the standard error. The standard output is that of the command line alone, so `./grailsw help --json` writes the JSON document and nothing else, also when it downloads first, and `./grailsw mcp` writes only the protocol an MCP client reads (see xref:commandLine#mcp[Driving Grails from an AI Agent]).
+
+The command line is looked for in the repositories that the `GRAILS_REPO_URL` environment variable (or the `grails.repo.url` system property) names, then in Maven Central and then in the ASF repository. A download is installed only when it is whole:
+
+* it is compared with the strongest checksum file the repository has beside the jar (`.sha512`, `.sha256`, `.sha1`, `.md5`). Where the repository has none, as a local Maven repository does not, every entry of the jar is read and compared with the CRC the jar records for it;
+* it opens as a jar and has the class the wrapper starts, `org.apache.grails.cli.DelegatingShellApplication`.
+
+The checksum file comes from the repository the jar comes from. The comparison finds a download that was cut off or damaged on the way; it does not tell whether the repository is to be trusted. Name only repositories you trust.
+
+A repository that does not have the command line, whose `maven-metadata.xml` cannot be read, or that cannot be reached or answers with an error is passed over, and the next one is tried. For a repository you named, and for every failure that is more than the command line not being there, one line says which repository and why. When no repository gave the command line, the wrapper ends with exit code 1 and lists each repository with its reason.
+
+The first repository that gives the jar decides. When what it gave is not whole, nothing is installed, no other repository is asked, and the wrapper ends with exit code 1 and a message that names the repository and the reason (`The Grails CLI that the repository [...] gave is not installed: ...`). A download is not whole when it does not match the checksum or the CRC, is no jar with the class the wrapper starts, has a checksum file that cannot be read or holds no checksum, or broke off before its end. The command line of another repository would otherwise run in the place of the one that was asked for, and a download that is not whole can be one that was tampered with. This holds for Maven Central and the ASF repository as it does for a repository you named. Run the command again; when a repository you named gives the same download again, correct the jar or its checksum file there, or remove the repository from `GRAILS_REPO_URL`.
+
+A user name and password in the address of a repository are not printed. An address that cannot be read with certainty, because the password has an `@`, a `/`, a `#`, a `?`, a bracket or a space in it that is not percent-encoded, or because the scheme is missing, is shown with everything from the start of the address (after `https://` where it has one) to its last `@` replaced by `***`, and an address without an `@` whose host is not a plain host name and port has the host replaced: `https://***@repo.example.com/maven`. That can hide a little more than the user and the password, such as an `@` in the path, and never shows a part of them. A remote address in which no host can be found where it belongs, as a `/`, `#` or `?` in a password leaves it, is refused before anything is downloaded, and the wrapper ends with that message: what Java would say of such an address is a part of the password. Percent-encode those characters in a password (`%2F`, `%23`, `%3F`, `%40` for `@`).
+
+The download is written to a file beside the place of the jar and moved there in one step, so a wrapper that is interrupted, or that runs at the same time as another one with the same home, as jobs of a build server do, leaves no part of a jar where the next run would start it. On Windows a file cannot be opened for a moment while another wrapper moves its download into its place; a wrapper that looks at the jar or starts it then waits for the move to end, up to 30 seconds. A jar in the home that cannot be started, which an interrupted download of an earlier wrapper can have left, is said in one line and downloaded again, once. The versions that were downloaded are all kept, so that projects of different versions do not download again; delete a directory under `~/.grails/wrapper` to remove one.
+
+When the home cannot be written to, the wrapper says which directory and ends with exit code 1 without asking a repository: make the directory writable or name another one with `GRAILS_WRAPPER_HOME`.
+
+The three files of the wrapper are replaced by those of another version of Grails with `./grailsw update-wrapper`, after `grailsVersion` in `gradle.properties` is changed to that version. The wrapper downloads the command line of that version, which writes its `grailsw`, `grailsw.bat` and `grails-wrapper.jar` over the ones of the project where they differ and names the files to commit. The wrapper of a project of Grails 7 or 8 is replaced in the same way when the project is upgraded to Grails 9. On Windows two of the files are in use while the wrapper runs: the command writes the new ones beside them and names the step that is left. See `update-wrapper` in the reference of the command line.

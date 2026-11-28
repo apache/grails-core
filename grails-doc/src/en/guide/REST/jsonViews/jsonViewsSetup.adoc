@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-If you are using the REST application or REST or AngularJS profiles, then the JSON views plugin will already be included and you can skip the remainder of this section. Otherwise you will need to modify your `build.gradle` to include the necessary plugin to activate JSON views:
+If your application was created with `create-restapi`, or with the `views-json` feature, then the JSON views plugin will already be included and you can skip the remainder of this section. Otherwise you will need to modify your `build.gradle` to include the necessary plugin to activate JSON views:
 
 [source,groovy]
 ----

@@ -1,0 +1,96 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: implementation org.apache.grails:grails-quartz without a version
+
+# web
+title: Quartz Job Scheduling
+description: Add Quartz framework integration to provide job scheduling capabilities.
+category: Other
+documentation: https://apache.github.io/grails-quartz/latest/
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-quartz documentation
++ - [Grails Quartz Job Scheduling documentation](https://apache.github.io/grails-quartz/latest/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-quartz"
+== grails-app/conf/application.yml
++ quartz.autoStartup: true
+
+# rest_api
+title: Quartz Job Scheduling
+description: Add Quartz framework integration to provide job scheduling capabilities.
+category: Other
+documentation: https://apache.github.io/grails-quartz/latest/
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-quartz documentation
++ - [Grails Quartz Job Scheduling documentation](https://apache.github.io/grails-quartz/latest/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-quartz"
+== grails-app/conf/application.yml
++ quartz.autoStartup: true
+
+# web_plugin
+title: Quartz Job Scheduling
+description: Add Quartz framework integration to provide job scheduling capabilities.
+category: Other
+documentation: https://apache.github.io/grails-quartz/latest/
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-quartz documentation
++ - [Grails Quartz Job Scheduling documentation](https://apache.github.io/grails-quartz/latest/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-quartz"
+== grails-app/conf/application.yml
++ quartz.autoStartup: true
+
+# plugin
+title: Quartz Job Scheduling
+description: Add Quartz framework integration to provide job scheduling capabilities.
+category: Other
+documentation: https://apache.github.io/grails-quartz/latest/
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-quartz documentation
++ - [Grails Quartz Job Scheduling documentation](https://apache.github.io/grails-quartz/latest/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-quartz"
+== grails-app/conf/application.yml
++ quartz.autoStartup: true
+
+# rest_api_plugin
+title: Quartz Job Scheduling
+description: Add Quartz framework integration to provide job scheduling capabilities.
+category: Other
+documentation: https://apache.github.io/grails-quartz/latest/
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-quartz documentation
++ - [Grails Quartz Job Scheduling documentation](https://apache.github.io/grails-quartz/latest/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-quartz"
+== grails-app/conf/application.yml
++ quartz.autoStartup: true
+

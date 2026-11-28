@@ -22,28 +22,31 @@ under the License.
 
 Most aspects of the plugin are configurable.
 
-=== s2ui-override script
+=== s2ui-override command
 
-The plugin's controllers and GSPs are easily overridden using the `s2ui-override` script. The general syntax for running the script is
+The plugin's controllers and GSPs are easily overridden using the <<ui-s2ui-override,s2ui-override>> command. The general syntax for running the command is
 
-....
-grails s2ui-override <type> [<controller-package>]
-....
+[source,bash]
+----
+./gradlew runTool -Pargs="s2ui-override <type> [<controller-package>]"
+----
 
-The script will copy an empty controller that extends the corresponding plugin controller into your application so you can override individual actions and methods as needed. It also copies the controller's GSPs. The exceptions are 'auth' and 'layout' which only copy GSPs.
+The command will copy an empty controller that extends the corresponding plugin controller into your application so you can override individual actions and methods as needed. It also copies the controller's GSPs. The exceptions are 'auth' and 'layout' which only copy GSPs.
 
 For `auth` and `layout`, you do not supply a package name.
 
 For example:
-....
-grails s2ui-override auth
-....
+[source,bash]
+----
+./gradlew runTool -Pargs="s2ui-override auth"
+----
 
 For the other types `aclclass`, `aclentry`, `aclobjectidentity`, `aclsid`, `persistentlogin`,`register`, `registrationcode`, `requestmap`, `role`, `securityinfo`, `user`, you supply a package name as command parameter. That it is to say:
 
-....
-grails s2ui-override persistentlogin com.company.myapp
-....
+[source,bash]
+----
+./gradlew runTool -Pargs="s2ui-override persistentlogin com.company.myapp"
+----
 
 The files copied for each type are summarized here:
 
@@ -86,10 +89,12 @@ The files copied for each type are summarized here:
 * register
 ** `controller/RegisterController.groovy`
 ** `views/layouts/email.gsp`
+** `views/layouts/register.gsp`
 ** `views/register/forgotPassword.gsp`
 ** `views/register/_forgotPasswordMail.gsp`
 ** `views/register/register.gsp`
 ** `views/register/resetPassword.gsp`
+** `views/register/securityQuestions.gsp`
 ** `views/register/_verifyRegistrationMail.gsp`
 
 * registrationcode

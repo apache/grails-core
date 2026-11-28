@@ -1,0 +1,83 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: always
+dependency: implementation org.springframework.boot:spring-boot-starter without a version when not applicationType=plugin
+dependency: implementation org.springframework.boot:spring-boot-starter-actuator without a version when not applicationType=plugin
+dependency: implementation org.springframework.boot:spring-boot-starter-validation without a version
+dependency: implementation org.springframework.boot:spring-boot-starter-logging without a version
+
+# web
+title: spring-boot-starter
+description: spring-boot-starter
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter"
++     implementation "org.springframework.boot:spring-boot-starter-actuator"
++     implementation "org.springframework.boot:spring-boot-starter-logging"
++     implementation "org.springframework.boot:spring-boot-starter-validation"
+
+# rest_api
+title: spring-boot-starter
+description: spring-boot-starter
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter"
++     implementation "org.springframework.boot:spring-boot-starter-actuator"
++     implementation "org.springframework.boot:spring-boot-starter-logging"
++     implementation "org.springframework.boot:spring-boot-starter-validation"
+
+# web_plugin
+title: spring-boot-starter
+description: spring-boot-starter
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter"
++     implementation "org.springframework.boot:spring-boot-starter-actuator"
++     implementation "org.springframework.boot:spring-boot-starter-logging"
++     implementation "org.springframework.boot:spring-boot-starter-validation"
+
+# plugin
+title: spring-boot-starter
+description: spring-boot-starter
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter-logging"
++     implementation "org.springframework.boot:spring-boot-starter-validation"
+
+# rest_api_plugin
+title: spring-boot-starter
+description: spring-boot-starter
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter"
++     implementation "org.springframework.boot:spring-boot-starter-actuator"
++     implementation "org.springframework.boot:spring-boot-starter-logging"
++     implementation "org.springframework.boot:spring-boot-starter-validation"
+

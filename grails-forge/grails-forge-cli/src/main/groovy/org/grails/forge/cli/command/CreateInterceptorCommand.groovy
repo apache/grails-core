@@ -19,19 +19,15 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
-import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
-import org.grails.forge.template.RenderResult
-import org.grails.forge.template.TemplateRenderer
-import org.grails.forge.template.GspTemplate
-import org.grails.forge.template.GspView
 import picocli.CommandLine
 
-@CommandLine.Command(name = CreateInterceptorCommand.NAME, description = 'Creates a Interceptor Class')
+@CommandLine.Command(name = CreateInterceptorCommand.NAME, description = 'Creates an interceptor')
 @CompileStatic
 class CreateInterceptorCommand extends CodeGenCommand {
 
@@ -57,28 +53,15 @@ class CreateInterceptorCommand extends CodeGenCommand {
     }
 
     @Override
-    Integer call() throws Exception {
-        final Project project = getProject(interceptorName)
-        final TemplateRenderer templateRenderer = getTemplateRenderer(project)
-        final RenderResult renderResult = templateRenderer.render(new GspTemplate('grails-app/controllers/{packagePath}/{className}Interceptor.groovy', GspView.of('/forge/cli/command/templates/interceptor.gsp', [project: project])), overwrite)
-        final RenderResult specRenderResult = templateRenderer.render(new GspTemplate('src/test/groovy/{packagePath}/{className}InterceptorSpec.groovy', GspView.of('/forge/cli/command/templates/interceptorSpec.gsp', [project: project])), overwrite)
-        if (renderResult != null && specRenderResult != null) {
-            logRenderResult(renderResult)
-            logRenderResult(specRenderResult)
-        }
-
-        return 0
+    List<ArtefactTemplate> getTemplates() {
+        return [ArtefactTemplate.INTERCEPTOR, ArtefactTemplate.INTERCEPTOR_TEST]
     }
 
-    private void logRenderResult(RenderResult result) throws Exception {
-        if (result != null) {
-            if (result.isSuccess()) {
-                out('@|blue ||@ Rendered interceptor class to ' + result.getPath())
-            } else if (result.isSkipped()) {
-                warning('Rendering skipped for ' + result.getPath() + ' because it already exists. Run again with -f to overwrite.')
-            } else if (result.getError() != null) {
-                throw result.getError()
-            }
-        }
+    @Override
+    Integer call() throws Exception {
+        return generate('interceptor class', getProject(interceptorName, 'Interceptor'), [
+                'grails-app/controllers/{packagePath}/{className}Interceptor.groovy': ArtefactTemplate.INTERCEPTOR,
+                'src/test/groovy/{packagePath}/{className}InterceptorSpec.groovy': ArtefactTemplate.INTERCEPTOR_TEST
+        ])
     }
 }

@@ -25,12 +25,9 @@ import org.grails.gradle.plugin.core.GradleSpecification
 
 /**
  * Verifies that {@code src/main/scripts} command resources and {@code src/main/templates} are
- * packaged according to whether the plugin publishes a companion {@code -cli} artifact (issue
- * #16035).
- *
- * <p>With {@code grails-plugin-cli}, Groovy/YAML command scripts must leave the runtime plugin jar
- * and land only in the companion. Without a companion, the historical runtime-jar packaging is
- * preserved so unmigrated Grails 7 plugins keep working under {@code legacyCommandSupport}.
+ * packaged where they belong (issue #16035): Groovy/YAML command scripts leave the runtime plugin jar
+ * and land only in the companion {@code -cli}, which every Grails plugin with a script publishes,
+ * whether or not it applies {@code grails-plugin-cli}, and templates stay in the runtime jar.
  * {@code copyCommands} and {@code copyTemplates} stay {@code Copy} tasks, but the owning
  * {@code process*Resources} task composes their {@code CopySpec} instead of copying a staged
  * directory. One task writes each directory, so a deleted source stops being packaged without a
@@ -59,7 +56,7 @@ class PluginScriptCommandPackagingSpec extends GradleSpecification {
         result.output.contains('RUNTIME_HAS_TEMPLATE=true')
     }
 
-    def "plugins without a companion keep src/main/scripts in the runtime jar"() {
+    def "a plugin that does not apply the id of the companions packages src/main/scripts in its -cli jar all the same"() {
         given:
         setupTestResourceProject('plugin-script-commands')
 
@@ -67,11 +64,12 @@ class PluginScriptCommandPackagingSpec extends GradleSpecification {
         BuildResult result = executeTask(':plugin-without-cli:inspectCommandPackaging')
 
         then:
-        result.output.contains('RUNTIME_HAS_SCRIPT=true')
+        result.output.contains('RUNTIME_HAS_SCRIPT=false')
+        result.output.contains('CLI_HAS_SCRIPT=true')
         result.output.contains('RUNTIME_HAS_TEMPLATE=true')
 
         and: 'the script is packaged once, not once per contributing task'
-        result.output.contains('RUNTIME_SCRIPT_COUNT=1')
+        result.output.contains('CLI_SCRIPT_COUNT=1')
     }
 
     def "GSP templates are packaged even though plugin views are excluded from resources"() {

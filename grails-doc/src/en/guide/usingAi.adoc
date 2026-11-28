@@ -17,7 +17,12 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-This chapter is about using AI models from an application: answering questions, summarising, classifying, searching by meaning and letting a model call the application's own services. It is distinct from the AI tooling that helps *develop* a Grails application, which the <<agentSkills,Agent Skills>> section covers.
+This chapter is about using AI models from an application: answering questions, summarising, classifying, searching by meaning and letting a model call the application's own services. It is distinct from the AI tooling that helps *develop* a Grails application, which the <<agentSkills,Agent Skills>> section and xref:commandLine#mcp[Driving Grails from an AI Agent] cover.
+
+The Model Context Protocol (MCP) appears on both sides, as two different servers:
+
+* *`grails mcp`* is the `grails` command line serving a coding agent on the developer's computer: the agent creates classes, adds features, builds, tests and runs the project, and runs the tools of the application and its plugins, through the commands a developer would type. It is part of the command line, not of the application, and is not deployed with it. See xref:commandLine#mcp[Driving Grails from an AI Agent].
+* *An MCP endpoint of the application* serves tools of the application itself, such as looking up an order, to agents of its users, while the application runs. It is built with Spring AI: its MCP server support turns `@McpTool` methods of beans of the application into tools, and its MCP client support lets the application call the tools of other servers. The Grails BOM manages both with the rest of Spring AI, and the MCP Java SDK they are built on at the version Spring AI needs.
 
 Grails integrates https://spring.io/projects/spring-ai[Spring AI] through the `grails-spring-ai` plugin. Spring AI gives an application one API, the `ChatClient`, over the chat models of OpenAI, Anthropic, Ollama, Google, Amazon Bedrock, Mistral and others, along with embeddings, vector stores, tool calling and the Model Context Protocol.
 

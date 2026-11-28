@@ -25,13 +25,33 @@ We recommend https://bell-sw.com/pages/downloads/#jdk-21-lts[Liberica JDK 21 LTS
 |===
 | Grails version | JDK version (minimum)
 
+| 9 | 21
 | 8 | 21
 | 7 | 17
 | 6 | 11
 | 5 | 8
 |===
 
-Grails applications are built with https://gradle.org/[Gradle]. Gradle does not need to be installed separately: a generated application includes the Gradle wrapper (`gradlew`), which downloads the right Gradle version on first use. Grails {grailsMajorVersion} requires Gradle 9.7 or later and generates applications with Gradle {gradleVersion}.
+Grails {grailsMajorVersion} is built on, and generates applications for:
+
+[cols="1,3"]
+|===
+| Component | Grails {grailsMajorVersion}
+
+| JDK
+| 21 or later. `create-app` generates for Java 21, and for Java 25 or 26 with `--jdk`.
+
+| Gradle
+| {gradleMinimumVersion} or later. Generated applications use Gradle {gradleVersion}, through the Gradle wrapper.
+
+| Groovy
+| {groovyVersion}, as the Grails BOM manages it.
+
+| Spring Boot
+| {springBootVersion}, as the Grails BOM manages it.
+|===
+
+Grails applications are built with https://gradle.org/[Gradle]. Gradle does not need to be installed separately: a generated application includes the Gradle wrapper (`gradlew`), which downloads the right Gradle version on first use and checks the download against the SHA-256 that Gradle publishes for it (`distributionSha256Sum` in `gradle/wrapper/gradle-wrapper.properties`). To move the application to another Gradle version, give its checksum as well, from https://gradle.org/release-checksums/[Gradle's checksums]: `./gradlew wrapper --gradle-version <version> --gradle-distribution-sha256-sum <checksum>`. Grails {grailsMajorVersion} requires Gradle {gradleMinimumVersion} or later and generates applications with Gradle {gradleVersion}.
 
 To automate the installation of Grails we recommend https://sdkman.io/[SDKMAN] which greatly simplifies installing and managing multiple Grails versions.
 

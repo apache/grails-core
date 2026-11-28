@@ -39,7 +39,6 @@ import org.grails.forge.util.NameUtils
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
-import spock.util.concurrent.PollingConditions
 
 import java.nio.file.Files
 
@@ -62,11 +61,32 @@ abstract class CommandSpec extends Specification {
     void setupSpec() {
         applicationContext = Application.builder().run()
         testKit = Files.createTempDirectory("${tempDirectoryPrefix}TestKit").toFile()
-        gradleRunner.withTestKitDir(testKit)
+        useGradleUserHome(testKit)
     }
 
     void setup() {
         dir = Files.createTempDirectory(tempDirectoryPrefix).toFile()
+        // the Gradle user home of the specification is removed after each feature
+        notWatching(testKit)
+    }
+
+    /**
+     * Has the builds of the specification run with a Gradle user home of its own, whose builds do not watch the
+     * file system ({@code org.gradle.vfs.watch=false}). A feature changes files of a project between two builds,
+     * and a daemon that watches knows of a change by the events of the system, which on a busy machine come late:
+     * the next build then took a changed file for unchanged, and could reuse what the configuration cache had
+     * stored for it. Without watching, a daemon looks at the files at the start of each build.
+     *
+     * @param home the directory TestKit has as the Gradle user home of the builds
+     */
+    void useGradleUserHome(File home) {
+        notWatching(home)
+        gradleRunner.withTestKitDir(home)
+    }
+
+    private static void notWatching(File home) {
+        home.mkdirs()
+        new File(home, 'gradle.properties').text = 'org.gradle.vfs.watch=false\n'
     }
 
     void cleanup() {
@@ -79,9 +99,12 @@ abstract class CommandSpec extends Specification {
     }
 
     BuildResult executeGradle(String... arguments) {
-        gradleRunner.withProjectDir(dir)
-                .withArguments(GeneratedBuild.arguments() + arguments.toList())
-                .build()
+        // without the Grails environment of this JVM, which is that of Forge and not one somebody asked the build for
+        GeneratedBuild.asFromACommandLine {
+            gradleRunner.withProjectDir(dir)
+                    .withArguments(GeneratedBuild.arguments() + arguments.toList())
+                    .build()
+        }
     }
 
     void generateProject(OperatingSystem operatingSystem = OperatingSystem.LINUX,
@@ -110,16 +133,6 @@ abstract class CommandSpec extends Specification {
                 new FileSystemOutputHandler(dir, ConsoleOutput.NOOP),
                 ConsoleOutput.NOOP
         )
-    }
-
-    PollingConditions getDefaultPollingConditions() {
-        new PollingConditions(timeout: 120, initialDelay: 3, delay: 1, factor: 1)
-    }
-
-    void testOutputContains(String output, String value) {
-        defaultPollingConditions.eventually {
-            assert output.toString().contains(value)
-        }
     }
 
     ThrowingSupplier<OutputHandler, IOException> getOutputHandler(ConsoleOutput consoleOutput) {

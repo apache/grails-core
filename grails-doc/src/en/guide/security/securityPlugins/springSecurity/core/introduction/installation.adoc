@@ -64,12 +64,12 @@ dependencies {
 
 9. You can start using the plugin's features and commands in your application.
 
-10. Run the <<core-s2-quickstart>> script to generate domain classes and add the initial configuration settings in `application.groovy`:
+10. Run the <<core-s2-quickstart>> command to generate domain classes and add the initial configuration settings to `application.groovy`, or to `application.yml` when the project has no `application.groovy`:
 
 +
 [source,bash]
 ```
-./grailsw s2-quickstart com.yourapp User Role
+grails s2-quickstart com.yourapp User Role
 ```
 
 === Spring Boot Auto-Configuration

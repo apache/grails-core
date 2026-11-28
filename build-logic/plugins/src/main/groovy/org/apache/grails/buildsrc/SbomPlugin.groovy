@@ -36,12 +36,26 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ArtifactView
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.artifacts.result.DependencyResult
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.java.archives.Manifest
 import org.gradle.api.logging.Logger
 import org.gradle.api.provider.Provider
+import org.gradle.api.specs.Spec
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 
 import java.nio.charset.StandardCharsets
@@ -55,6 +69,64 @@ import static org.apache.grails.buildsrc.GradleUtils.lookupProperty
 
 @CompileStatic
 class SbomPlugin implements Plugin<Project> {
+
+    /** The plugin that publishes the companions with a plugin's tools: GrailsCliArtifactGradlePlugin.PLUGIN_ID in grails-gradle. */
+    static final String CLI_ARTIFACT_PLUGIN_ID = 'org.apache.grails.gradle.grails-plugin-cli'
+
+    /**
+     * The companion with the tools the build runs ({@code src/cli}). The names are those of ToolBuildNames in
+     * grails-gradle-model: the source set {@code cli}, the artifact suffix {@code -cli} and the extra property
+     * {@code cliArtifactId}.
+     */
+    static final ToolCompanion CLI_COMPANION = new ToolCompanion('cyclonedxCliBom', 'cyclonedx-cli', 'cli', '-cli', 'cliArtifactId')
+
+    /**
+     * The companion with the tools that run as a process of their own ({@code src/standalone}). The names are
+     * those of ToolBuildNames in grails-gradle-model: the source set {@code standalone}, the artifact suffix
+     * {@code -cli-standalone} and the extra property {@code cliStandaloneArtifactId}.
+     */
+    static final ToolCompanion STANDALONE_COMPANION = new ToolCompanion('cyclonedxCliStandaloneBom', 'cyclonedx-cli-standalone',
+            'standalone', '-cli-standalone', 'cliStandaloneArtifactId')
+
+    /**
+     * A companion artifact of a plugin, with its tools: what its SBOM is built from and packed into, and how the
+     * project says that it publishes the companion.
+     */
+    static final class ToolCompanion {
+
+        /** The task that builds the SBOM of the companion */
+        final String bomTaskName
+
+        /** The directory under {@code build/reports} the task writes its own files into */
+        final String reportDirectory
+
+        /** The source set of the tools, whose runtime class path the SBOM lists and whose jar is the companion */
+        final String sourceSetName
+
+        /** What the artifact id of the companion ends with, after the name of the project */
+        final String artifactSuffix
+
+        /** The extra property a project has, with the artifact id as its value, when it publishes the companion */
+        final String artifactIdProperty
+
+        ToolCompanion(String bomTaskName, String reportDirectory, String sourceSetName, String artifactSuffix, String artifactIdProperty) {
+            this.bomTaskName = bomTaskName
+            this.reportDirectory = reportDirectory
+            this.sourceSetName = sourceSetName
+            this.artifactSuffix = artifactSuffix
+            this.artifactIdProperty = artifactIdProperty
+        }
+
+        /** @return the runtime class path of the source set, as Gradle names it */
+        String getRuntimeClasspathName() {
+            "${sourceSetName}RuntimeClasspath"
+        }
+
+        /** @return the jar task of the source set, as Gradle names it */
+        String getJarTaskName() {
+            "${sourceSetName}Jar"
+        }
+    }
 
     // ordered so that first value is the most preferred, this list is from https://www.apache.org/legal/resolved.html
     private static List<String> PREFERRED_LICENSES = [
@@ -193,7 +265,7 @@ class SbomPlugin implements Plugin<Project> {
         // sboms are only published to Grails jar files at this time
         publishSbomForJarProjects(project, sbomOutputLocation)
 
-        configureCliSbom(project)
+        configureToolCompanionSboms(project)
     }
 
     static Provider<RegularFile> sbomOutputLocationFor(Project project, Provider<String> artifactId) {
@@ -286,7 +358,7 @@ class SbomPlugin implements Plugin<Project> {
                 // disable xml output; the json output location, the scanned configuration, and the
                 // component name are set per task by configureBomTaskOutput so each published jar's
                 // SBOM lists only its own dependencies (the primary jar scans runtimeClasspath, the
-                // cli companion scans cliRuntimeClasspath)
+                // companions with the tools scan cliRuntimeClasspath and standaloneRuntimeClasspath)
                 xmlOutput.unsetConvention()
 
                 // cyclonedx does not support "choosing" the license placed in the sbom
@@ -374,8 +446,8 @@ class SbomPlugin implements Plugin<Project> {
     }
 
     /**
-     * Wires the per-task SBOM settings that differ between a module's primary jar and its cli
-     * companion: the emitted component name, the configuration whose resolved runtime classpath is
+     * Wires the per-task SBOM settings that differ between a module's primary jar and its companions
+     * with the tools: the emitted component name, the configuration whose resolved runtime classpath is
      * scanned, and the json output location. Together with {@link #configureSbomMetadata} this lets
      * a single module emit more than one SBOM, each describing only the dependencies of its own jar.
      */
@@ -387,53 +459,180 @@ class SbomPlugin implements Plugin<Project> {
             task.includeConfigs.set(includeConfigs)
             task.jsonOutput.set(output)
             task.outputs.file(output)
-        }
-    }
-
-    /**
-     * A plugin that ships a cli companion artifact (via {@code org.apache.grails.gradle.grails-plugin-cli})
-     * publishes {@code <artifactId>-cli} as its own Maven coordinate with its own runtime dependencies.
-     * Give that jar its own SBOM built from the cli source set's runtime classpath — the same
-     * configuration the cli publication maps its dependencies from — so the companion carries an
-     * accurate bill of materials just like the primary jar.
-     */
-    private static void configureCliSbom(Project project) {
-        project.pluginManager.withPlugin('org.apache.grails.gradle.grails-plugin-cli') {
-            Provider<String> cliArtifactId = cliCompanionArtifactId(project)
-
-            project.tasks.register('cyclonedxCliBom', CyclonedxDirectTask) { CyclonedxDirectTask task ->
-                Provider<Directory> reportDir = project.layout.buildDirectory.dir('reports/cyclonedx-cli')
-                task.xmlOutput.convention(reportDir.map { it.file('bom.xml') })
-                task.jsonOutput.convention(reportDir.map { it.file('bom.json') })
+            for (String name : includeConfigs) {
+                declareWhatTheSbomDescribes(project, task, name)
             }
-
-            def cliSbomOutputLocation = sbomOutputLocationFor(project, cliArtifactId)
-            configureBomTaskOutput(project, 'cyclonedxCliBom', cliSbomOutputLocation, cliArtifactId, ['cliRuntimeClasspath'])
-
-            project.tasks.named('build').configure { it.dependsOn('cyclonedxCliBom') }
-
-            publishSbomForCliJar(project, cliSbomOutputLocation)
         }
     }
 
     /**
-     * The companion coordinate published by the cli-artifact plugin, honouring a custom
-     * {@code cliArtifact { artifactId = '...' }}. Read from the extension directly (the same property
-     * the cli publication uses) rather than the derived {@code <name>-cli} default, so a customised
-     * name is reflected in the SBOM component name and file. Accessed dynamically because build-logic
-     * does not compile against the cli-artifact plugin.
+     * Makes what the SBOM describes an input of its task. The task declares the names of the configurations it
+     * reads and not what they resolve to, so a dependency that was added, removed or moved to another version left
+     * an SBOM that was built before up to date, and took one from the build cache under the same key. The SBOM
+     * names each component of the resolved graph by its coordinates and version, with what it depends on, and
+     * records the hashes of the files of the external modules; it leaves out the hashes of the projects of the
+     * build. So the inputs are:
+     * <ul>
+     * <li>the resolved graph, each component by its identifier, its coordinates and version and its variants,
+     * with the components it depends on: a version that changes counts even where the two versions have the same
+     * bytes, and a project dependency counts without its jar;</li>
+     * <li>the files of the external modules, by their content: a module whose bytes change under the same version,
+     * as a snapshot's do, counts. The files of the projects of the build are left out, so the task builds no jar it
+     * did not build before.</li>
+     * </ul>
+     * Both are lazy: nothing is resolved while the projects are configured. Gradle resolves them when it checks the
+     * task, or, with the configuration cache, when it stores the entry, as it resolves the configuration for the
+     * SBOM itself. A configuration the project does not have is passed over, as the task passes it over.
      */
-    @CompileDynamic
-    static Provider<String> cliCompanionArtifactId(Project project) {
-        project.extensions.getByName('cliArtifact').artifactId
+    private static void declareWhatTheSbomDescribes(Project project, CyclonedxDirectTask task, String configurationName) {
+        Configuration configuration = project.configurations.findByName(configurationName)
+        if (configuration == null) {
+            return
+        }
+        task.inputs.property("sbomGraph_${configurationName}".toString(),
+                configuration.incoming.resolutionResult.rootComponent.map(new DescribedGraph()))
+        FileCollection moduleFiles = configuration.incoming.artifactView { ArtifactView.ViewConfiguration view ->
+            view.lenient(true)
+            view.componentFilter(new ExternalModules())
+        }.files
+        task.inputs.files(moduleFiles)
+                .withPropertyName("sbomModuleFiles_${configurationName}".toString())
+                .withPathSensitivity(PathSensitivity.NONE)
     }
 
-    private static void publishSbomForCliJar(Project project, Provider<RegularFile> sbomOutputLocation) {
-        Provider<Boolean> publishesJavaComponent = project.provider { !project.findProperty('skipJavaComponent') as boolean }
+    /**
+     * The resolved graph as text: one line for each component, sorted, with its identity, its variants and the
+     * identities of what it depends on. The identity of a component is its coordinates and version, and its
+     * identifier; a project of the build is identified as the SBOM identifies it, by its path within its own build,
+     * so a project has the same identity whether its build runs alone or is included in another, as the framework
+     * is in that of Forge.
+     */
+    static final class DescribedGraph implements Transformer<String, ResolvedComponentResult> {
 
-        project.tasks.named('cliJar', Jar).configure { Jar jar ->
-            jar.dependsOn('cyclonedxCliBom')
-            jar.from(publishesJavaComponent.map { include -> include ? sbomOutputLocation.get() : [] }) { CopySpec spec ->
+        @Override
+        String transform(ResolvedComponentResult root) {
+            SortedSet<String> lines = new TreeSet<String>()
+            Set<ComponentIdentifier> seen = new HashSet<ComponentIdentifier>()
+            Deque<ResolvedComponentResult> pending = new ArrayDeque<ResolvedComponentResult>()
+            pending.push(root)
+            while (!pending.isEmpty()) {
+                ResolvedComponentResult component = pending.pop()
+                if (!seen.add(component.id)) {
+                    continue
+                }
+                SortedSet<String> dependsOn = new TreeSet<String>()
+                for (DependencyResult dependency : component.dependencies) {
+                    if (dependency instanceof ResolvedDependencyResult) {
+                        ResolvedComponentResult selected = ((ResolvedDependencyResult) dependency).selected
+                        dependsOn.add(identity(selected))
+                        pending.push(selected)
+                    } else {
+                        dependsOn.add("unresolved ${dependency.requested.displayName}".toString())
+                    }
+                }
+                List<String> variants = component.variants.collect { ResolvedVariantResult variant -> variant.displayName }.sort()
+                lines.add("${identity(component)} ${variants} -> ${dependsOn}".toString())
+            }
+            return lines.join('\n')
+        }
+
+        private static String identity(ResolvedComponentResult component) {
+            ComponentIdentifier id = component.id
+            String identifier = id instanceof ProjectComponentIdentifier ? "project ${((ProjectComponentIdentifier) id).projectPath}" : id.displayName
+            return "${component.moduleVersion} (${identifier})".toString()
+        }
+    }
+
+    /** The external modules of a resolved configuration, and not the projects of the build. */
+    static final class ExternalModules implements Spec<ComponentIdentifier> {
+
+        @Override
+        boolean isSatisfiedBy(ComponentIdentifier identifier) {
+            return identifier instanceof ModuleComponentIdentifier
+        }
+    }
+
+    /**
+     * A plugin publishes its tools in companion artifacts of their own, with their own runtime dependencies
+     * (via {@code org.apache.grails.gradle.grails-plugin-cli}): {@code <artifactId>-cli} with the tools the
+     * build runs and {@code <artifactId>-cli-standalone} with the tools that run as a process of their own.
+     * Each gets its own SBOM, built from the runtime class path of its source set — the configuration its
+     * publication maps its dependencies from — so a companion carries an accurate bill of materials just like
+     * the primary jar.
+     *
+     * <p>A project has a companion when it says so with the companion's extra property
+     * ({@link ToolCompanion#artifactIdProperty}), which the plugin sets once it knows whether the folder of
+     * the companion has sources. Without it no SBOM of the companion is built or packed, so a plugin without
+     * tools of one kind pays nothing for them. The property is read lazily, once every project is
+     * evaluated.</p>
+     */
+    private static void configureToolCompanionSboms(Project project) {
+        project.pluginManager.withPlugin(CLI_ARTIFACT_PLUGIN_ID) {
+            for (ToolCompanion companion : [CLI_COMPANION, STANDALONE_COMPANION]) {
+                configureToolCompanionSbom(project, companion)
+            }
+        }
+    }
+
+    private static void configureToolCompanionSbom(Project project, ToolCompanion companion) {
+        Provider<Boolean> published = companionPublished(project, companion)
+        Provider<String> artifactId = companionArtifactId(project, companion)
+
+        TaskProvider<CyclonedxDirectTask> bomTask = project.tasks.register(companion.bomTaskName, CyclonedxDirectTask) { CyclonedxDirectTask task ->
+            Provider<Directory> reportDir = project.layout.buildDirectory.dir("reports/${companion.reportDirectory}".toString())
+            task.xmlOutput.convention(reportDir.map { it.file('bom.xml') })
+            task.jsonOutput.convention(reportDir.map { it.file('bom.json') })
+        }
+
+        Provider<RegularFile> sbomOutputLocation = sbomOutputLocationFor(project, artifactId)
+        configureBomTaskOutput(project, companion.bomTaskName, sbomOutputLocation, artifactId, [companion.runtimeClasspathName])
+
+        project.tasks.named('build').configure { Task build ->
+            build.dependsOn(published.map { Boolean yes -> yes ? [bomTask] : [] })
+        }
+
+        // see TestRepositoryPublish.WITHOUT_SBOM_PROPERTY
+        if (!TestRepositoryPublish.isWithoutSbom(project)) {
+            packSbomIntoCompanionJar(project, companion, bomTask, sbomOutputLocation, published)
+        }
+    }
+
+    /**
+     * @return whether the project publishes the companion: whether it has the companion's extra property itself,
+     * not inherited from another project
+     */
+    static Provider<Boolean> companionPublished(Project project, ToolCompanion companion) {
+        project.provider { project.extensions.extraProperties.has(companion.artifactIdProperty) }
+    }
+
+    /**
+     * The coordinate the companion is published under, honouring a custom one such as
+     * {@code cliArtifact { artifactId = '...' }}: the value of the companion's extra property, which the
+     * plugin sets from its extension, so a customised name is reflected in the SBOM component name and file.
+     * Without the property, which is when the SBOM is not built unless its task is asked for by name, it is
+     * the name of the project with the suffix of the companion.
+     */
+    static Provider<String> companionArtifactId(Project project, ToolCompanion companion) {
+        project.provider {
+            project.extensions.extraProperties.has(companion.artifactIdProperty)
+                    ? project.extensions.extraProperties.get(companion.artifactIdProperty)?.toString()
+                    : "${project.name}${companion.artifactSuffix}".toString()
+        }
+    }
+
+    private static void packSbomIntoCompanionJar(Project project, ToolCompanion companion, TaskProvider<CyclonedxDirectTask> bomTask,
+                                                 Provider<RegularFile> sbomOutputLocation, Provider<Boolean> published) {
+        Provider<Boolean> publishesJavaComponent = project.provider { !project.findProperty('skipJavaComponent') as boolean }
+        Provider<Boolean> packed = published.zip(publishesJavaComponent) { Boolean companionPublished, Boolean javaComponent ->
+            companionPublished && javaComponent
+        }
+
+        // the jar task exists once the plugin has made the source set a feature, which it may do for a companion
+        // it does not publish: so the jar is found by its name, lazily, and packs the SBOM only when it is published
+        String jarTaskName = companion.jarTaskName
+        project.tasks.withType(Jar).matching { Jar jar -> jar.name == jarTaskName }.configureEach { Jar jar ->
+            jar.dependsOn(packed.map { Boolean yes -> yes ? [bomTask] : [] })
+            jar.from(packed.map { Boolean yes -> yes ? sbomOutputLocation.get() : [] }) { CopySpec spec ->
                 spec.into('META-INF')
                 spec.rename {
                     'sbom.json'
@@ -444,7 +643,7 @@ class SbomPlugin implements Plugin<Project> {
                 manifest.attributes('Sbom-Format': 'CycloneDX')
             }
             jar.doFirst { Task t ->
-                if (!publishesJavaComponent.get()) {
+                if (!packed.get()) {
                     ((Jar) t).manifest.attributes.remove('Sbom-Location')
                     ((Jar) t).manifest.attributes.remove('Sbom-Format')
                 }
@@ -466,7 +665,7 @@ class SbomPlugin implements Plugin<Project> {
      *
      * @param logger the logger to use for logging
      * @param projectName the name of the project (captured at configuration time)
-     * @param sbomComponent the artifact the SBOM describes (the primary or cli companion coordinate)
+     * @param sbomComponent the artifact the SBOM describes (the primary coordinate or the one of a companion with tools)
      * @param bomRef the bom reference for the dependency
      * @param licenseChoices the list of license choices
      * @return the chosen license
@@ -535,6 +734,12 @@ class SbomPlugin implements Plugin<Project> {
     }
 
     private static void publishSbomForJarProjects(Project project, Provider<RegularFile> sbomOutputLocation) {
+        // A build that only fills the repository of the tests, and was asked for jars without their SBOM,
+        // packs none and so runs no CycloneDX task for its jars: see TestRepositoryPublish.WITHOUT_SBOM_PROPERTY.
+        // Every other build, and every build that does not set that property, packs the SBOM.
+        if (TestRepositoryPublish.isWithoutSbom(project)) {
+            return
+        }
         def initialized = new AtomicBoolean(false)
         ['java', 'java-library'].each {
             project.plugins.withId(it) {

@@ -1,0 +1,38 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+format: 1
+kind: feature
+templateApi: 1
+name: grails-mcp
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+# Selected only when it is asked for, never by default: a committed .mcp.json registers the server for the agent of
+# everyone who works on the project, which is the team's choice. The entry runs the Grails wrapper, so the server is
+# the command line of the version the project names.
+title: Grails MCP Server
+description: Writes .mcp.json, which registers ./grailsw mcp as the MCP server of the project for AI agents.
+category: Development Tools
+guideOfGrails: 'guide/commandLine.html#mcp'
+files:
+  # a file whose name starts with a dot has another name in the pack, see "The Layout of a Pack" in the guide
+  - from: mcp.json
+    to: .mcp.json
+readme: |
+  ## Using Grails from an AI agent
+
+  `.mcp.json` registers `./grailsw mcp`, the command line of this project as a Model Context Protocol (MCP) server, for the agents that read the file, such as Claude Code: they can then run the commands of `grails` and the tools of the application. On Windows the entry is `"command": "cmd", "args": ["/c", "grailsw.bat", "mcp"]`. Cursor reads the same entry from `.cursor/mcp.json`. The file is committed with the project, so it registers the server for everyone who works on it.

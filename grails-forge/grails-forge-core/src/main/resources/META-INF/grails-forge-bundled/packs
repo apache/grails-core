@@ -1,0 +1,79 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+app-name
+asciidoctor
+asset-pipeline-grails
+cache
+cache-ehcache
+database-migration
+geb-with-local-browsers
+geb-with-testcontainers
+github-workflow-java-ci
+gorm-async
+gorm-graphql
+gorm-hibernate5
+gorm-hibernate7
+gorm-mongodb
+gorm-neo4j
+grails-compile-static
+grails-gorm-testing-support
+grails-gradle-plugin
+grails-layout
+grails-mcp
+grails-publish
+grails-quartz
+grails-spring-ai
+grails-spring-security
+grails-spring-security-ui
+grails-startup-progress
+grails-undertow
+grails-url-mappings
+grails-web
+grails-web-console
+grails-web-testing-support
+gsp
+h2
+hibernate-validator
+jrebel
+logback
+logback-config
+mockito
+mongo-sync
+mongodb-testing-support
+mysql
+openapi
+postgres
+scaffolding
+shade
+sitemesh3
+spock
+spring-ai-anthropic
+spring-ai-ollama
+spring-ai-openai
+spring-boot-autoconfigure
+spring-boot-devtools
+spring-boot-starter
+spring-boot-starter-jetty
+spring-boot-starter-security
+spring-boot-starter-tomcat
+spring-boot-virtual-threads
+spring-resources
+sqlserver
+testcontainers
+views-json
+views-json-testing-support
+views-markup

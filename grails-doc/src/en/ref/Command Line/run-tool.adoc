@@ -1,0 +1,73 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== run-tool
+
+=== Purpose
+
+Runs a tool of the application or of one of its plugins with the build of the project.
+
+A tool is run by its name, `grails hello-world`, which is what you type every day: see "Tools of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line]. `run-tool` runs the same tool with the Gradle task `runTool`, and is the form for an environment in front of the name, for a tool of a plugin whose name a command of `grails` itself has, and for automation that should not depend on the list of the tools. `./gradlew runTool` is what it runs. `run-command` is another name of `run-tool`, and is deprecated.
+
+=== Examples
+
+[source,console]
+----
+grails hello-world
+grails run-tool hello-world
+grails run-tool -Dgrails.env=test hello-world
+./gradlew runTool --arg=hello-world
+----
+
+The above expects a tool `HelloWorldTool` in `src/cli/groovy` or `src/standalone/groovy` of the application, or in a plugin your application depends on.
+
+To give each argument exactly as it is, repeat `--arg`, the name of the tool first:
+
+[source,console]
+----
+./gradlew runTool --arg=hello-world --arg="an argument with spaces" --arg=--force
+----
+
+`--args-file=<file>` reads the arguments from a UTF-8 file that holds a JSON array of strings, and `-Pargs="hello-world --force"` is one text that is split at spaces, with quotes read as a shell reads them. See link:{guidePath}commandLine.html#runningATool[Running a Tool] for the three.
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails run-tool [-Dname=value]... <<tool>> [<<argument>>...]
+----
+
+Arguments:
+
+* `tool` - Which tool to run
+* `argument` - The arguments of that tool
+
+`run-tool` runs the Gradle task `runTool` of the project, for the development environment or for the one a `-Dgrails.env=NAME` before the name of the tool names. A tool of `src/cli` is run with the application started around it, unless it declares `startsApplication = false`; a standalone tool, of `src/standalone`, is run by the build without the application, where `grails NAME` would start it without Gradle. Everything after the name of the tool is given to the tool as it is, each argument as the one it was, also one that is empty, has spaces or quotes, or looks like an option. A tool that declares its options and parameters checks them when it is started, and refuses what it does not take, `--help` among it, before it runs; `grails help NAME` shows what it takes. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.
+
+`run-command`, the name this command had in Grails 8, runs the same tool after one warning line, and the Gradle task `runCommand` runs it after a Gradle warning:
+
+[source,console]
+----
+$ grails run-command hello-world
+| Warning run-command is deprecated: use run-tool
+$ ./gradlew runCommand --arg=hello-world
+runCommand is deprecated: use runTool
+----

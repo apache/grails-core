@@ -25,13 +25,20 @@ Starts an instance of the Swing graphical Groovy console with an initialized Gra
 
 === Examples
 
-[source,groovy]
+[source,console]
 ----
 grails console
+grails console -Dgrails.env=test
 ----
 
 === Description
 
+Usage:
+
+[source,console]
+----
+grails console [--debug-jvm] [-Dname=value]... [-- <<gradle arguments>>]
+----
 
 Starts the Grails console, which is an extended version of the regular Groovy console. There are a couple of useful variables registered in the binding:
 
@@ -40,9 +47,4 @@ Starts the Grails console, which is an extended version of the regular Groovy co
 
 These are useful as they allow access to the conventions within Grails and Spring beans.
 
-Usage:
-[source,groovy]
-----
-grails <<environment>>* console
-----
-
+`console` runs the Gradle task `console` of the project for the development environment, or for the one `-Dgrails.env=NAME` names, and stays with the console until its window is closed. `--debug-jvm` starts the JVM of the console suspended, waiting for a debugger on port 5005. With `--non-interactive` the command is refused. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.

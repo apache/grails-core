@@ -1,0 +1,181 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: logging
+dependency: implementation org.apache.grails:grails-logging without a version
+
+# web
+title: Logback Configuration
+description: Generates an editable grails-app/conf/logback-spring.xml. Logback logging already works out of the box via Spring Boot's defaults; add this only to customize logging configuration in XML.
+category: Logging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== grails-app/conf/logback-spring.xml
++ <?xml version="1.0" encoding="UTF-8"?>
++ <configuration>
++     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
++     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
++ 
++     <root level="INFO">
++         <appender-ref ref="CONSOLE"/>
++     </root>
++ 
++     <springProfile name="development">
++         <logger name="StackTrace" level="ERROR"/>
++ 
++ <!--        <logger name="example.grails" level="DEBUG"/>-->
++ 
++ <!--        <logger name="org.hibernate.SQL" level="DEBUG"/>-->
++ <!--        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>-->
++ <!--        <logger name="org.springframework.security" level="TRACE"/>-->
++     </springProfile>
++ 
++ <!--    logging to a file: set logging.file.name in application.yml and include Spring Boot's file appender -->
++ <!--    <include resource="org/springframework/boot/logging/logback/file-appender.xml"/>-->
++ <!--    <root level="INFO">-->
++ <!--        <appender-ref ref="FILE"/>-->
++ <!--    </root>-->
++ </configuration>
+
+# rest_api
+title: Logback Configuration
+description: Generates an editable grails-app/conf/logback-spring.xml. Logback logging already works out of the box via Spring Boot's defaults; add this only to customize logging configuration in XML.
+category: Logging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== grails-app/conf/logback-spring.xml
++ <?xml version="1.0" encoding="UTF-8"?>
++ <configuration>
++     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
++     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
++ 
++     <root level="INFO">
++         <appender-ref ref="CONSOLE"/>
++     </root>
++ 
++     <springProfile name="development">
++         <logger name="StackTrace" level="ERROR"/>
++ 
++ <!--        <logger name="example.grails" level="DEBUG"/>-->
++ 
++ <!--        <logger name="org.hibernate.SQL" level="DEBUG"/>-->
++ <!--        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>-->
++ <!--        <logger name="org.springframework.security" level="TRACE"/>-->
++     </springProfile>
++ 
++ <!--    logging to a file: set logging.file.name in application.yml and include Spring Boot's file appender -->
++ <!--    <include resource="org/springframework/boot/logging/logback/file-appender.xml"/>-->
++ <!--    <root level="INFO">-->
++ <!--        <appender-ref ref="FILE"/>-->
++ <!--    </root>-->
++ </configuration>
+
+# web_plugin
+title: Logback Configuration
+description: Generates an editable grails-app/conf/logback-spring.xml. Logback logging already works out of the box via Spring Boot's defaults; add this only to customize logging configuration in XML.
+category: Logging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== grails-app/conf/logback-spring.xml
++ <?xml version="1.0" encoding="UTF-8"?>
++ <configuration>
++     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
++     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
++ 
++     <root level="INFO">
++         <appender-ref ref="CONSOLE"/>
++     </root>
++ 
++     <springProfile name="development">
++         <logger name="StackTrace" level="ERROR"/>
++ 
++ <!--        <logger name="example.grails" level="DEBUG"/>-->
++ 
++ <!--        <logger name="org.hibernate.SQL" level="DEBUG"/>-->
++ <!--        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>-->
++ <!--        <logger name="org.springframework.security" level="TRACE"/>-->
++     </springProfile>
++ 
++ <!--    logging to a file: set logging.file.name in application.yml and include Spring Boot's file appender -->
++ <!--    <include resource="org/springframework/boot/logging/logback/file-appender.xml"/>-->
++ <!--    <root level="INFO">-->
++ <!--        <appender-ref ref="FILE"/>-->
++ <!--    </root>-->
++ </configuration>
+
+# plugin
+title: Logback Configuration
+description: Generates an editable grails-app/conf/logback-spring.xml. Logback logging already works out of the box via Spring Boot's defaults; add this only to customize logging configuration in XML.
+category: Logging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== grails-app/conf/logback-spring.xml
++ <?xml version="1.0" encoding="UTF-8"?>
++ <configuration>
++     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
++     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
++ 
++     <root level="INFO">
++         <appender-ref ref="CONSOLE"/>
++     </root>
++ 
++     <springProfile name="development">
++         <logger name="StackTrace" level="ERROR"/>
++ 
++ <!--        <logger name="example.grails" level="DEBUG"/>-->
++ 
++ <!--        <logger name="org.hibernate.SQL" level="DEBUG"/>-->
++ <!--        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>-->
++ <!--        <logger name="org.springframework.security" level="TRACE"/>-->
++     </springProfile>
++ 
++ <!--    logging to a file: set logging.file.name in application.yml and include Spring Boot's file appender -->
++ <!--    <include resource="org/springframework/boot/logging/logback/file-appender.xml"/>-->
++ <!--    <root level="INFO">-->
++ <!--        <appender-ref ref="FILE"/>-->
++ <!--    </root>-->
++ </configuration>
+
+# rest_api_plugin
+title: Logback Configuration
+description: Generates an editable grails-app/conf/logback-spring.xml. Logback logging already works out of the box via Spring Boot's defaults; add this only to customize logging configuration in XML.
+category: Logging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== grails-app/conf/logback-spring.xml
++ <?xml version="1.0" encoding="UTF-8"?>
++ <configuration>
++     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
++     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
++ 
++     <root level="INFO">
++         <appender-ref ref="CONSOLE"/>
++     </root>
++ 
++     <springProfile name="development">
++         <logger name="StackTrace" level="ERROR"/>
++ 
++ <!--        <logger name="example.grails" level="DEBUG"/>-->
++ 
++ <!--        <logger name="org.hibernate.SQL" level="DEBUG"/>-->
++ <!--        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>-->
++ <!--        <logger name="org.springframework.security" level="TRACE"/>-->
++     </springProfile>
++ 
++ <!--    logging to a file: set logging.file.name in application.yml and include Spring Boot's file appender -->
++ <!--    <include resource="org/springframework/boot/logging/logback/file-appender.xml"/>-->
++ <!--    <root level="INFO">-->
++ <!--        <appender-ref ref="FILE"/>-->
++ <!--    </root>-->
++ </configuration>
+

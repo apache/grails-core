@@ -1,0 +1,57 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+order: 400
+dependency: testImplementation org.apache.grails.testing:grails-testing-support-mongodb without a version
+
+# web
+title: MongoDB Testing Support
+description: Adds Grails MongoDB testing support with Testcontainers for unit and integration tests.
+category: Testing
+documentation: https://grails.apache.org/docs/latest/guide/testing.html#testingMongodb
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+no application with it alone: mongodb-testing-support requires mongo-sync or gorm-mongodb to be selected.
+
+# rest_api
+title: MongoDB Testing Support
+description: Adds Grails MongoDB testing support with Testcontainers for unit and integration tests.
+category: Testing
+documentation: https://grails.apache.org/docs/latest/guide/testing.html#testingMongodb
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+no application with it alone: mongodb-testing-support requires mongo-sync or gorm-mongodb to be selected.
+
+# web_plugin
+title: MongoDB Testing Support
+description: Adds Grails MongoDB testing support with Testcontainers for unit and integration tests.
+category: Testing
+documentation: https://grails.apache.org/docs/latest/guide/testing.html#testingMongodb
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+no application with it alone: mongodb-testing-support requires mongo-sync or gorm-mongodb to be selected.
+
+# plugin
+title: MongoDB Testing Support
+description: Adds Grails MongoDB testing support with Testcontainers for unit and integration tests.
+category: Testing
+documentation: https://grails.apache.org/docs/latest/guide/testing.html#testingMongodb
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+no application with it alone: mongodb-testing-support requires mongo-sync or gorm-mongodb to be selected.
+
+# rest_api_plugin
+title: MongoDB Testing Support
+description: Adds Grails MongoDB testing support with Testcontainers for unit and integration tests.
+category: Testing
+documentation: https://grails.apache.org/docs/latest/guide/testing.html#testingMongodb
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+no application with it alone: mongodb-testing-support requires mongo-sync or gorm-mongodb to be selected.
+

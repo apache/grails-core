@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 
 /**
  * Configuration for the
@@ -41,6 +42,9 @@ import org.gradle.api.provider.Property
  *     // directly via platform() in the consumer's build.gradle
  *     bom 'org.example:my-bom:1.0.0'
  *     bom 'org.example:other-bom:2.0.0'
+ *
+ *     // Leave a configuration as it is: the class path of a tool, for example
+ *     excludeConfiguration 'myTool'
  * }
  *
  * // Override versions via gradle.properties or ext[]
@@ -78,9 +82,28 @@ class BomPropertyOverridesExtension {
      */
     final ListProperty<String> boms
 
+    /**
+     * The names of configurations that are left as they are: no override is applied to them, and a
+     * platform declared on one is not detected. For a configuration that is the class path of a tool
+     * and not a part of what the project builds, which has the versions the tool was published with.
+     */
+    final SetProperty<String> excludedConfigurations
+
     BomPropertyOverridesExtension(ObjectFactory objects) {
         this.autoDetect = objects.property(Boolean).convention(true)
         this.boms = objects.listProperty(String).convention([])
+        this.excludedConfigurations = objects.setProperty(String).convention([])
+    }
+
+    /**
+     * Leaves configurations as they are, see {@link #excludedConfigurations}.
+     *
+     * @param names the names of the configurations
+     */
+    void excludeConfiguration(String... names) {
+        for (String name : names) {
+            excludedConfigurations.add(name)
+        }
     }
 
     /**

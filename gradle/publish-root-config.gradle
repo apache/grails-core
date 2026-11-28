@@ -46,7 +46,6 @@ def publishedProjects = [
         'grails-controllers',
         'grails-converters',
         'grails-core',
-        'grails-core-cli-legacy',
         'grails-databinding',
         'grails-databinding-core',
         'grails-datasource',
@@ -82,7 +81,6 @@ def publishedProjects = [
         'grails-rest-transforms',
         'grails-scaffolding',
         'grails-services',
-        'grails-shell-cli',
         'grails-sitemesh3',
         'grails-spring',
         'grails-spring-ai',
@@ -174,24 +172,12 @@ def publishedProjects = [
         'grails-data-neo4j-spring-boot',
         // wrapper
         'grails-wrapper',
-        // profiles
-        'grails-profiles-base',
-        'grails-profiles-plugin',
-        'grails-profiles-profile',
-        'grails-profiles-rest-api',
-        'grails-profiles-rest-api-plugin',
-        'grails-profiles-web',
-        'grails-profiles-web-plugin',
 ]
 
 subprojects {
     if (name in publishedProjects || name in skillProjects) {
         // This has to be applied here in the root project due to the nexus plugin requirements
-        if (name.startsWith('grails-profiles')) {
-            apply plugin: 'org.apache.grails.gradle.grails-publish-profile'
-        } else {
-            apply plugin: 'org.apache.grails.gradle.grails-publish'
-        }
+        apply plugin: 'org.apache.grails.gradle.grails-publish'
     }
 }
 

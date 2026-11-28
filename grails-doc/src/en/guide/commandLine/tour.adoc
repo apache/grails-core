@@ -1,0 +1,394 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+This section walks through the `grails` command once, from installing it to changing a project months after it was created. It takes about ten minutes to read, shows each step with one example, and names the section that has the details. Nothing here is needed to understand the sections that follow; read it for the overall picture, and skip it when you only need to look something up.
+
+Three ideas carry the whole command line:
+
+* A project is created from an _application type_ and a set of _features_.
+* A generated project keeps a _record_ of how it was generated, in its `.grails` directory. The record is what lets the command line add a feature to the project later.
+* Whatever needs the classes of the application (compiling, testing, running, and the tools of the application and its plugins that use them) runs in the Gradle build of the project. The `grails` command starts that build with the Gradle wrapper of the project, so `grails` and `./gradlew` always build the same thing. In the interactive console the builds are asked of Gradle through its Tooling API, with the Gradle the wrapper names, which makes a build there begin at once.
+
+If you know the Grails shell and the profiles of Grails 8 and earlier, link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] and link:applicationTypes.html#profilesReplaced[What Became of Profiles] say what changed, and link:upgrading.html#cliMappingGrails8[note 55 of the upgrade notes] has every command of Grails 8 with what it is now.
+
+=== Installing the command line
+
+Install Grails with https://sdkman.io[SDKMAN], or download the binary distribution and put its `bin` directory on the path; link:gettingStarted.html#downloadingAndInstalling[Downloading and Installing] has both. Either way there is one command:
+
+[source,console]
+----
+$ sdk install grails
+$ grails --version
+$ grails help
+----
+
+`grails help` lists the commands of the current directory. Outside a project those are the commands that create one and a few that work anywhere; inside a project there are more. `grails help NAME` describes one command, and it never runs anything to do so: not the build of the project, and not the command. For a command of `grails` itself, `grails NAME --help` shows the same. A tool of the application or of a plugin (see below) is given everything after its name, `--help` included, so `grails NAME --help` runs that tool, and what it then shows is up to the tool; `grails help NAME` is the way to ask about it.
+
+Nothing has to be installed to create a project: https://start.grails.org/[the Grails Forge website] generates the same projects from the same application types and features, and each generated project brings the Grails wrapper, `grailsw`, described at the end of this section.
+
+=== Creating a project
+
+There is one `create-` command for each application type:
+
+[cols="2,3"]
+|===
+|Command |Creates
+
+|`create-app`
+|A web application
+
+|`create-restapi`
+|A REST API application
+
+|`create-plugin`
+|A plugin without a web layer
+
+|`create-web-plugin`
+|A plugin with a web layer
+
+|`create-rest-api-plugin`
+|A plugin with a REST API
+|===
+
+The type decides which features there are, which of them a project has by default, and which commands the project has afterwards. Every `create-` command lists its features by category with `--list-features`, the default ones marked `(+)`:
+
+[source,console]
+----
+$ grails create-app --list-features
+----
+
+`--features` adds features to the defaults and `--exclude-features` leaves a default out. The name of the application can carry the default package in front of it:
+
+[source,console]
+----
+$ grails create-app com.example.shop --features grails-quartz --exclude-features mockito
+| Application created at /home/me/shop
+$ cd shop
+----
+
+This is a web application named `shop` with the default package `com.example`, with Quartz job scheduling, and without Mockito. Four more options choose between alternatives: `--jdk`, `--servlet` (the servlet container), `--data` (the Grails Data implementation) and `--reloading`. An option that is not given is a default and gives way to a feature that needs something else; an option that is given is a choice, and a feature that contradicts it is refused before anything is written.
+
+xref:commandLine#creatingProject[Creating a Grails Project] describes every option, and how to create an application inside an existing Gradle build with `--subproject`. link:applicationTypes.html[Application Types, Features and Feature Packs] explains types and features.
+
+=== What the project contains
+
+Besides the application itself (`grails-app`, `src`, `build.gradle`, `gradle.properties`), the new directory has the Gradle wrapper (`gradlew`), the Grails wrapper (`grailsw`) and the `.grails` directory with the record:
+
+[cols="2,4"]
+|===
+|File |What it holds
+
+|`.grails/project.yml`
+|What was asked for: the application type, the name and package, the options, the features that were selected and those that were left out.
+
+|`.grails/forge.lock.yml`
+|What that came to: the version of Grails and every feature the application has, in the order they were applied.
+
+|`.grails/baseline/`
+|A copy of every generated file as it was generated.
+|===
+
+[source,yaml]
+..grails/project.yml
+----
+applicationType: web
+name: shop
+defaultPackage: com.example
+options:
+  jdk: 21
+  servlet: tomcat
+  data: hibernate5
+  reloading: devtools
+requestedFeatures:
+- name: grails-quartz
+excludedFeatures:
+- name: mockito
+----
+
+The file has a few more keys than are shown here. Three things follow from the record:
+
+* *Commit it.* The `.grails` directory belongs in version control with the rest of the project. The generated `.gitignore` keeps out only the parts of it that are of one machine.
+* *Do not edit it.* The files carry digests of each other. A record that was changed by hand is not used, and the commands that need it say so.
+* *The application does not read it.* Only the command line does: the commands that create classes take the type, the package and the features from it, and `feature add`, `project show` and `project regenerate` work from it.
+
+An application that Grails 9 did not generate, such as one that was created with the Grails shell of an earlier version, has no record. link:{commandLineRef}project-migrate.html[project migrate] writes one from the files of the application, with a copy of every file this version generates for an application of the same type, options and features. The commands that create classes are there afterwards, and so is `feature add`, which takes what the application has otherwise than that copy for a change of yours.
+
+See "The `.grails` directory of a project" in xref:commandLine#creatingProject[Creating a Grails Project].
+
+=== Creating classes
+
+In a project, `grails help` also lists the commands that write a class of the application, most of them with a test beside it:
+
+[source,console]
+----
+$ grails create-domain-class Book
+| Rendered domain class to grails-app/domain/com/example/Book.groovy
+| Rendered domain class to src/test/groovy/com/example/BookSpec.groovy
+$ grails create-controller Book
+| Rendered controller to grails-app/controllers/com/example/BookController.groovy
+| Rendered controller to src/test/groovy/com/example/BookControllerSpec.groovy
+$ grails create-job Nightly
+| Rendered job to grails-app/jobs/com/example/NightlyJob.groovy
+----
+
+A name without a package goes into the default package of the project. The commands work in every directory of the project and write relative to its top, and they do not replace a file that exists unless `--force` is given.
+
+Which commands there are depends on the record. `create-job` is there because this project has the `grails-quartz` feature, and `create-functional-test` writes a Geb test because it has the `geb-with-testcontainers` feature, as a web application has by default; `create-restful-controller` and `create-domain-resource` are commands of REST API applications and REST API plugins, where `create-functional-test` writes a test that calls the application over HTTP.
+
+Names can be shortened to the first letters of their words: `cDC` is `create-domain-class`. A short form that fits two commands runs neither: in a project `s` fits `stats` and `shell`, so type `st`. `cT` is `create-taglib`, and `create-tool` has no short form: it is typed with its whole name.
+
+The files come from templates, and a project can have its own under `src/main/templates`; `install-templates` copies the built-in ones there as a starting point. The table of commands and the template syntax are under "Creating Classes with the `grails` Command" in xref:commandLine[the introduction of this chapter].
+
+=== Building, testing and running
+
+The commands that build, test and run are the Gradle build of the project under shorter names:
+
+[cols="2,3"]
+|===
+|Command |Gradle tasks
+
+|`grails compile`
+|`classes`
+
+|`grails test-app`
+|`testApp`, which runs every test phase of the project
+
+|`grails run-app`
+|`bootRun`
+
+|`grails assemble` (also `war`, `package`)
+|`assemble`, for the production environment
+
+|`grails gradle ARGUMENTS`
+|Gradle with exactly these arguments
+|===
+
+[source,console]
+----
+$ grails test-app
+$ grails test-app BookControllerSpec
+$ grails test-app --unit "*ControllerSpec"
+$ grails test-app --functional
+$ grails run-app --port 9090
+$ grails run-app -Dgrails.env=test
+$ grails assemble
+----
+
+* `test-app` runs every test phase of the project: the unit tests, the integration tests, and every phase the project adds, such as the functional tests of a `functionalTest` task. A phase is a `Test` task of the build, so a phase that is added to the build is run without anything else to do.
+* A switch of the name of a phase runs that phase alone: `--unit`, `--integration`, and for a phase the project adds the name of its task without the ending `Test`, as `--functional` for `functionalTest`. Several switches run several phases.
+* `test-app` with the name of a test runs the test wherever it is found, in any of the phases that are run.
+* The environment is `development` for `run-app`, `test` for `test-app` and `production` for `assemble`. `-Dgrails.env=NAME` after the name of the command selects another one. This holds for the commands of `grails` itself, and not for a tool of the application or of a plugin, which takes everything after its name as its own arguments: such a tool runs in `development`, and `grails run-tool -Dgrails.env=NAME TOOL` runs it in another environment (see the next section). An environment in front of the command, as in `grails prod war` of earlier versions, is refused.
+* `run-app` stays with the application until it ends or you press Ctrl-C. `run-app --detach` returns once the application answers on its port and leaves it running; `stop-app` stops it.
+* Whatever follows `--` is given to Gradle as it is: `grails compile -- --offline`.
+
+The project needs its Gradle wrapper for these commands: the `grails` command brings no Gradle of its own. xref:commandLine#gradleBuild[Building with Gradle] has every command and option, and the rule by which a project above the current directory is used only when it is your own.
+
+=== Tools of the application and its plugins
+
+An application can add _tools_ of its own to the `grails` command, and so can each of its plugins. A tool is a class, and where its source is decides what it can use. A tool in `src/cli` is run by the build with the application started around it, which makes it the place for work that needs the services and the domain classes of the application, such as an import or a report:
+
+[source,console]
+----
+$ grails create-tool data-import
+| Rendered tool to src/cli/groovy/com/example/DataImportTool.groovy
+| Run it with: grails data-import
+$ grails data-import orders.csv
+----
+
+As it is written, the tool prints its name and what it was given, `Ran data-import for orders.csv`, and succeeds. Its work goes into its `handle()` method, which returns `true` when the tool has done it and `false` to end the tool with exit code 1. The tool also declares what it takes and what it does: a one-line description, the parameter it was given, and whether it changes anything. `grails help data-import` shows them, the command line refuses an argument the tool does not declare before anything is run, and an agent of `grails mcp` is offered the tool with them.
+
+A tool that only reads and writes files of the project, such as one that renders a template into the project, goes into `src/standalone` instead: `grails create-tool --standalone create-report`. `grails` runs such a tool as a Java process of its own, without Gradle and without the application, so it starts at once and works also while the project does not compile. Neither folder is part of the application: no tool, and no library that only tools use, is in the application as it runs or as it is packaged.
+
+The build of the project lists the tools, with the Gradle task `grailsToolCatalog`, every time it compiles the project. A tool the build has not listed yet, as in a checkout that was never built or right after `create-tool`, is listed when its name is typed: `grails` has the build list the tools once, which compiles the project, and runs the tool. In a project that was built, `help` and a mistyped name answer at once, without a build.
+
+`help` lists the tools of the application and of its plugins after its own commands, each with where it comes from, and each is run by its name. `grails help data-import` describes the tool from that list and runs nothing, with the options and parameters the tool declares, and so does `grails data-import --help`; a tool that declares nothing is given `--help` after its name as an argument, and runs. A tool runs in the `development` environment. Everything after its name is its own, so `-Dgrails.env=production` after the name does not select an environment: it reaches the tool as an argument, and `grails` warns that the tool runs in `development`. Name the environment in front of the tool with `run-tool`:
+
+[source,console]
+----
+$ grails run-tool -Dgrails.env=production data-import orders.csv
+----
+
+The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] as standalone tools. In a REST API application with the `scaffolding` feature they generate a REST controller and JSON views in place of pages. `run-tool NAME` is also how to reach a tool of a plugin whose name a command of `grails` itself has. A tool in `src/cli` that needs the classes of the application but not the running application says `startsApplication = false`, and is run without starting it; `query-tail` of Grails Data is one.
+
+An application of Grails 8 has its tools, which Grails 8 called commands, in `grails-app/commands`. They still run, each with a warning: the folder is deprecated, and `create-tool` never writes into it.
+
+A project can also have _scripts_ in `src/main/scripts`. A script is run by the build without the application and cannot use the classes of the application. Scripts are deprecated: the scripts a project has still run, no command creates a new one, and a new one is a tool that `create-tool` writes.
+
+See "Tools of the Application and its Plugins" in xref:commandLine[the introduction of this chapter], xref:commandLine#creatingTools[Creating Tools] and xref:commandLine#creatingCustomScripts[Creating Custom Scripts].
+
+=== Finding plugins
+
+Two commands answer which plugins there are and how one is added:
+
+[source,console]
+----
+$ grails list-plugins security
+$ grails plugin-info spring-security
+----
+
+`plugin-info` shows the versions of a plugin, its license and documentation, the line for the `dependencies` block of `build.gradle`, and the feature that adds the plugin, where there is one. For the plugin above that is `grails-spring-security`. See xref:commandLine#findingPlugins[Finding Plugins].
+
+=== Adding a feature later
+
+Most of what a feature does can be done by hand: a dependency, some configuration, a file or two. `feature add` does it for you, and the project afterwards is the project that the `create-` command would have made with the feature. The command leaves alone what you changed in the meantime. Here `build.gradle` has a dependency of your own by now:
+
+[source,console]
+----
+$ grails feature add cache
+| Adding the feature cache
+    update   README.md
+    merge    build.gradle (your changes are kept)
+    update   grails-app/conf/application.yml
+| Feature cache added. Commit the changes together with the directory .grails
+----
+
+The command generates the application as it was recorded and once more with the feature, and applies only the difference between the two. A file you did not change is updated; a file you changed in other lines is merged; and when you and the feature changed the same lines, that is a conflict. With one conflict nothing is written at all: the command names the file and the lines of both sides, and you run it again once they are out of each other's way.
+
+`--dry-run` lists what would happen and `--diff` shows it line by line; neither changes anything. Adding a feature the application already has changes nothing either.
+
+You do not need to remember how the project was created to know what can be added. `feature list` reads the record and says which features the project has, which of them were asked for by name, which features `feature add` can add with what each takes the place of, and why it cannot add each of the others, such as a feature that would change the servlet container the project was created with. In interactive mode the TAB key completes the names of the features the project does not have after `feature add`. `feature find TEXT` finds a feature by a word of its name or its description, `feature show FEATURE` says what one feature is and which files and lines of `build.gradle` it would add here, and `feature diff FEATURE` shows what `feature add` would change as a diff; none of them changes anything.
+
+Some features take the place of a default one. An application has the H2 database unless another one is chosen, so adding PostgreSQL replaces it, and the command says so:
+
+[source,console]
+----
+$ grails feature add postgres
+| Adding the feature postgres, and with it testcontainers
+    postgres replaces h2, the default of the group database-driver
+    update   README.md
+    merge    build.gradle (your changes are kept)
+    update   grails-app/conf/application.yml
+    add      src/test/resources/application-test.yml
+| Feature postgres added, in the place of h2. Commit the changes together with the directory .grails
+----
+
+The command also names the features that come with the one you asked for, here `testcontainers`. It is deliberately careful about the rest. A feature that was asked for by name, when the project was created or with an earlier `feature add`, is not replaced unless you say so with `--replace`: in a project that was created with `postgres`, `grails feature add mysql --replace` puts MySQL in its place, and without the option the command refuses and names both features. An option such as `--data` is never changed. No command takes a feature out again, and adding a feature does not move a project to another version of Grails. It works only in a project that Grails 9 generated; the record that `project migrate` writes for another application is not enough for it. See link:{commandLineRef}feature-add.html[feature add]. Review the result with your version control and commit it together with `.grails`.
+
+"Adding a feature to a project" in xref:commandLine#creatingProject[Creating a Grails Project] describes the merge, the conflicts and everything that is refused.
+
+=== Looking at the record, and generating the project again
+
+`project show` prints the record in readable form: every option with the value the application was generated with and whether that is the default of the running command line, the features that were asked for, and the features that came with them. Its last line is the command that creates the same application again:
+
+[source,console]
+----
+$ grails project show
+| How the application shop was generated, from its record in .grails
+    type          web
+    name          shop
+    package       com.example
+    ...
+    --jdk                      21  (default)
+    --servlet                  tomcat  (default)
+    --data                     hibernate5  (default)
+    --reloading                devtools  (default)
+    ...
+| Of the 31 features, 3 were asked for (--features above) and 28 came with the application type, with an option or with another feature:
+    ...
+| The application is created again with:
+grails create-app com.example.shop --features cache,grails-quartz,postgres --exclude-features mockito
+----
+
+`project regenerate` generates the application from the record and never changes the project. With `--output DIRECTORY` it writes the application as generated to another directory. With `--diff` it lists how the project differs from what was generated, which is a quick answer to "what did we change and add since?":
+
+[source,console]
+----
+$ grails project regenerate --diff
+changed  build.gradle
+added    grails-app/controllers/com/example/BookController.groovy
+added    grails-app/domain/com/example/Book.groovy
+added    grails-app/jobs/com/example/NightlyJob.groovy
+added    src/cli/groovy/com/example/DataImportTool.groovy
+added    src/test/groovy/com/example/BookControllerSpec.groovy
+added    src/test/groovy/com/example/BookSpec.groovy
+| 7 files are not as the application was generated: 6 added, 1 changed
+----
+
+`project show --json` writes the same as one JSON document for a tool, and `project regenerate --diff` ends with exit code 1 when it lists a file. See "How a project was generated, and generating it again" in xref:commandLine#creatingProject[Creating a Grails Project].
+
+`project health` reads the project and says what makes its build fail, what the upgrade notes ask for and is not done, and what the guide recommends, each with what to do. It changes nothing and runs nothing of the build. It ends with exit code 1 when there is an error, and with `--strict` when there is a warning too, so a job can hold the project to it:
+
+[source,console]
+----
+$ grails project health
+| Project shop on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
+| Advice  tool-catalog.missing  The tools of the application and its plugins are not listed: there is no .grails/cache/tool-catalog.json, so the grails command does not have them by their names. Fix: A build that compiles the project lists them (grails compile, run-app, test-app, assemble), and so does typing the name of one; grails gradle grailsToolCatalog lists them now
+| 12 checks OK (-v lists them). 0 errors, 0 warnings, 1 advice, 0 skipped
+----
+
+See "The state of a project" in xref:commandLine#creatingProject[Creating a Grails Project].
+
+=== For plugin authors
+
+A plugin can give its users two things on the command line.
+
+*Tools.* A plugin has tools like an application has, in `src/cli` and `src/standalone`. Every Grails plugin publishes them in companion artifacts, `<artifact>-cli` and `<artifact>-cli-standalone`, one for each folder that has a tool, so that they are neither in the jar of the plugin nor on the class path of the running application. Users of the plugin get them by depending on the plugin, as described above. See xref:commandLine#creatingTools[Creating Tools] and link:plugins.html#providingBasicArtefacts[Providing Basic Artefacts].
+
+*A feature.* A _feature pack_ describes what an application needs in order to use the plugin: the dependency, configuration, files rendered from templates. It is a `feature.yml` and a `templates` directory in `src/main/forge` of the plugin, and it is published inside the jar of the plugin. Most of the features of Grails itself are written in the same format. A user selects the feature of a published plugin by the coordinates of the plugin when creating an application:
+
+[source,console]
+----
+$ grails create-app com.example.shop --features com.acme:acme-audit-grails:2.3.0
+----
+
+While you write a pack, `--feature-pack-dir` gives it to a `create-` command as a directory, the Gradle task `checkForgePack` (a part of `check`) reads the pack and renders its templates, and `forgePackTest` generates and builds real applications with it. A pack is code that runs when an application is generated, so use one only when you trust where it comes from. The feature of a plugin is selected when an application is created, and added to an application that is there with `feature add`, by the coordinates of the plugin, as `grails feature add com.acme:acme-audit-grails:2.3.0`.
+
+link:plugins.html#forgeFeaturePacks[Adding a Feature to Application Creation] is the reference for packs, and link:applicationTypes.html#customizingGeneration[Customizing What a New Application Gets] compares the ways an organisation can shape new projects.
+
+=== The Grails wrapper
+
+A generated project has `grailsw`, `grailsw.bat` and `grails-wrapper.jar`. The wrapper downloads the command line of the version of Grails the project is on, the `grailsVersion` of its `gradle.properties`, and starts it, so it takes every command of this section:
+
+[source,console]
+----
+$ ./grailsw help
+$ ./grailsw feature add cache
+----
+
+Commit the three files. Everyone who works on the project, and the build server, then runs the command line of the same version without installing Grails, and `feature add` is run by the version whose record the project has, as it requires. The downloads are kept in `~/.grails/wrapper` and not in the project. See "Grails Wrapper" in link:gettingStarted.html#downloadingAndInstalling[Downloading and Installing].
+
+When the project moves to another version of Grails, the wrapper moves with it: change `grailsVersion` in `gradle.properties`, run link:{commandLineRef}update-wrapper.html[update-wrapper] and commit the files it names. Then `./grailsw project migrate` moves the record of the project to that version, so that `feature add` works with it, and changes no other file: see link:{commandLineRef}project-migrate.html[project migrate]. Last, `./grailsw project health` says what else the upgrade notes ask of the project, as far as its files show it, each finding with what to do: see link:{commandLineRef}project-health.html[project health].
+
+[source,console]
+----
+$ ./grailsw update-wrapper
+----
+
+=== Interactive mode
+
+In a project, `grails` without a command starts a prompt that takes the same commands, with completion on the TAB key and without the start of the command line for each:
+
+[source,console]
+----
+$ grails
+grails> create-service Inventory
+grails> run-app
+grails> !git status --short
+grails> exit
+----
+
+`run-app` returns to the prompt there once the application answers, and `exit` or `quit` leaves. A line that starts with `!` runs the rest of the line in your shell, with the terminal, in the current directory, and `!` alone runs the last command again. Outside a project, `grails` without a command shows the help. See xref:commandLine#interactiveMode[Interactive Mode].
+
+Outside interactive mode, bash and zsh complete the commands of `grails`, their options and the names of features on the TAB key once they have loaded the completion script of the distribution; see "Completion in a Shell" in xref:commandLine[the introduction of this chapter].
+
+=== Using the command line from a script or a tool
+
+Every command ends with an exit code: `0` when it did what it was asked, `2` for a mistake in the command line (a command there is not, an unknown option, features that cannot be had together) and `1` for any other failure. `--plain-output` writes plain text without terminal markup, `--non-interactive` never waits for input, and `help --json` describes the commands of the current directory as one JSON document. These are described under "Help" and "Output for a Program, and Running Without a User" in xref:commandLine[the introduction of this chapter].
+
+An AI coding agent uses the command line through `grails mcp`, which its MCP client starts in the project: the agent gets the commands of the project and the tools of the application and its plugins as tools of its own, and each call runs the command you would type. `claude mcp add --scope project grails -- ./grailsw mcp` registers it for Claude Code. See xref:commandLine#mcp[Driving Grails from an AI Agent].

@@ -64,7 +64,9 @@ public class RootMetadataHandler extends DefaultHandler {
                     versions.add(version);
                 }
             } catch (Exception e) {
-                throw new IllegalStateException("Failed to parse version '" + versionString + "' from maven repository.", e);
+                // the file is not ours: only the characters a version has are repeated, and not many of them
+                String shown = versionString.replaceAll("[^A-Za-z0-9._+-]", "?");
+                throw new IllegalStateException("it lists [" + (shown.length() > 40 ? shown.substring(0, 40) + "..." : shown) + "], which is no version");
             }
         }
     }

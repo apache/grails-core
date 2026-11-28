@@ -189,13 +189,9 @@ fi
 echo "Manual verification steps:"
 echo
 echo "☑️ 1 | Verify that the generated applications start correctly"
-echo "     1.1 | Wrapper Shell App:"
-echo "           cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-bin/ShellApp && ./gradlew bootRun"
-echo "     1.2 | Wrapper Forge App:"
+echo "     1.1 | Wrapper App:"
 echo "           cd ${DOWNLOAD_LOCATION}/apache-grails-wrapper-${VERSION}-bin/ForgeApp && ./gradlew bootRun"
-echo "     1.3 | CLI Shell App:"
-echo "           cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-bin/bin/ShellApp && ./gradlew bootRun"
-echo "     1.4 | CLI Forge App:"
+echo "     1.2 | CLI App:"
 echo "           cd ${DOWNLOAD_LOCATION}/apache-grails-${VERSION}-bin/bin/ForgeApp && ./gradlew bootRun"
 echo
 echo "☑️ 2 | Verify Grails command resolution"

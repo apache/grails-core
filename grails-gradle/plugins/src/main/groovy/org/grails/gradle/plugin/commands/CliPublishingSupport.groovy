@@ -32,6 +32,8 @@ import org.gradle.api.component.ConfigurationVariantDetails
 import org.gradle.api.provider.Provider
 import org.gradle.api.publish.tasks.GenerateModuleMetadata
 
+import org.apache.grails.gradle.model.cli.ToolBuildNames
+
 /**
  * Publication support for projects whose variants depend on a cli companion artifact declared
  * with a capability ({@code project(':other') { capabilities { requireCapability('g:other-cli') } }}).
@@ -51,6 +53,9 @@ import org.gradle.api.publish.tasks.GenerateModuleMetadata
 final class CliPublishingSupport {
 
     private static final String REWRITE_REGISTERED_PROPERTY = 'org.grails.cli.publishing.rewriteRegistered'
+
+    // what the artifact id of a companion ends with, after the artifact id of the module it is the companion of
+    private static final List<String> COMPANION_SUFFIXES = [ToolBuildNames.CLI_ARTIFACT_SUFFIX, ToolBuildNames.CLI_STANDALONE_ARTIFACT_SUFFIX].asImmutable()
 
     private CliPublishingSupport() {
     }
@@ -106,9 +111,11 @@ final class CliPublishingSupport {
     private static Set<String> knownCompanionCapabilities(Project project) {
         Set<String> capabilities = [] as Set
         for (Project subproject : project.rootProject.allprojects) {
-            def cliArtifactId = subproject.findProperty('cliArtifactId')
-            if (cliArtifactId) {
-                capabilities.add("${subproject.group}:${cliArtifactId}" as String)
+            for (String property : [ToolBuildNames.CLI_ARTIFACT_ID_PROPERTY, ToolBuildNames.CLI_STANDALONE_ARTIFACT_ID_PROPERTY]) {
+                def artifactId = subproject.findProperty(property)
+                if (artifactId) {
+                    capabilities.add("${subproject.group}:${artifactId}" as String)
+                }
             }
         }
         capabilities
@@ -146,13 +153,13 @@ final class CliPublishingSupport {
         metadata.variants?.each { Map<String, Object> variant ->
             variant.dependencies?.each { Map<String, Object> dependency ->
                 List<Map<String, Object>> capabilities = (List<Map<String, Object>>) dependency.requestedCapabilities
-                // a companion is recognized by the `<module>-cli` naming convention, or — for a
-                // customized companion coordinate — by matching a capability advertised by a
-                // project of this build; unrelated capability requests (e.g. an ehcache flavor)
-                // must survive untouched
+                // a companion is recognized by the `<module>-cli` and `<module>-cli-standalone` naming
+                // conventions, or — for a customized companion coordinate — by matching a capability
+                // advertised by a project of this build; unrelated capability requests (e.g. an
+                // ehcache flavor) must survive untouched
                 if (capabilities?.size() == 1
                         && capabilities[0].group == dependency.group
-                        && (capabilities[0].name == "${dependency.module}-cli" as String
+                        && (capabilities[0].name in COMPANION_SUFFIXES.collect { String suffix -> "${dependency.module}${suffix}" as String }
                                 || "${capabilities[0].group}:${capabilities[0].name}" as String in knownCompanionCapabilities)) {
                     dependency.module = capabilities[0].name
                     dependency.remove('requestedCapabilities')

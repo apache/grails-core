@@ -78,10 +78,30 @@ class ApplicationSpec extends Specification {
         !context.getBean(CreateAppCommand).is(context.getBean(CreateAppCommand))
     }
 
-    void "the environment is never development, so nothing watches the working directory"() {
+    void "Forge runs in production, so nothing watches the working directory"() {
         expect:
-        Environment.current != Environment.DEVELOPMENT
+        Environment.current == Environment.PRODUCTION
         !Environment.current.reloadEnabled
+    }
+
+    void "Forge runs in production whatever environment its JVM was given, which is meant for a project"() {
+        given: 'the environment of a project, as -Dgrails.env in GRAILS_OPTS would give the JVM'
+        String before = System.getProperty(Environment.KEY)
+        System.setProperty(Environment.KEY, Environment.DEVELOPMENT.name)
+
+        when:
+        Application.builder()
+
+        then:
+        Environment.current == Environment.PRODUCTION
+        !Environment.current.reloadEnabled
+
+        cleanup:
+        if (before == null) {
+            System.clearProperty(Environment.KEY)
+        } else {
+            System.setProperty(Environment.KEY, before)
+        }
     }
 
     void 'the CLI ignores application configuration in the working directory and its config directory'() {
@@ -90,16 +110,13 @@ class ApplicationSpec extends Specification {
         File config = new File(projectDir, 'config')
         config.mkdirs()
         new File(config, 'application.yml').text = 'spring:\n  config:\n    import: file:missing-required-configuration.yml\n'
-        String classpath = System.getProperty('java.class.path')
         File output = new File(projectDir, 'cli.log')
 
-        when:
-        Process process = new ProcessBuilder(new File(System.getProperty('java.home'), 'bin/java').absolutePath,
-                '-cp', classpath, Application.name, '--help')
-                .directory(projectDir).redirectErrorStream(true).redirectOutput(output).start()
+        when: 'a command line of its own, with its class path in a file: as an argument it is longer than a command line of Windows can be'
+        Process process = ForkedCli.builder(projectDir, [], '--help').redirectErrorStream(true).redirectOutput(output).start()
 
         then:
-        process.waitFor(90, TimeUnit.SECONDS)
+        process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         assert process.exitValue() == 0: output.text
         output.text.contains('Usage:')
 

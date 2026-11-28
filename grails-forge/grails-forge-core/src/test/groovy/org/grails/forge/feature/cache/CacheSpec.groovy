@@ -20,10 +20,30 @@
 package org.grails.forge.feature.cache
 
 import org.grails.forge.ApplicationContextSpec
+import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.fixture.CommandOutputFixture
 import spock.lang.Ignore
 import spock.lang.Unroll
 
-class CacheSpec extends ApplicationContextSpec {
+class CacheSpec extends ApplicationContextSpec implements CommandOutputFixture {
+
+    void 'the cache feature writes its settings under the keys the cache plugin reads'() {
+        when:
+        GeneratorContext context = buildGeneratorContext(['cache'])
+        String configuration = generate(['cache'])['grails-app/conf/application.yml']
+
+        then: 'clearAtStartup is the property of CachePluginConfiguration; cleanAtStartup, which Grails 8 and earlier wrote, is read by nothing'
+        context.configuration.get('grails.cache.enabled') == true
+        context.configuration.get('grails.cache.clearAtStartup') == false
+        !context.configuration.containsKey('grails.cache.cleanAtStartup')
+
+        and: 'the cache manager is named as the plugin compares it, without the package'
+        context.configuration.get('grails.cache.cacheManager') == 'GrailsConcurrentMapCacheManager'
+
+        and:
+        configuration.contains('  cache:\n    cacheManager: GrailsConcurrentMapCacheManager\n    clearAtStartup: false\n    enabled: true\n')
+        !configuration.contains('cleanAtStartup')
+    }
 
     @Ignore("There is only one cache implementation right now")
     void 'test there can only be one cache feature'() {

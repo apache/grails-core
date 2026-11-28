@@ -54,14 +54,16 @@ dependencies {
     // command and the reader behind it stay off application runtime classpaths
     cliImplementation platform(project(':grails-bom'))
     cliApi project(project.path)
+    // the command contract: query-tail is a command that runs without the application
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
     cliImplementation 'org.apache.groovy:groovy'
     cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
-    // compiles and runs the query-tail command script the way the shell does
-    testCliImplementation(project(':grails-shell-cli')) {
-        exclude group: 'org.slf4j', module: 'slf4j-simple'
-        // Keep legacy org.codehaus.groovy artifacts off this module's Groovy 5 classpath.
-        exclude group: 'org.codehaus.groovy'
-    }
+    // runs the query-tail command the way the build of a project does, with the class its runCommand task starts
+    testCliImplementation project(':grails-console')
 
     api project(':grails-datastore-core'), {
         // api: BuildableCriteria, ConnectionSourcesProvider, Criteria, Datastore, MappingContext, PersistentEntity,

@@ -1,0 +1,102 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: reloading
+default: allOf(reloading=devtools, not grails-micronaut)
+dependency: developmentOnly org.springframework.boot:spring-boot-devtools without a version
+
+# web
+title: SpringBoot Developer Tools
+description: Spring Boot Devtools is a powerful tool that enhances development productivity by providing features like automatic application restarts on code changes, live reloading of static resources, and remote debugging support. It enables developers to rapidly iterate and test changes during the development process, making it a valuable asset for Spring Boot projects.
+category: Development Tools
+documentation: https://docs.spring.io/spring-boot/reference/using/devtools.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature spring-boot-devtools documentation
++ - [Grails SpringBoot Developer Tools documentation](https://docs.spring.io/spring-boot/reference/using/devtools.html)
++ 
++ 
+== build.gradle
++     developmentOnly "org.springframework.boot:spring-boot-devtools" // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications
+== grails-app/conf/application-development.yml
++ spring.devtools.livereload.enabled: true
+
+# rest_api
+title: SpringBoot Developer Tools
+description: Spring Boot Devtools is a powerful tool that enhances development productivity by providing features like automatic application restarts on code changes, live reloading of static resources, and remote debugging support. It enables developers to rapidly iterate and test changes during the development process, making it a valuable asset for Spring Boot projects.
+category: Development Tools
+documentation: https://docs.spring.io/spring-boot/reference/using/devtools.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature spring-boot-devtools documentation
++ - [Grails SpringBoot Developer Tools documentation](https://docs.spring.io/spring-boot/reference/using/devtools.html)
++ 
++ 
+== build.gradle
++     developmentOnly "org.springframework.boot:spring-boot-devtools" // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications
+== grails-app/conf/application-development.yml
++ spring.devtools.livereload.enabled: true
+
+# web_plugin
+title: SpringBoot Developer Tools
+description: Spring Boot Devtools is a powerful tool that enhances development productivity by providing features like automatic application restarts on code changes, live reloading of static resources, and remote debugging support. It enables developers to rapidly iterate and test changes during the development process, making it a valuable asset for Spring Boot projects.
+category: Development Tools
+documentation: https://docs.spring.io/spring-boot/reference/using/devtools.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature spring-boot-devtools documentation
++ 
++ - [Grails SpringBoot Developer Tools documentation](https://docs.spring.io/spring-boot/reference/using/devtools.html)
++ 
+== build.gradle
++     developmentOnly "org.springframework.boot:spring-boot-devtools" // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications
+== grails-app/conf/application-development.yml
++ spring.devtools.livereload.enabled: true
+
+# plugin
+title: SpringBoot Developer Tools
+description: Spring Boot Devtools is a powerful tool that enhances development productivity by providing features like automatic application restarts on code changes, live reloading of static resources, and remote debugging support. It enables developers to rapidly iterate and test changes during the development process, making it a valuable asset for Spring Boot projects.
+category: Development Tools
+documentation: https://docs.spring.io/spring-boot/reference/using/devtools.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature spring-boot-devtools documentation
++ 
++ - [Grails SpringBoot Developer Tools documentation](https://docs.spring.io/spring-boot/reference/using/devtools.html)
++ 
+== build.gradle
++     developmentOnly "org.springframework.boot:spring-boot-devtools" // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications
+== grails-app/conf/application-development.yml
++ spring.devtools.livereload.enabled: true
+
+# rest_api_plugin
+title: SpringBoot Developer Tools
+description: Spring Boot Devtools is a powerful tool that enhances development productivity by providing features like automatic application restarts on code changes, live reloading of static resources, and remote debugging support. It enables developers to rapidly iterate and test changes during the development process, making it a valuable asset for Spring Boot projects.
+category: Development Tools
+documentation: https://docs.spring.io/spring-boot/reference/using/devtools.html
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature spring-boot-devtools documentation
++ - [Grails SpringBoot Developer Tools documentation](https://docs.spring.io/spring-boot/reference/using/devtools.html)
++ 
++ 
+== build.gradle
++     developmentOnly "org.springframework.boot:spring-boot-devtools" // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications
+== grails-app/conf/application-development.yml
++ spring.devtools.livereload.enabled: true
+

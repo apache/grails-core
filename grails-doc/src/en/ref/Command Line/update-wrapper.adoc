@@ -1,0 +1,77 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== update-wrapper
+
+=== Purpose
+
+Replaces the Grails wrapper that is committed in the project, the files `grailsw`, `grailsw.bat` and `grails-wrapper.jar`, by the wrapper of the version of Grails the command line is of.
+
+=== Examples
+
+[source,console]
+----
+$ ./grailsw update-wrapper
+Updating Grails wrapper, allowed versions to update to are [RELEASE]...
+...
+Updated wrapper to version: 9.0.0
+The Grails wrapper of the project in /home/me/shop was that of Grails 8.1.2 and is now that of Grails 9.0.0: grailsw, grailsw.bat, grails-wrapper.jar were replaced. Commit them.
+grails project health says what else the upgrade notes ask of the project, as far as its files show it.
+$ git add grailsw grailsw.bat grails-wrapper.jar
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+./grailsw update-wrapper
+grails update-wrapper
+----
+
+The command line has the three files of the wrapper with it, the ones a new application is created with, and writes those that differ over the ones of the project. It downloads nothing. The command ends with exit code 0 and one line that names the files it replaced, or says that nothing was changed. When the wrapper it replaced was that of an earlier major version of Grails, or did not say its version, a second line names link:project-health.html[project health], which says what else the upgrade asks of the project. It takes no arguments.
+
+Typed to the wrapper, `./grailsw update-wrapper` first makes the wrapper download the command line of the version the project names, the `grailsVersion` of its `gradle.properties`, again, also when it is there already. That command line then runs the command. This is how the wrapper of a project follows the version of the project: change `grailsVersion`, run `./grailsw update-wrapper`, commit the files it names. Typed to an installed command line, `grails update-wrapper` writes the wrapper of the version that is installed.
+
+The wrapper of Grails 9 and later is replaced by this command only: any other command typed to it leaves the three files as they are, whatever the version of the command line it downloads.
+
+The wrapper of Grails 7 and 8 replaces itself in the same way. Once `grailsVersion` names Grails 9, whatever is typed to that wrapper first replaces the three files and then runs the command, and `./grailsw update-wrapper`, or `./grailsw` without a command, ends after the replacement. See the upgrade notes of Grails 9.
+
+The files:
+
+* The wrapper is looked for in the directory of the project and, for a project that is a part of a larger Gradle build, in the root of that build. It is there when the directory has a `grails-wrapper.jar`. A project that has none is told so, and none is written.
+* A file is written beside the one it replaces and then moved over it, so a run that is interrupted leaves the file that was there or the new one. A file that is replaced keeps its mode, so `grailsw` stays executable; a file of the wrapper that is missing is written.
+* A file that is a symbolic link is not followed and not replaced, and neither is a file that is read-only, nor any file where the directory cannot be written to. Each is named with the reason on the standard error, the other files are replaced, and the command ends with exit code 1. Replace such a file by hand: the three files are in `apache-grails-wrapper-VERSION-bin.zip` of the https://github.com/apache/grails-core/releases[release], and at the root of an application that `grails create-app` creates.
+* On Windows, two of the files are in use while `grailsw update-wrapper` runs: `grails-wrapper.jar` is open in the JVM the wrapper started, and the system replaces no file that is open; `grailsw.bat` is being read by the command interpreter, which reads a batch file a command at a time and goes on, after each, at the place in the file it had come to. The update completes by itself all the same, in at most two runs, and at no moment is the directory without a wrapper that works:
+** The new jar is written beside the one in use as `grails-wrapper.jar.new`. The scripts of Grails 9 move such a file over `grails-wrapper.jar` before they start Java, so the wrapper is whole when it is next run.
+** A `grailsw.bat` of Grails 9 is replaced while it is read: what it does once Java has ended it finds by a label, in the file that is there then.
+** A `grailsw.bat` of Grails 7 or 8 is not: the new one is written beside it as `grailsw.bat.new`, and `grailsw.bat` itself is replaced by a short batch file that stands in until the next run. Where the command interpreter goes on reading, it ends the run with the exit code of the command; and when `grailsw` is next run, it moves both `.new` files into place and starts the new `grailsw.bat` with what it was given.
++
+The command says in one line which files were replaced, which are replaced by the wrapper when it is next run, and to commit the three files after that run; it ends with exit code 0. Run `grailsw` once more (`grailsw --version` will do) before you commit: the files named `.new` are gone then, and they and the batch file that stands in are not to be committed. Whoever can write to the directory of the wrapper can put such a file there, as they can replace the wrapper itself.
+* A file the system refuses to replace for another reason, and a `grailsw.bat` in use whose line that starts Java is not where the template of Gradle has it, is left as it is. The new one is written beside it with `.new` after its name, the command names the one step that is left, and ends with exit code 1. The step is the same in the command interpreter and in PowerShell:
++
+[source,console]
+----
+cmd /c move /y grailsw.bat.new grailsw.bat
+----
++
+`grails update-wrapper`, typed to an installed command line, has no file of the wrapper open and replaces all three at once.
+
+The command is a command of a Grails project of Grails 9 or later. Outside a project it says so and replaces nothing, also where the directory has the files of a wrapper. In a project whose `gradle.properties` names an earlier version of Grails it is refused as every command of a project is: change `grailsVersion` first.

@@ -1,0 +1,4 @@
+rootProject.name = 'test-plugin-forge-pack'
+
+// a build of its own, so that the tasks of the plugin are the only ones of their names
+includeBuild 'forge-stub'

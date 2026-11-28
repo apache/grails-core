@@ -72,6 +72,24 @@ class CompilePluginSpec extends Specification {
         compileGroovy.inputs.files.files*.canonicalFile.findAll { it in factoriesFiles }.sort() == factoriesFiles.sort()
     }
 
+    void 'the hand-authored factories file of each folder of tools is a compiler input'() {
+        given: 'a factories file in the folder of the tools the build runs and in the one of the tools that run on their own'
+        Project project = ProjectBuilder.builder().withProjectDir(projectDir).build()
+        GroovyCompile compileGroovy = project.tasks.register('compileGroovy', GroovyCompile).get()
+        List<File> toolFactories = ['src/cli', 'src/standalone'].collect { String folder ->
+            File file = new File(projectDir, "${folder}/resources/META-INF/grails-cli.factories")
+            file.parentFile.mkdirs()
+            file.text = 'org.apache.grails.core.cli.GrailsTool=example.ExampleTool\n'
+            file.canonicalFile
+        }
+
+        when:
+        CompilePlugin.registerFactoriesInputs(project, compileGroovy)
+
+        then: 'a change to either recompiles the project, as one to the factories file of its own sources does'
+        compileGroovy.inputs.files.files*.canonicalFile.containsAll(toolFactories)
+    }
+
     def setup() {
         testProjectDir.resolve('settings.gradle').toFile().text = ''
         testProjectDir.resolve('.asf.yaml').toFile().text = ''

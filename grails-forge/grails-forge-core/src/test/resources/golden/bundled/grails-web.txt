@@ -1,0 +1,53 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: applicationType=web|web-plugin
+
+# web
+title: grails-web
+description: grails-web
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++ apply plugin: "org.apache.grails.gradle.grails-web"
+
+# rest_api
+title: grails-web
+description: grails-web
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++ apply plugin: "org.apache.grails.gradle.grails-web"
+
+# web_plugin
+title: grails-web
+description: grails-web
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+title: grails-web
+description: grails-web
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+

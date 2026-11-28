@@ -17,7 +17,6 @@
 #  under the License.
 #
 grails:
-    profile: web
     codegen:
         defaultPackage: openapiapp
     openapi:

@@ -119,7 +119,6 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
 
         artifactIdMappings
     })
-    it.forcedGroupPrefixes.set(['org.apache.grails.profiles': 'grails-profile'])
     it.projectCoordinateProperties.set(project.provider {
         Map<String, String> projectCoordinates = [:]
 
@@ -173,7 +172,6 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
 // to the other projects, so it reads what it needs of them from this provider
 Provider<PropertyNameCalculator> bomPropertyNames = provider {
     PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
-    propertyNameCalculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
     propertyNameCalculator.addProjects(rootProject.subprojects)
     for (String gradleArtifactId : project.ext.gradleBuildProjects) {
         propertyNameCalculator.addProject('org.apache.grails.gradle', gradleArtifactId, project.version as String, gradleArtifactId)

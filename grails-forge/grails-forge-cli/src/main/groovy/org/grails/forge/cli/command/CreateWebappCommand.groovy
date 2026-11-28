@@ -19,6 +19,7 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import jakarta.annotation.Nonnull
@@ -26,9 +27,10 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.WebAvailableFeatures
 import org.grails.forge.application.generator.ProjectGenerator
+import org.grails.forge.cli.ForgeContext
 import picocli.CommandLine
 
-@CommandLine.Command(name = CreateWebappCommand.NAME, description = 'Creates an application')
+@CommandLine.Command(name = CreateWebappCommand.NAME, description = 'Creates an application; another name of create-app')
 @Component
 @Scope('prototype')
 @CompileStatic
@@ -39,6 +41,12 @@ class CreateWebappCommand extends CreateCommand {
     @CommandLine.Option(names = ['-f', '--features'], paramLabel = 'FEATURE', split = ',', description = 'The features to use. Possible values: ${COMPLETION-CANDIDATES}', completionCandidates = WebAvailableFeatures)
     List<String> features = new ArrayList<>()
 
+    /** On a Forge application that is started when the command first needs it. */
+    CreateWebappCommand(ForgeContext context) {
+        super(context, WebAvailableFeatures, ApplicationType.WEB)
+    }
+
+    @Autowired
     CreateWebappCommand(WebAvailableFeatures availableFeatures,
                                ContextFactory contextFactory,
                                ProjectGenerator projectGenerator) {

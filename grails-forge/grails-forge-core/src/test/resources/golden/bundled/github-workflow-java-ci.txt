@@ -1,0 +1,250 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+
+# web
+title: GitHub Actions CI Workflow
+description: Add a GitHub Actions workflow that builds and tests the project.
+category: CI/CD
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .github/workflows/gradle.yml
++ name: Java CI
++ on: [push, pull_request]
++ jobs:
++   build:
++     runs-on: ubuntu-22.04
++     permissions:
++       checks: write
++       contents: read
++     steps:
++       - uses: actions/checkout@v6.0.2
++       - name: Set up JDK 21
++         uses: actions/setup-java@v5.2.0
++         with:
++           distribution: 'liberica'
++           java-version: 21
++       - name: Setup Gradle
++         uses: gradle/actions/setup-gradle@v6.1.0
++         with:
++           # 'basic' is the MIT-licensed cache provider; the default 'enhanced' provider is proprietary (Gradle commercial Terms of Use)
++           cache-provider: basic
++           # Uncomment the build-scan parameters if you want to publish a Gradle build scan
++           # in order to see all the build logs, a complete task timeline, test outputs,
++           # and the resolved dependencies of your build.
++           # build-scan-publish: true
++           # build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
++           # build-scan-terms-of-use-agree: "yes"
++       - name: Run Tests
++         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
++         id: tests
++         run: ./gradlew check
++       - name: Run Build
++         if: github.event_name == 'push'
++         id: build
++         run: ./gradlew build
++       - name: Publish Test Report
++         if: failure()
++         uses: scacap/action-surefire-report@v1
++         with:
++           report_paths: '**/build/test-results/**/TEST-*.xml'
+
+# rest_api
+title: GitHub Actions CI Workflow
+description: Add a GitHub Actions workflow that builds and tests the project.
+category: CI/CD
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .github/workflows/gradle.yml
++ name: Java CI
++ on: [push, pull_request]
++ jobs:
++   build:
++     runs-on: ubuntu-22.04
++     permissions:
++       checks: write
++       contents: read
++     steps:
++       - uses: actions/checkout@v6.0.2
++       - name: Set up JDK 21
++         uses: actions/setup-java@v5.2.0
++         with:
++           distribution: 'liberica'
++           java-version: 21
++       - name: Setup Gradle
++         uses: gradle/actions/setup-gradle@v6.1.0
++         with:
++           # 'basic' is the MIT-licensed cache provider; the default 'enhanced' provider is proprietary (Gradle commercial Terms of Use)
++           cache-provider: basic
++           # Uncomment the build-scan parameters if you want to publish a Gradle build scan
++           # in order to see all the build logs, a complete task timeline, test outputs,
++           # and the resolved dependencies of your build.
++           # build-scan-publish: true
++           # build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
++           # build-scan-terms-of-use-agree: "yes"
++       - name: Run Tests
++         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
++         id: tests
++         run: ./gradlew check
++       - name: Run Build
++         if: github.event_name == 'push'
++         id: build
++         run: ./gradlew build
++       - name: Publish Test Report
++         if: failure()
++         uses: scacap/action-surefire-report@v1
++         with:
++           report_paths: '**/build/test-results/**/TEST-*.xml'
+
+# web_plugin
+title: GitHub Actions CI Workflow
+description: Add a GitHub Actions workflow that builds and tests the project.
+category: CI/CD
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .github/workflows/gradle.yml
++ name: Java CI
++ on: [push, pull_request]
++ jobs:
++   build:
++     runs-on: ubuntu-22.04
++     permissions:
++       checks: write
++       contents: read
++     steps:
++       - uses: actions/checkout@v6.0.2
++       - name: Set up JDK 21
++         uses: actions/setup-java@v5.2.0
++         with:
++           distribution: 'liberica'
++           java-version: 21
++       - name: Setup Gradle
++         uses: gradle/actions/setup-gradle@v6.1.0
++         with:
++           # 'basic' is the MIT-licensed cache provider; the default 'enhanced' provider is proprietary (Gradle commercial Terms of Use)
++           cache-provider: basic
++           # Uncomment the build-scan parameters if you want to publish a Gradle build scan
++           # in order to see all the build logs, a complete task timeline, test outputs,
++           # and the resolved dependencies of your build.
++           # build-scan-publish: true
++           # build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
++           # build-scan-terms-of-use-agree: "yes"
++       - name: Run Tests
++         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
++         id: tests
++         run: ./gradlew check
++       - name: Run Build
++         if: github.event_name == 'push'
++         id: build
++         run: ./gradlew build
++       - name: Publish Test Report
++         if: failure()
++         uses: scacap/action-surefire-report@v1
++         with:
++           report_paths: '**/build/test-results/**/TEST-*.xml'
+
+# plugin
+title: GitHub Actions CI Workflow
+description: Add a GitHub Actions workflow that builds and tests the project.
+category: CI/CD
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .github/workflows/gradle.yml
++ name: Java CI
++ on: [push, pull_request]
++ jobs:
++   build:
++     runs-on: ubuntu-22.04
++     permissions:
++       checks: write
++       contents: read
++     steps:
++       - uses: actions/checkout@v6.0.2
++       - name: Set up JDK 21
++         uses: actions/setup-java@v5.2.0
++         with:
++           distribution: 'liberica'
++           java-version: 21
++       - name: Setup Gradle
++         uses: gradle/actions/setup-gradle@v6.1.0
++         with:
++           # 'basic' is the MIT-licensed cache provider; the default 'enhanced' provider is proprietary (Gradle commercial Terms of Use)
++           cache-provider: basic
++           # Uncomment the build-scan parameters if you want to publish a Gradle build scan
++           # in order to see all the build logs, a complete task timeline, test outputs,
++           # and the resolved dependencies of your build.
++           # build-scan-publish: true
++           # build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
++           # build-scan-terms-of-use-agree: "yes"
++       - name: Run Tests
++         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
++         id: tests
++         run: ./gradlew check
++       - name: Run Build
++         if: github.event_name == 'push'
++         id: build
++         run: ./gradlew build
++       - name: Publish Test Report
++         if: failure()
++         uses: scacap/action-surefire-report@v1
++         with:
++           report_paths: '**/build/test-results/**/TEST-*.xml'
+
+# rest_api_plugin
+title: GitHub Actions CI Workflow
+description: Add a GitHub Actions workflow that builds and tests the project.
+category: CI/CD
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== .github/workflows/gradle.yml
++ name: Java CI
++ on: [push, pull_request]
++ jobs:
++   build:
++     runs-on: ubuntu-22.04
++     permissions:
++       checks: write
++       contents: read
++     steps:
++       - uses: actions/checkout@v6.0.2
++       - name: Set up JDK 21
++         uses: actions/setup-java@v5.2.0
++         with:
++           distribution: 'liberica'
++           java-version: 21
++       - name: Setup Gradle
++         uses: gradle/actions/setup-gradle@v6.1.0
++         with:
++           # 'basic' is the MIT-licensed cache provider; the default 'enhanced' provider is proprietary (Gradle commercial Terms of Use)
++           cache-provider: basic
++           # Uncomment the build-scan parameters if you want to publish a Gradle build scan
++           # in order to see all the build logs, a complete task timeline, test outputs,
++           # and the resolved dependencies of your build.
++           # build-scan-publish: true
++           # build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
++           # build-scan-terms-of-use-agree: "yes"
++       - name: Run Tests
++         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
++         id: tests
++         run: ./gradlew check
++       - name: Run Build
++         if: github.event_name == 'push'
++         id: build
++         run: ./gradlew build
++       - name: Publish Test Report
++         if: failure()
++         uses: scacap/action-surefire-report@v1
++         with:
++           report_paths: '**/build/test-results/**/TEST-*.xml'
+

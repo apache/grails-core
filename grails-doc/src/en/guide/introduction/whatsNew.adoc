@@ -186,19 +186,47 @@ any expression, such as `random()` or a SQL formula, in its place among the quer
 are registered in code, or by a plugin through `META-INF/services` providers that are loaded when the first query
 runs. See the section on extending the criteria builder in the GORM for Hibernate 7 guide.
 
+==== One Command Line: Application Types, Features and Feature Packs
+
+Grails 9 has one command line, `grails`. The Grails shell and its profiles are gone, and with them the `grails-shell-cli` and `grails-forge-cli` commands, the `-t`/`--type` option and the `GRAILS_PREFERRED_SHELL` environment variable. The one command line creates projects, creates the classes of a project and runs its build (`run-app`, `test-app`, `assemble`, `console` and the others), in a project and in its interactive mode. See xref:commandLine[The Command Line].
+
+* *Application types and features take the place of profiles.* `create-app`, `create-restapi`, `create-plugin`, `create-web-plugin` and `create-rest-api-plugin` each create one type of application, with the features that are selected for it; `--exclude-features` leaves a default feature out. See link:applicationTypes.html[Application Types, Features and Feature Packs], and link:applicationTypes.html#profilesReplaced[What Became of Profiles] for a profile of your own and for the profile commands that are removed.
+* *Feature packs.* A plugin can bring a feature of its own to application creation: a descriptor and templates in `src/main/forge`, published in the jar of the plugin and selected with `--features` by the coordinates of the plugin. See xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
+* *The `grails-publish` feature.* A plugin that is created with it, or that it is added to with `feature add grails-publish`, applies the Grails Publish Gradle plugin and has a `grailsPublish` block to fill in, so that `./gradlew publishToMavenLocal` and `./gradlew publish` publish it with its sources, its API documentation and a complete POM. It takes the place of the `maven-publish` feature of the `plugin` profile. See "Publishing a Plugin" in xref:plugins#creatingAndInstallingPlugins[Creating and Installing Plugins].
+* *The `.grails` project record.* A generated project records how it was generated: the type, the options, the features, and a copy of every generated file as it was generated. It is committed with the project, and takes the place of `grails-forge-cli.yml`.
+* *`feature add`.* Adds a feature of Grails, or the feature of a plugin by the coordinates of the plugin, to an existing project: the files become what the `create-` command would have written with the feature, your own changes are kept, and when the two cannot be had together nothing is written and the conflicts are named. A feature that takes the place of a default, as `postgres` takes that of `h2`, replaces it, one that takes the place of a feature you asked for by name replaces it with `--replace`, and the keys of the generated YAML configuration are in an order that does not depend on the features, so adding one moves no line of `application.yml`.
+* *`project show` and `project regenerate`.* `project show` says how a project was generated and prints the command that creates it again; `project regenerate` writes the project as it was generated to another directory, or with `--diff` names the files that are no longer as generated.
+* *`project migrate`.* Writes the `.grails` record for an application that has none, as one that was created with the Grails shell: the type, the default package and the features are worked out from the files of the project, and the `create-*` code generation commands are there afterwards. Only the `.grails` directory is written.
+* *`list-plugins` and `plugin-info`.* The two commands of the Grails shell for finding plugins are commands of the one command line. They know the plugins of the Grails release without the network, with the versions the Grails BOM manages, and read the plugins of the community from the Grails plugin index, which is what the plugin portal shows. `plugin-info` gives the line for `build.gradle` and names the feature that `feature add` adds the plugin with. Each is also a command of `plugin`, as `plugin list` and `plugin show`, beside `plugin find`. See xref:commandLine#findingPlugins[Finding Plugins].
+* *`feature find`, `feature show` and `feature diff`.* Find a feature by a word, say what one feature is and what it contributes to an application, and show what `feature add` would change as a unified diff, in a project and, for a new application of a type, outside one. See "Adding a feature to a project" in xref:commandLine#creatingProject[Creating a Grails Project].
+* *Tools.* What an application or a plugin adds to `grails` is a tool, run by its name: a tool of `src/cli` by the build, and a tool of `src/standalone` as a process of its own without Gradle. `create-tool` writes one. See "Tools of Applications and Plugins" below.
+* *`grails mcp`.* The command line is also a server of the Model Context Protocol, for an AI coding agent. See "Driving Grails from an AI Agent" below.
+* *Multi-project builds.* `create-app --subproject` creates an application as a project of an existing Gradle build, with the files of the application only, and prints the `include` line for the settings of the build. In such a build the commands run the Gradle wrapper of the root and name their tasks by the path of the project.
+
+The `.grails` record, `feature add`, `project show`, `project regenerate`, `project migrate` and `--subproject` are described in xref:commandLine#creatingProject[Creating a Grails Project]. What an existing application has to change, the Grails wrapper among it, is in xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], notes 32 to 39, 41 to 51, 63 to 66 and 71 to 74.
+
 ==== Hibernate 7 Application Generation
 
 Grails Forge can now generate applications configured for Grails Data with Hibernate 7.
-The `create-*` commands also accept a new `-d, --data` option (the previous `-g` and `--gorm` flags remain supported as legacy aliases) with the values `hibernate5`, `hibernate7`, and `mongodb`; the legacy value `hibernate` is still accepted and selects Hibernate 5:
+The `create-*` commands also accept a new `-d, --data` option (the previous `-g` and `--gorm` flags remain supported as legacy aliases) with the values `hibernate5`, `hibernate7`, `mongodb`, and `neo4j`; the legacy value `hibernate` is still accepted and selects Hibernate 5:
 
 [source,console]
 ----
-grails -t forge create-app --data=hibernate7 com.example.demo
+grails create-app --data=hibernate7 com.example.demo
 ----
 
 Applications generated for Hibernate 7 consume `grails-hibernate7-bom` consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
 This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
+Applications generated with GORM for Neo4j (`--data=neo4j` or the `gorm-neo4j` feature) consume `grails-neo4j-bom` in the same places, also when they use Hibernate 5, because `grails-data-neo4j` needs the Neo4j driver that BOM manages.
+No Grails BOM covers GORM for Neo4j together with Hibernate 7 or Micronaut, so Grails Forge refuses those combinations.
+
+==== Generated Applications Keep Their Wrapper Scripts on Every Clone
+
+An application generated by Grails Forge now has a `.gitattributes` file at its root.
+It has Git keep `gradlew.bat` and `grailsw.bat` with the line endings of Windows, and `gradlew` and `grailsw` with those of Unix, whatever `core.autocrlf` is set to, and never convert the wrapper jars.
+Before, a commit or a clone with line-ending conversion could leave a wrapper script that does not run.
+An existing application is not changed; the four lines are shown in xref:commandLine#creatingProject[Creating a Grails Project] and can be copied into it.
 
 ==== Asynchronous Grails Data Application Generation
 
@@ -206,7 +234,7 @@ Grails Forge offers a new `gorm-async` feature that adds the asynchronous progra
 
 [source,console]
 ----
-grails -t forge create-app --features=gorm-async com.example.demo
+grails create-app --features=gorm-async com.example.demo
 ----
 
 The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
@@ -301,80 +329,86 @@ As in Spring Boot, the parent cannot host a web server, so a web application is 
 A Grails application without a web server no longer prints a `Grails application running at ...` line when it starts.
 See <<applicationBuilder,Building the Application>>.
 
-==== CLI Commands Move to Companion `-cli` Artifacts
+==== Tools of Applications and Plugins: Two Folders, Two Companions, Nothing in the Application
 
-Grails commands (`ApplicationCommand` implementations such as the `dbm-*` database-migration
-commands, the scaffolding `generate-*` commands, `url-mappings-report`, and `schema-export`) no
-longer ship inside the runtime plugin artifacts.
-Each command-bearing module now publishes a companion artifact under its own Maven coordinate with
-a `-cli` suffix — for example `org.apache.grails:grails-core-cli` and
-`org.apache.grails:grails-data-hibernate7-dbmigration-cli`.
+What an application or a plugin adds to the `grails` command is a _tool_: `dbm-update` of the Database Migration plugin, `generate-all` of the Scaffolding plugin, or a class of your own, each run by its name (`grails data-import orders.csv`). Where the source of a tool is decides what it can use and how it runs:
 
-The command contract itself moved from `grails.dev.commands.*` to `org.apache.grails.core.cli.*`
-in the new `grails-core-cli` artifact.
-Applications consume cli artifacts through the new `grailsCli` Gradle configuration, which is
-compile-visible for `grails-app/commands` sources and on the command-runner classpath, but never on
-`runtimeClasspath` — commands and their CLI-only dependencies (such as `grails-shell-cli`) are
-excluded from `bootRun`, `bootJar`, and `bootWar` entirely.
-The Grails Gradle plugin provisions `grailsCli` automatically: it adds `grails-core-cli` and
-`grails-console`, and discovers every companion cli artifact advertised by the application's
-dependency graph — a command-bearing plugin advertises its companion through the
-`Grails-Cli-Artifact` manifest attribute of its runtime jar, and its commands are registered in a
-`META-INF/grails-cli.factories` file inside the companion jar. Declaring a plugin is therefore all
-that is needed; its commands (including the per-command Gradle tasks such as `dbmUpdate`) follow
-automatically, even when the plugin is only a transitive dependency:
+* *`src/cli`* has the tools that use the classes of the project, and by default the running application with its beans, GORM and configuration. The build runs them with the Gradle task `runTool`. A tool that needs the classes but not the running application declares `boolean startsApplication = false` and is run without starting it.
+* *`src/standalone`* has the tools that only read and write files of the project, such as the tools of the Scaffolding plugin. `grails` runs them as a Java process of its own, without Gradle and without the application, so they start at once and work while the project does not compile. They have the tool API and the files of the project, never its classes.
+
+Nothing of either folder is part of the application: no tool, and no library only tools use, is on the class path of `bootRun` or in a `bootJar`, a `bootWar` or the jar of a plugin. Libraries of the tools are declared in the scopes `grailsCli` and `grailsCliStandalone`, which are on the class paths of the tools and of the tests and not on that of the application.
+
+`grails create-tool NAME` writes a tool into `src/cli/groovy`, and `grails create-tool --standalone NAME` one into `src/standalone/groovy`. The types a tool implements are `ApplicationTool` and `StandaloneTool` of `org.apache.grails.core.cli`, each with `ToolSupport` for the helpers for templates, files and models. A tool reads what the project is, its type and its features, from `executionContext.project`.
+
+Every Grails plugin publishes its tools beside the plugin, without a line in its build: `<artifact>-cli` for `src/cli` and `<artifact>-cli-standalone` for `src/standalone`, each when its folder has a tool. `-cli-standalone` never depends on the plugin. An application that depends on a plugin gets both companions, named in the manifest of the plugin's jar, and with them the tools and the Gradle task of each, such as `dbmUpdate`:
 
 [source,groovy]
 .build.gradle
 ----
 dependencies {
-    // the dbm-* commands are discovered automatically: the plugin jar advertises
+    // the dbm-* tools are discovered automatically: the plugin jar names
     // org.apache.grails:grails-data-hibernate7-dbmigration-cli, which is added to grailsCli
     implementation 'org.apache.grails:grails-data-hibernate7-dbmigration'
+
+    // the standalone tools of a plugin, without the plugin, as a REST API application has scaffolding
+    grailsCliStandalone 'org.apache.grails:grails-scaffolding-cli-standalone'
 }
 ----
 
-The auto-provisioning can be disabled with `grails { cliAutoProvision = false }`, in which case
-`grailsCli` dependencies are declared explicitly.
+The commands of Grails 8 keep working: the classes in `grails-app/commands` are compiled with `src/cli` and run as before, and `ApplicationCommand` and `GrailsApplicationCommand` are deprecated names of `ApplicationTool`; both warn. `run-command` and `runCommand` are deprecated names of `run-tool` and `runTool`. The bridge that ran the commands of Grails 7 (`grails-core-cli-legacy`, `grails.dev.commands.*`, `legacyCommandSupport`) is removed. See xref:commandLine#creatingTools[Creating Tools], and notes 46 and 63 to 66 of the xref:upgrading#upgrading90x[upgrade guide] for what an application, a plugin and a build of continuous integration have to do.
 
-The plugin can also provision `grails-core-cli-legacy` into a separate execution-only
-`grailsCliLegacy` bucket when both `cliAutoProvision` (default `true`) and
-`legacyCommandSupport` (default `false`) are enabled. That bucket contributes to
-`grailsCliClasspath`, never to application or plugin compile classpaths. Opt in with
-`grails { legacyCommandSupport = true }` so unchanged Grails 7 command plugins keep working
-without a re-release, without leaking `grails.dev.commands.*` into the Grails 8
-command-authoring ABI.
-
-When that bridge is disabled, runtime command discovery still detects plugins that publish legacy
-`grails.dev.commands.ApplicationCommand` factories without loading their command classes. Grails
-logs the originating plugin artifact and appends the exact opt-in or upgrade remediation when an
-unknown command is requested. The detection remains on the resolved command runtime classpath and
-does not add a Gradle configuration-time dependency scan.
-
-Plugin authors get the whole publishing side from the new
-`org.apache.grails.gradle.grails-plugin-cli` Gradle plugin: it creates the `cli` source set as a
-feature variant, wires the command contract onto its compile classpath, advertises the companion
-from the runtime jar, and publishes it (via the Grails publish plugin) under the plugin's
-coordinate with the `-cli` suffix — the framework's own command-bearing modules are built with the
-same plugin.
-
-This removes CLI-only dependencies — and their side effects, such as the WAR-deployment failure
-caused by a CLI Spring Boot initializer on the runtime classpath — from packaged applications.
-
-The split does not hold up application upgrades on plugin re-releases: a plugin that ships no
-commands is unaffected, and a command-bearing plugin that has not yet been rebuilt for Grails 8
-keeps its runtime functionality. Its legacy `grails.dev.commands.ApplicationCommand` registrations
-can continue to work through a deprecated compatibility layer when `legacyCommandSupport` is
-enabled, so those commands remain available without a re-release; publishing a companion `-cli`
-artifact is recommended when migrating to the Grails 8 command API. New commands should use
-`org.apache.grails.core.cli.*`. A plugin that still authors legacy commands must explicitly compile
-against `grails-core-cli-legacy`; consumers of an already-published legacy plugin enable the bridge
-with `grails { legacyCommandSupport = true }` (or declare `grailsCliLegacy` themselves). See the
-xref:upgrading#upgrading80x[upgrade guide] for the migration steps and the full upgrade-impact
-breakdown.
+This keeps what only tools need, and its side effects, such as the WAR-deployment failure caused by a CLI Spring Boot initializer on the runtime classpath, out of packaged applications.
 
 The Grails Data plugin itself (`grails-data-hibernate5` or `grails-data-hibernate7`) is an application dependency only: generated builds no longer place it on the `buildscript` classpath or in `buildSrc`, where Gradle's own Groovy would run the compile-time transformations the plugin carries while compiling the build scripts.
 See the xref:upgrading#upgrading80x[upgrade guide] for the equivalent change in an existing build.
+
+==== Tools Declare Their Options, Parameters and Hints
+
+A tool says what it takes and what it does, and everything that shows or runs tools reads it: `grails help NAME`, completion in interactive mode, `help --json` and so IDEs, and the agents of `grails mcp`. The declarations are annotations of `org.apache.grails.core.cli`, which the compiler reads without running the tool:
+
+[source,groovy]
+----
+@ToolHints(readOnlyHint = true)
+class AuditReportTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Writes the audit report'
+
+    @ToolOption(names = ['--since', '-s'], label = 'DATE', description = 'The first day of the report')
+    String since
+
+    @ToolParameter(index = 0, label = 'OUTPUT', description = 'The file to write')
+    String output
+
+    boolean handle() {
+        ...
+    }
+}
+----
+
+* `@ToolOption` and `@ToolParameter` on the fields of the tool declare its options and parameters, and the tool is given their values before `handle()`. A tool that declares them is held to them: `grails audit-report --sinse 2026-01-01` is refused with exit code 2 before a build is started. A set of options several tools share is one Groovy `@AnnotationCollector`.
+* `@ToolHints` says whether the tool changes anything, with the members and defaults of the hints of the Model Context Protocol.
+* `boolean readsInput = true` says that the tool asks what is typed: `--non-interactive` refuses it, and interactive mode gives it the terminal.
+* `executionContext.result` gives a result as data, which an agent of `grails mcp` receives as structured content.
+* `create-tool` writes a tool that declares all of it, and the compiler warns about a tool that has no description, or reads its arguments without declaring them. `grails project health` names the tools of the application that lack a declaration.
+
+Nothing is required: a tool of Grails 8 compiles and runs as before, with free arguments. The tools of the framework, the `dbm-*` tools of the Database Migration plugin and the tools of Spring Security and scaffolding among them, declare theirs, under the names their options always had, and refuse what they do not take. See xref:commandLine#creatingTools[Creating Tools], and notes 51, 72, 73 and 74 of the xref:upgrading#upgrading90x[upgrade guide].
+
+==== Driving Grails from an AI Agent: `grails mcp`
+
+`grails mcp` makes the `grails` command line a server of the Model Context Protocol, so that an AI coding agent such as Claude Code or Cursor drives it with the commands a developer types:
+
+[source,console]
+----
+$ claude mcp add --scope project grails -- ./grailsw mcp
+----
+
+* *Everything without a terminal.* The agent gets every command of the directory that makes sense without a terminal, creating projects and classes, adding features, building, testing, running and stopping the application, the `project` commands, and every tool of the application and its plugins, with their options, parameters and hints. A tool written while the agent works is offered once the project is compiled, and the client is told.
+* *One program.* The server is the `grails` process. It runs each call as interactive mode runs a line, with one connection to Gradle and the project generator kept for the session, so calls after the first answer at once. No class of the project is loaded in its JVM: builds run in Gradle, and tools in Gradle or in a process of their own. Its standard output carries the protocol only.
+* *For agents.* Several calls run at once in three lanes, a call can be cancelled, long output is shortened and its whole text kept in `.grails/run/mcp`, a JSON document and the result a tool sets come as structured content, and progress is reported while a build runs.
+* *Safe by the rules of the command line.* A call is the command line you could type, with your rights. Over MCP no new source of code can be named (no feature pack by its coordinates, no preset or catalog), hints are passed on only for the commands of Grails, the tools of the project and those of Grails' own plugins, and `--read-only` gives an agent only the tools that say that they change nothing.
+* *The protocol of the official MCP Java SDK*, at the version the Grails BOM manages for Spring AI, revision 2026-07-28. The new optional feature `grails-mcp` writes `.mcp.json` for a new application.
+
+`grails mcp` serves the developer's command line; an MCP endpoint of the running application is built with Spring AI through `grails-spring-ai`. See xref:commandLine#mcp[Driving Grails from an AI Agent].
 
 ==== GSP Tag Library Improvements
 
@@ -442,7 +476,7 @@ Grails Forge has a new `grails-compile-static` feature that generates the `compi
 
 [source,console]
 ----
-grails -t forge create-app --features=grails-compile-static com.example.demo
+grails create-app --features=grails-compile-static com.example.demo
 ----
 
 See <<gspStaticCompilation,Static Compilation>> for what static compilation asks of a GSP page.
@@ -848,7 +882,7 @@ It covers every store GORM runs statements on: SQL through Hibernate 5 and 7, Cy
 through MongoDB. With the GORM GraphQL plugin, each GraphQL operation is a page of its own, such as
 `graphql/index (query BookList)`.
 Start the application with `grails run-app --query-tail` (or `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`), then
-`grails query-tail` in a second terminal follows the capture and refreshes as requests are served. `--statements`
+`grails query-tail` in a second terminal follows the capture and writes the summary again as requests are served. `--statements`
 ranks the statements, `--page=book/show` shows one page's, `--stream` prints each statement as it runs, and
 `--all --once` reports a whole run, including an integration test run. The command reads a capture file and does
 not boot the application. Capture is off unless the application is started with it, and an application started

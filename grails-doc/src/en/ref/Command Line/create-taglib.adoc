@@ -25,27 +25,29 @@ The `create-taglib` command creates a tag library and associated unit test for t
 
 === Examples
 
-[source,groovy]
+[source,console]
 ----
-grails create-taglib
-grails create-taglib book
+grails create-taglib Book
 grails create-taglib org.bookstore.Book
 ----
 
 === Description
 
-Creates a tag library for the given base name. The argument is optional, but if you don't include it the command will ask you for the name of the tag library.
+Usage:
+
+[source,console]
+----
+grails create-taglib [-f] <<name>>
+----
+
+Creates a tag library, `grails-app/taglib/<package>/<Name>TagLib.groovy`, and its test `src/test/groovy/<package>/<Name>TagLibSpec.groovy`. It is a command of every project.
 
 A link:{guidePath}theWebLayer.html#taglibs[tag library] is a "view helper" that in MVC terms helps the view with rendering by providing a set of reusable tags.
 
-The name of the tag library can include a Java package, such as `org.bookstore` in the final example above, but if one is not provided a default is used. So the second example will create the file `grails-app/taglibs/<appname>/BookTagLib.groovy` whereas the last one will create `grails-app/taglibs/org/bookstore/BookTagLib.groovy` directory. Note that the first letter of the tag library name is always upper-cased when determining the class name.
+The name is needed: the command does not ask for one. It can include a package, such as `org.bookstore` in the last example above; without one, the class goes into the default package of the project. The first letter of the name is made upper case.
 
-If you want the command to default to a different package for tag libraries, provide a value for `grails.project.groupId` in the link:{guidePath}conf.html[runtime configuration].
+Options:
 
-Note that this command is just for convenience and you can also create tag libs in your favourite text editor or IDE if you choose.
+* `-f`, `--force` - Replace a file that is there already. Without it the command writes nothing when one of its files exists, says which, and ends with exit code 1.
 
-Usage:
-[source,groovy]
-----
-grails create-taglib <<name>>
-----
+See "Creating Classes with the `grails` Command" in link:{guidePath}commandLine.html[The Command Line] for the names the command takes, what it does when a file is there already, and how a project replaces the template.

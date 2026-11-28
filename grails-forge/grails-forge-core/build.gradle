@@ -84,34 +84,130 @@ dependencies {
 }
 
 
+// What this build takes from the framework build besides its modules: the POMs of the BOMs and the Grails wrapper.
+// With -PprebuiltTestRepository (see settings.gradle) the framework build is not part of this one, and they are
+// read from the copies its publish leaves in the repository of the tests, under the paths they have in the
+// checkout (TestRepositoryMarker.FRAMEWORK_OUTPUTS in build-logic).
+def prebuiltTestRepository = rootProject.ext.prebuiltTestRepository
+Directory frameworkOutputs = prebuiltTestRepository
+        ? layout.projectDirectory.dir(new File(prebuiltTestRepository.directory as File, org.apache.grails.buildsrc.TestRepositoryMarker.FRAMEWORK_OUTPUTS_DIRECTORY).absolutePath)
+        : rootProject.layout.projectDirectory.dir('..')
+
 def grailsVersionsPath = layout.buildDirectory.dir('version-info')
 def grailsVersionInfoTask = tasks.register('grailsVersionInfo', WriteGrailsVersionInfoTask)
 grailsVersionInfoTask.configure { WriteGrailsVersionInfoTask it ->
-    def bomPublicationTask = gradle.includedBuild('grails-core').task(':grails-bom:generatePomFileForMavenPublication')
-    it.dependsOn(bomPublicationTask)
-    it.bomPublicationFile = rootProject.layout.projectDirectory.file('../grails-bom/default/build/publications/maven/pom-default.xml')
+    if (!prebuiltTestRepository) {
+        it.dependsOn(gradle.includedBuild('grails-core').task(':grails-bom:generatePomFileForMavenPublication'))
+    }
+    it.bomPublicationFile = frameworkOutputs.file('grails-bom/default/build/publications/maven/pom-default.xml')
     it.versionsDirectory = grailsVersionsPath
     it.endOfSupport = findProperty('grailsEndOfSupport') as String
+    // the Gradle the wrapper of a generated application names, with the SHA-256 of its distribution, and the earliest Gradle
+    // Grails is built with: all from the gradle.properties of the root, so that the generated wrapper, the command line and
+    // the guide say the same
+    it.gradleVersion = findProperty('gradleToolingApiVersion') as String
+    it.gradleDistributionSha256Sum = findProperty('gradleDistributionSha256Sum') as String
+    it.gradleMinimumVersion = findProperty('gradleMinimumVersion') as String
 }
 sourceSets.main.resources.srcDir(grailsVersionsPath)
+
+// The versions each BOM of Grails manages that the generator can give an application and that this build makes:
+// the Forge CLI holds the feature pack of a plugin to the version the application's BOM manages the plugin at.
+// A table has what the pom of the BOM manages itself and what the BOMs of Grails it imports manage: grails-base-bom,
+// which each imports, and grails-bom, which grails-neo4j-bom imports; nothing is resolved, so what Spring Boot's BOM
+// and the other imported BOMs manage is not in it.
+def bomTablesTask = tasks.register('grailsBomTables', WriteBomTablesTask)
+bomTablesTask.configure { WriteBomTablesTask it ->
+    if (!prebuiltTestRepository) {
+        it.dependsOn(['grails-base-bom', 'grails-bom', 'grails-hibernate7-bom', 'grails-neo4j-bom'].collect { String bom ->
+            gradle.includedBuild('grails-core').task(":${bom}:generatePomFileForMavenPublication")
+        })
+    }
+    it.basePom = frameworkOutputs.file('grails-bom/base/build/publications/maven/pom-default.xml')
+    it.defaultPom = frameworkOutputs.file('grails-bom/default/build/publications/maven/pom-default.xml')
+    it.hibernate7Pom = frameworkOutputs.file('grails-bom/hibernate7/build/publications/maven/pom-default.xml')
+    it.neo4jPom = frameworkOutputs.file('grails-bom/neo4j/build/publications/maven/pom-default.xml')
+    it.tablesDirectory = layout.buildDirectory.dir('bom-tables')
+}
+sourceSets.main.resources.srcDir(bomTablesTask)
+
+abstract class WriteBomTablesTask extends DefaultTask {
+
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getBasePom()
+
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getDefaultPom()
+
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getHibernate7Pom()
+
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getNeo4jPom()
+
+    @OutputDirectory
+    abstract DirectoryProperty getTablesDirectory()
+
+    @TaskAction
+    void write() {
+        // each BOM with the poms of the BOMs of Grails it imports, the one it imports first, and its own last
+        Map<String, List<RegularFileProperty>> boms = ['grails-bom': [basePom, defaultPom], 'grails-hibernate7-bom': [basePom, hibernate7Pom],
+                                                       'grails-neo4j-bom': [basePom, defaultPom, neo4jPom]]
+        boms.each { String bom, List<RegularFileProperty> poms ->
+            // what a BOM manages itself is said over what the BOM it imports manages
+            Map<String, String> versions = new TreeMap<String, String>()
+            for (RegularFileProperty pom : poms) {
+                versions.putAll(managed(pom.get().asFile))
+            }
+            File table = tablesDirectory.get().file("META-INF/grails-forge-boms/${bom}.tsv").asFile
+            table.parentFile.mkdirs()
+            table.setText(versions.collect { String artifact, String version -> "${artifact}\t${version}\n" }.join(''), 'UTF-8')
+        }
+    }
+
+    // the artifacts a pom manages with a version it gives itself, by a property of its own or as it is; not what a BOM it imports manages
+    static Map<String, String> managed(File pom) {
+        def project = new groovy.xml.XmlSlurper(false, false).parse(pom)
+        Map<String, String> properties = [:]
+        project.properties.children().each { properties.put(it.name() as String, it.text() as String) }
+        Map<String, String> versions = [:]
+        project.dependencyManagement.dependencies.dependency.each { dependency ->
+            String version = dependency.version.text()
+            java.util.regex.Matcher property = version =~ /^\$\{(.+)\}$/
+            if (property.matches()) {
+                version = properties.get(property.group(1))
+            }
+            if (dependency.scope.text() != 'import' && version && !version.contains('${')) {
+                versions.put("${dependency.groupId.text()}:${dependency.artifactId.text()}".toString(), version)
+            }
+        }
+        return versions
+    }
+}
 
 tasks.named('build').configure {
     it.dependsOn(grailsVersionInfoTask)
 }
 
 // A Grails plugin's GSPs are its views, compiled rather than packaged, so the plugin build keeps them out
-// of the resources. The GSPs under src/main/resources/gsp are templates the generator writes into
+// of the resources. The GSPs of the feature packs under src/main/resources are templates the generator writes into
 // generated applications, not views of this plugin, so they stay in.
 tasks.named('processResources', ProcessResources).configure { ProcessResources task ->
     task.excludes = task.excludes.findAll { String pattern -> pattern != '**/*.gsp' }
 }
 
-// profile base
+// the Grails wrapper every generated application gets
 TaskProvider<Sync> copyGrailsWrapper = tasks.register('copyGrailsWrapper', Sync)
 copyGrailsWrapper.configure { Sync it ->
-    it.dependsOn(gradle.includedBuild('grails-core').task(':grails-wrapper:installDist'))
+    if (!prebuiltTestRepository) {
+        it.dependsOn(gradle.includedBuild('grails-core').task(':grails-wrapper:installDist'))
+    }
 
-    def wrapperFiles = rootProject.layout.projectDirectory.dir('../grails-wrapper/build/install/apache-grails-wrapper-bin')
+    def wrapperFiles = frameworkOutputs.dir('grails-wrapper/build/install/apache-grails-wrapper-bin')
     it.inputs.files(wrapperFiles)
     it.includeEmptyDirs = false
 
@@ -122,6 +218,10 @@ copyGrailsWrapper.configure { Sync it ->
                 'grails-wrapper.jar'
         )
         eachFile { details -> details.path = details.name } // flatten
+    }
+    if (prebuiltTestRepository) {
+        // a repository that was downloaded as a workflow artifact has lost the permissions installDist gave the script
+        it.filesMatching('grailsw') { details -> details.permissions { unix(0755) } }
     }
     it.into(layout.projectDirectory.dir('src/main/resources/grails-wrapper'))
 }
@@ -136,8 +236,180 @@ apply {
         it.dependsOn(copyGrailsWrapper, grailsVersionInfoTask)
     }
 }
+
+// The identity of the generator, which the record of a generated project names beside the version: one digest of
+// what the generator generates from, its sources and pages, the templates and feature packs it has in itself, the
+// Grails wrapper it gives an application and the versions it writes. Two builds of one version, as two snapshots
+// are, are told apart by it. It is a digest of the sources and not of the jar, so that the website and the command
+// line, which has these classes in a jar of its own, name the same generator.
+TaskProvider<WriteGeneratorIdentityTask> generatorIdentityTask = tasks.register('generatorIdentity', WriteGeneratorIdentityTask)
+generatorIdentityTask.configure { WriteGeneratorIdentityTask it ->
+    it.dependsOn(copyGrailsWrapper)
+    it.generatorSources.from(layout.projectDirectory.dir('src/main'), layout.projectDirectory.dir('grails-app'), grailsVersionInfoTask, bomTablesTask)
+    it.identityDirectory = layout.buildDirectory.dir('generator-identity')
+}
+sourceSets.main.resources.srcDir(generatorIdentityTask)
+
+@CacheableTask
+abstract class WriteGeneratorIdentityTask extends DefaultTask {
+
+    /** Where the identity is read from when the generator runs */
+    static final String RESOURCE = 'META-INF/grails-forge-generator.properties'
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    @IgnoreEmptyDirectories
+    @NormalizeLineEndings
+    abstract ConfigurableFileCollection getGeneratorSources()
+
+    @OutputDirectory
+    abstract DirectoryProperty getIdentityDirectory()
+
+    @TaskAction
+    void write() {
+        // every file by its path and the digest of its content, the lines ending with a line feed whatever the
+        // checkout gives them, so that a checkout on Windows names the same generator
+        List<String> entries = []
+        generatorSources.asFileTree.visit { FileVisitDetails details ->
+            if (!details.isDirectory()) {
+                byte[] content = details.file.bytes
+                ByteArrayOutputStream normalized = new ByteArrayOutputStream(content.length)
+                for (int index = 0; index < content.length; index++) {
+                    if (content[index] != (byte) 13 || index + 1 == content.length || content[index + 1] != (byte) 10) {
+                        normalized.write(content[index])
+                    }
+                }
+                entries << "${WriteGeneratorIdentityTask.sha256(normalized.toByteArray())} ${details.relativePath.pathString}".toString()
+            }
+        }
+        entries.sort()
+        String digest = WriteGeneratorIdentityTask.sha256(entries.join('\n').getBytes('UTF-8'))
+        File properties = identityDirectory.get().file(RESOURCE).asFile
+        properties.parentFile.mkdirs()
+        properties.setText("# The digest of the sources of the generator of Grails applications this jar was built from\nsha256=${digest}\n", 'UTF-8')
+    }
+
+    static String sha256(byte[] bytes) {
+        return java.security.MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString()
+    }
+}
 // The specs render the pages as the plugin ships them, compiled. The GSP plugin leaves the compiled
 // pages off a Grails build's test class path, where an application renders its views from source.
 tasks.named('test', Test).configure { Test test ->
     test.classpath += files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
+}
+
+// The templates of the packs Forge has in itself (src/main/resources/META-INF/grails-forge-bundled) are
+// compiled here, so that the command line does not compile them each time it generates an application.
+// PackPagesCompiler compiles them with the code that compiles a template when Forge runs, in a JVM
+// that has what this module runs with, and writes the classes and an index that names them. The jar
+// has both. What it writes depends on its class path alone and is the same on every machine, so the
+// task is cached.
+abstract class PackPagesDirectory implements CommandLineArgumentProvider {
+
+    @OutputDirectory
+    abstract DirectoryProperty getDirectory()
+
+    @Override
+    Iterable<String> asArguments() {
+        [directory.get().asFile.absolutePath]
+    }
+}
+TaskProvider<JavaExec> compilePackPages = tasks.register('compilePackPages', JavaExec)
+compilePackPages.configure { JavaExec task ->
+    task.description = 'Compiles the templates of the feature packs Forge has in itself.'
+    task.group = 'build'
+    task.classpath = sourceSets.main.runtimeClasspath
+    task.mainClass = 'org.apache.grails.forge.core.pack.PackPagesCompiler'
+    PackPagesDirectory pages = objects.newInstance(PackPagesDirectory)
+    pages.directory.set(layout.buildDirectory.dir('pack-pages/main'))
+    task.argumentProviders.add(pages)
+    // Groovy compiles for the Java it runs on unless it is told: the classes are for the Java this build
+    // compiles for, whichever Java runs the build, as the classes of the module are
+    Object javaVersion = findProperty('javaVersion')
+    if (javaVersion != null) {
+        task.systemProperty('groovy.target.bytecode', javaVersion.toString())
+    }
+    task.outputs.cacheIf { true }
+}
+tasks.named('jar', Jar).configure { Jar jar ->
+    jar.from(compilePackPages)
+}
+// the specs take the pages of the build as the jar has them
+tasks.named('test', Test).configure { Test test ->
+    test.classpath += files(compilePackPages)
+}
+
+// PackCheckSpec runs the check of a feature pack as the Grails Gradle plugin does: in a JVM of its own
+// that has what this module needs to run and nothing of its tests. The class path goes through a file,
+// since it can be longer than a command line.
+def packCheckClasspathFile = layout.buildDirectory.file('pack-check/classpath.txt')
+TaskProvider<Task> writePackCheckClasspath = tasks.register('writePackCheckClasspath') { Task task ->
+    // with the compiled pages of the generator, which the jar of this module has and its main runtime
+    // class path has not: PackFixturesSpec generates applications, which are rendered from them
+    FileCollection classpath = sourceSets.main.runtimeClasspath +
+            files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
+    task.inputs.files(classpath)
+    task.outputs.file(packCheckClasspathFile)
+    task.doLast {
+        packCheckClasspathFile.get().asFile.setText(classpath.files*.absolutePath.join('\n'), 'UTF-8')
+    }
+}
+tasks.named('test', Test).configure { Test test ->
+    test.dependsOn(writePackCheckClasspath)
+    // what the Grails Gradle plugin, which this build is built with, starts and what it reads: a class
+    // of Forge that is renamed, or says something else, fails a spec here and not the build of a plugin
+    String startedByGradlePlugin = org.grails.gradle.plugin.core.CheckForgePackTask.MAIN_CLASS
+    String readByGradlePlugin = org.grails.gradle.plugin.core.CheckForgePackTask.CHECKED_LINE
+    // and the same of the class that generates the fixtures of a pack, for PackFixturesSpec
+    Map<String, String> ofFixtures = [
+            mainClassOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.MAIN_CLASS,
+            generatedLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.GENERATED_LINE,
+            refusedLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.REFUSED_LINE,
+            packProblemLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.PACK_PROBLEM_LINE,
+            summaryLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.SUMMARY_LINE,
+            generatedExitOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.GENERATED as String,
+            refusedExitOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.REFUSED as String,
+            linesReadByGradlePlugin: org.grails.gradle.plugin.core.ForgePackToolTask.MAX_LINES as String,
+    ]
+    test.jvmArgumentProviders.add({
+        ["-Dforge.packCheck.classpathFile=${packCheckClasspathFile.get().asFile.absolutePath}".toString(),
+         "-Dforge.packCheck.mainClassOfGradlePlugin=${startedByGradlePlugin}".toString(),
+         "-Dforge.packCheck.checkedLineOfGradlePlugin=${readByGradlePlugin}".toString()] +
+                ofFixtures.collect { String name, String value -> "-Dforge.packFixtures.${name}=${value}".toString() }
+    } as CommandLineArgumentProvider)
+}
+// The specs of the templates of packs hold the guide and the class with the template API to each other
+// and run the examples of the guide. Those two files are beside Forge in the sources of Grails and are
+// not on the class path of the tests, so they are named here: a change to one of them runs the tests
+// again. The views the specs write back are copies under the resources of the tests.
+// -PallRepositoryViews has PackTemplateViewsSpec take every GSP file of the sources of Grails instead:
+// ./gradlew :grails-forge-core:test --tests '*PackTemplateViewsSpec' -PallRepositoryViews
+tasks.named('test', Test).configure { Test test ->
+    Directory sources = rootProject.layout.projectDirectory.dir('..')
+    test.inputs.files(sources.file('grails-doc/src/en/guide/plugins/forgeFeaturePacks.adoc'))
+            .withPropertyName('forgeFeaturePacksGuide')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    test.inputs.files(layout.projectDirectory.file('src/main/groovy/org/apache/grails/forge/core/pack/PackModel.groovy'))
+            .withPropertyName('templateApiJavadoc')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    // FeatureNamesSharedSpec holds the name of a feature to the reader of the record in grails-gradle-model, by a file the two share
+    test.inputs.files(sources.file('grails-gradle/model/src/test/resources/project-record-sample/feature-names.txt'))
+            .withPropertyName('sharedFeatureNames')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    if (providers.gradleProperty('allRepositoryViews').present) {
+        test.systemProperty('forge.packTemplateViews.all', 'true')
+        // the views are no inputs of the tests: a run that was asked for is a run
+        test.outputs.upToDateWhen { false }
+    }
+}
+// -PverifyGradleChecksums has GradleWrapperPropertiesSpec download the SHA-256 Gradle publishes for the distribution of
+// gradleToolingApiVersion and compare it with gradleDistributionSha256Sum, which the generated gradle-wrapper.properties names:
+// ./gradlew :grails-forge-core:test --tests '*GradleWrapperPropertiesSpec' -PverifyGradleChecksums
+tasks.named('test', Test).configure { Test test ->
+    if (providers.gradleProperty('verifyGradleChecksums').present) {
+        test.systemProperty('forge.gradleChecksums.verify', 'true')
+        // what Gradle publishes is no input of the tests: a run that was asked for is a run
+        test.outputs.upToDateWhen { false }
+    }
 }

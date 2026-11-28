@@ -56,8 +56,6 @@ dependencies {
     implementation 'org.hibernate:hibernate-core-jakarta'
     implementation 'com.graphql-java:graphql-java'
 
-    profile 'org.apache.grails.profiles:rest-api'
-
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 

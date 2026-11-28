@@ -48,4 +48,4 @@ Then apply the `org.apache.grails.gradle.grails-gson` Gradle plugin after any Gr
 apply plugin: "org.apache.grails.gradle.grails-web"
 apply plugin: "org.apache.grails.gradle.grails-gson"
 
-This will add a `compileGsonViews` task to Gradle that is executed when producing a JAR or WAR file.
+This will add a `compileGsonViews` task to Gradle that is executed when producing a JAR or WAR file. A project that has no `grails-app/views` directory, as a new REST API plugin has none, or none with a file in it, builds all the same: the task then has no source and compiles nothing.

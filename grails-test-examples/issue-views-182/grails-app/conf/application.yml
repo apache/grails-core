@@ -15,7 +15,6 @@
 
 ---
 grails:
-    profile: rest-api
     codegen:
         defaultPackage: issueviews182
 info:

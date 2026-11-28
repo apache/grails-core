@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "grails": {
+      "command": "./grailsw",
+      "args": ["mcp"]
+    }
+  }
+}

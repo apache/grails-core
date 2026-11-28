@@ -58,6 +58,13 @@ out/
 ### VS Code ###
 .vscode/
 
+### Grails ###
+# The rest of .grails is the record of how the application was generated, and is committed
+.grails/cache/
+.grails/transactions/
+.grails/run/
+.grails/history
+
 ### Other ###
 Thumbs.db
 .DS_Store

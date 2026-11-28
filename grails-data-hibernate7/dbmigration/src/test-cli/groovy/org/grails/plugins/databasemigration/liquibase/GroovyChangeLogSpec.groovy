@@ -21,11 +21,11 @@ package org.grails.plugins.databasemigration.liquibase
 import grails.core.GrailsApplication
 import liquibase.exception.CommandExecutionException
 import org.apache.grails.data.hibernate7.dbmigration.cli.ApplicationContextDatabaseMigrationCommandSpec
-import org.apache.grails.data.hibernate7.dbmigration.cli.DbmChangelogSyncCommand
-import org.apache.grails.data.hibernate7.dbmigration.cli.DbmRollbackCommand
-import org.apache.grails.data.hibernate7.dbmigration.cli.DbmTagCommand
-import org.apache.grails.data.hibernate7.dbmigration.cli.DbmUpdateCommand
-import org.apache.grails.data.hibernate7.dbmigration.cli.DbmUpdateCountCommand
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmChangelogSyncTool
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmRollbackTool
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmTagTool
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmUpdateTool
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmUpdateCountTool
 
 class GroovyChangeLogSpec extends ApplicationContextDatabaseMigrationCommandSpec {
 
@@ -38,7 +38,7 @@ class GroovyChangeLogSpec extends ApplicationContextDatabaseMigrationCommandSpec
 
     def "updates a database with Groovy Change"() {
         given:
-        def command = createCommand(DbmUpdateCommand)
+        def command = createCommand(DbmUpdateTool)
         command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: "John Smith", id: "1") {
@@ -54,7 +54,7 @@ databaseChangeLog = {
 }
 """
         when:
-        command.handle(getExecutionContext(DbmUpdateCommand))
+        command.handle(getExecutionContext(DbmUpdateTool))
 
         then: 'all change-set closures executed in the documented order'
         // Per-changeset Liquibase log lines (e.g. confirmation message) are
@@ -73,7 +73,7 @@ databaseChangeLog = {
 
     def "outputs a warning message by calling the warn method"() {
         given:
-        def command = createCommand(DbmUpdateCommand)
+        def command = createCommand(DbmUpdateTool)
         command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: "John Smith", id: "2") {
@@ -90,7 +90,7 @@ databaseChangeLog = {
 }
 """
         when:
-        command.handle(getExecutionContext(DbmUpdateCommand))
+        command.handle(getExecutionContext(DbmUpdateTool))
 
         then: 'validate-with-warn closure runs and the change applies normally'
         // See the explanatory comment on 'updates a database with Groovy
@@ -101,7 +101,7 @@ databaseChangeLog = {
 
     def "stops processing by calling the error method"() {
         given:
-        DbmUpdateCommand command = (DbmUpdateCommand) createCommand(DbmUpdateCommand)
+        DbmUpdateTool command = (DbmUpdateTool) createCommand(DbmUpdateTool)
         command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: "John Smith", id: "1") {
@@ -118,7 +118,7 @@ databaseChangeLog = {
 }
 """
         when:
-        command.handle(getExecutionContext(DbmUpdateCommand))
+        command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
         def e = thrown(CommandExecutionException)
@@ -131,7 +131,7 @@ databaseChangeLog = {
 
     def "can use bind variables in the change block"() {
         given:
-        def command = createCommand(DbmUpdateCommand)
+        def command = createCommand(DbmUpdateTool)
         command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: "John Smith", id: "4") {
@@ -148,7 +148,7 @@ databaseChangeLog = {
 }
 """
         when:
-        command.handle(getExecutionContext(DbmUpdateCommand))
+        command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
         calledBlocks == ['change']
@@ -157,7 +157,7 @@ databaseChangeLog = {
 
     def "executes sql statements in the change block"() {
         given:
-        def command = createCommand(DbmUpdateCommand)
+        def command = createCommand(DbmUpdateTool)
         command.changeLogFile << """
 import groovy.sql.Sql
 import liquibase.statement.core.InsertStatement
@@ -178,7 +178,7 @@ databaseChangeLog = {
 """
 
         when:
-        command.handle(getExecutionContext(DbmUpdateCommand))
+        command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
         sql.rows('SELECT id FROM book').collect { it.id } as Set == [1, 2, 3, 4, 5] as Set
@@ -187,7 +187,7 @@ databaseChangeLog = {
 
     def "rolls back a database with Groovy Change"() {
         given:
-        def command = createCommand(DbmRollbackCommand)
+        def command = createCommand(DbmRollbackTool)
         command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: "John Smith", id: "6") {
@@ -204,13 +204,13 @@ databaseChangeLog = {
     }
 }
 """
-        createCommand(DbmUpdateCountCommand).handle(getExecutionContext(DbmUpdateCountCommand, '1'))
-        createCommand(DbmTagCommand).handle(getExecutionContext(DbmTagCommand, 'test tag'))
-        createCommand(DbmChangelogSyncCommand).handle(getExecutionContext(DbmChangelogSyncCommand))
+        createCommand(DbmUpdateCountTool).handle(getExecutionContext(DbmUpdateCountTool, '1'))
+        createCommand(DbmTagTool).handle(getExecutionContext(DbmTagTool, 'test tag'))
+        createCommand(DbmChangelogSyncTool).handle(getExecutionContext(DbmChangelogSyncTool))
         calledBlocks = []
 
         when:
-        command.handle(getExecutionContext(DbmRollbackCommand, 'test tag'))
+        command.handle(getExecutionContext(DbmRollbackTool, 'test tag'))
 
         then:
         calledBlocks == ['init', 'change', 'rollback', 'rollback']
@@ -219,7 +219,7 @@ databaseChangeLog = {
 
     def "can use bind variables in the rollback block"() {
         given:
-        def command = createCommand(DbmRollbackCommand)
+        def command = createCommand(DbmRollbackTool)
         command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: "John Smith", id: "8") {
@@ -237,13 +237,13 @@ databaseChangeLog = {
     }
 }
 """
-        createCommand(DbmUpdateCountCommand).handle(getExecutionContext(DbmUpdateCountCommand, '1'))
-        createCommand(DbmTagCommand).handle(getExecutionContext(DbmTagCommand, 'test tag'))
-        createCommand(DbmChangelogSyncCommand).handle(getExecutionContext(DbmChangelogSyncCommand))
+        createCommand(DbmUpdateCountTool).handle(getExecutionContext(DbmUpdateCountTool, '1'))
+        createCommand(DbmTagTool).handle(getExecutionContext(DbmTagTool, 'test tag'))
+        createCommand(DbmChangelogSyncTool).handle(getExecutionContext(DbmChangelogSyncTool))
         calledBlocks = []
 
         when:
-        command.handle(getExecutionContext(DbmRollbackCommand, 'test tag'))
+        command.handle(getExecutionContext(DbmRollbackTool, 'test tag'))
 
         then:
         calledBlocks == ['rollback', 'rollback']

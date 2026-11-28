@@ -1,0 +1,51 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+What a new Grails project is made of is decided by two things when it is created: the _type_ of the application, which is the command that creates it, and the _features_ it has. A plugin can add features of its own with a _feature pack_, and an organisation can give its applications of one type their options, features and files with a _preset_. Before Grails 9 a project was created from a _profile_; the last section of this chapter says what became of profiles.
+
+There is one command for each type of application:
+
+[cols="2,1,4"]
+|===
+|Command |Type |What it creates
+
+|`create-app` (also `create-webapp`)
+|`web`
+|A web application: controllers, GSP views, static assets and scaffolding.
+
+|`create-restapi`
+|`rest-api`
+|An application that serves a REST API: controllers and JSON views, and nothing for HTML. See link:REST.html#restApiApplication[The REST API Application Type].
+
+|`create-plugin`
+|`plugin`
+|A plugin without a web layer and without a servlet container.
+
+|`create-web-plugin`
+|`web-plugin`
+|A plugin with a web layer.
+
+|`create-rest-api-plugin`
+|`rest-api-plugin`
+|A plugin for REST endpoints, set up as a REST API application is: JSON views, and nothing for HTML. Its `UrlMappings` class is empty and it has no controller or views of its own.
+|===
+
+All of them take the same options, which xref:commandLine#creatingProject[Creating a Grails Project] describes. https://start.grails.org/[The Grails Forge website] creates projects from the same types and features.
+
+The type of a project decides which features can be selected for it, which of them it has by default, and which commands that create classes it has: `create-restful-controller` and `create-domain-resource` are commands of a REST API application and of a REST API plugin, `create-functional-test` is one of those and of a web application or web plugin with a Geb feature, and `package-plugin` and `publish-plugin` are commands of a plugin. The type is recorded in `.grails/project.yml` of the project, and `project show` prints it. Nothing reads it when the application runs.

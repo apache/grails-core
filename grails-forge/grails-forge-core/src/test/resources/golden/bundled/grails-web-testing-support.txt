@@ -1,0 +1,67 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: always
+dependency: testImplementation org.apache.grails:grails-testing-support-web without a version
+
+# web
+title: grails-web-testing-support
+description: grails-web-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     testImplementation "org.apache.grails:grails-testing-support-web"
+
+# rest_api
+title: grails-web-testing-support
+description: grails-web-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     testImplementation "org.apache.grails:grails-testing-support-web"
+
+# web_plugin
+title: grails-web-testing-support
+description: grails-web-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     testImplementation "org.apache.grails:grails-testing-support-web"
+
+# plugin
+title: grails-web-testing-support
+description: grails-web-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     testImplementation "org.apache.grails:grails-testing-support-web"
+
+# rest_api_plugin
+title: grails-web-testing-support
+description: grails-web-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     testImplementation "org.apache.grails:grails-testing-support-web"
+

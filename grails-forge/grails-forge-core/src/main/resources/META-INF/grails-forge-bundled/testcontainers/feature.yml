@@ -1,0 +1,68 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+format: 1
+kind: feature
+templateApi: 1
+name: testcontainers
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+title: Testcontainers
+description: Leverage Testcontainers to run databases and other services in Docker containers during testing.
+category: Testing
+thirdPartyDocumentation: 'https://java.testcontainers.org/'
+dependencies:
+  - scope: testImplementation
+    coordinates: org.testcontainers:testcontainers
+  # the database of the driver, for a Grails Data implementation that connects through the driver
+  - scope: testImplementation
+    coordinates: org.testcontainers:testcontainers-mysql
+    when: { allOf: [mysql, { anyOf: [gorm-hibernate5, gorm-hibernate7] }] }
+  - scope: testImplementation
+    coordinates: org.testcontainers:testcontainers-postgresql
+    when: { allOf: [postgres, { anyOf: [gorm-hibernate5, gorm-hibernate7] }] }
+  - scope: testImplementation
+    coordinates: org.testcontainers:testcontainers-mssqlserver
+    when: { allOf: [sqlserver, { anyOf: [gorm-hibernate5, gorm-hibernate7] }] }
+  - scope: testImplementation
+    coordinates: org.testcontainers:testcontainers-spock
+    when: { feature: spock }
+  - scope: testImplementation
+    coordinates: org.testcontainers:testcontainers-mongodb
+    when: { anyOf: [mongo-sync, gorm-mongodb] }
+configuration:
+  - environmentFile: test
+    when: { allOf: [mysql, { anyOf: [gorm-hibernate5, gorm-hibernate7] }] }
+    values:
+      dataSource.url: 'jdbc:tc:mysql:8:///db'
+      dataSource.driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
+  - environmentFile: test
+    when: { allOf: [postgres, { anyOf: [gorm-hibernate5, gorm-hibernate7] }] }
+    values:
+      dataSource.url: 'jdbc:tc:postgresql:12:///postgres'
+      dataSource.driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
+  - environmentFile: test
+    when: { allOf: [sqlserver, { anyOf: [gorm-hibernate5, gorm-hibernate7] }] }
+    values:
+      dataSource.url: 'jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb'
+      dataSource.driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
+files:
+  # the image whose license the tests accept, which Testcontainers asks for before it starts a SQL Server
+  - from: container-license-acceptance.txt
+    to: src/test/resources/container-license-acceptance.txt
+    template: false
+    when: { allOf: [sqlserver, { anyOf: [gorm-hibernate5, gorm-hibernate7] }] }

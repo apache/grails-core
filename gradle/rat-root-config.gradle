@@ -64,19 +64,12 @@ tasks.named('rat') {
             '**/*.ldif', // LDAP test data files
             'grails-fields/grails-app/views/layouts/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
-            'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
             'grails-doc/src/en/ref/Versions/Grails BOM.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate5.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Neo4j.adoc', // exclude generated data
             'grails-doc/src/en/ref/Configuration/Application Properties.adoc', // exclude generated data
-            'grails-profiles/**/templates/**', // template files that people are expected to use in the end application
-            'grails-profiles/**/commands/**', // template files that people are expected to use in the end application
-            'grails-profiles/**/features/**', // template files that people are expected to use in the end application
-            'grails-profiles/**/skeleton/**', // template files that people are expected to use in the end application
-            'grails-quartz/src/main/templates/**', // template files that people are expected to use in the end application
             'grails-scaffolding/src/main/templates/scaffolding/**/*', // template files that people are expected to use in the end application
-            'bin/**', // scripts generated during build for grails-shell-cli
             'build-logic/plugins/build/**', // exclude build artifacts
             'build-logic/docs-core/build/**', // exclude build artifacts
             'grails-test-examples/*/build/**', // build directories
@@ -148,6 +141,7 @@ tasks.named('rat') {
             'grails-forge/grails-forge-web/aws/Procfile', // Elastic Beanstalk Procfile cannot contain comments
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
+            'grails-gradle/model/src/test/resources/project-record-sample/**', // records as the grails command line writes them, which the reader of the record is tested with; a license header would alter the compared bytes
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
             'grails-gradle/plugins/bin/**', // generated IDE output for the Gradle plugin build
             'end-to-end/**/build/**', // its own build, so its build directories are not covered by the root exclude
@@ -158,12 +152,6 @@ tasks.named('rat') {
             'grails-spring-security/plugin/src/main/templates/**', // template files that people are expected to use in the end application
             'grails-spring-security/ldap/examples/functional-test-app/grails-app/ldap-servers/d1/data/users.ldif', // test database that does not support comments
             'grails-spring-security/oauth2/plugin/src/main/templates/**', // template files that people are expected to use in the end application
-            'grails-spring-security/rest/testapp-profile/commands/**', // template files that people are expected to use in the end application
-            'grails-spring-security/rest/testapp-profile/features/**', // template files that people are expected to use in the end application
-            'grails-spring-security/rest/testapp-profile/profile.yml', // generated file
-            'grails-spring-security/rest/testapp-profile/profile.yml.tmpl', // template that will be included in an end application
-            'grails-spring-security/rest/testapp-profile/skeleton/**', // template files that people are expected to use in the end application
-            'grails-spring-security/rest/testapp-profile/templates/**', // template files that people are expected to use in the end application
             'grails-spring-security/ui/plugin/grails-app/assets/javascripts/jquery/jquery.jdMenu.js', // See license file, MIT licensed
             'grails-spring-security/ui/plugin/grails-app/assets/javascripts/jquery/jquery.positionBy.js', // See license file, MIT licensed
             'grails-spring-security/ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.css', // See license file, MIT licensed
@@ -178,6 +166,8 @@ tasks.named('rat') {
             '**/*.log', // exclude log files
             'local-tasks.gradle', // exclude local helper scripts
             '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
+            '**/META-INF/grails-tools/*.json', // tool descriptors; JSON files cannot contain license headers
+            '**/META-INF/grails-command-options.json', // options declared for run-app; JSON files cannot contain license headers
             'end-to-end/native-i18n/src/native/resources/META-INF/native-image/reachability-metadata.json', // JSON files cannot contain license headers
             'grails-test-examples/spring-security/cas/test1/src/main/resources/cas/services/*.json', // CAS service registry definitions; JSON files cannot contain license headers
             'grails-test-examples/benchmarks/src/reportTest/resources/jmh-golden/**', // byte-exact JMH report fixtures; a license header would alter the compared bytes

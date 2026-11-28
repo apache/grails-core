@@ -1,0 +1,79 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# The Grails plugins of this release of Grails: every plugin the framework's own build publishes, which list-plugins
+# and plugin-info of the command line know without asking the network. A line is, with tabs between them:
+#
+#   group:artifact   the coordinates; the version is not here, it is the one the Grails BOM manages
+#   name             the name people know the plugin by
+#   description      one line that says what the plugin is for
+#   documentation    the https address of its documentation, or empty
+#   features         the features of the command line that add the plugin to an application, with commas, or empty
+#   descriptor       the plugin class in the sources of the framework, by its path from the root of the repository
+#
+# BundledPluginsSpec holds this file to the sources: a plugin class of the framework without a line here, a line
+# whose plugin class is gone, an artifact the Grails BOM does not manage and a feature that does not add the
+# plugin each fail it. Add a line when the framework gets a plugin.
+org.apache.grails.i18n:grails-i18n	I18n	Message bundles and internationalization; part of every web application			grails-i18n/src/main/groovy/org/grails/plugins/i18n/I18nGrailsPlugin.groovy
+org.apache.grails:grails-async	Async	Asynchronous request handling for controllers, with promises and the Servlet asynchronous API			grails-async/plugin/src/main/groovy/org/grails/plugins/web/async/ControllersAsyncGrailsPlugin.groovy
+org.apache.grails:grails-cache	Cache	Caches the results of service methods and of parts of views, with annotations and tags		cache	grails-cache/src/main/groovy/grails/plugin/cache/CacheGrailsPlugin.groovy
+org.apache.grails:grails-codecs	Codecs	The encoding and decoding methods of Grails, such as encodeAsHTML and encodeAsBase64; part of every web application			grails-codecs/src/main/groovy/org/grails/plugins/codecs/CodecsGrailsPlugin.groovy
+org.apache.grails:grails-controllers	Controllers	Controllers and their actions; part of every web application			grails-controllers/src/main/groovy/org/grails/plugins/web/controllers/ControllersGrailsPlugin.groovy
+org.apache.grails:grails-converters	Converters	Renders objects as JSON and XML with the grails.converters classes			grails-converters/src/main/groovy/org/grails/plugins/converters/ConvertersGrailsPlugin.groovy
+org.apache.grails:grails-core	Core	The core of the Grails framework; part of every application			grails-core/src/main/groovy/org/grails/plugins/CoreGrailsPlugin.groovy
+org.apache.grails:grails-data-graphql	GORM GraphQL	Generates a GraphQL schema from the domain classes of GORM		gorm-graphql	grails-data-graphql/plugin/src/main/groovy/org/grails/gorm/graphql/plugin/GormGraphqlGrailsPlugin.groovy
+org.apache.grails:grails-data-hibernate5	Hibernate 5	GORM for relational databases with Hibernate 5		gorm-hibernate5	grails-data-hibernate5/grails-plugin/src/main/groovy/grails/plugin/hibernate/HibernateGrailsPlugin.groovy
+org.apache.grails:grails-data-hibernate5-dbmigration	Database Migration (Hibernate 5)	Manages database changes with Liquibase, for applications with Hibernate 5		database-migration	grails-data-hibernate5/dbmigration/src/main/groovy/org/grails/plugins/databasemigration/DatabaseMigrationGrailsPlugin.groovy
+org.apache.grails:grails-data-hibernate7	Hibernate 7	GORM for relational databases with Hibernate 7		gorm-hibernate7	grails-data-hibernate7/grails-plugin/src/main/groovy/grails/plugin/hibernate/HibernateGrailsPlugin.groovy
+org.apache.grails:grails-data-hibernate7-dbmigration	Database Migration (Hibernate 7)	Manages database changes with Liquibase, for applications with Hibernate 7		database-migration	grails-data-hibernate7/dbmigration/src/main/groovy/org/grails/plugins/databasemigration/DatabaseMigrationGrailsPlugin.groovy
+org.apache.grails:grails-data-mongodb	MongoDB	GORM for the MongoDB document database		gorm-mongodb	grails-data-mongodb/grails-plugin/src/main/groovy/grails/plugins/mongodb/MongodbGrailsPlugin.groovy
+org.apache.grails:grails-data-neo4j	Neo4j	GORM for the Neo4j graph database		gorm-neo4j	grails-data-neo4j/grails-plugin/src/main/groovy/org/grails/datastore/gorm/neo4j/Neo4jGrailsPlugin.groovy
+org.apache.grails:grails-databinding	Data Binding	Binds request parameters and other data to objects; part of every web application			grails-databinding/src/main/groovy/org/grails/plugins/databinding/DataBindingGrailsPlugin.groovy
+org.apache.grails:grails-datasource	Data Source	Configures the JDBC data sources of an application			grails-datasource/src/main/groovy/org/grails/plugins/datasource/DataSourceGrailsPlugin.groovy
+org.apache.grails:grails-domain-class	Domain Class	Domain classes and their validation; part of every application with GORM			grails-domain-class/src/main/groovy/org/grails/plugins/domain/DomainClassGrailsPlugin.groovy
+org.apache.grails:grails-events	Events	Publishes and consumes events within an application, with annotations and an event bus			grails-events/plugin/src/main/groovy/org/grails/plugins/events/EventBusGrailsPlugin.groovy
+org.apache.grails:grails-fields	Fields	Renders form fields and whole forms from the constraints of a domain class, with templates that can be overridden			grails-fields/src/main/groovy/grails/plugin/formfields/FieldsGrailsPlugin.groovy
+org.apache.grails:grails-geb	Geb	Functional tests in a browser with Geb and Spock		geb-with-testcontainers,geb-with-local-browsers	grails-geb/src/main/groovy/grails/plugin/geb/GebGrailsPlugin.groovy
+org.apache.grails:grails-gsp	GSP	Groovy Server Pages, the view technology of Grails web applications		gsp	grails-gsp/plugin/src/main/groovy/org/grails/plugins/web/GroovyPagesGrailsPlugin.groovy
+org.apache.grails:grails-interceptors	Interceptors	Interceptors that run before and after the actions of controllers; part of every web application			grails-interceptors/src/main/groovy/org/grails/plugins/web/interceptors/InterceptorsGrailsPlugin.groovy
+org.apache.grails:grails-layout	Layout	Layouts for GSP views with SiteMesh 2		grails-layout	grails-gsp/grails-layout/src/main/groovy/org/apache/grails/web/layout/LayoutGrailsPlugin.groovy
+org.apache.grails:grails-mail	Mail	Sends mail from an application, with a builder and GSP views for the message			grails-mail/src/main/groovy/grails/plugins/mail/MailGrailsPlugin.groovy
+org.apache.grails:grails-mimetypes	Mime Types	Content negotiation by MIME type and the withFormat method; part of every web application			grails-mimetypes/src/main/groovy/org/grails/plugins/web/mime/MimeTypesGrailsPlugin.groovy
+org.apache.grails:grails-openapi	OpenAPI	Describes an application as an OpenAPI document, at build time and through springdoc		openapi	grails-openapi/src/main/groovy/org/grails/plugins/openapi/OpenApiGrailsPlugin.groovy
+org.apache.grails:grails-quartz	Quartz	Schedules jobs that run at an interval or by a cron expression, with Quartz		grails-quartz	grails-quartz/src/main/groovy/quartz/QuartzGrailsPlugin.groovy
+org.apache.grails:grails-redis	Redis	Connects an application to Redis, with a service, tags and memoization annotations			grails-redis/src/main/groovy/redis/RedisGrailsPlugin.groovy
+org.apache.grails:grails-rest-transforms	REST Transforms	The Resource annotation and the respond method for REST controllers			grails-rest-transforms/src/main/groovy/org/grails/plugins/web/rest/plugin/RestResponderGrailsPlugin.groovy
+org.apache.grails:grails-scaffolding	Scaffolding	Generates controllers and views for the domain classes of an application, at run time or as source files		scaffolding	grails-scaffolding/src/main/groovy/grails/plugin/scaffolding/ScaffoldingGrailsPlugin.groovy
+org.apache.grails:grails-services	Services	Services and their transactions; part of every application			grails-services/src/main/groovy/org/grails/plugins/services/ServicesGrailsPlugin.groovy
+org.apache.grails:grails-sitemesh3	Sitemesh 3 Layouts	Layouts for GSP views with SiteMesh 3		sitemesh3	grails-gsp/grails-sitemesh3/src/main/groovy/org/grails/plugins/sitemesh3/Sitemesh3GrailsPlugin.groovy
+org.apache.grails:grails-spring-ai	Spring AI	Integrates Spring AI with Grails applications		grails-spring-ai	grails-spring-ai/src/main/groovy/org/apache/grails/ai/SpringAiGrailsPlugin.groovy
+org.apache.grails:grails-spring-security	Spring Security Core	Authentication and authorization for an application with Spring Security		grails-spring-security	grails-spring-security/plugin/src/main/groovy/grails/plugin/springsecurity/SpringSecurityCoreGrailsPlugin.groovy
+org.apache.grails:grails-spring-security-acl	Spring Security ACL	Access control lists for domain objects, for the Spring Security plugin			grails-spring-security/acl/plugin/src/main/groovy/grails/plugin/springsecurity/acl/SpringSecurityAclGrailsPlugin.groovy
+org.apache.grails:grails-spring-security-cas	Spring Security CAS	Single sign-on with CAS, for the Spring Security plugin			grails-spring-security/cas/plugin/src/main/groovy/grails/plugin/springsecurity/cas/SpringSecurityCasGrailsPlugin.groovy
+org.apache.grails:grails-spring-security-ldap	Spring Security LDAP	Authentication against LDAP, for the Spring Security plugin			grails-spring-security/ldap/plugin/src/main/groovy/grails/plugin/springsecurity/ldap/SpringSecurityLdapGrailsPlugin.groovy
+org.apache.grails:grails-spring-security-oauth2	Spring Security OAuth2	Sign-in with OAuth2 providers, for the Spring Security plugin			grails-spring-security/oauth2/plugin/src/main/groovy/grails/plugin/springsecurity/oauth2/SpringSecurityOauth2GrailsPlugin.groovy
+org.apache.grails:grails-spring-security-rest	Spring Security REST	Token-based authentication for REST APIs, for the Spring Security plugin			grails-spring-security/rest/core/src/main/groovy/grails/plugin/springsecurity/rest/SpringSecurityRestGrailsPlugin.groovy
+org.apache.grails:grails-spring-security-rest-gorm	Spring Security REST GORM	Keeps the tokens of the Spring Security REST plugin in a GORM domain class			grails-spring-security/rest/gorm/src/main/groovy/grails/plugin/springsecurity/rest/SpringSecurityRestGormGrailsPlugin.groovy
+org.apache.grails:grails-spring-security-rest-grailscache	Spring Security REST Grails Cache	Keeps the tokens of the Spring Security REST plugin in the cache of the Cache plugin			grails-spring-security/rest/grailscache/src/main/groovy/grails/plugin/springsecurity/rest/SpringSecurityRestGrailsCacheGrailsPlugin.groovy
+org.apache.grails:grails-spring-security-rest-memcached	Spring Security REST Memcached	Keeps the tokens of the Spring Security REST plugin in memcached			grails-spring-security/rest/memcached/src/main/groovy/grails/plugin/springsecurity/rest/SpringSecurityRestMemcachedGrailsPlugin.groovy
+org.apache.grails:grails-spring-security-rest-redis	Spring Security REST Redis	Keeps the tokens of the Spring Security REST plugin in Redis			grails-spring-security/rest/redis/src/main/groovy/grails/plugin/springsecurity/rest/SpringSecurityRestRedisGrailsPlugin.groovy
+org.apache.grails:grails-spring-security-ui	Spring Security UI	Pages for registration, forgotten passwords and the management of users and roles, for the Spring Security plugin		grails-spring-security-ui	grails-spring-security/ui/plugin/src/main/groovy/grails/plugin/springsecurity/ui/SpringSecurityUiGrailsPlugin.groovy
+org.apache.grails:grails-undertow	Undertow	Runs an application on the Undertow embedded servlet container		grails-undertow	grails-undertow/plugin/src/main/groovy/org/apache/grails/undertow/plugin/UndertowGrailsPlugin.groovy
+org.apache.grails:grails-url-mappings	URL Mappings	Maps URLs to controllers and views; part of every web application			grails-url-mappings/src/main/groovy/org/grails/plugins/web/mapping/UrlMappingsGrailsPlugin.groovy
+org.apache.grails:grails-views-gson	JSON Views	Renders JSON with views written in Groovy		views-json	grails-views-gson/src/main/groovy/grails/plugin/json/view/JsonViewGrailsPlugin.groovy
+org.apache.grails:grails-views-markup	Markup Views	Renders XML and HTML with views written in Groovy		views-markup	grails-views-markup/src/main/groovy/grails/plugin/markup/view/MarkupViewGrailsPlugin.groovy
+org.apache.grails:grails-xml	XML	XML support for Grails, with the XML converter and parser			grails-xml/src/main/groovy/org/grails/plugins/xml/XmlGrailsPlugin.groovy

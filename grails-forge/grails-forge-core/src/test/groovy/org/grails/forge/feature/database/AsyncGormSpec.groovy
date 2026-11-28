@@ -23,6 +23,7 @@ import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Category
+import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
@@ -68,7 +69,7 @@ class AsyncGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
     void "test gorm-async category is Database"() {
         when:
-        def feature = beanContext.getBean(AsyncGorm)
+        def feature = beanContext.getBean(FeatureRegistry).all().find { it.name == 'gorm-async' }
 
         then:
         feature.category == Category.DATABASE
@@ -76,7 +77,7 @@ class AsyncGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
     void "test gorm-async supports all application types"() {
         when:
-        def feature = beanContext.getBean(AsyncGorm)
+        def feature = beanContext.getBean(FeatureRegistry).all().find { it.name == 'gorm-async' }
 
         then:
         ApplicationType.values().every { feature.supports(it) }

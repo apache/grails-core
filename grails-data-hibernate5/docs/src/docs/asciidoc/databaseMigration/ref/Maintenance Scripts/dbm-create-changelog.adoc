@@ -21,35 +21,32 @@ under the License.
 
 ====== Purpose
 
-Creates an empty changelog file.
+Creates an empty change log file.
 
 ====== Description
 
-Creates a new empty file instead of generating the file from the database (using <<ref-rollback-scripts-dbm-generate-changelog,dbm-generate-changelog>>) or your GORM classes (using <<ref-rollback-scripts-dbm-generate-gorm-changelog,dbm-generate-gorm-changelog>>).
+Creates a new empty file instead of generating the file from the database (with <<ref-rollback-scripts-dbm-generate-changelog,dbm-generate-changelog>>) or from your GORM classes (with <<ref-rollback-scripts-dbm-generate-gorm-changelog,dbm-generate-gorm-changelog>>).
+
+The folder of the change logs is `grails-app/migrations`, or the one `grails.plugin.databasemigration.changelogLocation` names. The extension of the file decides its format: `.groovy` for the Groovy DSL, `.xml` for Liquibase XML, and the other formats Liquibase writes, as `.yaml`. A name without an extension gets `.groovy`, after a hyphen and the name of the data source when it is not the default one: `changes` is `changes.groovy`, and `changes-reports.groovy` with `--dataSource=reports`. For an extension Liquibase writes no format for, the tool fails and leaves a file of that name as it is, also with `--force`.
 
 Usage:
-[source,java]
+[source,console]
 ----
-grails <<environment>> dbm-create-changelog <<filename>> --dataSource=<<dataSource>>
+grails dbm-create-changelog [--add] [--contexts=CONTEXTS] [--dataSource=DATASOURCE] [--defaultSchema=SCHEMA] [--force] FILE
 ----
 
 Required arguments:
 
-* `filename` - The path to the output file to write to
+* `FILE` - The change log to create, relative to the folder of the change logs.
 
 Optional arguments:
 
-* `dataSource` - if provided will run the script for the specified dataSource creating a file named `changelog-<<dataSource>>.groovy` if a `filename` is not given. Not needed for the default dataSource.
+* `--add` - Adds an `include` of the change log it writes to the root change log.
+* `--contexts` - Taken by every tool of the plugin; this one does not use it.
+* `--dataSource` - The data source to work with, by its name under `dataSources` in `application.[yml|groovy]`, as `--dataSource=reports`. Without it, the default data source.
+* `--defaultSchema` - Taken by every tool of the plugin; this one opens no database and does not use it.
+* `--force` - Replaces the change log when it exists; without it the tool fails when the file is there.
 
-NOTE: Note that the `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
-[source,groovy]
-----
-grails dbm-create-changelog "--dataSource=<<dataSource>>"
-----
+The tool runs in the application, which the build of the project starts around it, for the `development` environment. For another environment, name it in front of the name of the tool with `run-tool`, as `grails run-tool -Dgrails.env=production dbm-create-changelog`, or give it to the build, as `./gradlew -Dgrails.env=production runTool --arg=dbm-create-changelog` or `./gradlew -Dgrails.env=production dbmCreateChangelog`; after the name of the tool, `-Dgrails.env` is an argument of the tool and selects no environment.
 
-NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
-
-[source,groovy]
-----
---dataSource=reports
-----
+The value of an option follows `=` or is the next argument: `--dataSource=reports` and `--dataSource reports` are the same. `grails help dbm-create-changelog` lists the options and parameters the tool takes. An option it does not take, an argument more than it takes and a required argument that is missing are refused before the application is started, with exit code 2 and one line, as `| Error dbm-create-changelog: --datasource is not one of its options. grails help dbm-create-changelog shows its options`.

@@ -33,21 +33,22 @@ git clone https://github.com/apache/grails-core.git
 
 This will create a "grails-core" directory in your current working directory containing all the project source files. The next step is to get a Grails installation from the source.
 
-=== Using Grails Shell
+=== Using the `grails` Command
 
-If you want to use a custom version of the grails shell to generate an application, you can do so by generating the shell distribution.
+If you want to use a custom version of the `grails` command to generate an application, you can do so by building its distribution. The command line is part of the `grails-forge` build:
 
-[source,groovy]
+[source,console]
 ----
-./gradlew grails-shell-cli:installDist
+$ cd grails-forge
+$ ./gradlew :grails-cli:installDist
 ----
 
-This will fetch all the standard dependencies required by Grails, build it, and then generate a zip file containing the necessary shell script to invoke the grails-shell-cli.
+This will fetch all the standard dependencies required by Grails, build it, and then install the distribution, with the script that starts the command line, to `grails-forge/grails-cli/build/install/apache-grails-bin`.
+`./gradlew :grails-cli:build` also writes it as a zip file to `grails-forge/grails-cli/build/distributions`, which can be extracted to a desired location.
 
-Once the above command has finished, extract one of files located under `grails-shell-cli/build/distributions` to a desired location.
-Under the extracted location is a `bin` directory.
+Under the installed or extracted location is a `bin` directory.
 Add it to your path.
-When you next type `grails-shell-cli` command to run, you'll be using the version you just built.
+When you next type the `grails` command, you'll be using the version you just built.
 
 If you are using https://sdkman.io/[SDKMAN] then that can also be used to work with this local installation via the following:
 

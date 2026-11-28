@@ -1,8 +1,0 @@
-import ${fullName}
-
-model {
-	Iterable<${className}> ${propertyName}List
-}
-
-json tmpl.${propertyName}(${propertyName}List ?: [])
-

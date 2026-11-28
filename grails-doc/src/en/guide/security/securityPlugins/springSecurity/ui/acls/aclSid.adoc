@@ -20,7 +20,7 @@ under the License.
 [[ui-aclSid]]
 === AclSid Management
 
-The default action for the AclSid controller is search. By default only the standard fields are available but this is customizable with the <<ui-s2ui-override>> script - see the <<ui-customization>> section for details.
+The default action for the AclSid controller is search. By default only the standard fields are available but this is customizable with the <<ui-s2ui-override>> command - see the <<ui-customization>> section for details.
 
 The `sid` field has an Ajax autocomplete to assist in finding instances. Leave the field empty and `principal` set to Either to return all instances.
 

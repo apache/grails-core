@@ -77,7 +77,7 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
 ====
 Note that the syntax of the `staticRules` block has changed from previous versions of the plugin where the keys were URL patterns and the values were access rules (roles, expressions, etc.) To avoid issues in configuration parsing and to allow optionally specifying the HTTP method associated with one or more of the rules, the `staticRules` block is now specified as a `List` of ``Map``s. Each `Map` defines one combination of url pattern and access rules (and optionally HTTP method). If there are multiple access rules, specify them as a `List` of ``String``s; if there is only one access rule, its value can be a `String` or a single-element `List`.
 
-The preceding `staticRules` example includes the default mappings defined when running the <<core-s2-quickstart>> script. Here's a more complete example using all configuration options:
+The preceding `staticRules` example includes the default mappings defined when running the <<core-s2-quickstart>> command. Here's a more complete example using all configuration options:
 
 [source,groovy]
 ----

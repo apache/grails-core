@@ -27,6 +27,40 @@ KEYS           text eol=lf
 Dockerfile     text eol=lf
 *.properties   text eol=lf
 
+# The descriptor of a command that is written by hand goes into a jar as it is checked out, and is
+# the bytes the compiler writes for a command it describes: one line that ends with LF. With CRLF a
+# jar built on Windows differs from one built elsewhere.
+**/META-INF/grails-commands/*.json text eol=lf
+# the descriptor of a tool is compared with what the compiler writes, byte for byte
+**/META-INF/grails-tools/*.json text eol=lf
+
+# The templates the generator of Forge writes applications from go into its jar as they are checked out,
+# and the generator keeps the line ends of a template: the pages are compiled with theirs and the files of
+# the bundled packs are copied or rendered with theirs. With CRLF a Forge built on Windows generates
+# applications that differ from those of one built elsewhere, in their files and in the sums of their
+# baseline. The second line sets no `text`, so the binary types below still apply to an icon of a pack.
+grails-forge/grails-forge-core/grails-app/views/forge/**/*.gsp text eol=lf
+grails-forge/grails-forge-core/src/main/resources/META-INF/grails-forge-bundled/** eol=lf
+# The same holds for the templates the command line writes artefacts from, and the specs compare what is
+# written with the files under golden as text.
+grails-forge/grails-forge-cli/src/main/resources/META-INF/grails-forge-cli/templates/** text eol=lf
+grails-forge/grails-forge-cli/src/test/resources/golden/** text eol=lf
+# The applications that released versions of Grails created, which the specs of project migrate copy as those
+# versions wrote them, with LF on every system, and whose lines they change and compare. With CRLF they are not
+# what those versions wrote; the specs make a copy with CRLF where that is what they test.
+grails-forge/grails-forge-cli/src/test/resources/earlier-applications/** eol=lf
+# The lists the command line reads from its jar are written by hand or by a spec and go into the jar as they
+# are checked out: the classes it loads ahead and the plugins of the release. With CRLF a jar built on
+# Windows differs from one built elsewhere.
+grails-forge/grails-forge-cli/src/main/resources/META-INF/grails-forge-cli/preload-classes* text eol=lf
+grails-forge/grails-forge-cli/src/main/resources/META-INF/grails-forge-plugins/plugins.tsv text eol=lf
+# And for what the specs of the generator compare with as text: the views of the templates of a pack, the
+# files the bundled packs generate, and the reference of the merge of three texts. No `text` is set for the
+# directories, so what git takes for binary there stays as it is.
+grails-forge/grails-forge-core/src/test/resources/golden/** eol=lf
+grails-forge/grails-forge-core/src/test/resources/pack-template-views/** eol=lf
+grails-forge/grails-forge-core/src/test/resources/three-way-merge-reference.txt text eol=lf
+
 # Files that MUST be CRLF (Windows scripts).
 *.bat          text eol=crlf
 *.cmd          text eol=crlf

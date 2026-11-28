@@ -33,6 +33,7 @@ import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 import org.grails.forge.util.NameUtils
+import org.grails.forge.web.ForgeRequestSupport
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -63,7 +64,6 @@ class CreateProjectService {
             ServletImpl servlet,
             JdkVersion javaVersion,
             String userAgent) {
-        Project project = NameUtils.parse(name)
         Options options = new Options(
                 reloading != null ? reloading : DevelopmentReloading.DEFAULT_OPTION,
                 gorm != null ? gorm : GormImpl.DEFAULT_OPTION,
@@ -71,10 +71,27 @@ class CreateProjectService {
                 javaVersion != null ? javaVersion : JdkVersion.DEFAULT_OPTION,
                 UserAgentParser.getOperatingSystem(userAgent)
         )
+        // an option that is not the default is a choice, which the features that are selected do not replace
+        options = options.withGiven(ForgeRequestSupport.given(options))
+        return createProjectGeneratorContext(type, name, features, options, userAgent)
+    }
+
+    /**
+     * @param options the options of the application, with those the request chose marked as given
+     * ({@link Options#getGiven()}): an application that would not have what one of them asks for is
+     * refused with a {@link org.grails.forge.feature.FeatureSelectionException}
+     */
+    GeneratorContext createProjectGeneratorContext(
+            ApplicationType type,
+            String name,
+            List<String> features,
+            Options options,
+            String userAgent) {
+        Project project = NameUtils.parse(name)
         GeneratorContext generatorContext = projectGenerator.createGeneratorContext(
                 type,
                 project,
-                options,
+                options.withOperatingSystem(getOperatingSystem(userAgent)),
                 getOperatingSystem(userAgent),
                 features ?: [],
                 ConsoleOutput.NOOP

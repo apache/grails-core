@@ -28,10 +28,15 @@ under the License.
 <%@ model="GradleBuild gradleBuild" %>
 <%@ model="Function<String,Coordinate> coordinateResolver" %>
 <%@ model="Features features" %>
-%{-- Keep gradle version synced with .sdkmanrc, gradle.properties (gradleToolingApiVersion), all gradle-wrapper.properties files --}%
+<%@ model="String gradleVersion" %>
+<%@ model="String gradleDistributionSha256Sum" %>
+%{-- The version is gradleToolingApiVersion of the gradle.properties of the root of the Grails repository, see VersionInfo.getGradleVersion(), --}%
+%{-- and distributionSha256Sum the SHA-256 Gradle publishes for that distribution, gradleDistributionSha256Sum beside it, see --}%
+%{-- VersionInfo.getGradleDistributionSha256Sum(). GradleWrapperPropertiesSpec, with -PverifyGradleChecksums, compares it with what Gradle publishes --}%
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.9.2-bin.zip
+distributionSha256Sum=${gradleDistributionSha256Sum}
+distributionUrl=https\://services.gradle.org/distributions/gradle-${gradleVersion}-bin.zip
 networkTimeout=10000
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME

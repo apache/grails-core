@@ -136,7 +136,7 @@ final class StartupProgressResponder {
         boolean signInForDetails = access.isSignInRequired() && !showDetails;
         if (status) {
             StartupProgress.Status current = progress.report(showDetails, signInForDetails);
-            exchange.setHeader(StartupProgress.PHASE_HEADER, current.phase().name());
+            setPhase(exchange, current.phase());
             send(exchange, 200, "application/json", current.json());
             progress.delivered(current);
         }
@@ -183,8 +183,8 @@ final class StartupProgressResponder {
         return true;
     }
 
-    private static void sendReady(Exchange exchange) throws IOException {
-        exchange.setHeader(StartupProgress.PHASE_HEADER, StartupProgress.Phase.READY.name());
+    private void sendReady(Exchange exchange) throws IOException {
+        setPhase(exchange, StartupProgress.Phase.READY);
         send(exchange, 200, "application/json", "{\"phase\":\"READY\"}");
     }
 
@@ -193,7 +193,7 @@ final class StartupProgressResponder {
      * address once the application is ready, and anything else a plain answer to try again.
      */
     private void sendStarting(Exchange exchange, boolean pageLoad, boolean showDetails, boolean signInForDetails) throws IOException {
-        exchange.setHeader(StartupProgress.PHASE_HEADER, progress.getPhase().name());
+        setPhase(exchange, progress.getPhase());
         exchange.setHeader("Retry-After", StartupProgressPage.RETRY_AFTER_SECONDS);
         String accept = exchange.header("Accept");
         if (pageLoad || accept != null && accept.contains("text/html")) {
@@ -203,6 +203,15 @@ final class StartupProgressResponder {
         else {
             send(exchange, 503, "text/plain", page.plainText());
         }
+    }
+
+    /**
+     * Names the phase of the start on an answer, and with it the path the page polls, so a client that is no
+     * browser can ask there as the page does and be told when the start fails: {@code grails run-app} does.
+     */
+    private void setPhase(Exchange exchange, StartupProgress.Phase phase) {
+        exchange.setHeader(StartupProgress.PHASE_HEADER, phase.name());
+        exchange.setHeader(StartupProgress.STATUS_PATH_HEADER, statusPath);
     }
 
     private static void setPageHeaders(Exchange exchange) {

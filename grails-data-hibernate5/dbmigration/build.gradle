@@ -21,7 +21,6 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
-    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.configuration-metadata'
     id 'org.apache.grails.buildsrc.publish'
@@ -63,7 +62,7 @@ dependencies {
     }
 
     // the cli tier — published separately as org.apache.grails:grails-data-hibernate5-dbmigration-cli;
-    // the dbm-* commands and their CLI-only dependencies (grails-shell-cli) stay off the
+    // the dbm-* commands and their CLI-only dependencies stay off the
     // application runtime classpath entirely
     cliImplementation platform(project(':grails-hibernate5-bom'))
     cliApi project(project.path)
@@ -87,12 +86,6 @@ dependencies {
     cliCompileOnly 'org.apache.groovy:groovy-sql'
     cliCompileOnly 'org.apache.groovy:groovy-xml'
     cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
-    cliImplementation(project(':grails-shell-cli')) {
-        exclude group: 'org.slf4j', module: 'slf4j-simple'
-
-        // Keep legacy org.codehaus.groovy artifacts off this plugin's Groovy 5 classpath.
-        exclude group: 'org.codehaus.groovy'
-    }
 
     compileOnly 'org.springframework.boot:spring-boot-starter-logging'
     compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
@@ -110,6 +103,8 @@ dependencies {
 
     // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output
     testRuntimeOnly 'org.slf4j:jul-to-slf4j'
+    // runs the dbm-* tools the way the build of an application does, with the class its runTool task starts
+    testCliRuntimeOnly project(':grails-console')
 }
 
 tasks.named('test', Test) {

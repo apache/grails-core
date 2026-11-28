@@ -17,52 +17,19 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == install-templates
 
-
-
 === Purpose
 
-
-Copies the the templates used by Grails during code generation to your project directory
-
-
-=== Examples
-
-
-[source,groovy]
-----
-grails install-templates
-----
-
-
-=== Description
-
-
-Usage:
-
-[source,groovy]
-----
-grails install-templates
-----
-
-The `install-templates` command will copy the templates Grails uses for all code generation activities to the application's `src/main/templates/scaffolding` directory.
-
-
-== Gradle runCommand install-templates
-
-=== Purpose
-
-Copies the templates used by Grails during code generation to your project directory
+Copies the templates of the code generation commands to your project directory
 
 === Examples
 
 [source,console]
 ----
-$ ./gradlew runCommand -Pargs="install-templates"
+grails install-templates
+grails install-templates --force
 ----
-
 
 === Description
 
@@ -70,7 +37,29 @@ Usage:
 
 [source,console]
 ----
-$ ./gradlew runCommand -Pargs="install-templates"
+grails install-templates [-f]
 ----
 
-The `install-templates` command will copy the templates Grails uses for all code generation activities to the application's `src/main/templates/scaffolding` directory.
+The `install-templates` command copies the templates of the commands the project has, such as `create-controller`, `create-service` and `create-unit-test`, to `src/main/templates/artifacts` and `src/main/templates/testing` of the project (and `src/main/templates/Job.groovy` in a project with the Quartz plugin). Those commands then write their files from the templates of the project. It lists each file it writes; a template the project has already is kept and named unless `-f` or `--force` is given.
+
+The templates of the `create-` commands a feature of the project gives it are not copied: the project has them already, under `src/main/templates/features/<feature>/`, since it was generated with the feature, and the command neither writes nor replaces them.
+
+See "Templates of the Project" in link:{guidePath}commandLine.html[The Command Line] for the templates and their syntax.
+
+== The install-templates Tool of the Scaffolding Plugin
+
+=== Purpose
+
+Copies the templates the scaffolding plugin uses to generate controllers and views to your project directory
+
+=== Examples
+
+[source,console]
+----
+$ ./gradlew runTool -Pargs="install-templates"
+$ grails run-tool install-templates
+----
+
+=== Description
+
+The scaffolding plugin has a tool of the same name, which copies its templates to the application's `src/main/templates/scaffolding` directory. `grails install-templates` is the command above and does not write those templates: the tool of the plugin is run with `run-tool` or with the Gradle task `runTool`. The templates of a REST API application are among them: `index.gson`, `show.gson` and `_domain.gson` for the JSON views, and `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy` for the controller, the service and their tests (see link:{commandLineRefFromRef}generate-all.html[generate-all]).

@@ -1,0 +1,92 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: spock
+dependency: testImplementation org.mockito:mockito-core without a version
+
+# web
+title: Mockito Framework
+description: Mockito test mocking framework for JUnit
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://site.mockito.org
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature mockito documentation
++ - [https://site.mockito.org](https://site.mockito.org)
++ 
++ 
+== build.gradle
++     testImplementation "org.mockito:mockito-core"
+
+# rest_api
+title: Mockito Framework
+description: Mockito test mocking framework for JUnit
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://site.mockito.org
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature mockito documentation
++ - [https://site.mockito.org](https://site.mockito.org)
++ 
++ 
+== build.gradle
++     testImplementation "org.mockito:mockito-core"
+
+# web_plugin
+title: Mockito Framework
+description: Mockito test mocking framework for JUnit
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://site.mockito.org
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature mockito documentation
++ - [https://site.mockito.org](https://site.mockito.org)
++ 
++ 
+== build.gradle
++     testImplementation "org.mockito:mockito-core"
+
+# plugin
+title: Mockito Framework
+description: Mockito test mocking framework for JUnit
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://site.mockito.org
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature mockito documentation
++ - [https://site.mockito.org](https://site.mockito.org)
++ 
++ 
+== build.gradle
++     testImplementation "org.mockito:mockito-core"
+
+# rest_api_plugin
+title: Mockito Framework
+description: Mockito test mocking framework for JUnit
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://site.mockito.org
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature mockito documentation
++ - [https://site.mockito.org](https://site.mockito.org)
++ 
++ 
+== build.gradle
++     testImplementation "org.mockito:mockito-core"
+

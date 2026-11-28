@@ -21,33 +21,26 @@ under the License.
 
 ====== Purpose
 
-Checks the changelog for errors.
+Checks the change log for errors.
 
 ====== Description
 
-Prints any validation messages to the console.
+Writes any validation messages to the standard output. It never changes the schema or the data of the application, and never runs or records a change set, so `grails mcp --read-only` offers it to an AI agent. In a database Liquibase has not been used with yet, it creates the two empty bookkeeping tables of Liquibase, `DATABASECHANGELOG` and `DATABASECHANGELOGLOCK`, as any first use of the plugin does.
 
 Usage:
-[source,java]
+[source,console]
 ----
-grails <<environment>> dbm-validate --dataSource=<<dataSource>>
+grails dbm-validate [--contexts=CONTEXTS] [--dataSource=DATASOURCE] [--defaultSchema=SCHEMA]
 ----
 
-Required arguments: __none__.
+Required arguments: _none_.
 
 Optional arguments:
 
-* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+* `--contexts` - Taken by every tool of the plugin; this one does not use it.
+* `--dataSource` - The data source to work with, by its name under `dataSources` in `application.[yml|groovy]`, as `--dataSource=reports`. Without it, the default data source.
+* `--defaultSchema` - The schema of the database to work in where the change log names none.
 
-NOTE: Note that the `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
-[source,groovy]
-----
-grails dbm-validate "--dataSource=<<dataSource>>"
-----
+The tool runs in the application, which the build of the project starts around it, for the `development` environment. For another environment, name it in front of the name of the tool with `run-tool`, as `grails run-tool -Dgrails.env=production dbm-validate`, or give it to the build, as `./gradlew -Dgrails.env=production runTool --arg=dbm-validate` or `./gradlew -Dgrails.env=production dbmValidate`; after the name of the tool, `-Dgrails.env` is an argument of the tool and selects no environment.
 
-NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
-
-[source,groovy]
-----
---dataSource=reports
-----
+The value of an option follows `=` or is the next argument: `--dataSource=reports` and `--dataSource reports` are the same. `grails help dbm-validate` lists the options and parameters the tool takes. An option it does not take, an argument more than it takes and a required argument that is missing are refused before the application is started, with exit code 2 and one line, as `| Error dbm-validate: --datasource is not one of its options. grails help dbm-validate shows its options`.

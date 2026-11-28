@@ -27,7 +27,7 @@ Spring Security supports four ways of disabling a user account. When you attempt
 * `isCredentialsNonExpired()`
 * `isEnabled()`
 
-If you use the <<core-s2-quickstart>> script to create a user domain class, it creates a class with corresponding properties to manage this state.
+If you use the <<core-s2-quickstart>> command to create a user domain class, it creates a class with corresponding properties to manage this state.
 
 When an accessor returns `true` for `accountExpired`, `accountLocked`, or `passwordExpired` or returns `false` for `enabled`, a corresponding exception is thrown:
 

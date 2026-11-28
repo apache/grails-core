@@ -22,9 +22,10 @@ package org.grails.gradle.plugin.core
  * Tests that {@link GrailsGradlePlugin} applies Java compatibility JVM arguments
  * conditionally based on the target Java version.
  *
- * <p>The plugin adds {@code --enable-native-access=ALL-UNNAMED} for Java 24+
- * (JEP 472) and {@code --sun-misc-unsafe-memory-access=allow} for Java 23+
- * (JEP 471/498) to both {@code Test} and {@code JavaExec} tasks.</p>
+ * <p>The plugin adds {@code --enable-native-access=ALL-UNNAMED} for Java 22+
+ * (JEP 454 and JEP 472, as {@code JvmOptions} says it) and
+ * {@code --sun-misc-unsafe-memory-access=allow} for Java 23+ (JEP 471/498) to both
+ * {@code Test} and {@code JavaExec} tasks.</p>
  *
  * @since 7.0.8
  * @see GrailsGradlePlugin#configureJavaCompatibilityArgs
@@ -38,7 +39,7 @@ class GrailsGradlePluginJavaCompatSpec extends GradleSpecification {
     def "compat args match current JDK version when no toolchain configured"() {
         given:
         setupTestResourceProject('java-compat-no-toolchain')
-        boolean expectNativeAccess = CURRENT_JDK >= 24
+        boolean expectNativeAccess = CURRENT_JDK >= 22
         boolean expectUnsafeAccess = CURRENT_JDK >= 23
 
         when:
@@ -56,7 +57,7 @@ class GrailsGradlePluginJavaCompatSpec extends GradleSpecification {
     def "compat args match current JDK version when toolchain is set to current JDK"() {
         given:
         setupTestResourceProject('java-compat-toolchain-current')
-        boolean expectNativeAccess = CURRENT_JDK >= 24
+        boolean expectNativeAccess = CURRENT_JDK >= 22
         boolean expectUnsafeAccess = CURRENT_JDK >= 23
 
         when:
@@ -68,10 +69,30 @@ class GrailsGradlePluginJavaCompatSpec extends GradleSpecification {
     }
 
     // ----------------------------------------------------------------
-    // Java 23 toolchain: only --sun-misc-unsafe-memory-access=allow
+    // Java 22 toolchain: only --enable-native-access=ALL-UNNAMED
     // ----------------------------------------------------------------
 
-    def "Java 23 toolchain adds sun-misc-unsafe-memory-access arg to JavaExec and Test tasks"() {
+    def "Java 22 toolchain adds native-access arg to JavaExec and Test tasks, which a restricted method JLine calls needs from Java 22 on"() {
+        given:
+        setupTestResourceProject('java-compat-toolchain-22')
+
+        when:
+        def result = executeTask('inspectCompatArgs')
+
+        then: "native access flag is present"
+        result.output.contains('HAS_NATIVE_ACCESS=true')
+        result.output.contains('TEST_HAS_NATIVE_ACCESS=true')
+
+        and: "sun.misc.Unsafe memory access flag is NOT present (only for 23+)"
+        result.output.contains('HAS_UNSAFE_ACCESS=false')
+        result.output.contains('TEST_HAS_UNSAFE_ACCESS=false')
+    }
+
+    // ----------------------------------------------------------------
+    // Java 23 toolchain: both flags
+    // ----------------------------------------------------------------
+
+    def "Java 23 toolchain adds both native-access and sun-misc-unsafe-memory-access args"() {
         given:
         setupTestResourceProject('java-compat-toolchain-23')
 
@@ -82,9 +103,9 @@ class GrailsGradlePluginJavaCompatSpec extends GradleSpecification {
         result.output.contains('HAS_UNSAFE_ACCESS=true')
         result.output.contains('TEST_HAS_UNSAFE_ACCESS=true')
 
-        and: "native access flag is NOT present (only for 24+)"
-        result.output.contains('HAS_NATIVE_ACCESS=false')
-        result.output.contains('TEST_HAS_NATIVE_ACCESS=false')
+        and: "native access flag is present too (from 22 on)"
+        result.output.contains('HAS_NATIVE_ACCESS=true')
+        result.output.contains('TEST_HAS_NATIVE_ACCESS=true')
     }
 
     // ----------------------------------------------------------------

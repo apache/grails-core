@@ -27,9 +27,11 @@ import org.springframework.context.annotation.ComponentScan
 
 import grails.boot.GrailsAppBuilder
 import grails.boot.config.GrailsAutoConfiguration
-import grails.util.Environment
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginDiscovery
+import org.apache.grails.forge.cli.StartupPreload
+import org.apache.grails.forge.cli.console.GradleBuild
+import org.apache.grails.forge.core.ForgeEnvironment
 import org.grails.forge.ForgeGrailsPlugin
 import org.grails.plugins.CoreGrailsPlugin
 
@@ -48,6 +50,10 @@ import org.grails.plugins.CoreGrailsPlugin
 class Application extends GrailsAutoConfiguration {
 
     static void main(String[] args) {
+        // first: the classes the command is about to load are loaded beside it from here on, see StartupPreload
+        StartupPreload.start(Application.classLoader, args)
+        // Gradle is given the output of the process for as long as it is the output of the CLI
+        GradleBuild.outputOfProcess(System.out, System.err)
         System.exit(ForgeCli.run(args))
     }
 
@@ -58,17 +64,17 @@ class Application extends GrailsAutoConfiguration {
      * @return the builder of a Grails application without a web server
      */
     static GrailsAppBuilder builder() {
-        if (!Environment.isSystemSet()) {
-            // A generator is not a project under development: without this the environment defaults
-            // to development and the application would watch the user's current directory for
-            // source changes to reload.
-            System.setProperty(Environment.KEY, Environment.PRODUCTION.name)
-        }
+        // Forge's own environment, not the user's: a grails.env or GRAILS_ENV that reaches this JVM is
+        // meant for a project, which the commands give its Gradle build. Without production the
+        // application would watch the user's current directory for source changes to reload.
+        ForgeEnvironment.useProduction()
         return new GrailsAppBuilder(Application)
                 .web(WebApplicationType.NONE)
                 .bannerMode(Banner.Mode.OFF)
                 .logStartupInfo(false)
                 .addCommandLineProperties(false)
+                // whoever starts the application closes it: a JVM that runs more than this is left no hook
+                .registerShutdownHook(false)
                 .properties('spring.config.location': 'classpath:/')
                 .addBootstrapRegistryInitializer(Application::declarePlugins)
     }

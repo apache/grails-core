@@ -1,0 +1,76 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+build plugin: com.gradleup.shadow in the version Forge has for shadow-gradle-plugin
+
+# web
+title: Fat/Shaded JAR Support
+description: Adds the ability to build a Fat/Shaded JAR
+category: Packaging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
+- ## Feature asset-pipeline-grails documentation
++ - [Shadow Gradle Plugin](https://plugins.gradle.org/plugin/com.gradleup.shadow)## Feature asset-pipeline-grails documentation
+== build.gradle
++     id "com.gradleup.shadow" version "9.2.2"
+
+# rest_api
+title: Fat/Shaded JAR Support
+description: Adds the ability to build a Fat/Shaded JAR
+category: Packaging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
+- ## Feature mockito documentation
++ - [Shadow Gradle Plugin](https://plugins.gradle.org/plugin/com.gradleup.shadow)## Feature mockito documentation
+== build.gradle
++     id "com.gradleup.shadow" version "9.2.2"
+
+# web_plugin
+title: Fat/Shaded JAR Support
+description: Adds the ability to build a Fat/Shaded JAR
+category: Packaging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
+- ## Feature asset-pipeline-grails documentation
++ - [Shadow Gradle Plugin](https://plugins.gradle.org/plugin/com.gradleup.shadow)## Feature asset-pipeline-grails documentation
+== build.gradle
++     id "com.gradleup.shadow" version "9.2.2"
+
+# plugin
+title: Fat/Shaded JAR Support
+description: Adds the ability to build a Fat/Shaded JAR
+category: Packaging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
+- ## Feature mockito documentation
++ - [Shadow Gradle Plugin](https://plugins.gradle.org/plugin/com.gradleup.shadow)## Feature mockito documentation
+== build.gradle
++     id "com.gradleup.shadow" version "9.2.2"
+
+# rest_api_plugin
+title: Fat/Shaded JAR Support
+description: Adds the ability to build a Fat/Shaded JAR
+category: Packaging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
+- ## Feature mockito documentation
++ - [Shadow Gradle Plugin](https://plugins.gradle.org/plugin/com.gradleup.shadow)## Feature mockito documentation
+== build.gradle
++     id "com.gradleup.shadow" version "9.2.2"
+

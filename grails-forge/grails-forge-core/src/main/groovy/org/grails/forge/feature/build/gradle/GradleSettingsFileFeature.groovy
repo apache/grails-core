@@ -33,6 +33,11 @@ interface GradleSettingsFileFeature extends OneOfFeature {
     }
 
     @Override
+    default String getGroup() {
+        return 'gradle-settings-file'
+    }
+
+    @Override
     default boolean supports(ApplicationType applicationType) {
         return true
     }

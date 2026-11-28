@@ -31,8 +31,8 @@ class MockitoValidator implements FeatureValidator {
 
     @Override
     void validatePreProcessing(Options options, ApplicationType applicationType, Set<Feature> features) {
-        if (features.stream().anyMatch(f -> f instanceof Mockito)) {
-            if (features.stream().noneMatch(f -> (f instanceof Spock))) {
+        if (features.stream().anyMatch(f -> f.getName() == 'mockito')) {
+            if (features.stream().noneMatch(f -> f.getName() == 'spock')) {
                 throw new IllegalArgumentException('Mockito requires JUnit or Spock.')
             }
         }

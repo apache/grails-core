@@ -50,7 +50,6 @@ class SpringSecurityUiGrailsPlugin extends Plugin {
     def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
     def scm = [ url: 'https://github.com/apache/grails-core']
     def loadAfter = ['springSecurityCore', 'springSecurityAcl']
-    def profiles = ['web']
 
     Closure doWithSpring() {
         { ->

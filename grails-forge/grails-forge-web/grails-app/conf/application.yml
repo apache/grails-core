@@ -15,7 +15,6 @@
 
 ---
 grails:
-  profile: rest-api
   mime:
     types:
       json: ['application/json', 'application/hal+json', 'text/json']

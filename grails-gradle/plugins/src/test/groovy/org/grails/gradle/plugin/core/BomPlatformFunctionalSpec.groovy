@@ -90,9 +90,8 @@ class BomPlatformFunctionalSpec extends GradleSpecification {
         result.output.contains('LAZY_TOOL_RESOLVED=[org.apache.grails:lazy-bom:1.0-lazy, org.example:lazy-tool:1.0.0]')
         result.output.contains('LAZY_TOOL_HAS_BOM=true')
 
-        and: "the plugin's own profile configuration keeps its default profile"
-        result.output.contains('PROFILE_DEFAULT_DECLARED=true')
-        result.output.contains('PROFILE_HAS_BOM=true')
+        and: 'the configuration that refuses a profile dependency is given no platform'
+        result.output.contains('PROFILE_DEPENDENCIES=[]')
 
         and: 'the platform still manages versions on configurations declared by the build'
         result.output.contains('MANAGED_RESOLVED=[org.apache.grails:lazy-bom:1.0-lazy, org.example:managed-lib:1.0.0]')

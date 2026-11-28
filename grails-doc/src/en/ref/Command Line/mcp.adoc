@@ -1,0 +1,74 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== mcp
+
+=== Purpose
+
+Serves the commands of `grails` and the tools of the application and its plugins to an AI agent, as a server of the Model Context Protocol (MCP) on its standard input and output. An MCP client starts it; it is not typed.
+
+=== Examples
+
+[source,console]
+----
+claude mcp add grails -- grails mcp
+claude mcp add --scope project grails -- ./grailsw mcp
+claude mcp add shop -- grails mcp --directory apps/shop
+claude mcp add grails-readonly -- grails mcp --read-only
+----
+
+The same server in the `.mcp.json` of a project, which Claude Code reads, and in `.cursor/mcp.json` for Cursor:
+
+[source,json]
+----
+{
+  "mcpServers": {
+    "grails": {
+      "command": "./grailsw",
+      "args": ["mcp"]
+    }
+  }
+}
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails mcp [--directory=DIRECTORY] [--read-only]
+----
+
+Options:
+
+* `--directory` - The directory to serve, in place of the working directory the client starts the server in, and relative to it. A server serves one directory for its whole session; another project gets a server of its own. A directory that is not there is a mistake of the command line: `--directory names no directory: DIRECTORY`, with exit code 2.
+* `--read-only` - Offer only the tools that say that they change nothing, and not `refresh_tools`: for an agent that should look at a project and not change it. Among them are `dbm-validate`, `dbm-status`, `dbm-list-locks` and the tools of the Database Migration plugin whose SQL Liquibase only prints (`dbm-changelog-sync-sql`, `dbm-future-rollback-sql`, `dbm-future-rollback-count-sql`, `dbm-mark-next-changeset-ran-sql`, `dbm-rollback-sql`, `dbm-rollback-count-sql` and `dbm-rollback-to-date-sql`): they never change the schema or the data of the application, and write a file only when they are given its name, and only a new one inside the project. In a database Liquibase has not been used with yet, `dbm-validate`, `dbm-status` and `dbm-list-locks` create its two empty bookkeeping tables, `DATABASECHANGELOG` and `DATABASECHANGELOGLOCK`.
+
+`grails mcp` speaks the revision 2026-07-28 of the Model Context Protocol, through the MCP Java SDK, on its standard input and output; it binds no socket. Its standard output carries the protocol and nothing else, and what it says for you goes to its standard error. A client that speaks only an earlier revision of MCP, and so begins with `initialize`, is answered with the error `-32022`.
+
+Each call of a tool runs one `grails --plain-output --non-interactive` command line in the process of the server, as interactive mode runs a line, with one connection to Gradle, for the builds of the commands that build and test and of the tools, and the project generator kept for the session; `run-app` and `refresh_tools` start the Gradle wrapper as a process. The tools are the commands of the directory as `help --json` lists them, without those that need a terminal or a person (`shell`, `console`, `gradle`, `help`, `bug-report`, `run-script`, and the other names of commands), and every tool of the application and its plugins except one that declares that it reads what is typed. `refresh_tools`, the server's own tool, has the build list the tools of the application and its plugins again. Arguments that do not fit the input schema of a tool are refused by the MCP Java SDK, with a result marked as an error whose text begins with `Invalid arguments:`; a tool that is not offered is the error `-32602`, `Unknown tool: NAME`. The resources are `grails://commands`, `grails://tools/{name}`, and in a project `grails://project` and `grails://project/health`.
+
+Started by hand at a terminal, `mcp` writes one line on the standard error that says how a client registers it, and then serves its input. `mcp` is not listed by `help`; `grails mcp --help` shows how it is used. At the prompt of interactive mode it is refused with exit code 2, and through `GrailsCli.execute` in the JVM of another program with exit code 1.
+
+Exit codes: 0 when the client closes its input; 1 when the server gave up on three calls that had not ended 30 seconds after they were cancelled; 2 for a mistake in its command line. Sent SIGINT or SIGTERM, it answers a call that ends within 300 milliseconds with the result `The call was cancelled before it ended.`, and ends as a JVM ends on that signal, with 130 or 143.
+
+The scripts that start the command line do not give `mcp` the option `-XX:TieredStopAtLevel=1` they give a command, because the server runs for a whole session.
+
+See link:{guidePath}commandLine.html#mcp[Driving Grails from an AI Agent] for registering a client, what is offered and how a call runs, safety, and troubleshooting.

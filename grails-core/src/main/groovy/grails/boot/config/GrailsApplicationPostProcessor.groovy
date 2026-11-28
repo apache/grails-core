@@ -50,7 +50,6 @@ import org.springframework.core.env.AbstractEnvironment
 import org.springframework.core.env.ConfigurableEnvironment
 
 import grails.boot.GrailsApp
-import grails.config.Settings
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.core.GrailsApplicationClass
@@ -464,7 +463,6 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             if (applicationContext instanceof ConfigurableApplicationContext) {
                 def configurable = (ConfigurableApplicationContext) applicationContext
                 configurable.addApplicationListener(this)
-                configurable.environment.addActiveProfile(grailsApplication.getConfig().getProperty(Settings.PROFILE, String, 'web'))
             }
         }
     }

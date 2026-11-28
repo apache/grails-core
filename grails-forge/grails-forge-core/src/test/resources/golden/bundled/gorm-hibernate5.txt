@@ -1,0 +1,200 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: allOf(data=hibernate5, not gorm-hibernate7)
+adds: h2 when not group=database-driver
+takes the data source of the database driver
+dependency: implementation org.apache.grails:grails-data-hibernate5 without a version
+dependency: runtimeOnly com.zaxxer:HikariCP without a version
+
+# web
+title: Grails Data for Hibernate 5
+description: Configure Grails Data for using Hibernate 5.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5"
++     runtimeOnly "com.zaxxer:HikariCP"
+== grails-app/conf/application.yml
++ dataSource:
++   driverClassName: org.h2.Driver
++   jmxExport: true
++   password: ''
++   pooled: true
++   username: sa
++ environments:
++   development:
++     dataSource:
++       dbCreate: create-drop
++       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   test:
++     dataSource:
++       dbCreate: update
++       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   production:
++     dataSource:
++       dbCreate: none
++       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++ hibernate:
++   cache:
++     queries: false
++     use_query_cache: false
++     use_second_level_cache: false
+
+# rest_api
+title: Grails Data for Hibernate 5
+description: Configure Grails Data for using Hibernate 5.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5"
++     runtimeOnly "com.zaxxer:HikariCP"
+== grails-app/conf/application.yml
++ dataSource:
++   driverClassName: org.h2.Driver
++   jmxExport: true
++   password: ''
++   pooled: true
++   username: sa
++ environments:
++   development:
++     dataSource:
++       dbCreate: create-drop
++       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   test:
++     dataSource:
++       dbCreate: update
++       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   production:
++     dataSource:
++       dbCreate: none
++       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++ hibernate:
++   cache:
++     queries: false
++     use_query_cache: false
++     use_second_level_cache: false
+
+# web_plugin
+title: Grails Data for Hibernate 5
+description: Configure Grails Data for using Hibernate 5.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5"
++     runtimeOnly "com.zaxxer:HikariCP"
+== grails-app/conf/application.yml
++ dataSource:
++   driverClassName: org.h2.Driver
++   jmxExport: true
++   password: ''
++   pooled: true
++   username: sa
++ environments:
++   development:
++     dataSource:
++       dbCreate: create-drop
++       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   test:
++     dataSource:
++       dbCreate: update
++       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   production:
++     dataSource:
++       dbCreate: none
++       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++ hibernate:
++   cache:
++     queries: false
++     use_query_cache: false
++     use_second_level_cache: false
+
+# plugin
+title: Grails Data for Hibernate 5
+description: Configure Grails Data for using Hibernate 5.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5"
++     runtimeOnly "com.zaxxer:HikariCP"
+== grails-app/conf/application.yml
++ dataSource:
++   driverClassName: org.h2.Driver
++   jmxExport: true
++   password: ''
++   pooled: true
++   username: sa
++ environments:
++   development:
++     dataSource:
++       dbCreate: create-drop
++       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   test:
++     dataSource:
++       dbCreate: update
++       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   production:
++     dataSource:
++       dbCreate: none
++       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++ hibernate:
++   cache:
++     queries: false
++     use_query_cache: false
++     use_second_level_cache: false
+
+# rest_api_plugin
+title: Grails Data for Hibernate 5
+description: Configure Grails Data for using Hibernate 5.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5"
++     runtimeOnly "com.zaxxer:HikariCP"
+== grails-app/conf/application.yml
++ dataSource:
++   driverClassName: org.h2.Driver
++   jmxExport: true
++   password: ''
++   pooled: true
++   username: sa
++ environments:
++   development:
++     dataSource:
++       dbCreate: create-drop
++       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   test:
++     dataSource:
++       dbCreate: update
++       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   production:
++     dataSource:
++       dbCreate: none
++       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++ hibernate:
++   cache:
++     queries: false
++     use_query_cache: false
++     use_second_level_cache: false
+

@@ -27,6 +27,6 @@ import java.util.stream.Stream
 class GormImplCandidates extends ArrayList<String> {
 
     GormImplCandidates() {
-        super(Stream.of(GormImpl.values()).map(gi -> gi.toString().toLowerCase()).collect(Collectors.toList()))
+        super(Stream.of(GormImpl.values()).map(gi -> gi.toString().toLowerCase(Locale.ROOT)).collect(Collectors.toList()))
     }
 }

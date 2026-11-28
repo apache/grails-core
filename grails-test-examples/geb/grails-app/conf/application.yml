@@ -27,7 +27,6 @@ grails:
         scriptlet: html
   codegen:
     defaultPackage: org.demo.spock
-  profile: web
 dataSource:
   driverClassName: org.h2.Driver
   username: sa

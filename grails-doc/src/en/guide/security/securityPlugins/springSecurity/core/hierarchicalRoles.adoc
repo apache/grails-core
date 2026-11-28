@@ -84,13 +84,13 @@ You can also reduce the number of granted roles in the database. Where previousl
 
 === Persistent role hierarchy
 
-Specifying a static string in the `roleHierarchy` property will be sufficient for most applications, but you can also store the information in your database. This is particularly useful if you're also storing requestmaps in the database. To use persistant storage, run the <<core-s2-create-role-hierarchy-entry>> script. This will create the domain class and enable persistent storage by registering its name as the `roleHierarchyEntryClassName` setting in `grails-app/conf/application.groovy`.
+Specifying a static string in the `roleHierarchy` property will be sufficient for most applications, but you can also store the information in your database. This is particularly useful if you're also storing requestmaps in the database. To use persistant storage, run the <<core-s2-create-role-hierarchy-entry>> command. This will create the domain class and enable persistent storage by registering its name as the `roleHierarchyEntryClassName` setting in the configuration of the project, `grails-app/conf/application.groovy` or `grails-app/conf/application.yml`.
 
 For example, running
 
 [source,bash]
 ----
-./grailsw s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry
+grails s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry
 ----
 
 will generate this class in `grails-app/domain/com/yourapp/RoleHierarchyEntry.groovy`:

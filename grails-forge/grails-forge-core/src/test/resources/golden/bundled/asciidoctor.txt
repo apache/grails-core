@@ -1,0 +1,412 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+build plugin: org.asciidoctor.jvm.convert in the version Forge has for asciidoctor-gradle-jvm
+build block: afterPlugins
+
+# web
+title: AsciiDoc
+description: Add support for creating AsciiDoc documentation.
+category: Documentation
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++     id "org.asciidoctor.jvm.convert" version "4.0.5"
++ apply from: "gradle/asciidoc.gradle"
++ 
+== gradle/asciidoc.gradle
++ asciidoctorj {
++     version '3.0.0'
++     modules {
++         diagram {
++             version '2.3.1'
++         }
++     }
++ 
++     options doctype: "book", ruby: "erubis"
++ 
++     attributes "sourcedir": "src/docs/asciidoc",
++                "source-highlighter": "coderay",
++                "toc": "left",
++                "idprefix": "",
++                "idseparator": "-",
++                "icons": "font",
++                "setanchors": "",
++                "listing-caption": "",
++                "imagesdir": "images",
++                "project-version": "$project.version",
++                "revnumber": "$project.version"
++ }
++ 
++ // The Asciidoctor Gradle plugin does not support the configuration cache, so a build that runs
++ // its task runs without the cache instead of failing. This script cannot see the plugin's classes,
++ // so it names the task rather than its type.
++ tasks.named('asciidoctor') {
++     notCompatibleWithConfigurationCache('The Asciidoctor Gradle plugin does not support the configuration cache')
++ }
++ 
+== src/docs/asciidoc/index.adoc
++ = Your Project
++ author@example.org
++ 
++ Write a short introduction about your project
++ 
++ == Build
++ 
++ Explain what it requires and how to build the project. For example:
++ 
++ This project requires Java 8 (min) and you can build it executing the following command:
++ 
++ [source,console]
++ ----
++ ./gradlew build
++ ----
++ 
++ == Architecture
++ 
++ When you document your architecture you can use different `diagrams` blocks as
++ for example `plantuml`
++ 
++ [plantuml]
++ ----
++ Alice -> Bob: Authentication Request
++ Bob --> Alice: Authentication Response
++ 
++ Alice -> Bob: Another authentication Request
++ Alice <-- Bob: another authentication Response
++ ----
++ 
++ == Implementation
++ 
++ Remember you can include piece of code extracted from your project using the `include` directive
++ 
++     include::{sourcedir}/com/mycompany/service/MyService.java[tags=init]
++ 
+
+# rest_api
+title: AsciiDoc
+description: Add support for creating AsciiDoc documentation.
+category: Documentation
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++     id "org.asciidoctor.jvm.convert" version "4.0.5"
++ apply from: "gradle/asciidoc.gradle"
++ 
+== gradle/asciidoc.gradle
++ asciidoctorj {
++     version '3.0.0'
++     modules {
++         diagram {
++             version '2.3.1'
++         }
++     }
++ 
++     options doctype: "book", ruby: "erubis"
++ 
++     attributes "sourcedir": "src/docs/asciidoc",
++                "source-highlighter": "coderay",
++                "toc": "left",
++                "idprefix": "",
++                "idseparator": "-",
++                "icons": "font",
++                "setanchors": "",
++                "listing-caption": "",
++                "imagesdir": "images",
++                "project-version": "$project.version",
++                "revnumber": "$project.version"
++ }
++ 
++ // The Asciidoctor Gradle plugin does not support the configuration cache, so a build that runs
++ // its task runs without the cache instead of failing. This script cannot see the plugin's classes,
++ // so it names the task rather than its type.
++ tasks.named('asciidoctor') {
++     notCompatibleWithConfigurationCache('The Asciidoctor Gradle plugin does not support the configuration cache')
++ }
++ 
+== src/docs/asciidoc/index.adoc
++ = Your Project
++ author@example.org
++ 
++ Write a short introduction about your project
++ 
++ == Build
++ 
++ Explain what it requires and how to build the project. For example:
++ 
++ This project requires Java 8 (min) and you can build it executing the following command:
++ 
++ [source,console]
++ ----
++ ./gradlew build
++ ----
++ 
++ == Architecture
++ 
++ When you document your architecture you can use different `diagrams` blocks as
++ for example `plantuml`
++ 
++ [plantuml]
++ ----
++ Alice -> Bob: Authentication Request
++ Bob --> Alice: Authentication Response
++ 
++ Alice -> Bob: Another authentication Request
++ Alice <-- Bob: another authentication Response
++ ----
++ 
++ == Implementation
++ 
++ Remember you can include piece of code extracted from your project using the `include` directive
++ 
++     include::{sourcedir}/com/mycompany/service/MyService.java[tags=init]
++ 
+
+# web_plugin
+title: AsciiDoc
+description: Add support for creating AsciiDoc documentation.
+category: Documentation
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++     id "org.asciidoctor.jvm.convert" version "4.0.5"
++ apply from: "gradle/asciidoc.gradle"
++ 
+== gradle/asciidoc.gradle
++ asciidoctorj {
++     version '3.0.0'
++     modules {
++         diagram {
++             version '2.3.1'
++         }
++     }
++ 
++     options doctype: "book", ruby: "erubis"
++ 
++     attributes "sourcedir": "src/docs/asciidoc",
++                "source-highlighter": "coderay",
++                "toc": "left",
++                "idprefix": "",
++                "idseparator": "-",
++                "icons": "font",
++                "setanchors": "",
++                "listing-caption": "",
++                "imagesdir": "images",
++                "project-version": "$project.version",
++                "revnumber": "$project.version"
++ }
++ 
++ // The Asciidoctor Gradle plugin does not support the configuration cache, so a build that runs
++ // its task runs without the cache instead of failing. This script cannot see the plugin's classes,
++ // so it names the task rather than its type.
++ tasks.named('asciidoctor') {
++     notCompatibleWithConfigurationCache('The Asciidoctor Gradle plugin does not support the configuration cache')
++ }
++ 
+== src/docs/asciidoc/index.adoc
++ = Your Project
++ author@example.org
++ 
++ Write a short introduction about your project
++ 
++ == Build
++ 
++ Explain what it requires and how to build the project. For example:
++ 
++ This project requires Java 8 (min) and you can build it executing the following command:
++ 
++ [source,console]
++ ----
++ ./gradlew build
++ ----
++ 
++ == Architecture
++ 
++ When you document your architecture you can use different `diagrams` blocks as
++ for example `plantuml`
++ 
++ [plantuml]
++ ----
++ Alice -> Bob: Authentication Request
++ Bob --> Alice: Authentication Response
++ 
++ Alice -> Bob: Another authentication Request
++ Alice <-- Bob: another authentication Response
++ ----
++ 
++ == Implementation
++ 
++ Remember you can include piece of code extracted from your project using the `include` directive
++ 
++     include::{sourcedir}/com/mycompany/service/MyService.java[tags=init]
++ 
+
+# plugin
+title: AsciiDoc
+description: Add support for creating AsciiDoc documentation.
+category: Documentation
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++     id "org.asciidoctor.jvm.convert" version "4.0.5"
++ apply from: "gradle/asciidoc.gradle"
++ 
+== gradle/asciidoc.gradle
++ asciidoctorj {
++     version '3.0.0'
++     modules {
++         diagram {
++             version '2.3.1'
++         }
++     }
++ 
++     options doctype: "book", ruby: "erubis"
++ 
++     attributes "sourcedir": "src/docs/asciidoc",
++                "source-highlighter": "coderay",
++                "toc": "left",
++                "idprefix": "",
++                "idseparator": "-",
++                "icons": "font",
++                "setanchors": "",
++                "listing-caption": "",
++                "imagesdir": "images",
++                "project-version": "$project.version",
++                "revnumber": "$project.version"
++ }
++ 
++ // The Asciidoctor Gradle plugin does not support the configuration cache, so a build that runs
++ // its task runs without the cache instead of failing. This script cannot see the plugin's classes,
++ // so it names the task rather than its type.
++ tasks.named('asciidoctor') {
++     notCompatibleWithConfigurationCache('The Asciidoctor Gradle plugin does not support the configuration cache')
++ }
++ 
+== src/docs/asciidoc/index.adoc
++ = Your Project
++ author@example.org
++ 
++ Write a short introduction about your project
++ 
++ == Build
++ 
++ Explain what it requires and how to build the project. For example:
++ 
++ This project requires Java 8 (min) and you can build it executing the following command:
++ 
++ [source,console]
++ ----
++ ./gradlew build
++ ----
++ 
++ == Architecture
++ 
++ When you document your architecture you can use different `diagrams` blocks as
++ for example `plantuml`
++ 
++ [plantuml]
++ ----
++ Alice -> Bob: Authentication Request
++ Bob --> Alice: Authentication Response
++ 
++ Alice -> Bob: Another authentication Request
++ Alice <-- Bob: another authentication Response
++ ----
++ 
++ == Implementation
++ 
++ Remember you can include piece of code extracted from your project using the `include` directive
++ 
++     include::{sourcedir}/com/mycompany/service/MyService.java[tags=init]
++ 
+
+# rest_api_plugin
+title: AsciiDoc
+description: Add support for creating AsciiDoc documentation.
+category: Documentation
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++     id "org.asciidoctor.jvm.convert" version "4.0.5"
++ apply from: "gradle/asciidoc.gradle"
++ 
+== gradle/asciidoc.gradle
++ asciidoctorj {
++     version '3.0.0'
++     modules {
++         diagram {
++             version '2.3.1'
++         }
++     }
++ 
++     options doctype: "book", ruby: "erubis"
++ 
++     attributes "sourcedir": "src/docs/asciidoc",
++                "source-highlighter": "coderay",
++                "toc": "left",
++                "idprefix": "",
++                "idseparator": "-",
++                "icons": "font",
++                "setanchors": "",
++                "listing-caption": "",
++                "imagesdir": "images",
++                "project-version": "$project.version",
++                "revnumber": "$project.version"
++ }
++ 
++ // The Asciidoctor Gradle plugin does not support the configuration cache, so a build that runs
++ // its task runs without the cache instead of failing. This script cannot see the plugin's classes,
++ // so it names the task rather than its type.
++ tasks.named('asciidoctor') {
++     notCompatibleWithConfigurationCache('The Asciidoctor Gradle plugin does not support the configuration cache')
++ }
++ 
+== src/docs/asciidoc/index.adoc
++ = Your Project
++ author@example.org
++ 
++ Write a short introduction about your project
++ 
++ == Build
++ 
++ Explain what it requires and how to build the project. For example:
++ 
++ This project requires Java 8 (min) and you can build it executing the following command:
++ 
++ [source,console]
++ ----
++ ./gradlew build
++ ----
++ 
++ == Architecture
++ 
++ When you document your architecture you can use different `diagrams` blocks as
++ for example `plantuml`
++ 
++ [plantuml]
++ ----
++ Alice -> Bob: Authentication Request
++ Bob --> Alice: Authentication Response
++ 
++ Alice -> Bob: Another authentication Request
++ Alice <-- Bob: another authentication Response
++ ----
++ 
++ == Implementation
++ 
++ Remember you can include piece of code extracted from your project using the `include` directive
++ 
++     include::{sourcedir}/com/mycompany/service/MyService.java[tags=init]
++ 
+

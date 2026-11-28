@@ -29,7 +29,6 @@ class ExplodedGrailsPlugin extends Plugin {
     def description = '''\
 Brief summary/description of the plugin.
 '''
-    def profiles = ['web']
 
     def loadAfter = ['springSecurityCore']
 

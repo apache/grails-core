@@ -52,7 +52,9 @@ class GradleBuildCreator {
                 .sorted(Comparator.comparingInt(Ordered::getOrder))
                 .toList()
 
-        return new GradleBuild(gradleDsl, resolveDependencies(generatorContext), resolveBuildscriptDependencies(generatorContext), gradlePlugins, buildRepositories, repositories)
+        BuildFileContributions contributions = generatorContext.getBuildContributions()
+        contributions.close()
+        return new GradleBuild(gradleDsl, resolveDependencies(generatorContext), resolveBuildscriptDependencies(generatorContext), gradlePlugins, buildRepositories, repositories, contributions)
     }
 
     @Nonnull

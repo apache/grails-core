@@ -23,7 +23,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
-import org.grails.forge.feature.other.GrailsQuartz
+import org.grails.forge.cli.ForgeCli
 import org.grails.forge.io.ConsoleOutput
 
 class CreateJobCommandSpec extends CommandSpec implements CommandFixture {
@@ -33,7 +33,7 @@ class CreateJobCommandSpec extends CommandSpec implements CommandFixture {
         setup:
         generateProject(ApplicationType.WEB)
         CodeGenConfig codeGenConfig = CodeGenConfig.load(beanContext, dir, ConsoleOutput.NOOP)
-        codeGenConfig.getFeatures().add(GrailsQuartz.FEATURE_NAME)
+        codeGenConfig.getFeatures().add('grails-quartz')
         ConsoleOutput consoleOutput = Mock(ConsoleOutput)
         CreateJobCommand command = new CreateJobCommand(codeGenConfig, getOutputHandler(consoleOutput), consoleOutput)
         command.jobName = "Scheduled"
@@ -63,5 +63,30 @@ class CreateJobCommandSpec extends CommandSpec implements CommandFixture {
         then:
         final e = thrown(IllegalArgumentException)
         e.message == 'Please first select Grails Quartz Plugin'
+    }
+
+    void "an application the plugin was added to by hand has the command once the feature is added to its record"() {
+
+        setup: 'an application without the feature, with the dependency of the plugin written into its build'
+        generateProject(ApplicationType.WEB)
+        File build = new File(dir, 'build.gradle')
+        build.text = build.text.replaceFirst(/(?m)^dependencies \{$/, "dependencies {\n    implementation 'org.apache.grails:grails-quartz'")
+        File job = new File(dir, 'grails-app/jobs/example/grails/NightlyJob.groovy')
+
+        expect: 'the record does not list the feature, and the command goes by the record'
+        build.text.contains("implementation 'org.apache.grails:grails-quartz'")
+        ForgeCli.execute(beanContext, 'create-job', 'Nightly') == 2
+        !job.exists()
+
+        when:
+        int added = ForgeCli.execute(beanContext, 'feature', 'add', 'grails-quartz')
+        int exit = ForgeCli.execute(beanContext, 'create-job', 'Nightly')
+
+        then: 'the line that was written by hand is kept'
+        added == 0
+        exit == 0
+        build.text.contains("implementation 'org.apache.grails:grails-quartz'")
+        job.text == 'package example.grails\n\nclass NightlyJob {\n\n    static triggers = {\n        simple repeatInterval: 5000L // execute the job every 5 seconds\n    }\n\n' +
+                '    def execute() {\n        // execute job\n    }\n}\n'
     }
 }

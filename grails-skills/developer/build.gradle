@@ -29,5 +29,5 @@ group = 'org.apache.grails.skills'
 ext {
     pomArtifactId = 'grails-developer'
     pomTitle = 'Apache Grails® Developer Agent Skill'
-    pomDescription = 'Agent Skill that guides AI coding agents building Apache Grails® applications: controllers, services, GORM, views, plugins, and testing with Spock and Geb.'
+    pomDescription = 'Agent Skill that guides AI coding agents building Apache Grails® applications: controllers, services, GORM, views, plugins, testing with Spock and Geb, and the grails command line.'
 }

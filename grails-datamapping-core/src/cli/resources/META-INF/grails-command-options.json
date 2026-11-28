@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "options": [
+    {
+      "command": "run-app",
+      "name": "query-tail",
+      "description": "Capture every statement GORM runs, for the query-tail command.",
+      "type": "boolean",
+      "property": "grails.gorm.queryTail.enabled",
+      "value": "true"
+    }
+  ]
+}

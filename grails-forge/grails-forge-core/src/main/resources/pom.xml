@@ -44,12 +44,6 @@
             <version>7.0.0</version>
         </dependency>
         <dependency>
-            <!-- Last released Feb 24, 2021 -->
-            <groupId>org.grails.plugins</groupId>
-            <artifactId>cache-ehcache</artifactId>
-            <version>3.0.0</version>
-        </dependency>
-        <dependency>
             <groupId>org.asciidoctor.jvm.convert</groupId>
             <artifactId>asciidoctor-gradle-jvm</artifactId>
             <version>4.0.5</version>

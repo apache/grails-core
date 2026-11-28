@@ -71,12 +71,6 @@
     ],
     "properties": [
         {
-            "name": "grails.profile",
-            "type": "java.lang.String",
-            "description": "The active Grails application profile (e.g., web, rest-api, plugin).",
-            "defaultValue": "Set by project template"
-        },
-        {
             "name": "grails.codegen.defaultPackage",
             "type": "java.lang.String",
             "description": "The default package used when generating artefacts with grails create-* commands.",

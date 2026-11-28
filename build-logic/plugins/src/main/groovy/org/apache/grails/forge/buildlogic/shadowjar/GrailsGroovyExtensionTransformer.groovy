@@ -34,6 +34,7 @@ import org.gradle.api.file.FileTreeElement
 class GrailsGroovyExtensionTransformer implements Transformer {
 
     private static final String GROOVY_EXTENSION_MODULE_DESCRIPTOR_PATH = 'META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule'
+    private static final String LEGACY_GROOVY_EXTENSION_MODULE_DESCRIPTOR_PATH = 'META-INF/services/org.codehaus.groovy.runtime.ExtensionModule'
 
     private static final String MODULE_NAME_KEY = 'moduleName'
     private static final String MODULE_VERSION_KEY = 'moduleVersion'
@@ -48,7 +49,7 @@ class GrailsGroovyExtensionTransformer implements Transformer {
     @Override
     boolean canTransformResource(FileTreeElement element) {
         def path = element.relativePath.pathString
-        path == GROOVY_EXTENSION_MODULE_DESCRIPTOR_PATH
+        path == GROOVY_EXTENSION_MODULE_DESCRIPTOR_PATH || path == LEGACY_GROOVY_EXTENSION_MODULE_DESCRIPTOR_PATH
     }
 
     @Override
@@ -122,7 +123,8 @@ class GrailsGroovyExtensionTransformer implements Transformer {
             BufferedWriter bufferedWriter = new BufferedWriter(writer)
             lines.each { String line ->
                 if (!TIME_REGEX.matcher(line).matches()) {
-                    bufferedWriter.writeLine(line)
+                    bufferedWriter.write(line)
+                    bufferedWriter.write('\n')
                 }
             }
             bufferedWriter.flush()

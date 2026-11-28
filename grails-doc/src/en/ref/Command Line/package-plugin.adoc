@@ -17,38 +17,28 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == package-plugin
-
-
 
 === Purpose
 
-
 Packages a plugin as a JAR archive which can then be installed into another application
-
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
 grails package-plugin
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails package-plugin
+grails package-plugin [-Dname=value]... [-- <<gradle arguments>>]
 ----
 
-The plugin archive will be built to the `build/libs` directory by default. You can also install the plugin to your local Maven repository with the `install` command:
+`package-plugin` runs the Gradle task `jar` and is a command in a plugin project only. The plugin archive is built to the `build/libs` directory by default.
 
-[source,groovy]
-----
-grails install
-----
+The `install` command of earlier versions runs nothing: a plugin is installed into the local Maven repository with `grails gradle publishToMavenLocal`, and `publish-plugin` runs the Gradle task `publish`, which publishes it to the repositories its build names. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.

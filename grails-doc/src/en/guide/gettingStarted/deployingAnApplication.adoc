@@ -46,11 +46,11 @@ ext['tomcat.version'] = '7.0.59'
 ----
 WARNING: Grails 5 contains dependencies that _require_ `javax.el-api:3.0` (eg.: `datastore-gorm:7.x`, `spring-boot:2.x`) which is only supported starting from Tomcat 8.x+, based on the https://tomcat.apache.org/whichversion.html[tomcat version table]!
 
-Unlike most scripts which default to the `development` environment unless overridden, the `war` command runs in the `production` environment by default. You can override this like any script by specifying the environment name, for example:
+Unlike most scripts which default to the `development` environment unless overridden, the `war` command runs in the `production` environment by default. You can override this by naming the environment after the command, for example:
 
 [source,bash]
 ----
-grails dev war
+grails war -Dgrails.env=development
 ----
 
 If you prefer not to operate a separate Servlet container then you can simply run the Grails WAR file as a regular Java application. Example:

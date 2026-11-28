@@ -1,5 +1,0 @@
-description: Adds support for the Grails EventBus abstraction
-dependencies:
-    - scope: implementation
-      coords: "org.apache.grails:grails-events"
-        

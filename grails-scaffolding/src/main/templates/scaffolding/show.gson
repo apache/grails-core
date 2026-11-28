@@ -1,0 +1,7 @@
+import ${fullName}
+
+model {
+    ${className} ${propertyName}
+}
+
+json tmpl.${propertyName}(${propertyName})

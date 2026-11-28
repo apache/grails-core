@@ -17,39 +17,8 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+== run-command
 
-===== run-command
+`run-command` is the name link:run-tool.html[run-tool] had in Grails 8. It is another name of `run-tool`, deprecated: `grails run-command NAME` runs the tool `NAME` after one warning line, and the Gradle task `runCommand` runs it as `runTool` does, after a Gradle warning.
 
-
-
-===== Purpose
-
-
-Execute Grails Commands defined in `grails-app/commands` or in plugins.
-
-
-===== Examples
-
-
-[source,java]
-----
-grails run-command hello-world
-
-./gradlew runCommand -Pargs="helloWorld"
-----
-
-The above scripts will expect `grails-app/commands/HelloWorldCommand.groovy` to exist in the application or in a plugin your application depends on.
-
-
-===== Description
-
-
-Usage:
-[source,java]
-----
-grails <<env>>* run-command <<command>>
-----
-
-Arguments:
-
-* `command` - Which command to run
+What Grails 8 called the commands of the application and its plugins are its _tools_ now; see link:{guidePath}commandLine.html#creatingTools[Creating Tools].

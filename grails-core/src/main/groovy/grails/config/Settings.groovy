@@ -36,10 +36,6 @@ import groovy.transform.CompileStatic
 interface Settings {
 
     /**
-     *  The active Grails profile
-     */
-    String PROFILE = 'grails.profile'
-    /**
      *  Packages to scan for Spring beans
      */
     String SPRING_BEAN_PACKAGES = 'grails.spring.bean.packages'

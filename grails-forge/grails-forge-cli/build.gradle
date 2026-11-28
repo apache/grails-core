@@ -24,9 +24,8 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-app'
+    id 'java-library' // api: what a program that calls GrailsCli.execute compiles against
     id 'java-test-fixtures' // CliRunner, which the specs here and in test-core run one command bean with
-    // the pages of the code generation commands, under grails-app/views/forge/cli
-    id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -89,20 +88,28 @@ dependencies {
     // the framework of a Grails application without a web server
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails.bootstrap:grails-bootstrap' // grails.codegen.model, for add-property
-    implementation 'org.apache.groovy:groovy'
+    // GrailsCli, which a program calls (see "Starting the Command Line from a Tool" in the guide), is a Groovy class:
+    // its supertype groovy.lang.GroovyObject is on the class path a program compiles a call of execute against
+    api 'org.apache.groovy:groovy'
+    // the document help --json writes
+    implementation 'org.apache.groovy:groovy-json'
 
-    // renders the compiled pages, without a web request
-    implementation 'org.apache.grails.views:grails-gsp-core'
-    // the page compiler compileGroovyPages forks, which lives in the web GSP module; needed to build
-    // the pages only
-    compileOnly 'org.apache.grails.views:grails-web-gsp'
-    compileOnly 'jakarta.servlet:jakarta.servlet-api'
     implementation "info.picocli:picocli:$picocliVersion"
     implementation 'jakarta.inject:jakarta.inject-api'
     // InteractiveShell drives JLine directly, and since the ansi stream install was dropped it also
     // relies on JLine's terminal for virtual-terminal processing. CommandLineCompleter connects it to
     // picocli's completion itself: picocli's own bridge, picocli-shell-jline3, is built for JLine 3.
     implementation 'org.jline:jline'
+    // What the commands that are a build of the project run Gradle with, see GradleBuild. It is published to the
+    // repository of Gradle and not to Maven Central; repo.grails.org, which this build resolves from, serves it.
+    // Its version is the Gradle of the wrappers: gradleToolingApiVersion in the gradle.properties of the root.
+    implementation("org.gradle:gradle-tooling-api:$gradleToolingApiVersion") {
+        // the logging API is the one the BOM manages
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+    // the protocol of 'grails mcp'; grails-bom manages its version in step with Spring AI's
+    implementation 'io.modelcontextprotocol.sdk:mcp'
+    implementation 'org.slf4j:slf4j-api'
     implementation 'org.yaml:snakeyaml'
     runtimeOnly 'org.slf4j:slf4j-nop'
 
@@ -118,13 +125,42 @@ dependencies {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
     testImplementation 'org.apache.groovy:groovy-test'
+    // what writes the catalog of the application commands, for the spec that reads what it writes: that class alone, and nothing it brings
+    testImplementation "org.apache.grails.gradle:grails-gradle-model:$projectVersion", {
+        transitive = false
+    }
     testRuntimeOnly 'org.objenesis:objenesis'
 }
 
-// The specs render the pages as the application ships them, compiled. The GSP plugin leaves the
-// compiled pages off a Grails build's test class path, where an application renders its views from source.
 tasks.named('test', Test).configure { Test test ->
-    test.classpath += files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
+    // the specs name their catalogs themselves, whatever the environment of whoever runs them names; and a spec that
+    // would ask another computer for anything fails with the address (NoNetworkExtension, in the test sources)
+    test.environment('GRAILS_FORGE_CATALOG', 'none')
+    // and so do the specs of list-plugins and plugin-info name their plugin index
+    test.environment('GRAILS_PLUGIN_INDEX', 'none')
+    // How the commands run Gradle is what it is without the variable, whatever the environment of whoever runs the specs
+    // says: a command line that runs one command starts the wrapper, which in the specs of the commands is a script that
+    // writes down what it was given. A spec that holds another way to something asks for it itself (GradleBuild.setRunner).
+    test.environment('GRAILS_GRADLE_RUNNER', 'auto')
+    // BundledPluginsSpec holds the list of the plugins of this release to the plugin classes in the sources of the framework:
+    // a project that is added to its build, which is where a new plugin comes from, runs the spec again
+    test.inputs.files(rootProject.layout.projectDirectory.file('../settings.gradle'), rootProject.layout.projectDirectory.file('../gradle/publish-root-config.gradle'))
+            .withPropertyName('frameworkProjects').withPathSensitivity(PathSensitivity.NONE)
+    // -PpluginIndex=<file> has PluginIndexCatalogSpec, PluginIndexSpec and PluginDiscoveryContractSpec read a whole copy of grails-plugins-index.json besides the part
+    // among the test resources, such as the index the indexer of apache/grails-plugins-metadata writes with the packs it records:
+    // ./gradlew :grails-forge-cli:test --tests '*PluginIndexCatalogSpec' -PpluginIndex=/path/to/grails-plugins-index.json
+    if (providers.gradleProperty('pluginIndex').present) {
+        test.systemProperty('forge.pluginIndex', providers.gradleProperty('pluginIndex').get())
+    }
+    // RunAppReadinessSpec holds the command line to what it and grails-startup-progress agree on, which is written down there
+    test.inputs.file(rootProject.layout.projectDirectory.file('../grails-startup-progress/src/test/resources/org/apache/grails/startup/run-app-protocol.properties'))
+            .withPropertyName('runAppProtocol').withPathSensitivity(PathSensitivity.NONE)
+    // FormerCommandsSpec holds the guide to the table of the commands of earlier versions
+    test.inputs.file(rootProject.layout.projectDirectory.file('../grails-doc/src/en/guide/commandLine.adoc'))
+            .withPropertyName('commandLineGuide').withPathSensitivity(PathSensitivity.NONE)
+    // ProjectRecordSampleSpec holds the records the reader of the record in grails-gradle-model is tested with to what create-app writes
+    test.inputs.dir(rootProject.layout.projectDirectory.dir('../grails-gradle/model/src/test/resources/project-record-sample'))
+            .withPropertyName('projectRecordSamples').withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 apply {
@@ -154,20 +190,26 @@ processManPages.configure { Sync it ->
     }
 }
 
+// The completion script of the program grails for bash and zsh (build-completion/grails_completion), which the
+// distribution of grails-cli has in its bin directory: written from the command line as the program has it,
+// every command of the command line itself with its options, those of a project among them.
 def buildCompletion = tasks.register('buildCompletion', PicocliBuildCompletionTask)
 buildCompletion.configure { PicocliBuildCompletionTask it ->
     it.outputDirectory.set(layout.buildDirectory.dir('build-completion'))
     it.classpath.from(sourceSets.main.runtimeClasspath)
-    it.mainClass.set(findProperty('rootCommandClass'))
+    it.mainClass.set('org.grails.forge.cli.CompletionScript')
+    // the name of the program, as org.apache.grails.forge.cli.GrailsCli starts the command line
+    it.commandName.set('grails')
 }
 
 // The CLI is distributed through the shadow jar of grails-cli and consumed as a library by it and by
 // test-core, so the plain jar keeps its name, and the executable jar Spring Boot would build is not made.
+// Its module name is that of the package of its entry point, GrailsCli, which no other jar of Grails has.
 TaskProvider<Jar> jarTask = tasks.named('jar', Jar)
 jarTask.configure { Jar it ->
     it.archiveClassifier.set('')
     it.manifest {
-        attributes 'Main-Class': project.property('startMainClass')
+        attributes 'Main-Class': project.property('startMainClass'), 'Automatic-Module-Name': 'org.apache.grails.forge.cli'
     }
 }
 tasks.named('bootJar').configure {

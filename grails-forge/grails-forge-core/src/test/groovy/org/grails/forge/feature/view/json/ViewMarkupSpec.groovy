@@ -60,7 +60,9 @@ class ViewMarkupSpec extends ApplicationContextSpec implements CommandOutputFixt
         output.containsKey("grails-app/views/error.gml")
         output.containsKey("grails-app/views/notFound.gml")
         output.containsKey("grails-app/views/errors/_errors.gml")
-        output.containsKey("grails-app/views/object/_object.gml")
+
+        and: 'no template of an object: a markup view has no helper that renders any object, as a JSON view has'
+        !output.containsKey("grails-app/views/object/_object.gml")
     }
 
     @Unroll

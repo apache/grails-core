@@ -1,0 +1,107 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: testImplementation org.testcontainers:testcontainers without a version
+dependency: testImplementation org.testcontainers:testcontainers-mysql without a version when allOf(mysql, anyOf(gorm-hibernate5, gorm-hibernate7))
+dependency: testImplementation org.testcontainers:testcontainers-postgresql without a version when allOf(postgres, anyOf(gorm-hibernate5, gorm-hibernate7))
+dependency: testImplementation org.testcontainers:testcontainers-mssqlserver without a version when allOf(sqlserver, anyOf(gorm-hibernate5, gorm-hibernate7))
+dependency: testImplementation org.testcontainers:testcontainers-spock without a version when spock
+dependency: testImplementation org.testcontainers:testcontainers-mongodb without a version when anyOf(mongo-sync, gorm-mongodb)
+file: src/test/resources/container-license-acceptance.txt when allOf(sqlserver, anyOf(gorm-hibernate5, gorm-hibernate7))
+
+# web
+title: Testcontainers
+description: Leverage Testcontainers to run databases and other services in Docker containers during testing.
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://java.testcontainers.org/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+
+# rest_api
+title: Testcontainers
+description: Leverage Testcontainers to run databases and other services in Docker containers during testing.
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://java.testcontainers.org/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+
+# web_plugin
+title: Testcontainers
+description: Leverage Testcontainers to run databases and other services in Docker containers during testing.
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://java.testcontainers.org/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
+== build.gradle
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+
+# plugin
+title: Testcontainers
+description: Leverage Testcontainers to run databases and other services in Docker containers during testing.
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://java.testcontainers.org/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
+== build.gradle
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+
+# rest_api_plugin
+title: Testcontainers
+description: Leverage Testcontainers to run databases and other services in Docker containers during testing.
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://java.testcontainers.org/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+

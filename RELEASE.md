@@ -65,7 +65,7 @@ During the staging step, we must create a source distribution & stage any binary
    * extract signing secrets from github action variables 
    * build the project, sign the jar files, and stage them to the necessary locations
    * add the grails wrapper to the `grails-core` release
-   * add the grails binary distribution (grails, grails-shell-cli, and grails-forge-cli) to the `grails-core` release
+   * add the grails binary distribution (the `grails` command) to the `grails-core` release
    * add the grails documentation distribution to the `grails-core` release
    * close the staging repository so the `grails-core` artifacts can be accessed
    * generate project checksums & artifact lists to make verification easier
@@ -195,7 +195,7 @@ This task is also run automatically during the `publish` job of the release work
 
 Grails has 2 binary distributions:
    * `grailsw` - the Grails wrapper, which is a script that downloads the necessary jars to run Grails. This will exist inside of the generated applications, but can be optionally downloaded as a standalone binary distribution.
-   * `grails` - the delegating CLI, which is a script that delegates to the Grails Forge CLI. This is the `sdkman` distribution.
+   * `grails` - the Grails CLI, which creates applications and runs the commands of an application. This is the `sdkman` distribution.
 
 #### Manual Verification: Verify Grails Wrapper Binary Distribution
 
@@ -219,11 +219,12 @@ Verifies the wrapper distribution signature via the command:
 Extracts the zip file and verifies the contents:
 * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
 
-Generates applications using the wrapper and verifies all dependencies resolve:
-* Creates a shell app and a forge app against the staging repository.
-* Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
+Generates an application using the wrapper and verifies all dependencies resolve:
+* Starts the `grails` command the wrapper downloads from the staging repository (`--version`, `help`).
+* Creates an app against the staging repository, and checks that `grailsw`, `grailsw.bat` and `grails-wrapper.jar` of the app are those of the distribution and that the wrapper of the app starts.
+* Runs `./gradlew dependencies` in the generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
 
-#### Manual Verification: Verify Grails Delegating CLI Binary Distribution
+#### Manual Verification: Verify Grails CLI Binary Distribution
 
 The following are the Grails distribution artifacts:
 * `apache-grails-<version>-bin.zip` - the cli distribution that will be uploaded to sdkman
@@ -245,9 +246,10 @@ Verifies the cli distribution signature via the command:
 Extracts the zip file and verifies the contents:
 * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
 
-Generates applications using the CLIs and verifies all dependencies resolve:
-* Creates a shell app via `grails-shell-cli` and a forge app via `grails-forge-cli` against the staging repository.
-* Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
+Generates an application using the CLI and verifies all dependencies resolve:
+* Checks that `bin` has the `grails` command, which starts `org.apache.grails.forge.cli.GrailsCli`, and neither `grails-shell-cli` nor `grails-forge-cli`.
+* Starts the `grails` command (`--version`, `help`) and creates an app with it against the staging repository.
+* Runs `./gradlew dependencies` in the generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
 
 ### Manual Verification: Documentation Distribution Verification
 
@@ -279,35 +281,37 @@ license text under `grails-doc/distribution-artifacts/licenses/`.
 
 ## 3. Verifying the CLIs are Functional
 
-The CLI distribution consists of various CLI's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and
-`grails-shell-cli`. Each CLI needs tested to ensure it's functional prior to release. The `verify.sh` script will output
-example commands to perform this verification. However, it if manually verifying, these are the minimum suggested steps:
+The CLI distribution consists of two CLI's: `grailsw` (wrapper) and `grails`. Each CLI needs tested to ensure it's
+functional prior to release. The `verify.sh` script will output example commands to perform this verification.
+However, it if manually verifying, these are the minimum suggested steps:
 
 * Testing `grailsw`:
     * set GRAILS_REPO_URL to the staging repository (https://repository.apache.org/content/groups/staging)
-    * run `grailsw` and ensure it downloads the correct jars to `.grails` (verify the checksums of the jars)
+    * run `grailsw` and ensure it downloads the correct jars to `.grails` (verify the checksums of the jars; the
+      wrapper compares a download only with the checksum file of the repository it came from, which finds a damaged
+      download and does not replace this check)
   * Please note that the Grails Wrapper (`grailsw`) writes to the `.grails` directory in the user's home directory. If
     not run in an isolated environment, it may attempt to use already downloaded artifacts. If the wrapper fails, try
     removing the `.grails` directory to confirm it isn't a transient state issue.
-* Testing `grails-shell-cli`:
+    * in an application generated by an earlier release line (Grails 7 or 8), replace `grailsw`, `grailsw.bat` and
+      `grails-wrapper.jar` with those of this distribution and run `grailsw help`: the wrapper starts
+      `org.apache.grails.cli.DelegatingShellApplication`, which every `grails-cli` jar since Grails 7 has, so it must
+      start the command line of that earlier version too
+    * in another application generated by an earlier release line, keep its wrapper, set `grailsVersion` in
+      `gradle.properties` to the version under test and run `grailsw update-wrapper`: the earlier wrapper downloads
+      the command line under test, which must replace `grailsw`, `grailsw.bat` and `grails-wrapper.jar` with those
+      of this distribution (compare their checksums) and say so; `grailsw help` must then run without a line about
+      the wrapper
+* Testing `grails`:
     * create a basic app:
     ```bash
-    grails-shell-cli create-app test
+    grails create-app test
     ```
     * modify the application to include the staging repo
     * start the app:
     ```bash
-    grails-shell-cli run-app
-    ```
-* Perform the same tests, but use the delegating cli `grails` with type forge
-    * create a basic app:
-    ```bash
-    grails -t forge create-app test
-    ```
-    * modify the application to include the staging repo
-    * start the app:
-    ```bash
-    gradlew bootRun
+    cd test
+    grails run-app
     ```
 
 ## 4. Voting

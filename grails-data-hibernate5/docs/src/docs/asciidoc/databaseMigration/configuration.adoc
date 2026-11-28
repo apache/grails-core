@@ -28,7 +28,7 @@ There are a few configuration options for the plugin. All configurations are pre
 |changelogFileName |`changelog.groovy` |the name of the main changelog file
 |changelogProperties |none |a map of properties to use for property substitution in Groovy DSL changelogs
 |contexts |none |A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be run
-|dbDocLocation |`target/dbdoc` |the directory where the output from the <<ref-documentation-scripts-dbm-db-doc,dbm-db-doc>> script is written
+|dbDocLocation |`build/dbdoc` |the directory where the output from the <<ref-documentation-scripts-dbm-db-doc,dbm-db-doc>> tool is written
 |dbDocController.enabled |`true` in dev mode |whether the /dbdoc/ url is accessible at runtime
 |dropOnStart |`false` |if `true` then drops all tables before auto-running migrations (if updateOnStart is true)
 |updateOnStart |`false` |if `true` then changesets from the specified list of names will be run at startup
@@ -36,9 +36,9 @@ There are a few configuration options for the plugin. All configurations are pre
 |updateOnStartDefaultSchema |none |the default schema to use when running auto-migrate on start
 |updateOnStartContexts |none |A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be run
 |updateAllOnStart |false |if `true` then changesets from the specified list of names will be run at startup for all dataSources. Useful for Grails Multitenancy with Multiple Databases (same db schema)
-|autoMigrateScripts |['RunApp'] |the scripts when running auto-migrate. Useful to run auto-migrate during test phase with: ['RunApp', 'TestApp']
-|excludeObjects |none |A comma-delimited list of database object names to ignore while performing a dbm-gorm-diff or dbm-generate-gorm-changelog
-|includeObjects |none |A comma-delimited list of database object names to look for while performing a dbm-gorm-diff or dbm-generate-gorm-changelog
+|skipUpdateOnStartMainClasses |`['grails.ui.command.GrailsApplicationContextCommandRunner']` |the main classes of the JVM that do not run the update on start: by default the class that runs a tool in the application, so that a `dbm-*` tool that starts the application does not update the database first
+|excludeObjects |none |A comma-delimited list of database object names to ignore while performing a dbm-diff, dbm-gorm-diff, dbm-generate-changelog or dbm-generate-gorm-changelog; it cannot be set together with includeObjects
+|includeObjects |none |A comma-delimited list of the only database object names to look for while performing a dbm-diff, dbm-gorm-diff, dbm-generate-changelog or dbm-generate-gorm-changelog; it cannot be set together with excludeObjects
 |databaseChangeLogTableName |'databasechangelog' |the Liquibase changelog record table name
 |databaseChangeLogLockTableName |'databasechangeloglock' |the Liquibase lock table name
 |==================================

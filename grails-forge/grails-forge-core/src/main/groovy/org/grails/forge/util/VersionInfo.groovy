@@ -29,7 +29,13 @@ import java.time.format.DateTimeParseException
 class VersionInfo {
 
     private static final String END_OF_SUPPORT = 'grails.endOfSupport'
+    private static final String GRADLE_VERSION = 'gradle.version'
+    private static final String GRADLE_MINIMUM = 'gradle.minimum'
+    private static final String GRADLE_SHA256 = 'gradle.sha256'
+    // what the build writes beside the versions of the BOM, and is no version of a dependency
+    private static final Set<String> NOT_DEPENDENCIES = [END_OF_SUPPORT, GRADLE_VERSION, GRADLE_MINIMUM, GRADLE_SHA256].toSet().asImmutable()
     private static final Properties VERSIONS = new Properties()
+    private static final String GENERATOR_SHA256 = generatorSha256()
 
     static {
         URL resource = VersionInfo.getResource('/grails-versions.properties')
@@ -57,6 +63,34 @@ class VersionInfo {
     }
 
     /**
+     * The identity of this build of the generator: the digest of what it generates from, its sources,
+     * templates and feature packs and the versions it writes, which the build computes. Two builds of
+     * one version, as two snapshots are, have different ones when they generate from different sources.
+     *
+     * @return the SHA-256 digest in hexadecimal, or {@code null} for a generator that was not built with
+     * one, as when it runs from the classes an editor compiled
+     * @since 9.0
+     */
+    static String getGeneratorSha256() {
+        return GENERATOR_SHA256
+    }
+
+    private static String generatorSha256() {
+        URL resource = VersionInfo.getResource('/META-INF/grails-forge-generator.properties')
+        if (resource == null) {
+            return null
+        }
+        Properties properties = new Properties()
+        try (Reader reader = new InputStreamReader(resource.openStream(), StandardCharsets.UTF_8)) {
+            properties.load(reader)
+        } catch (IOException ignored) {
+            return null
+        }
+        String digest = properties.getProperty('sha256')
+        return digest != null && digest ==~ /[0-9a-f]{64}/ ? digest : null
+    }
+
+    /**
      * @return Checks whether the Grails is a snapshot version.
      */
     static boolean isSnapshot() {
@@ -71,9 +105,11 @@ class VersionInfo {
     }
 
     static String getGrailsVersion() {
-        Object grailsVersion = VERSIONS.get('grails.version')
+        // by the lookup that gives a text: making a text of an object goes through the formatting of
+        // Groovy, which loads and scans far more than this is worth, on every start of a command line
+        String grailsVersion = VERSIONS.getProperty('grails.version')
         if (grailsVersion != null) {
-            return grailsVersion.toString()
+            return grailsVersion
         }
         return '6.0.0-M4'
     }
@@ -107,6 +143,53 @@ class VersionInfo {
     }
 
     /**
+     * The version of Gradle the wrapper of a generated application names. The build writes it from
+     * {@code gradleToolingApiVersion} of the root of the Grails repository, which is the Gradle of
+     * the build of Grails itself.
+     *
+     * @return the version, as {@code 9.9.2}
+     * @throws IllegalStateException for a generator that was not built with it
+     * @since 9.0
+     */
+    static String getGradleVersion() {
+        return required(GRADLE_VERSION)
+    }
+
+    /**
+     * The SHA-256 Gradle publishes for the binary distribution of {@link #getGradleVersion()}
+     * ({@code gradle-<version>-bin.zip}), which the wrapper of a generated application names as its
+     * {@code distributionSha256Sum}. The build writes it from {@code gradleDistributionSha256Sum} of
+     * the root of the Grails repository, which is beside the version.
+     *
+     * @return the checksum, as 64 lowercase hexadecimal digits
+     * @throws IllegalStateException for a generator that was not built with it
+     * @since 9.0
+     */
+    static String getGradleDistributionSha256Sum() {
+        return required(GRADLE_SHA256)
+    }
+
+    /**
+     * The earliest version of Gradle a Grails application of this version is built with. The build
+     * writes it from {@code gradleMinimumVersion} of the root of the Grails repository.
+     *
+     * @return the version, as {@code 9.7}
+     * @throws IllegalStateException for a generator that was not built with it
+     * @since 9.0
+     */
+    static String getMinimumGradleVersion() {
+        return required(GRADLE_MINIMUM)
+    }
+
+    private static String required(String key) {
+        String value = VERSIONS.getProperty(key)
+        if (value == null) {
+            throw new IllegalStateException("The versions this generator was built with have no ${key}".toString())
+        }
+        return value
+    }
+
+    /**
      * Gets the dependency versions.
      *
      * @return The versions
@@ -114,7 +197,7 @@ class VersionInfo {
     static Map<String, String> getDependencyVersions() {
         Map<String, String> map = new LinkedHashMap<>()
         for (String key : VERSIONS.stringPropertyNames().sort()) {
-            if (key != END_OF_SUPPORT) {
+            if (!NOT_DEPENDENCIES.contains(key)) {
                 map.put(key, VERSIONS.getProperty(key))
             }
         }

@@ -20,23 +20,45 @@ package org.apache.grails.core.cli
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 
 import grails.util.BuildSettings
 import org.grails.build.parsing.CommandLine
 
 /**
- * A context command to pass to {@link ApplicationCommand} instances
+ * What a {@link GrailsTool} is run with: the command line, the directories of the project, and what the project is
  *
  * @since 3.0
  */
 @CompileStatic
 @Canonical
+@ToString(allProperties = false, excludes = 'result')
+@TupleConstructor(excludes = 'result')
+@EqualsAndHashCode(excludes = 'result')
 class ExecutionContext {
 
     /**
      * The command line instance
      */
     CommandLine commandLine
+
+    /**
+     * What the tool gives as its result besides what it prints, for a program that runs it: a
+     * {@code Map}, a {@code List}, a {@code String}, a {@code Number} or a {@code Boolean} that can
+     * be written as JSON, made of these and {@code null}. A tool sets it while it runs; {@code null}
+     * is no result. It is no part of what makes two contexts the same, of how one is shown, or of
+     * what a context is made with.
+     *
+     * <pre>
+     * executionContext.result = [count: 3, files: written]
+     * </pre>
+     *
+     * @since 9.0
+     */
+    Object result
+
     /**
      * The base directory for the project
      */
@@ -49,4 +71,21 @@ class ExecutionContext {
      * The target directory of the project
      */
     final File targetDir = BuildSettings.TARGET_DIR
+
+    private ProjectInfo project
+
+    /**
+     * What the project is, as the record of the {@code grails} command line says it: read from the
+     * directory of the project when it is first asked for, and the same whatever started the tool.
+     *
+     * @return the type of the application and its features; never {@code null}, and for a project
+     * without a record one that is not recorded
+     * @since 9.0
+     */
+    ProjectInfo getProject() {
+        if (project == null) {
+            project = ProjectInfo.of(baseDir)
+        }
+        project
+    }
 }

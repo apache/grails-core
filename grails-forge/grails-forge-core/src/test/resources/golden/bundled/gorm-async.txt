@@ -1,0 +1,87 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+adds: gorm-hibernate5 when not anyOf(gorm-hibernate5, gorm-hibernate7, gorm-mongodb, gorm-neo4j)
+dependency: implementation org.apache.grails:grails-datamapping-async without a version
+
+# web
+title: Asynchronous Grails Data
+description: Adds the asynchronous programming model for Grails Data, including the AsyncEntity trait and the async namespace.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/guide/async.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature gorm-async documentation
++ - [Grails Asynchronous Grails Data documentation](https://grails.apache.org/docs/VERSION/guide/async.html)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-datamapping-async"
+
+# rest_api
+title: Asynchronous Grails Data
+description: Adds the asynchronous programming model for Grails Data, including the AsyncEntity trait and the async namespace.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/guide/async.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature gorm-async documentation
++ - [Grails Asynchronous Grails Data documentation](https://grails.apache.org/docs/VERSION/guide/async.html)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-datamapping-async"
+
+# web_plugin
+title: Asynchronous Grails Data
+description: Adds the asynchronous programming model for Grails Data, including the AsyncEntity trait and the async namespace.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/guide/async.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature gorm-async documentation
++ - [Grails Asynchronous Grails Data documentation](https://grails.apache.org/docs/VERSION/guide/async.html)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-datamapping-async"
+
+# plugin
+title: Asynchronous Grails Data
+description: Adds the asynchronous programming model for Grails Data, including the AsyncEntity trait and the async namespace.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/guide/async.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature gorm-async documentation
++ - [Grails Asynchronous Grails Data documentation](https://grails.apache.org/docs/VERSION/guide/async.html)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-datamapping-async"
+
+# rest_api_plugin
+title: Asynchronous Grails Data
+description: Adds the asynchronous programming model for Grails Data, including the AsyncEntity trait and the async namespace.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/guide/async.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature gorm-async documentation
++ - [Grails Asynchronous Grails Data documentation](https://grails.apache.org/docs/VERSION/guide/async.html)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-datamapping-async"
+

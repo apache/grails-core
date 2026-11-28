@@ -32,21 +32,21 @@ class GrailsStartupProgressSpec extends ApplicationContextSpec implements Comman
 
     void "test grails-startup-progress feature"() {
         when:
-        final Features features = getFeatures([GrailsStartupProgress.FEATURE_NAME])
+        final Features features = getFeatures(['grails-startup-progress'])
 
         then:
-        features.contains(GrailsStartupProgress.FEATURE_NAME)
+        features.contains('grails-startup-progress')
     }
 
     void "test grails-startup-progress is a development tool"() {
         expect:
-        beanContext.getBean(GrailsStartupProgress).category == Category.DEV_TOOLS
+        getFeatures(['grails-startup-progress']).getFeatures().find { it.name == 'grails-startup-progress' }.category == Category.DEV_TOOLS
     }
 
     void "test grails-startup-progress dependency version is managed by the grails-bom"() {
         when:
         final String template = new BuildBuilder(beanContext)
-                .features([GrailsStartupProgress.FEATURE_NAME])
+                .features(['grails-startup-progress'])
                 .render()
 
         then:
@@ -56,7 +56,7 @@ class GrailsStartupProgressSpec extends ApplicationContextSpec implements Comman
 
     void "test an application generated with grails-startup-progress depends on it"(ApplicationType applicationType) {
         when:
-        final String buildGradle = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), [GrailsStartupProgress.FEATURE_NAME])['build.gradle']
+        final String buildGradle = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ['grails-startup-progress'])['build.gradle']
 
         then:
         buildGradle.contains('implementation "org.apache.grails:grails-startup-progress"')
@@ -67,7 +67,7 @@ class GrailsStartupProgressSpec extends ApplicationContextSpec implements Comman
 
     void "test an application generated with grails-startup-progress opens a browser under bootRun"(ApplicationType applicationType) {
         when:
-        final String gradleProperties = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), [GrailsStartupProgress.FEATURE_NAME])['gradle.properties']
+        final String gradleProperties = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ['grails-startup-progress'])['gradle.properties']
 
         then: 'the property bootRun hands to the application is set in the project, where a developer can override it'
         gradleProperties.readLines().contains('grails.startup.progress.openBrowser=true')
@@ -98,13 +98,13 @@ class GrailsStartupProgressSpec extends ApplicationContextSpec implements Comman
 
     void "test grails-startup-progress is not offered to plugins, whose dependencies reach every application using them"(ApplicationType applicationType) {
         when:
-        generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), [GrailsStartupProgress.FEATURE_NAME])
+        generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ['grails-startup-progress'])
 
         then:
         def e = thrown(IllegalArgumentException)
         e.message == 'The requested feature does not exist: grails-startup-progress'
 
         where:
-        applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
     }
 }

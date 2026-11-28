@@ -15,6 +15,8 @@
  *  limitations under the License.
  */
 
+import org.apache.grails.buildsrc.CommandLineStartScripts
+
 plugins {
     id 'groovy'
     id 'distribution'
@@ -61,6 +63,13 @@ apply {
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory
 // rather than defining the application and then having to add tasks to rework it, just define a distribution and
 // create the scripts in the right location from the start
+// The jar is committed into every project and comes with each clone of it, so it is kept small: the classes keep
+// their source file and line numbers, which a stack trace shows, and leave out the tables of local variables, which
+// only a debugger reads (a tenth of the jar)
+tasks.named('compileJava', JavaCompile).configure { JavaCompile it ->
+    it.options.debugOptions.debugLevel = 'source,lines'
+}
+
 TaskProvider<Jar> jarTask = tasks.named('jar', Jar)
 jarTask.configure { Jar it ->
     it.archiveFileName = "${project.name}.jar" as String
@@ -81,6 +90,12 @@ startScripts.configure { CreateStartScripts t ->
     // warns on every launch and a future JDK will refuse the call
     t.defaultJvmOpts = ['--enable-native-access=ALL-UNNAMED']
 
+    // -XX:TieredStopAtLevel=1 when the wrapper is started with a command, which then runs in this JVM: why it is
+    // there, what it costs and how it is overridden is said in CommandLineStartScripts, and in the scripts
+    CommandLineStartScripts.compileForShortRuns(t, 'GRAILSW_OPTS')
+    // grails.init.Start is compiled for javaVersion: an earlier Java is named by the scripts, see CommandLineStartScripts
+    CommandLineStartScripts.requireJava(t)
+
     // See gradle tickets such as for lib https://github.com/gradle/gradle/issues/7033
     doLast {
         t.unixScript.text = t.unixScript.text
@@ -91,11 +106,42 @@ startScripts.configure { CreateStartScripts t ->
                 .replace('%APP_HOME%\\lib\\', '%APP_HOME%\\')
                 .replace('"%APP_HOME%\\lib\\', '"%APP_HOME%\\')
                 .replace('%DIRNAME%..', '%DIRNAME%')
+
+        // On Windows update-wrapper cannot replace grails-wrapper.jar while the wrapper runs, since the JVM has
+        // it open: it writes the new jar beside it, and the scripts move it over the jar before they start Java.
+        // The batch file that stands in for an earlier one between two runs has the same line, and
+        // WrapperFiles of grails-forge-cli looks for it to know that the wrapper completes the update itself.
+        String jarClassPath = 'CLASSPATH=$APP_HOME/grails-wrapper.jar\n'
+        String localScope = '@rem Set local scope for the variables'
+        if (!t.unixScript.text.contains(jarClassPath) || !t.windowsScript.text.contains(localScope) || !t.windowsScript.text.contains(':exitWithErrorLevel')) {
+            throw new GradleException('The start scripts Gradle generates have changed: the lines that complete an update of the Grails wrapper have no place in them')
+        }
+        t.unixScript.text = t.unixScript.text.replace(jarClassPath, jarClassPath + '\n' +
+                '# A grails-wrapper.jar that update-wrapper wrote beside the one that was in use takes its place\n' +
+                'if [ -f "$APP_HOME/grails-wrapper.jar.new" ] ; then\n' +
+                '    mv -f "$APP_HOME/grails-wrapper.jar.new" "$APP_HOME/grails-wrapper.jar" 2>/dev/null || :\n' +
+                'fi\n')
+        String windowsLineEnd = t.windowsScript.text.contains('\r\n') ? '\r\n' : '\n'
+        t.windowsScript.text = t.windowsScript.text.replace(localScope,
+                '@rem A grails-wrapper.jar that update-wrapper wrote beside the one that was in use takes its place' + windowsLineEnd +
+                'if exist "%~dp0grails-wrapper.jar.new" move /y "%~dp0grails-wrapper.jar.new" "%~dp0grails-wrapper.jar" >NUL 2>&1' + windowsLineEnd +
+                windowsLineEnd + localScope)
     }
 }
 
+// WrapperScriptsSpec starts the scripts this build generates, and StartClassSpec the jar. Their content is the input;
+// where they are is not.
+tasks.named('test', Test).configure { Test it ->
+    it.inputs.files(startScripts).withPropertyName('wrapperScripts').withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> scriptsPath = startScripts.map { CreateStartScripts scripts -> scripts.outputDir.absolutePath }
+    it.jvmArgumentProviders.add({ ["-Dgrails.wrapper.scripts=${scriptsPath.get()}".toString()] } as CommandLineArgumentProvider)
+    it.inputs.files(jarTask).withPropertyName('wrapperJar').withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> jarPath = jarTask.flatMap { Jar jar -> jar.archiveFile }.map { RegularFile file -> file.asFile.absolutePath }
+    it.jvmArgumentProviders.add({ ["-Dgrails.wrapper.jar=${jarPath.get()}".toString()] } as CommandLineArgumentProvider)
+}
+
 project.extensions.getByType(DistributionContainer).configureEach {
-    // WARNING: changing the distro name / classifier requires updating the task in grails-profiles-base to copy from the correct location
+    // WARNING: changing the distro name / classifier requires updating the copyGrailsWrapper task of grails-forge-core (the grails-forge build) to copy from the correct location
     it.distributionBaseName = 'apache-grails-wrapper'
     it.distributionClassifier = 'bin'
     it.contents {

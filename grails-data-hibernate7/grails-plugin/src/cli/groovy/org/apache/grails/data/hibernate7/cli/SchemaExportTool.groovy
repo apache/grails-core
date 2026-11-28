@@ -1,0 +1,133 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.apache.grails.data.hibernate7.cli
+
+import groovy.transform.CompileStatic
+
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.tool.hbm2ddl.SchemaExport as HibernateSchemaExport
+import org.hibernate.tool.schema.TargetType
+import org.hibernate.tool.schema.spi.SchemaManagementException
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.core.cli.ToolHints
+import org.apache.grails.core.cli.ToolOption
+import org.apache.grails.core.cli.ToolParameter
+import grails.util.Environment
+import org.grails.build.parsing.CommandLine
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.orm.hibernate.HibernateDatastore
+
+/**
+ * Adds a schema-export command
+ *
+ * @since 4.0
+ */
+@ToolHints(readOnlyHint = false, destructiveHint = true)
+@ToolOption(names = ['--datasource'], arity = '1',
+        description = 'The data source whose schema is written, by its name under dataSources in the configuration; the default data source when not given')
+@ToolParameter(index = 0, label = 'ACTION', arity = '1', required = false,
+        description = 'generate, the default, or export; either writes the DDL to the file, and neither runs it against the database')
+@ToolParameter(index = 1, label = 'STDOUT', arity = '1', required = false,
+        description = 'stdout writes the DDL to the standard output as well; the parameters can be given in any order')
+@ToolParameter(index = 2, label = 'FILE', arity = '1', required = false,
+        description = 'The file the DDL is added to; ddl.sql in the build directory when not given')
+@CompileStatic
+class SchemaExportTool implements ApplicationTool {
+
+    private static final Logger LOG = LoggerFactory.getLogger(SchemaExportTool)
+
+    final String description = 'Creates a DDL file of the database schema'
+    Boolean skipBootstrap = true
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        CommandLine commandLine = executionContext.commandLine
+
+        String filename = "${executionContext.targetDir}/ddl.sql"
+        boolean export = false
+        boolean stdout = false
+
+        for (arg in commandLine.remainingArgs) {
+            switch (arg) {
+                case 'export':   export = true; break
+                case 'generate': export = false; break
+                case 'stdout':   stdout = true; break
+                default:         filename = arg
+            }
+        }
+
+        def argsMap = commandLine.undeclaredOptions
+        String dataSourceName = argsMap.datasource ? argsMap.datasource : ConnectionSource.DEFAULT
+
+        def file = new File(filename)
+        file.parentFile.mkdirs()
+
+        HibernateDatastore hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
+        hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSourceName)
+
+        def serviceRegistry = ((SessionFactoryImplementor) hibernateDatastore.sessionFactory).getServiceRegistry()
+                                                                                            .getParentServiceRegistry()
+        def metadata = hibernateDatastore.metadata
+
+        def schemaExport = new HibernateSchemaExport()
+                .setHaltOnError(true)
+                .setOutputFile(file.path)
+                .setDelimiter(';')
+
+        String action = export ? 'Exporting' : "Generating script to ${file.path}"
+        String ds = argsMap.datasource ? "for DataSource '$argsMap.datasource'" : 'for the default DataSource'
+        println("$action in environment '${Environment.current.name}' $ds")
+
+        EnumSet<TargetType> targetTypes
+        if (stdout) {
+            targetTypes = EnumSet.of(TargetType.SCRIPT, TargetType.STDOUT)
+        }
+        else {
+            targetTypes = EnumSet.of(TargetType.SCRIPT)
+        }
+
+        try {
+            schemaExport.execute(targetTypes, HibernateSchemaExport.Action.CREATE, metadata, serviceRegistry)
+        } catch (SchemaManagementException e) {
+            reportFailure(e)
+            return false
+        }
+
+        if (schemaExport.exceptions) {
+            def e = (Exception) schemaExport.exceptions[0]
+            reportFailure(e)
+            return false
+        }
+        return true
+    }
+
+    private static void reportFailure(Exception exception) {
+        if (LOG.errorEnabled) {
+            LOG.error('Unable to export database schema', exception)
+        }
+        else {
+            exception.printStackTrace(System.err)
+        }
+    }
+
+}

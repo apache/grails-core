@@ -55,11 +55,13 @@ jobs:
       matrix:
         os: [ubuntu-24.04]
     runs-on: ${{ matrix.os }}
+    outputs:
+      repository-ready: ${{ steps.test-repository.outcome == 'success' }}
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -79,11 +81,29 @@ jobs:
           --stacktrace
           -PskipCodeStyle
       - name: "📤 Upload coverage artifact"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-core-${{ matrix.os }}
           path: build/reports/jacoco/aggregate/jacocoAggregateReport.xml
           if-no-files-found: warn
+      - name: "📦 Publish Gradle plugins for Forge coverage"
+        if: ${{ !cancelled() }}
+        id: publish-plugins
+        working-directory: grails-gradle
+        run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository --stacktrace
+      - name: "📦 Publish the framework already built for coverage"
+        if: ${{ !cancelled() }}
+        id: publish-framework
+        run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository --stacktrace
+      - name: "📤 Share the test repository"
+        if: ${{ !cancelled() && steps.publish-framework.outcome == 'success' && steps.publish-plugins.outcome == 'success' }}
+        id: test-repository
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: forge-coverage-test-repository
+          path: build/local-maven/
+          if-no-files-found: error
+          retention-days: 1
 
   coverage-gradle:
     name: "Coverage - grails-gradle (${{ matrix.os }})"
@@ -98,7 +118,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -119,15 +139,71 @@ jobs:
           --stacktrace
           -PskipCodeStyle
       - name: "📤 Upload coverage artifact"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-gradle-${{ matrix.os }}
           path: grails-gradle/build/reports/jacoco/aggregate/jacocoAggregateReport.xml
           if-no-files-found: warn
 
+  coverage-forge:
+    name: "Coverage - grails-forge (${{ matrix.os }})"
+    needs: [ policy, coverage-core ]
+    # JaCoCo instruments at test runtime. Forge's report includes only its own source sets, not those
+    # of the included framework; no framework exec data or instrumented jars need transferring.
+    # A failed core test need not lose Forge coverage if the repository was successfully published.
+    if: ${{ !cancelled() && needs.policy.outputs.run-tests == 'true' && needs.coverage-core.outputs.repository-ready == 'true' }}
+    # Twice the slowest of the Forge builds of the CI workflow that finished over 2026-11-21 and 2026-11-22
+    # (83 min), rounded up to the half hour: this job runs the same specs, less those of test-core.
+    timeout-minutes: 180 # slowest run: none yet
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+      - name: "📥 Download the framework built for core coverage"
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: forge-coverage-test-repository
+          path: build/local-maven/
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v6.3.0
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🗄️ Decide the Gradle cache mode"
+        id: gradle-cache-policy
+        uses: ./.github/actions/gradle-cache-policy
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # Decided by the step above; see .github/actions/gradle-cache-policy.
+          cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+      - name: "🌡️ Run tests with coverage"
+        # Forge measures coverage only when this task is asked for, see grails-forge/gradle/test-config.gradle.
+        # The specs of test-core are left out: they build generated applications, which run in JVMs of their
+        # own that are not measured, and the generator they start is what the specs of grails-forge-core cover.
+        working-directory: grails-forge
+        run: >
+          ./gradlew jacocoAggregateReport
+          -PprebuiltTestRepository
+          --continue
+          --stacktrace
+          -PskipCodeStyle
+          -x :test-core:test
+      - name: "📤 Upload coverage artifact"
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: coverage-forge-${{ matrix.os }}
+          path: grails-forge/build/reports/jacoco/aggregate/jacocoAggregateReport.xml
+          if-no-files-found: warn
+
   upload-coverage:
     name: "Upload Coverage to Codecov"
-    needs: [ policy, coverage-core, coverage-gradle ]
+    needs: [ policy, coverage-core, coverage-gradle, coverage-forge ]
     # Run even if some matrix legs fail so partial coverage is still uploaded, but not on a run that skipped the tests
     if: ${{ always() && needs.policy.outputs.run-tests == 'true' }}
     runs-on: ubuntu-24.04
@@ -138,6 +214,7 @@ jobs:
         uses: actions/download-artifact@v8.0.1
         with:
           path: coverage-reports
+          pattern: coverage-*
       - name: "📊 Upload coverage to Codecov"
         continue-on-error: true
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1

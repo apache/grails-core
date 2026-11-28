@@ -69,7 +69,7 @@ class GradleRepositorySpec extends Specification {
 
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == 'Remote GRAILS_REPO_URL repositories must use HTTPS: http://localhost/releases'
+        e.message == "Remote GRAILS_REPO_URL repositories must use HTTPS: 'http://localhost/releases'"
     }
 
     def 'GRAILS_REPO_URL overrides reject malformed remote repositories'() {
@@ -78,7 +78,7 @@ class GradleRepositorySpec extends Specification {
 
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == 'Invalid GRAILS_REPO_URL repository: https://repo example'
+        e.message == 'Invalid GRAILS_REPO_URL repository: an address that is not shown (https, 20 characters)'
     }
 
     def 'GRAILS_REPO_URL overrides accept Windows drive local repositories'() {
@@ -113,6 +113,18 @@ class GradleRepositorySpec extends Specification {
 
         then: 'it is not mistaken for a drive letter and is rejected for not using HTTPS'
         def e = thrown(IllegalArgumentException)
-        e.message == 'Remote GRAILS_REPO_URL repositories must use HTTPS: c://host/releases'
+        e.message == "Remote GRAILS_REPO_URL repositories must use HTTPS: 'c://host/releases'"
+    }
+
+    def 'what a repository is written with into a build file is the text it is'() {
+        expect:
+        new DefaultGradleRepository(0, url).toSnippet('') == "maven {\n   url = '" + written + "'\n}"
+
+        where:
+        url                          | written
+        'https://repo.example/m'     | 'https://repo.example/m'
+        'C:\\repo\\sub'              | 'C:\\\\repo\\\\sub'
+        "/home/o'brien/repo"         | "/home/o\\'brien/repo"
+        '/home/me/repo\n}\nprintln 1' | '/home/me/repo\\u000a}\\u000aprintln 1'
     }
 }

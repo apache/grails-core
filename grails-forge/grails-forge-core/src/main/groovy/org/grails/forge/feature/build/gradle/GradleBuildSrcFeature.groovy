@@ -33,6 +33,11 @@ interface GradleBuildSrcFeature extends OneOfFeature {
     }
 
     @Override
+    default String getGroup() {
+        return 'gradle-build-src'
+    }
+
+    @Override
     default boolean supports(ApplicationType applicationType) {
         return true
     }

@@ -24,6 +24,7 @@ import org.grails.forge.application.OperatingSystem
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 import org.springframework.mock.web.MockHttpServletRequest
@@ -61,6 +62,18 @@ class ForgeRequestSupportSpec extends Specification {
         options.servletImpl == ServletImpl.DEFAULT_OPTION
         options.javaVersion == JdkVersion.JDK_21
         options.operatingSystem == OperatingSystem.LINUX
+    }
+
+    void "an option of a request counts as chosen when it is not the default, since the UI sends every option with every request"() {
+        expect: 'left out, or repeating the default: not chosen'
+        ForgeRequestSupport.options(null, null, null, '21', OperatingSystem.LINUX).given.empty
+        ForgeRequestSupport.options('DEVTOOLS', 'hibernate5', 'TOMCAT', '21', OperatingSystem.LINUX).given.empty
+        ForgeRequestSupport.options('devtools', 'HIBERNATE', 'tomcat', null, OperatingSystem.LINUX).given.empty
+
+        and: 'another value: chosen'
+        ForgeRequestSupport.options(null, 'hibernate7', null, null, OperatingSystem.LINUX).given == [OptionName.DATA] as Set
+        ForgeRequestSupport.options('NONE', 'hibernate5', 'JETTY', null, OperatingSystem.LINUX).given == [OptionName.RELOADING, OptionName.SERVLET] as Set
+        ForgeRequestSupport.options('JREBEL', 'mongodb', 'NONE', '21', OperatingSystem.LINUX).given == OptionName.values() as Set
     }
 
     void 'generation rejects an invalid #label selection'() {
@@ -107,6 +120,9 @@ class ForgeRequestSupportSpec extends Specification {
         'rest_api'   | ApplicationType.REST_API
         'REST_API'   | ApplicationType.REST_API
         'web-plugin' | ApplicationType.WEB_PLUGIN
+        'rest-api-plugin' | ApplicationType.REST_API_PLUGIN
+        'rest_api_plugin' | ApplicationType.REST_API_PLUGIN
+        'REST_API_PLUGIN' | ApplicationType.REST_API_PLUGIN
         'not-a-type' | null
         ''           | null
         null         | null

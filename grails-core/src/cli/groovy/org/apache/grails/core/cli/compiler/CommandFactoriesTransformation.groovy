@@ -32,6 +32,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.TransformWithPriority
 
 import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import org.grails.compiler.injection.FactoriesFileWriter
 import org.grails.compiler.injection.GlobalGrailsClassInjectorTransformation
 import org.grails.compiler.injection.GrailsASTUtils
@@ -40,12 +41,19 @@ import org.grails.io.support.UrlResource
 
 /**
  * A global transformation that registers compiled
- * {@link org.apache.grails.core.cli.ApplicationCommand} implementations in
- * {@code META-INF/grails-cli.factories}, keyed by the command contract's class name.
+ * {@link org.apache.grails.core.cli.GrailsTool} implementations in
+ * {@code META-INF/grails-cli.factories}, keyed by the tool contract's class name. A registration an
+ * earlier compilation made under the key of Grails 8, the name of
+ * {@link org.apache.grails.core.cli.ApplicationCommand}, is taken out when the class is compiled again.
  *
  * The transform ships in the {@code grails-core-cli} artifact, so it is active exactly when a
- * command can compile — a class implementing the contract only resolves when the cli artifact is
- * on the compile classpath. Command registrations never touch {@code META-INF/grails.factories}.
+ * tool can compile — a class implementing the contract only resolves when the cli artifact is
+ * on the compile classpath. Tool registrations never touch {@code META-INF/grails.factories}.
+ *
+ * Beside the registration it writes the descriptor of each tool it registers,
+ * {@code META-INF/grails-tools/<class name>.json} (see {@link ToolDescriptorWriter}), and it makes
+ * what a tool does against the rules of its kind and of its folder an error of the compilation, and
+ * a deprecated type a class implements a warning (see {@link ToolRules}).
  *
  * @since 8.0
  */
@@ -53,7 +61,11 @@ import org.grails.io.support.UrlResource
 @CompileStatic
 class CommandFactoriesTransformation implements ASTTransformation, TransformWithPriority {
 
-    public static final ClassNode APPLICATION_COMMAND_CLASS = ClassHelper.make('org.apache.grails.core.cli.ApplicationCommand')
+    /** The tool contract, whose name is the key a tool class is registered under. */
+    public static final ClassNode GRAILS_TOOL_CLASS = ClassHelper.make(ToolDescriptor.FACTORIES_KEY_TOOL)
+
+    /** The command contract of Grails 8, whose name is the key its companions registered their classes under. */
+    public static final ClassNode APPLICATION_COMMAND_CLASS = ClassHelper.make(ToolDescriptor.FACTORIES_KEY_COMMAND)
 
     public static final ClassNode APPLICATION_COMMAND_TARGET_AWARE_CLASS = ClassHelper.make('org.apache.grails.core.cli.ApplicationCommandTargetAware')
 
@@ -64,15 +76,16 @@ class CommandFactoriesTransformation implements ASTTransformation, TransformWith
     protected static final List<String> SOURCE_CLI_FACTORIES_LOCATIONS = [
             'src/main/resources/META-INF/grails-cli.factories',
             'src/cli/resources/META-INF/grails-cli.factories',
+            'src/standalone/resources/META-INF/grails-cli.factories',
     ].asImmutable()
 
     /**
-     * Commands shipped in a companion cli artifact live in the {@code cli} source set
-     * ({@code src/cli/groovy} or {@code src/cli/java}), which is not one of the standard
-     * project-source locations recognised by {@link GrailsResourceUtils#isProjectSource}.
+     * Tools live in the {@code cli} source set ({@code src/cli/groovy} or {@code src/cli/java}) and
+     * in the {@code standalone} source set ({@code src/standalone/groovy} or {@code src/standalone/java}),
+     * which are not standard project-source locations recognised by {@link GrailsResourceUtils#isProjectSource}.
      */
     protected static final Pattern CLI_SOURCE_PATTERN =
-            Pattern.compile('.+?[\\\\/]src[\\\\/]cli[\\\\/](groovy|java)[\\\\/].+?\\.(groovy|java)$')
+            Pattern.compile('.+?[\\\\/]src[\\\\/](cli|standalone)[\\\\/](groovy|java)[\\\\/].+?\\.(groovy|java)$')
 
     @Override
     int priority() {
@@ -94,15 +107,28 @@ class CommandFactoriesTransformation implements ASTTransformation, TransformWith
         }
 
         File compilationTargetDirectory = GlobalGrailsClassInjectorTransformation.resolveCompilationTargetDirectory(source)
+        ToolSource located = ToolSource.of(url)
 
         for (ClassNode classNode : classes) {
+            ToolRules.warnOfDeprecatedTypes(classNode, located, source)
+            boolean registered = false
             if (shouldRegisterCommand(classNode)) {
-                FactoriesFileWriter.updateFactoriesWithType(classNode, APPLICATION_COMMAND_CLASS,
+                registered = FactoriesFileWriter.updateFactoriesWithType(classNode, GRAILS_TOOL_CLASS,
                         compilationTargetDirectory, CLI_FACTORIES_LOCATION, SOURCE_CLI_FACTORIES_LOCATIONS)
             } else {
-                // an adapter is never a command of its own, including one that used to be a command
-                FactoriesFileWriter.removeFromFactories(classNode.name, APPLICATION_COMMAND_CLASS,
+                // an adapter is never a tool of its own, including one that used to be a tool
+                FactoriesFileWriter.removeFromFactories(classNode.name, GRAILS_TOOL_CLASS,
                         compilationTargetDirectory, CLI_FACTORIES_LOCATION, SOURCE_CLI_FACTORIES_LOCATIONS)
+            }
+            // what an earlier compilation registered under the key of Grails 8 is registered under one key, the new one
+            FactoriesFileWriter.removeFromFactories(classNode.name, APPLICATION_COMMAND_CLASS,
+                    compilationTargetDirectory, CLI_FACTORIES_LOCATION, SOURCE_CLI_FACTORIES_LOCATIONS)
+            // the descriptor goes with the registration this compilation made: a build lists the tool from it
+            if (registered) {
+                ToolRules.check(classNode, located, source)
+                ToolDescriptorWriter.write(classNode, compilationTargetDirectory, ToolRules.deprecations(classNode, located))
+            } else {
+                ToolDescriptorWriter.remove(classNode.name, compilationTargetDirectory)
             }
         }
     }

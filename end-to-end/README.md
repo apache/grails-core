@@ -17,7 +17,7 @@ limitations under the License.
 # End-to-end tests
 
 Tests that exercise Grails from the outside, where doing so needs something the core build
-cannot provide — a different JDK, a different Grails major, or a real published artifact.
+cannot provide — a different JDK or a real published artifact.
 
 This is its own Gradle build, so the core build never reaches these projects and `./gradlew build`
 at the repository root is unaffected by anything here.
@@ -34,18 +34,10 @@ applications at via `GRAILS_REPO_URL`.
 |---|---|
 | `agent-skills` | An example Grails 8 application that gets the published agent skills the way the user guide shows: extracted by the SkillsJars Gradle plugin, declared without a version and resolved through the Grails BOM. Its test checks what it and `agent-skills-plain-build` extract. |
 | `agent-skills-plain-build` | The same from a build without the Grails Gradle plugin, which names the Grails BOM on the `skill` configuration itself. |
-| `legacy-g7-command-plugin` | A **standalone build**, not part of this one. Compiles against published Grails 7 / Groovy 4 to produce a genuine precompiled `grails.dev.commands.ApplicationCommand` binary. |
-| `legacy-commands-plugin` | A Grails 8 plugin whose legacy commands are recompiled under Groovy 5. |
-| `legacy-commands` | A Grails 8 application that consumes both and runs their commands through the registry. |
 | `native-i18n` | An application that resolves messages from three kinds of bundle, on a JVM always and inside a GraalVM binary when asked. |
 | `native-i18n-plugin` | A plugin shipping a namespaced message bundle (`native-messages.properties`) and a `plugin.yml`, with a multi-word plugin name. |
 | `spring-dependency-management` | A Grails 8 application that manages its versions with the legacy `io.spring.dependency-management` plugin instead of the Grails Gradle plugin's native `platform(grails-bom)`, as an upgraded Grails 7 application does. |
 | `taglib-index-incremental` | Builds a Grails 8 application **twice, without a clean**, to prove a renamed or deleted tag library cannot survive in the published tag library index. Incremental behaviour is the whole point, so it cannot be expressed by a project the core build builds once for itself. |
-
-`legacy-g7-command-plugin` is deliberately excluded from `settings.gradle`. An included build would
-substitute `org.apache.grails:grails-core` for this repository's Groovy 5 project, which is exactly
-the substitution the fixture exists to avoid — it must be compiled by a real Grails 7 toolchain for
-its trait-woven bytecode to prove anything.
 
 `spring-dependency-management` is here because Spring DM imports a BOM as a **Maven** BOM, resolving
 it in its own detached configuration. That bypasses any project substitution, so the import can only
@@ -143,32 +135,25 @@ though the framework had regressed.
 
 ## JDKs
 
-The Grails 7 half declares the JDK it needs in a `.sdkmanrc`, rather than a Gradle toolchain, so that
-neither the core build nor a contributor's default environment inherits a second JDK requirement:
-
-| Where | JDK | Why |
-|---|---|---|
-| `legacy-g7-command-plugin/.sdkmanrc` | 17, Gradle 8.14.8 | What Grails 7 pins, so the fixture is built the way a Grails 7 plugin actually was. `gradle-bootstrap` generates this wrapper from that file via its `legacyG7Wrapper` task, rather than copying the shared one. |
-| the repository's root `.sdkmanrc` | 21 | The Grails 8 baseline. This build consumes artifacts from the core build, so it runs on whatever the core build runs on — it deliberately does not re-pin that. |
+This build runs on the JDK of the repository's root `.sdkmanrc`. It consumes artifacts from the core
+build, so it runs on whatever the core build runs on — it deliberately does not re-pin that. Only the
+native half of `native-i18n` needs another JDK, a GraalVM: see above.
 
 ## Running locally
 
-Three steps, in order. Each fails with an actionable message if a prior one was skipped.
+Two steps, in order.
 
 Publish Grails to the repository this build resolves from. Both builds publish into the same
-directory and both are needed — the BOM constrains `org.apache.grails.gradle` artifacts too:
+directory and both are needed — the BOM constrains `org.apache.grails.gradle` artifacts too.
+Asked for alone, as here, the publish holds the jars, the POMs and the Gradle module metadata, and
+neither the sources and javadoc jars nor the checksums of a release (`-PcompleteTestRepository=true`
+publishes those as well). The jars are the jars of a release; adding `-PtestRepositoryWithoutSbom=true`
+to both commands builds them without their SBOM (`META-INF/sbom.json`), which is faster but no longer
+what is released, so it is off unless you ask for it:
 
 ```shell
 (cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)
 ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository
-```
-
-Build the Grails 7 fixture — it is consumed as a prebuilt jar:
-
-```shell
-cd end-to-end/legacy-g7-command-plugin
-sdk env
-./gradlew jar
 ```
 
 Run the suite, on the root JDK:
@@ -189,20 +174,18 @@ in the core build, see `DEVELOPMENT.md`) forces the test tasks to run anyway:
 DO_NOT_CACHE_TESTS=1 ./gradlew check
 ```
 
-CI does the same three steps, reading both JDK majors out of the `.sdkmanrc` files. Only the major
-is honoured there: `sdk env` gives a developer the exact Liberica patch, but these are test builds
+CI does the same two steps, reading the JDK major out of the root `.sdkmanrc`. Only the major is
+honoured there: `sdk env` gives a developer the exact Liberica patch, but these are test builds
 outside the reproducible-build surface, so CI deliberately takes the runner's current release of
-each major. See `.github/workflows/end-to-end.yml`.
+that major. See `.github/workflows/end-to-end.yml`.
 
 ## Style and analysis checks
 
 These projects are deliberately outside the violation gate — no `grails-code-style` or
 `grails-code-analysis` plugin is applied here, matching every other test-example application in the
 repository (none of the `grails-test-examples/*` projects apply them either, and the root
-`aggregateViolations` reports only collect from projects that do). They are fixtures: the
-application and plugin sources exist to exercise the command registry, and the Grails 7 fixture
-must stay compilable by a real Grails 7 toolchain, which the current convention plugins do not
-target.
+`aggregateViolations` reports only collect from projects that do). They are fixtures: their
+sources exist to exercise what the published artifacts do, and are never shipped.
 
 ## Why not `includeBuild('..')`
 

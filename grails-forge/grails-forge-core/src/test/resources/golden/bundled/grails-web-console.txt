@@ -1,0 +1,126 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: runtimeOnly org.grails.plugins:grails-web-console in the version of Forge
+
+# web
+title: Web Console
+description: A web-based Groovy console for interactive runtime application management and debugging.
+category: Management
+documentation: https://github.com/grails-plugins/grails-web-console/#readme
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-web-console documentation
++ - [Grails Web Console documentation](https://github.com/grails-plugins/grails-web-console/#readme)
++ 
++ 
+== build.gradle
++     runtimeOnly "org.grails.plugins:grails-web-console:VERSION"
+== grails-app/conf/application.yml
++     grails:
++       plugin:
++         console:
++           enabled: false
++           fileStore:
++             remote:
++               enabled: false
+
+# rest_api
+title: Web Console
+description: A web-based Groovy console for interactive runtime application management and debugging.
+category: Management
+documentation: https://github.com/grails-plugins/grails-web-console/#readme
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-web-console documentation
++ - [Grails Web Console documentation](https://github.com/grails-plugins/grails-web-console/#readme)
++ 
++ 
+== build.gradle
++     runtimeOnly "org.grails.plugins:grails-web-console:VERSION"
+== grails-app/conf/application.yml
++     grails:
++       plugin:
++         console:
++           enabled: false
++           fileStore:
++             remote:
++               enabled: false
+
+# web_plugin
+title: Web Console
+description: A web-based Groovy console for interactive runtime application management and debugging.
+category: Management
+documentation: https://github.com/grails-plugins/grails-web-console/#readme
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-web-console documentation
++ - [Grails Web Console documentation](https://github.com/grails-plugins/grails-web-console/#readme)
++ 
++ 
+== build.gradle
++     runtimeOnly "org.grails.plugins:grails-web-console:VERSION"
+== grails-app/conf/application.yml
++     grails:
++       plugin:
++         console:
++           enabled: false
++           fileStore:
++             remote:
++               enabled: false
+
+# plugin
+title: Web Console
+description: A web-based Groovy console for interactive runtime application management and debugging.
+category: Management
+documentation: https://github.com/grails-plugins/grails-web-console/#readme
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-web-console documentation
++ - [Grails Web Console documentation](https://github.com/grails-plugins/grails-web-console/#readme)
++ 
++ 
+== build.gradle
++     runtimeOnly "org.grails.plugins:grails-web-console:VERSION"
+== grails-app/conf/application.yml
++     grails:
++       plugin:
++         console:
++           enabled: false
++           fileStore:
++             remote:
++               enabled: false
+
+# rest_api_plugin
+title: Web Console
+description: A web-based Groovy console for interactive runtime application management and debugging.
+category: Management
+documentation: https://github.com/grails-plugins/grails-web-console/#readme
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-web-console documentation
++ - [Grails Web Console documentation](https://github.com/grails-plugins/grails-web-console/#readme)
++ 
++ 
+== build.gradle
++     runtimeOnly "org.grails.plugins:grails-web-console:VERSION"
+== grails-app/conf/application.yml
++     grails:
++       plugin:
++         console:
++           enabled: false
++           fileStore:
++             remote:
++               enabled: false
+

@@ -31,7 +31,6 @@ plugins {
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.gradle.grails-plugin'
-    id 'org.apache.grails.gradle.grails-plugin-cli'
 }
 
 version = projectVersion
@@ -39,7 +38,7 @@ group = 'org.apache.grails'
 
 cliArtifact {
     automaticModuleName = 'org.apache.grails.security.cli'
-    // this framework module wires its cli dependencies with project dependencies below
+    // this framework module wires the dependencies of its tools with project dependencies below
     defaultDependencies = false
 }
 
@@ -48,7 +47,22 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    // the cli tier — published separately as a companion -cli artifact
+    // the tools that run as a process of their own (s2-create-persistent-token, s2-create-role-hierarchy-entry), and
+    // the helpers s2-quickstart shares with them: published as the companion -cli-standalone, which is compiled against
+    // the tool API and nothing of the plugin
+    standaloneImplementation platform(project(':grails-bom'))
+    standaloneApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+    // GrailsConsole (used by the tools) needs jline at compile time
+    standaloneImplementation 'org.jline:jline'
+
+    standaloneCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
+    // s2-quickstart, which the build runs without starting the application: published as the companion -cli, with
+    // the plugin, the tool API and the standalone tools whose helpers it uses
     cliImplementation platform(project(':grails-bom'))
     cliApi project(project.path)
     cliApi(project(':grails-core')) {
@@ -56,7 +70,11 @@ dependencies {
             requireCapability('org.apache.grails:grails-core-cli')
         }
     }
-    // GrailsConsole (used by the s2-* commands) needs jline at compile time
+    cliApi(project(project.path)) {
+        capabilities {
+            requireCapability("${project.group}:${project.name}-cli-standalone")
+        }
+    }
     cliImplementation 'org.jline:jline'
 
     cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
@@ -122,6 +140,18 @@ dependencies {
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during tests
+
+    // SecurityToolsLocationSpec reads the POM and the module metadata of the companions
+    testCliImplementation 'org.apache.groovy:groovy-json'
+    testCliImplementation 'org.apache.groovy:groovy-xml'
+    // SecurityToolsDeclaredArgumentsSpec runs s2-quickstart as the runTool task does, with the class that runs a tool
+    testCliRuntimeOnly project(':grails-console')
+}
+
+// the templates the tools render are in the companion of the tools as well as in the plugin: the same staged
+// directory the plugin's jar has them from
+sourceSets.named('standalone') { SourceSet standalone ->
+    standalone.output.dir([builtBy: tasks.named('copyTemplates')], layout.buildDirectory.dir('grails/plugin-templates'))
 }
 
 apply {
@@ -137,4 +167,41 @@ sourceSets.main.groovy.srcDir('grails-app/conf')
 tasks.named('generateConfigurationMetadata') {
     dslConfigurationFiles.from(file('grails-app/conf/DefaultSecurityConfig.groovy'))
     dslRootPrefixes.put('security', 'grails.plugin.springsecurity')
+}
+
+// SecurityToolsLocationSpec reads the jar, the POM and the module metadata of each companion of the four Spring
+// Security plugins that have tools, as the build publishes them
+tasks.named('testCli', Test) { Test test ->
+    ToolCompanionFiles companions = new ToolCompanionFiles()
+    [':grails-spring-security', ':grails-spring-security-acl', ':grails-spring-security-oauth2', ':grails-spring-security-ui'].each { String path ->
+        Project plugin = project(path)
+        String name = path.substring(1)
+        ['cli': 'cliJar', 'cliStandalone': 'standaloneJar'].each { String publication, String jar ->
+            String artifact = publication == 'cli' ? "${name}-cli" : "${name}-cli-standalone"
+            companions.files["${name}.${publication}.jar".toString()] = plugin.layout.buildDirectory.file("libs/${artifact}-${projectVersion}.jar")
+            companions.files["${name}.${publication}.pom".toString()] = plugin.layout.buildDirectory.file("publications/${publication}/pom-default.xml")
+            companions.files["${name}.${publication}.module".toString()] = plugin.layout.buildDirectory.file("publications/${publication}/module.json")
+            test.dependsOn("${path}:${jar}", "${path}:generatePomFileFor${publication.capitalize()}Publication",
+                    "${path}:generateMetadataFileFor${publication.capitalize()}Publication")
+        }
+    }
+    test.jvmArgumentProviders.add(companions)
+}
+
+/** Hands the specs the files of the companions, as {@code -Dtools.<project>.<publication>.<jar|pom|module>=<path>}. */
+class ToolCompanionFiles implements CommandLineArgumentProvider {
+
+    @Internal
+    Map<String, Provider<RegularFile>> files = [:]
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.NAME_ONLY)
+    List<Provider<RegularFile>> getCompanionFiles() {
+        files.values().toList()
+    }
+
+    @Override
+    Iterable<String> asArguments() {
+        files.collect { String key, Provider<RegularFile> file -> "-Dtools.${key}=${file.get().asFile.absolutePath}".toString() }
+    }
 }

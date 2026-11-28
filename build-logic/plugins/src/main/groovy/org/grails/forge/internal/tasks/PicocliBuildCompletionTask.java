@@ -31,10 +31,25 @@ import org.gradle.process.ExecOperations;
 
 import javax.inject.Inject;
 
+/**
+ * Writes the completion script of a command line for bash and zsh: runs the class that writes it, on the
+ * class path of the command line, with the name the script completes and the file
+ * {@code <name>_completion} in the output directory.
+ */
 @CacheableTask
 public abstract class PicocliBuildCompletionTask extends DefaultTask {
+
+    /**
+     * @return the class whose {@code main} writes the script, given the name it completes and the file to write
+     */
     @Input
     public abstract Property<String> getMainClass();
+
+    /**
+     * @return the name the script completes, which is the name of the program
+     */
+    @Input
+    public abstract Property<String> getCommandName();
 
     @Classpath
     public abstract ConfigurableFileCollection getClasspath();
@@ -47,15 +62,13 @@ public abstract class PicocliBuildCompletionTask extends DefaultTask {
 
     @TaskAction
     public void execute() {
+        String name = getCommandName().get();
         getExecOperations().javaexec(spec -> {
             spec.setClasspath(getClasspath());
-            spec.getMainClass().set("picocli.AutoComplete");
-            spec.jvmArgs("-Dpicocli.autocomplete.systemExitOnError");
+            spec.getMainClass().set(getMainClass());
             spec.args(
-                    getMainClass().get(),
-                    "--completionScript=" + getOutputDirectory().file("grails_forge_cli_completion").get().getAsFile().getAbsolutePath(),
-                    "--force",
-                    "--factory=org.grails.forge.cli.GrailsPicocliFactory"
+                    name,
+                    getOutputDirectory().file(name + "_completion").get().getAsFile().getAbsolutePath()
             );
         });
     }

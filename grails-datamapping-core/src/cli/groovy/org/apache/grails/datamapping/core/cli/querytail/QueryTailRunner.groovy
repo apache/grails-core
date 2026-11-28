@@ -24,8 +24,8 @@ import org.apache.grails.datamapping.core.querytail.QueryTailRecord
 
 /**
  * Runs the {@code query-tail} command: waits for the capture file, follows it, and prints the
- * summary or the stream until stopped. The command script hands it the console and stops it when
- * the shell cancels the command.
+ * summary or the stream until stopped. {@link QueryTailTool} hands it where to write and stops
+ * it when the JVM the build runs the command in ends.
  *
  * @since 9.0
  */

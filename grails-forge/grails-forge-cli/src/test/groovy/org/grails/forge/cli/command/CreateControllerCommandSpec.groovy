@@ -58,7 +58,9 @@ class CreateControllerCommandSpec extends CommandSpec implements CommandFixture 
         when:
         command.controllerName  = 'Greeting'
         def exitCode = command.call()
-        executeGradleCommand('build')
+        // The functional test of the application drives a browser in a container, and the runners of
+        // Windows start no Linux container: there the application is built and tested without that task.
+        executeGradleCommand(File.separatorChar == ('\\' as char) ? 'build -x integrationTest' : 'build')
 
         then:
         exitCode == 0

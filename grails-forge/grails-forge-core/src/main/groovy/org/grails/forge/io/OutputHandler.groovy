@@ -30,4 +30,15 @@ interface OutputHandler extends Closeable {
 
     String getOutputLocation()
 
+    /**
+     * Told once an application is generated, when files of it were not written because there were
+     * files of their names already. The state of the project has those files as they would have been
+     * generated.
+     *
+     * @param files the files that were not written, by the path each would have been written to
+     * @since 9.0
+     */
+    default void kept(Map<String, Template> files) {
+    }
+
 }

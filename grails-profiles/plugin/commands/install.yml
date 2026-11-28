@@ -1,8 +1,0 @@
-description: Installs a plugin into the local Maven cache
-minArguments: 0
-usage: |
- install
-steps:
- - command: gradle
-   tasks:
-     - install

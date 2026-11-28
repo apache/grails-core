@@ -24,9 +24,7 @@ import javax.inject.Inject
 import groovy.transform.CompileStatic
 
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Input
 import org.gradle.process.ExecOperations
 
 import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
@@ -40,15 +38,6 @@ import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
 @CompileStatic
 @CacheableTask
 abstract class MarkupViewCompilerTask extends AbstractGroovyTemplateCompileTask {
-
-    @Input
-    final Property<String> fileExtension
-
-    @Input
-    final Property<String> scriptBaseName
-
-    @Input
-    final Property<String> compilerName
 
     @Inject
     MarkupViewCompilerTask(ExecOperations execOperations, ObjectFactory objectFactory) {

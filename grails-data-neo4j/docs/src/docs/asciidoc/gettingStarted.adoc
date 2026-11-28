@@ -19,15 +19,21 @@ under the License.
 
 To get started with GORM for Neo4j you need to install the plugin into a Grails application.
 
-For Grails 3.x and above you need to edit your `build.gradle` file and add the plugin as a dependency:
+Edit your `build.gradle` file: import `grails-neo4j-bom` as the Grails BOM of the application, in place of `grails-bom`, and add the plugin as a dependency:
 
-[source,groovy,subs="attributes"]
+[source,groovy]
 .build.gradle
 ----
 dependencies {
-	compile 'org.grails.plugins:neo4j:{pluginVersion}'
+    implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
+    implementation 'org.apache.grails:grails-data-neo4j'
 }
 ----
+
+`grails-data-neo4j` needs the version of the Neo4j driver that `grails-neo4j-bom` manages. With `grails-bom`, which manages the newer driver of Spring Boot, the runtime class path of the application does not resolve. Import the same BOM on the `buildscript` classpath and in `buildSrc` when the build has them.
+`grails-neo4j-bom` imports `grails-bom`, so GORM for Neo4j can be used together with GORM for Hibernate 5. There is no Grails BOM for GORM for Neo4j together with Hibernate 7 or with Micronaut.
+
+Grails Forge generates such a build for `--data=neo4j` and for the `gorm-neo4j` feature.
 
 If you are using a version of Grails 3 earlier than 3.3 then you may need to enforce the GORM version. If you are using Grails 3.2.7 or above this can be done by modifying the `gormVersion` setting in `gradle.properties`:
 

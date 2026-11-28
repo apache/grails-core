@@ -1,0 +1,13 @@
+JSON Schema Validator
+Copyright (c) 2016 and onwards Network New Technologies Inc.
+
+// ------------------------------------------------------------------
+// NOTICE file corresponding to the section 4d of The Apache License,
+// Version 2.0, in this case for
+// ------------------------------------------------------------------
+
+Apache Commons Validator
+Copyright 2001-2023 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).

@@ -19,13 +19,22 @@
 
 package org.grails.forge.feature.grails
 
+import java.util.regex.Pattern
+
+import grails.util.GrailsNameUtils
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.OperatingSystem
+import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.io.ConsoleOutput
+import org.grails.forge.io.MapOutputHandler
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
+import org.grails.forge.util.NameUtils
+import spock.lang.Unroll
 
 class GrailsDefaultPluginsSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
@@ -49,6 +58,52 @@ class GrailsDefaultPluginsSpec extends ApplicationContextSpec implements Command
         output.containsKey("grails-app/i18n/messages.properties")
         !(Arrays.asList("cs", "da", "de", "es", "fr", "it", "ja", "nb", "nl", "pl", "pt_BR", "pt_PT", "ru", "sk", "sv", "th", "zh_CN", "zh_TW")
                 .findAll {prop -> { !output.containsKey("grails-app/i18n/messages_" + prop + ".properties") }})
+    }
+
+    @Unroll
+    void "a #type has its message bundles under the name of the plugin, the only base name the build of a plugin takes"() {
+        given:
+        MapOutputHandler handler = new MapOutputHandler()
+        beanContext.getBean(ProjectGenerator).generate(type, NameUtils.parse(name), new Options(), OperatingSystem.MACOS_ARCH64,
+                [], handler, ConsoleOutput.NOOP)
+        Map<String, String> output = handler.getProject()
+        List<String> bundles = output.keySet().findAll { it.startsWith('grails-app/i18n/') }.sort()
+        String descriptor = output.keySet().find { it.endsWith('GrailsPlugin.groovy') }
+
+        expect: 'the name the framework gives the plugin, from the name of its class'
+        descriptor.endsWith("/${pluginClass}.groovy")
+        GrailsNameUtils.getPluginName("${pluginClass}.groovy") == baseName
+
+        and: 'every bundle is that base name, or a locale of it: none is messages, which is the application\'s'
+        bundles.size() == 19
+        bundles.contains("grails-app/i18n/${baseName}.properties".toString())
+        bundles.every { it ==~ "grails-app/i18n/${Pattern.quote(baseName)}(_[a-z]{2}(_[A-Z]{2})?)?\\.properties" }
+        !bundles.any { it.contains('/messages') }
+
+        and: 'with what the bundles of an application have'
+        output["grails-app/i18n/${baseName}.properties".toString()].contains('welcome.title=')
+        output["grails-app/i18n/${baseName}_ja.properties".toString()].contains('welcome.title=Grailsへようこそ')
+
+        where:
+        type                       | name                    | pluginClass             | baseName
+        ApplicationType.PLUGIN     | 'example.tools'         | 'ToolsGrailsPlugin'     | 'tools'
+        ApplicationType.WEB_PLUGIN | 'example.tools'         | 'ToolsGrailsPlugin'     | 'tools'
+        ApplicationType.PLUGIN     | 'example.audit-log'     | 'AuditLogGrailsPlugin'  | 'audit-log'
+        ApplicationType.WEB_PLUGIN | 'com.example.shopAdmin' | 'ShopAdminGrailsPlugin' | 'shop-admin'
+        ApplicationType.REST_API_PLUGIN | 'com.example.shopApi' | 'ShopApiGrailsPlugin'  | 'shop-api'
+    }
+
+    @Unroll
+    void "a #type keeps its message bundles under the base name messages"() {
+        given:
+        final Map<String, String> output = generate(type, new Options(DevelopmentReloading.DEVTOOLS))
+
+        expect:
+        output.keySet().findAll { it.startsWith('grails-app/i18n/') }.size() == 19
+        output.keySet().findAll { it.startsWith('grails-app/i18n/') }.every { it.startsWith('grails-app/i18n/messages') }
+
+        where:
+        type << [ApplicationType.WEB, ApplicationType.REST_API]
     }
 
     void "test i18n bundles are key-complete and MessageFormat-safe"() {

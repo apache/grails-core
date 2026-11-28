@@ -34,23 +34,21 @@ For further reference please see the [Geb documentation](https://groovy.apache.o
 To use the plugin, add the following dependencies to your `build.gradle` file:
 ```groovy
 dependencies {
-    
-    // This is only needed to if you want to use the
-    // create-functional-test command (see below)
-    implementation 'org.apache.grails:grails-geb'
-    
     // This is needed to compile and run the tests
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 ```
 
-To get started, you can use the `create-functional-test` command to generate a new functional test using Geb:
+To get started, you can use the `create-functional-test` command of the `grails` command line to generate a new functional test using Geb:
 
 ```console
-./grailsw create-functional-test com.example.MyFunctionalSpec
+./grailsw create-functional-test com.example.MyFunctional
 ```
 
 This will create a new Geb test named `MyFunctionalSpec` in the `src/integration-test/groovy/com/example` directory.
+The test extends `ContainerGebSpec` in a project with the `geb-with-testcontainers` feature, which a web application created with Grails has by default, and `GebSpec` in a project with the `geb-with-local-browsers` feature.
+The command is there when the record of the project (`.grails`) lists one of the two features; `./grailsw feature add geb-with-testcontainers` adds the feature to a project that has none.
+The plugin itself no longer ships a `create-functional-test` script, so the `implementation 'org.apache.grails:grails-geb'` dependency that only made the script available is not needed.
 
 There are two ways to use this plugin. Either extend your test classes with the `ContainerGebSpec` class or with the `GebSpec` class.
 

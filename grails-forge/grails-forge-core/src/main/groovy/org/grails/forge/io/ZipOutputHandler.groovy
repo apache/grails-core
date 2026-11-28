@@ -78,6 +78,9 @@ class ZipOutputHandler implements OutputHandler {
 
     @Override
     void write(String path, Template contents) throws IOException {
+        if (!OutputUtils.isRelativePath(path)) {
+            throw new IOException("The file ${path} is not a path inside the archive")
+        }
         String entryName = (directory != null ? joinUri(directory, path) : path)
 
         // ensure parent directories exist as explicit dir entries

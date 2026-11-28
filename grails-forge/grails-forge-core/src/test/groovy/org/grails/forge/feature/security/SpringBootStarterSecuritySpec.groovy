@@ -22,6 +22,7 @@ package org.grails.forge.feature.security
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Category
+import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
@@ -152,7 +153,7 @@ class SpringBootStarterSecuritySpec extends ApplicationContextSpec implements Co
 
     void 'the feature appears in its own Spring Security category with the agreed title'() {
         given:
-        def feature = beanContext.getBean(SpringBootStarterSecurity)
+        def feature = beanContext.getBean(FeatureRegistry).all().find { it.name == 'spring-boot-starter-security' }
 
         expect:
         feature.name == 'spring-boot-starter-security'
@@ -184,6 +185,6 @@ class SpringBootStarterSecuritySpec extends ApplicationContextSpec implements Co
         e.message == 'The requested feature does not exist: spring-boot-starter-security'
 
         where:
-        applicationType << [ApplicationType.PLUGIN, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.PLUGIN, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
     }
 }

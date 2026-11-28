@@ -17,29 +17,14 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-[NOTE]
-====
-The `create-app` and related commands are available in both the Grails Shell CLI and the Grails Forge CLI.
-
-- To create a project using the default Grails Shell CLI:
-`$ grails create-app myapp`
-- To use Forge-specific options (such as `--java-version`, `--features`, etc.):
-`$ grails -t forge create-app myapp`
-
-====
-
-The primary command for creating a new project is `create-app`, which creates a standard Grails web application that communicates over HTTP. For other types of applications, see the documentation below.
-
-Creating a project is the primary usage of the Grails Forge CLI.  You can also generate an application with grails-shell, which uses profiles for generation.
-
-The `create-app` and other commands support extended options in Forge, which must be run using the following format:
+The primary command for creating a new project is `create-app`, which creates a standard Grails web application that communicates over HTTP. There is one command for each type of application, shown below, and each takes options that choose the features of the project; see link:applicationTypes.html[Application Types, Features and Feature Packs] for what types and features are.
 
 [source,console]
 ----
-$ ./grails -t forge create-app myapp
+$ grails create-app myapp
 ----
 
-After generating a project with Forge, switch to the created directory and use the default Grails shell CLI (`./grails`) to manage, run, test, and deploy your application.
+After generating a project, switch to the created directory and use `grails`, or the Grails wrapper `./grailsw` the project has, to manage, run, test, and deploy your application.
 
 [cols="1,3,4a,8a"]
 |===
@@ -49,20 +34,20 @@ After generating a project with Forge, switch to the created directory and use t
 | Creates a Grails web application
 |
 [none]
-* -jdk, --java-version
+* --jdk, --java-version
 * -s, --servlet
 * -d, --data (-g, --gorm are legacy aliases)
-* -t, --test
+* -r, --reloading
 * -f, --features
+* --exclude-features
 * -i, --inplace
 |
 [source,console]
 ----
-./grails -t forge create-app \
+grails create-app \
     --servlet=tomcat \
-    --jdk=11 \
+    --jdk=21 \
     --data=hibernate5 \
-    --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
 ----
@@ -71,64 +56,86 @@ After generating a project with Forge, switch to the created directory and use t
 | Creates a Grails REST API application
 |
 [none]
-* -jdk, --java-version
+* --jdk, --java-version
 * -s, --servlet
 * -d, --data (-g, --gorm are legacy aliases)
-* -t, --test
+* -r, --reloading
 * -f, --features
+* --exclude-features
 * -i, --inplace
 |
 [source,console]
 ----
-./grails -t forge create-restapi \
+grails create-restapi \
     --servlet=tomcat \
-    --jdk=11 \
+    --jdk=21 \
     --data=hibernate5 \
-    --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
 ----
 
 | create-plugin
-| Creates a Grails Plugin application
+| Creates a Grails plugin
 |
 [none]
-* -jdk, --java-version
+* --jdk, --java-version
 * -s, --servlet
 * -d, --data (-g, --gorm are legacy aliases)
-* -t, --test
+* -r, --reloading
 * -f, --features
+* --exclude-features
 * -i, --inplace
 |
 [source,console]
 ----
-./grails -t forge create-plugin \
+grails create-plugin \
     --servlet=tomcat \
-    --jdk=11 \
+    --jdk=21 \
     --data=hibernate5 \
-    --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
 ----
 
 | create-web-plugin
-| Creates a Grails Web Plugin application
+| Creates a Grails plugin with a web layer
 |
 [none]
-* -jdk, --java-version
+* --jdk, --java-version
 * -s, --servlet
 * -d, --data (-g, --gorm are legacy aliases)
-* -t, --test
+* -r, --reloading
 * -f, --features
+* --exclude-features
 * -i, --inplace
 |
 [source,console]
 ----
-./grails -t forge create-web-plugin \
+grails create-web-plugin \
     --servlet=tomcat \
-    --jdk=11 \
+    --jdk=21 \
     --data=hibernate5 \
-    --test=spock \
+    --features=github-workflow-java-ci \
+    com.example.demo
+----
+
+| create-rest-api-plugin
+| Creates a Grails plugin with a REST API
+|
+[none]
+* --jdk, --java-version
+* -s, --servlet
+* -d, --data (-g, --gorm are legacy aliases)
+* -r, --reloading
+* -f, --features
+* --exclude-features
+* -i, --inplace
+|
+[source,console]
+----
+grails create-rest-api-plugin \
+    --servlet=tomcat \
+    --jdk=21 \
+    --data=hibernate5 \
     --features=github-workflow-java-ci \
     com.example.demo
 ----
@@ -136,14 +143,14 @@ After generating a project with Forge, switch to the created directory and use t
 
 === The `create-` command flags
 
-The "create-*" commands are used to produce a fundamental Grails project, allowing for the inclusion of optional flags to select additional features, to customize Grails Data settings, an embedded servlet, the test framework, and the Java version.
+The "create-*" commands are used to produce a fundamental Grails project, allowing for the inclusion of optional flags to select additional features, to customize Grails Data settings, an embedded servlet, the reloading, and the Java version.
 
 [cols="4,8,6a"]
 |===
 | Flag | Description | Example
 
-| -jdk, --java-version
-| The JDK version the project should target
+| --jdk, --java-version
+| The JDK version the project should target. Possible values: 21, 25, 26.
 |
 [source,shell]
 ----
@@ -151,7 +158,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | -s, --servlet
-| Which Servlet Implementation to configure. Possible values: none, tomcat, jetty, undertow.
+| Which Servlet Implementation to configure. Possible values: tomcat, jetty, undertow, none.
 |
 [source,shell]
 ----
@@ -159,35 +166,810 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | -d, --data (-g, --gorm are legacy aliases)
-| Which Grails Data implementation to configure. Possible values: hibernate5, hibernate7, mongodb. The value hibernate is accepted as a legacy alias for hibernate5.
+| Which Grails Data implementation to configure. Possible values: hibernate5, hibernate7, mongodb, neo4j. The value hibernate is accepted as a legacy alias for hibernate5. The application imports the Grails BOM that matches: `grails-hibernate7-bom` with hibernate7, `grails-neo4j-bom` with neo4j or the gorm-neo4j feature, and `grails-bom` otherwise. GORM for Neo4j cannot be combined with Hibernate 7 or with the grails-micronaut feature, because no Grails BOM covers those combinations. The command refuses them and says why, and `--list-features` marks such a feature.
 |
 [source,shell]
 ----
 --data hibernate5
 ----
 
-| -t, --test
-| Which test framework to use. Possible values: junit, spock.
+| -r, --reloading
+| Which development reloading option to use. Possible values: devtools, jrebel, none.
 |
 [source,shell]
 ----
---test spock
+--reloading devtools
 ----
 
 | -f, --features
-| The features to use. Possible values: h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, gorm-graphql, assertj, mockito, grails-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties, grails-spring-ai, spring-ai-openai, spring-ai-anthropic, spring-ai-ollama
+| The features to use, in addition to the default ones. `--list-features` lists the features of the type of application and marks the default ones; `--help` names them too. The feature of a published plugin is selected with the coordinates of the plugin, `group:artifact:version`; see xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
 |
 [source,shell]
 ----
 --features github-workflow-java-ci,micronaut-http-client
 ----
 
+| --exclude-features
+| The features to leave out of those the project would have by default, which `--list-features` marks with `(+)`; given together, the two options show the defaults that remain. Takes a list of feature names separated by commas and can be given more than once. A feature cannot be left out when it is also selected, when a feature of the project requires it, when it is the Grails Data implementation of the project (choose another with `--data`), when the project would lose a part it is built on with it, as a REST API would lose its web layer without `views-json`, or when what another feature of the project generates relies on it, as the pages of a web application rely on `asset-pipeline-grails` and its URL mappings on `gsp`: the command says why and creates nothing. A feature the project would not have anyway can be named too: nothing is left out then, but the name is recorded and the command still refuses it should a feature of the project require it. The features that were left out are recorded as `excludedFeatures` in `.grails/project.yml`.
+|
+[source,shell]
+----
+--exclude-features mockito,scaffolding
+----
+
 | -i, --inplace
-| Create a project using the current directory
+| Create the project in the current directory, and not in a new directory named after it. Without a name, the project is named after the current directory. See "Creating a project in the current directory" below.
 |
 [source,shell]
 ----
 --inplace
 ----
 
+| --subproject
+| Create the project as a project of the Gradle build the directory is in, with the files of the application only. See "Creating a project in an existing Gradle build" below.
+|
+[source,shell]
+----
+--subproject
+----
+
+| --feature-option
+| An option of a feature, which the feature pack of the feature declares as a parameter: the name of the feature, a dot, the name of the option and its value. Can be given more than once. An option the feature does not have, or a value the option cannot have, is refused. See xref:plugins#forgeFeaturePackParameters[Parameters].
+|
+[source,shell]
+----
+--feature-option acme-audit.store=collection
+----
+
+| --feature-pack-dir
+| A directory that holds the feature pack of a plugin, whose feature can then be selected with `--features`. Can be given more than once. A pack is code: use one only when you trust where it comes from. See xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
+|
+[source,shell]
+----
+--feature-pack-dir ../acme-audit/src/main/forge
+----
+
+| --feature-pack-repository
+| A Maven repository to take the feature pack of a published plugin from, when the plugin is given to `--features` by its coordinates (`group:artifact:version`). The address is `https`, or `file:` for a directory. When the option is given, only the repositories it names are asked; without it, those of `GRAILS_REPO_URL` and then Maven Central are, and an entry of `GRAILS_REPO_URL` that is not `https` or the absolute path of a directory, or that has credentials in it, is left out with a warning. A repository that fails, or a jar that cannot be used, ends the command with exit code 1; an address that cannot be read is exit code 2. Can be given more than once.
+|
+[source,shell]
+----
+--features com.acme:acme-audit-grails:2.3.0 --feature-pack-repository https://repo.acme.example/maven
+----
+
+| --feature-pack-sha256
+| The SHA-256 the jar of a plugin that is given to `--features` by its coordinates has to have, as `group:artifact:version=sha256`. A jar with another one is refused before it is opened. Can be given more than once.
+|
+[source,shell]
+----
+--feature-pack-sha256 com.acme:acme-audit-grails:2.3.0=<sha256>
+----
+
+| --feature-catalog
+| A feature catalog, in which a name given to `--features` that is neither a feature of Grails nor that of a feature pack that was given is looked up; the feature pack is then taken from the plugin and the version the catalog has for the name. There is no catalog unless one is named, with this option, with the `GRAILS_FORGE_CATALOG` environment variable, or with the `GRAILS_PLUGIN_INDEX` environment variable when `GRAILS_FORGE_CATALOG` names none. A catalog chooses the plugin, can name the repository it is fetched from and supplies the SHA-256 it is checked against: name one only when you trust it as you trust the plugins. The address is `https`, or `file:` for a file, and `none` is for no catalog. A catalog that cannot be read ends the command with exit code 1; an address that cannot be read is exit code 2. Can be given more than once. See xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
+|
+[source,shell]
+----
+--features acme-audit --feature-catalog https://catalog.acme.example/index.json
+----
+
+| --preset
+| The preset the project is made from: a pack of an organisation or a team that is for the type of the project, gives the options their defaults, asks for features and adds dependencies, configuration and files as a feature pack does. It is given as the coordinates of its artifact, `group:artifact:version`, which are taken from the repositories as those of a feature pack are and can be held to a SHA-256 with `--feature-pack-sha256`; as a jar or a directory, by a path with a `/` in it, such as `./acme-preset`; or by its name in a feature catalog. An option given on the command line is used in place of the one of the preset, which is used in place of the default of Grails. A preset of another type of project is refused with exit code 2, and so is a feature pack. Given once. A preset is code: use one only when you trust where it comes from. See xref:applicationTypes#presets[Making Applications from a Preset].
+|
+[source,shell]
+----
+--preset com.acme:acme-service-preset:1.0.0
+----
+
+| --list-catalog-features
+| Output the features of the feature catalogs that can be selected by their name, with the plugin and the version each would be taken from. `--list-features` reads a catalog only when a name given with `--features` has to be looked up.
+|
+[source,shell]
+----
+--list-catalog-features
+----
+
+| --refresh
+| Read each feature catalog anew, and not the copy of it that is kept in `.grails/forge/catalogs` of the home directory for 24 hours, and fetch the jar of each plugin whose feature pack is used, and not the copy of it that is kept in `.grails/forge/packs`.
+|
+[source,shell]
+----
+--refresh
+----
+
+| --offline
+| Make no request to the network: a feature catalog is read from its copy on this computer or from a file, and the feature pack of a plugin is taken from a repository that is a directory, or from the copy of its jar that is kept in `.grails/forge/packs` of the home directory since it was last fetched. See xref:plugins#forgePackJars[The Jars on Your Computer].
+|
+[source,shell]
+----
+--offline
+----
+
 |===
+
+The features of a project do not depend on the order they are named in. A feature brings in the features it requires, and the features that nothing selected are then given their defaults: selecting `postgres`, for example, leaves out the default database driver `h2`. The servlet container and the reloading a project has when `--servlet` and `--reloading` are not given are defaults of the same kind and give way in the same way: without `--servlet`, a feature that requires Jetty gives a project with Jetty and without Tomcat. Without `--data`, the default Grails Data implementation, Hibernate 5, gives way to Hibernate 7: `--features gorm-hibernate7` gives a Hibernate 7 project. An option that is given on the command line is a choice and does not give way: `--data hibernate5 --features gorm-hibernate7` asks for two things that cannot both be had, as does `--servlet none` with a feature that requires a servlet container, and the command refuses them rather than choose one. What is recorded of the options is what the project has: `data: hibernate7` in the first example, and `servlet: none` for a plugin, which has no servlet container unless one is asked for. Features and options that cannot be had as they were asked for, and a value an option cannot have, are a mistake in the command line: the command says what is wrong, shows its usage and ends with exit code 2, and nothing is created.
+
+=== Creating a project in the current directory
+
+`--inplace` creates the project in the current directory, and not in a new directory named after it. The name can then be left out, and the project is named after the current directory:
+
+[source,shell]
+----
+mkdir bookstore
+cd bookstore
+grails create-app --inplace
+----
+
+* The name of the directory is the name of the project, and the default package is made from it as from a name given without a package. `bookstore` is the project `bookstore` in the package `bookstore`, and `my-shop` the project `my-shop` in the package `my.shop`, as `grails create-app bookstore` and `grails create-app my-shop` make them. This is the directory the command is run in, and a symbolic link on the way to it does not name it: the name is that of the directory the link leads to.
+* A name that is given is used as it is without `--inplace`, with or without a package: in any directory, `grails create-app --inplace com.example.bookstore` creates the project `bookstore` in the package `com.example` there.
+* A directory whose name the project cannot have is refused, with exit code 2, and nothing is written: a name with a dot, which in the name of a project ends its package, a name with a character that cannot be part of the name of a class, such as a space, a name that gives no package, such as one that starts with a digit, and the root of a file system, which has no name. The message names the directory. Give the name of the project then.
+* A file the directory already has is kept, and a directory that already has the record of a project is refused, as "The `.grails` directory of a project" below describes. The `create-` commands have no `--force` that would replace such a file.
+* With `--subproject` the current directory becomes the project of the build around it, under the name of the directory.
+* The record of the project has the name and the package, and not that the project was created in place: `project show` prints the `create-` command with the name and its package, such as `grails create-app bookstore.bookstore`, which creates the same project in a new directory `bookstore`.
+
+=== Creating a project in an existing Gradle build
+
+In a directory of a Gradle build, that is at or below a directory with a `settings.gradle` or a `settings.gradle.kts`, `--subproject` creates the application as a project of that build:
+
+[source,shell]
+----
+cd acme/apps
+grails create-app --subproject com.acme.shop
+----
+
+[source]
+----
+| Application created at /work/acme/apps/shop
+| The application is not a part of the build yet. Add this line to /work/acme/settings.gradle:
+    include 'apps:shop'
+| Its tasks are then those of the project :apps:shop, run with the Gradle wrapper of the build, as the tools of the application do
+----
+
+* Only the files of the application are written. The files that belong to the root of a build are not: the Gradle wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper`), a `settings.gradle`, the Grails wrapper (`grailsw`, `grailsw.bat`, `grails-wrapper.jar`) and the `.gitattributes` that is there for the wrapper scripts. The `gradle.properties` of the application has its `grailsVersion` and `version`, and not the `org.gradle.` settings, which Gradle reads at the root of a build only.
+* The settings of the build are yours and are not changed. The command prints the line that includes the application, in the syntax of the settings file there is, and until the line is there Gradle does not know the application.
+* The `build.gradle` of the application is the one every application gets: it names its own repositories and plugins, so the build around it needs nothing for it.
+* `.grails/project.yml` and `.grails/forge.lock.yml` record this as `layout: subproject` among the options, and the baseline has the files of the application only. `feature add` therefore adds to such an application what it adds to any other, without the files of the root of a build.
+* The command is refused, and nothing is written, when no directory above has the settings of a build, when the directory of the application would itself be the root of one (`--inplace` at the root), and together with the feature `gradle-settings-file`.
+
+Without `--subproject` a `create-` command creates a whole application wherever it is given. Inside another build that application has a wrapper of its own and no settings, and Gradle, which looks for the settings in the directories above, takes it for a directory of the build around it that the build does not include, and fails. The command says so when it has created the application: create it with `--subproject` to make it a project of that build, or with the feature `gradle-settings-file` to make it a build of its own.
+
+How the commands behave in such a build is described under "In a Gradle Build of Several Projects" in the section on the command line.
+
+=== The `.grails` directory of a project
+
+A project that is generated by a `create-` command or by https://start.grails.org/[the Grails Forge website] has a `.grails` directory, which records how the project was generated:
+
+[cols="1,3"]
+|===
+| File | What it records
+
+| `.grails/project.yml`
+| What was asked for: the type of application, its name and default package, the options (`jdk`, `servlet`, `data`, `reloading`), the features that were selected by name and the features that were left out with `--exclude-features`. A feature of a feature pack that was selected by the coordinates of its plugin has those coordinates and its version.
+
+| `.grails/forge.lock.yml`
+| What that came to: the version of the generator and the identity of its build (see "Which generator wrote the record" below), the version of Grails, and every feature the application has, including the default ones and those another feature requires, in the order they were applied. For a feature of a feature pack that was taken from a repository it has the coordinates, the version and the SHA-256 digest of the jar, and the address of the repository when that is an `https` address without a user name or a password in it. For a feature of a feature pack that was given as a directory it has the SHA-256 digest of the content of the pack (`contentSha256`), and not where the directory was. That address is written as it is, also when the repository is one of your organisation: it is where the pack can be taken from again, and the repositories of the build are in `build.gradle` in the same way. A directory, a `file:` address and an address with a password are never written.
+
+| `.grails/baseline/`
+| A copy of every generated file as it was generated (`files/`), with an index of their SHA-256 digests, whether each is text or binary, and whether it is executable (`index.yml`). A file named `.gitignore` or `.gitattributes` is kept there as `.gitignore.baseline` or `.gitattributes.baseline`, so that Git does not read the copy.
+|===
+
+Beside them are two files for Git. `.grails/.gitattributes` tells it to keep the bytes of these files as they are, whatever its setting for line endings is, because the digests are of those bytes. `.grails/.gitignore` tells it to commit `project.yml`, `forge.lock.yml`, the two files for Git and every file of the baseline, also where a pattern of the application's own `.gitignore`, or of your global one (such as `*.yml`, `*.jar` or `.grails/*`), would leave one of them out. One kind of pattern it cannot undo: a pattern that ignores the directory `.grails` itself (`.grails` or `.grails/`), because Git does not look into a directory that is ignored. Such a pattern has to be removed from the ignore file it is in, or the record is not committed at all.
+
+The files contain no time of day and nothing of the machine or the operating system they were written on: generating the same application again with the same version gives the same files. Nor do they depend on the order the command line was written in: the features that were asked for and those that were left out are sorted by name in `project.yml`, the features of the lock are in the order they are applied in, which is by the phase of each feature and then by its name, and the files of the index of the baseline are sorted by path. Paths are written with `/`, lines end with a line feed and the files are UTF-8, on every operating system. The same holds for the files of the application: the language, the time zone and the character set of the computer, the directory, and the order features are named in change none of them, as xref:plugins#forgeFeaturePackSameEveryTime[What Is the Same Every Time] describes for each kind of file. One thing of the environment is part of what an application is generated from, and is therefore recorded: the repositories that the `GRAILS_REPO_URL` environment variable puts in place of the default ones. They are written to `build.gradle` as they are given, as before, and the copy of `build.gradle` in the baseline is that file. The lock says that they were given, of what kind each is, and for an `https` address its scheme, host, port and path: a query and a fragment are left out, because that is where a token is given to a repository, and an address with a user name or a password in it is not named at all. Of a directory it says only that there was one. The lock names the first fifty and counts the rest. An entry of `GRAILS_REPO_URL` with a control character, a quote or a `$` in it is refused, because it is written into the build file.
+
+Commit all of them to version control with the rest of the project; `git status --ignored` shows whether an ignore rule keeps any of them back. When a clone has the baseline and not `project.yml` or `forge.lock.yml`, the record is not complete and is not used, and the message says so: the files were not committed where the project was generated. The baseline doubles the generated files in the repository, which is intended: with it the tooling can tell a file you changed from a file as it was generated, on any clone of the project. A text file counts as unchanged when only its line endings differ, because Git can check a file out with the line endings of the platform (`core.autocrlf`); a binary file is compared byte by byte. The wrapper scripts (`gradlew`, `gradlew.bat`, `grailsw`, `grailsw.bat`) are binary to the generator, and the `.gitattributes` at the root of the project, described below, has Git give every clone the bytes they were generated with. The generated `.gitignore` excludes only what is of one machine: `.grails/cache/`, `.grails/transactions/`, `.grails/run/` and `.grails/history`. The record's own `.grails/.gitignore` leaves out the same four and has Git commit the files of the record, so they stay out of version control also in a project whose `.gitignore` has no such lines, as one that an earlier version created and `project migrate` gave its record.
+
+A generated project also has a `.gitattributes` at its root, next to its `.gitignore`:
+
+[source]
+----
+*.bat text eol=crlf
+gradlew text eol=lf
+grailsw text eol=lf
+*.jar binary
+----
+
+It is about the wrappers only. The scripts for Windows keep the line endings of Windows and the scripts for Unix those of Unix on every clone, whatever Git is set to do with line endings, so the scripts run wherever the project is checked out, and the jars of the wrappers are never converted. Everything else is left to your own settings of Git; add rules of your own to the file as the project needs them.
+
+`grails-forge-cli.yml` at the root of a project is the record earlier versions wrote. It is not written any more: `.grails` is the record of a project, and the features of the application are in `.grails/forge.lock.yml`. A project that an earlier version generated keeps its `grails-forge-cli.yml`, and the command line reads it there. In a project that has a `.grails` directory, the `create-*` code generation commands go by `.grails`: a `grails-forge-cli.yml` beside it does not change what they do, and when the two do not say the same default package or the same features, the commands that go by the record say so in a warning on the standard error: the `create-*` code generation commands and those of the features, `add-property`, `install-templates`, every command of `feature`, `project show` and `project regenerate`. The commands that run the build or look for plugins, as `compile`, `run-app`, `stop-app` and `plugin list`, do not say it; `project health` has the finding `leftover.earlier-record-differs` for it, and `help --json` has the warning among its `diagnostics`. Once `.grails` says what the project is, which `project show` tells, remove `grails-forge-cli.yml`, unless a tool of yours reads it: nothing of Grails {grailsMajorVersion} needs the file beside a `.grails` directory. No feature can write a file of that name, or `grails-cli.yml`, at the root of a project. In a project without a `.grails` directory, a `grails-forge-cli.yml` that is not as it is written (a value that is not one of those it can have, a file that is not YAML or is larger than 256 KiB) is not used: the command line says what is wrong with it in one line and then behaves as in a directory without a project, so its help and the commands that create an application still work. A feature that is added to a project by hand, by adding its dependencies to the build, is not known to the record: add it with `feature add`, described below, which changes the files and the record together.
+
+Do not edit the files of `.grails` by hand, and do not change the copies under `.grails/baseline/files`. The lock has the digest of `project.yml` and of the index of the baseline and ends with the digest of itself, the options and the requested and excluded features of `project.yml` have to agree with the lock, and the index has the digest of every copy. A change to one of the files that is not made to the others in the same way is therefore found when the record is read, and the record is then not used: a command that reads it says what is wrong, in one line, and the `create-*` code generation commands fall back to the `grails-forge-cli.yml` of an earlier version, when the project has one. The commands that create an application and `--version` do not read the record of the directory they are run in. The digests show a change that was made by accident or by hand; they are not a signature, and they do not show where a project came from.
+
+A `create-` command with `--inplace` does not generate over a directory that already has such a record: remove the `.grails` directory first to generate the project anew. When a generation did not come to its end, which leaves a `.grails` directory without `project.yml`, the same command with `--inplace` completes it. A file that already exists in the directory is kept, as before, and the baseline holds the file as it would have been generated: the command names the kept files that are not what it would have written, the first twenty of them, and to the record those are files that were changed.
+
+The difference that the website shows for a feature is of the files of the application and does not include `.grails`: applying it to a project by hand changes the application and leaves the record as it was, in which the changed files then count as changed.
+
+=== How a project was generated, and generating it again
+
+`project show` reads the record under `.grails` and says how the project was generated: its type, name and package, the options, the features that were asked for and left out, and every feature the application has, in the order they were applied. Its last line is the `create-` command that creates the application again:
+
+[source,console]
+----
+$ cd shop
+$ ./grailsw project show
+| How the application shop was generated, from its record in .grails
+    type          web
+    name          shop
+    package       com.example
+    ...
+| Every option of create-app with the value the application was generated with, and whether that is the default of this version (9.0.0) of the command line
+    application type           web
+    name                       shop
+    package                    com.example
+    Grails version             9.0.0
+    --jdk                      21  (default)
+    --servlet                  tomcat  (default)
+    --data                     hibernate7  (differs from the current default: hibernate5)
+    --reloading                devtools  (default)
+    --subproject               no  (default)
+    --features                 grails-quartz  (differs from the current default: (none))
+    --exclude-features         mockito  (differs from the current default: (none))
+    --feature-pack-dir         (none)  (default)
+    --feature-pack-repository  (none)  (default)
+    --feature-pack-sha256      (none)  (default)
+    --feature-catalog          (none)  (default)
+    --preset                   (none)  (default)
+    test framework             spock  (not recorded: the only one this version generates)
+    build tool                 gradle  (not recorded: the only one this version generates)
+| Of the 30 features, 1 was asked for (--features above) and 29 came with the application type, with an option or with another feature:
+    app-name, asset-pipeline-grails, base, ...
+| The application is created again with:
+grails create-app com.example.shop --data hibernate7 --features grails-quartz --exclude-features mockito
+----
+
+The list of options has every option of the `create-` command that decides something of the application, also the ones that were not given when it was created, because the value an option has when it is not given can change from one version of Grails to the next. The record holds the value the application was generated with, whether it was given or not, and that is the value shown. What follows it compares it with the command line that is running:
+
+[cols="1,3"]
+|===
+| Mark | Meaning
+
+| `default`
+| The value is what a `create-` command of the version of the command line that is running takes when the option is not given. The record does not say whether the option was given. For an application that was made from a preset, the default is that of the command line and not that of the preset, which the record does not have.
+
+| `differs from the current default: VALUE`
+| The value is another one. It was chosen with the option, or it follows from the application type or a feature (a plugin has `--servlet none`), or it was the default when the application was generated and the default has changed since. The command line at the end has every such option, so it creates the application with the recorded values whatever the defaults are now.
+
+| `not recorded: the current default`
+| The record does not have the option, because it was written by a build of Grails that did not record it. The default of the running command line is shown in its place, and a line before the command says that the command takes that default, which need not be what the application was generated with.
+
+| `not recorded: the only one this version generates`
+| The test framework and the build tool are no options: every application has Spock and Gradle, and the record does not name them.
+
+| (no mark)
+| The type, the name and the version of Grails are what the record has, and have no default. So is the package: it is given with the name, as in `com.example.shop`, and the command line at the end gives it that way. It is marked `default` only when it is the package a `create-` command gives a name without one, as `shop` for `grails create-app shop`.
+|===
+
+The line after the options tells the features that were asked for from the ones the application has because of its type, an option or another feature; the record does not say which of the three brought a feature in.
+
+The command line names the application with its package, each option whose recorded value is not the default of the `create-` commands of the running version (`--subproject` among them; for an application made from a preset, every option the preset can give, as the next paragraph says), the features that were asked for (`--features`, with those that were found in the project for a record `project migrate` wrote, see "The record of an application that was not generated by Grails 9" below) and those that were left out (`--exclude-features`). A feature pack that was selected by the coordinates of its plugin is named by those coordinates, with `--feature-pack-sha256` for the SHA-256 of the jar that was used and `--feature-pack-repository` for the repository, when the record has its address. An argument that a shell would act on is written between single quotes, so the line can be pasted into a POSIX shell as it is. Run by the version of Grails that generated the project, in an empty directory, it gives the same application with the same record. Three things the record does not hold are said in a line before the command, when they apply: a feature pack that was given as a directory (`--feature-pack-dir`), a repository whose address is not recorded, and the repositories of the `GRAILS_REPO_URL` environment variable, which has to be set to the same ones. `--json` writes the same as one JSON document, for a tool: the record (`applicationType`, `name`, `defaultPackage`, `grailsVersion`, `generator` with the `name`, the `version` and the `sha256` of the build that wrote the record, `options`, `requestedFeatures`, `excludedFeatures`, `repositories`, `features`), the command as `command.name`, `command.arguments` and `command.line`, those lines as `notes`, the list of options as `effectiveOptions` and the features that were not asked for as `addedFeatures`. An entry of `effectiveOptions` has a `name`, the `option` of the `create-` commands where there is one, the `value`, the `default` of the running command line where there is one, and a `status`: `default`, `differs`, `not-recorded`, or `recorded` for the type, the name and the version of Grails, which have no default. The keys are always in the same order. `format` is 1; a member that is added to the document later comes after the ones that are there and does not change the format, so a tool ignores a member it does not know.
+
+An application that was made from a preset has a `preset` line in what `project show` prints, with the coordinates and the version of its artifact, and the command names the preset with `--preset` and those coordinates, with `--feature-pack-sha256` for the SHA-256 of its jar; the preset is not among the `--features` of the command. The command has every option a preset can give a default, `--jdk`, `--servlet`, `--data` and `--reloading`, with the value the application has, also where it is the default of Grails: the preset gives these options defaults of its own, and the record has the value of each and not whether it was given or came from the preset. An option that was given in place of the one of the preset therefore stays what it was, as `--data hibernate5` for a preset that gives MongoDB. A preset that was given as a directory or a jar is not named by the record, which a line before the command says. `--json` has the member `preset`, with its `name`, `coordinates` and `version`, only for an application that was made from one.
+
+`project regenerate` generates the application again from the record, without a command line to copy, and changes nothing in the project:
+
+[cols="1,3"]
+|===
+| Flag | Description
+
+| `--output DIRECTORY`, `-o`
+| Writes the application as it was generated to the directory, which is created when it is not there, and then compares the record under `.grails` there with that of the project, file by file: when one is not the same, the command names the first and ends with 1. A directory that has anything in it is refused, with exit code 1, unless `--force` (`-f`) is given; then the files of the application are written over those that are there, and other files stay. The directory cannot be that of the project or one above it, and no file is written through a symbolic link. The files are written one after the other: when one cannot be written, the command names it, says how many of the files were written before it, and ends with 1. The directory then has the record of an application and not all of its files, so remove it, or write to it again with `--force` once what was in the way is gone.
+
+| `--diff`
+| Writes nothing, and lists the files of the project that are not those it was generated with, one path a line, sorted: `added` for a file the generator did not write, `removed` for a generated file that is not there any more, `changed` for one with other content. A text file counts as unchanged when only its line endings differ. Files that the `.gitignore` the project was generated with leaves out (`build/`, `.gradle`, the settings of an IDE and so on) are not looked at, and neither is `.git`; a rule you added to `.gitignore` since does not count. The command ends with 0 when there is no such file and with 1 when there are any. When a file or a directory of the project cannot be read, the command names it, lists nothing and ends with 1: a file that cannot be read is not compared, and is not listed as `changed`.
+
+| `--json`
+| With `--diff`: writes the same as one JSON document for a program, whose outcome tells files that differ from a record that cannot be used and from a failure, all of which end the command with 1. See xref:commandLine#changeResultsForAProgram[The Result of `feature add` and `project regenerate` for a Program].
+|===
+
+[source,console]
+----
+$ ./grailsw project regenerate --diff
+changed  build.gradle
+removed  grails-app/conf/logback-spring.xml
+added    src/main/groovy/com/example/Mine.groovy
+| 3 files are not as the application was generated: 1 added, 1 removed, 1 changed
+----
+
+Both forms generate the application as `feature add` does before it adds a feature, and refuse what it refuses, in the same words: a record that is missing, not complete or changed by hand, a project that another version of Grails generated (the message names `project migrate`, which moves the record of an earlier version to this one, or the later version to use), an application whose record `project migrate` wrote without a baseline, and an application with the feature of a feature pack that is not part of Grails when that very pack is not there. Both take the pack as `feature add` does: the jar of a plugin is fetched again by its recorded coordinates and digest, and the pack of a directory is given with `--feature-pack-dir`. `project show` reads `project.yml` and `forge.lock.yml` and not the baseline, and shows such a project all the same, so its command line is the way to create one of those again.
+
+=== The record of an application that was not generated by Grails 9
+
+An application that the Grails shell created, one that an earlier version generated, and one that was put together by hand have no `.grails` directory. `project migrate` writes the record for such an application, in the directory of the application, so that the `create-*` code generation commands and `feature add` are there, as they are for an application that Grails {grailsMajorVersion} generated:
+
+[source,console]
+----
+$ grails project migrate
+| The record of the application myapp, as it is written to .grails
+    type          web              (the profile web, grails.profile of grails-app/conf/application.yml)
+    name          myapp            (rootProject.name of settings.gradle)
+    package       com.example      (grails.codegen.defaultPackage of grails-app/conf/application.yml)
+    jdk           21               (assumed)
+    servlet       tomcat           (build.gradle declares org.springframework.boot:spring-boot-starter-tomcat)
+    data          hibernate5       (the feature gorm-hibernate5)
+    reloading     none             (assumed)
+| The 3 features of Grails it is taken to have, each with where it was found
+    gorm-hibernate5 (build.gradle declares org.apache.grails:grails-data-hibernate5)
+    grails-gradle-plugin (build.gradle declares org.apache.grails:grails-gradle-plugins)
+    grails-quartz (build.gradle declares org.apache.grails:grails-quartz)
+| Assumed, because nothing in the project says it: jdk (--jdk), reloading (--reloading). The files of the project were read as text and nothing of the build was run, so a feature the build does not declare in a line of its own was not found. To say it otherwise, run grails project migrate --force with the name and the package (com.example.myapp), --type, --jdk, --servlet, --data, --reloading, --features for features that were not found and --exclude-features for features the application does not have
+| The baseline is the 64 files this version generates for an application of the type, the options and the features above (29 features with those of the type; grails project show lists them). The application has 41 of them as generated, 21 otherwise and 2 not at all: what it has otherwise is taken for a change of yours
+| The record was written, with its baseline under .grails/baseline: .grails/project.yml, .grails/forge.lock.yml and .grails/baseline/index.yml. No other file of the project was changed. Commit the directory .grails
+| grails help lists the commands that create the classes of the application, and grails project show says what the record has. grails feature add adds a feature against the baseline and keeps what the application has otherwise; where a feature changes lines the application has otherwise, it names them and writes nothing. grails project regenerate --diff names the files that are not as this version generates them, and grails project migrate --force writes the record anew when the type, an option or a feature above is not what the application has
+| grails project health says what else the upgrade notes ask of the project, as far as its files show it
+----
+
+The command reads the files of the project and changes none of them. It writes only the files of the record in `.grails`, all of them or none, and leaves a `.gitignore` or `.gitattributes` that is there already as it is. Each value is taken from the first of these that has it:
+
+[cols="1,3"]
+|===
+| Value | Where it is looked for, in this order
+
+| type
+| `--type`; `applicationType` of a `grails-forge-cli.yml` (or `grails-cli.yml`); the profile the application had, which is the `profile` of that file, `grails.profile` in `grails-app/conf/application.yml`, or the `profile` dependency of `build.gradle` (`web` is a web application, `rest-api` a REST API, and `plugin`, `web-plugin` and `rest-api-plugin` the three types of plugin); the Grails Gradle plugins of `build.gradle` (`grails-web` with `grails-gsp` is a web application and without it a REST API; `grails-plugin` with `grails-gsp` is a web plugin and without it a plugin, which the command says it assumed, because a REST API plugin has the same plugins).
+
+| name
+| The name given to the command; `rootProject.name` in `settings.gradle`; the name of the directory.
+
+| package
+| The package given with the name, as in `com.example.shop`; `defaultPackage` of a `grails-forge-cli.yml`; `grails.codegen.defaultPackage` in `application.yml`; the `group` of `build.gradle`; the package of the `Application` class under `grails-app/init`.
+
+| features
+| The features a `grails-forge-cli.yml` names that this version of Grails has, and each feature of Grails that adds to a build a dependency no other feature adds, when `build.gradle` declares every such dependency of the feature. `--features` adds features that were not found and `--exclude-features` leaves out features that were.
+
+| `--jdk`, `--servlet`, `--data`, `--reloading`
+| The option; the version of Java `build.gradle` names, from the release of the compilation (`compileJava.options.release`, `options.release`), `targetCompatibility`, `sourceCompatibility` or the Java toolchain (`JavaLanguageVersion.of`, `jvmToolchain`), in that order, with the setting and its line in the row; and for the other three the feature of that option among the features of the application; for `--servlet` then the starter of a servlet container that `build.gradle` declares, as the build of an application the Grails shell created does: `spring-boot-starter-tomcat` is `tomcat`, `spring-boot-starter-jetty` is `jetty`, and `spring-boot-starter-undertow` and `grails-undertow` are `undertow`. The starters of more than one container, and the starter of a container the type of application is not generated with (Tomcat for a plugin), name none, and the command says so. Without any of these, the version of Java and the Grails Data implementation are the defaults of the `create-` commands, the servlet implementation is `tomcat` (`none` for a plugin) and reloading is `none`, and the command lists them as assumed. A version of Java the `create-` commands do not generate for is not taken: the record has Java 21, the command lists it as assumed in place of what the build names, and says which setting names what. A version below 21, which Grails {grailsMajorVersion} does not run on, is said wherever the build names it, also with `--jdk`: change the build to Java 21 or later, or it does not build with Grails {grailsMajorVersion}.
+|===
+
+`build.gradle` is read as text, line by line, and so is `build.gradle.kts` in a project whose build is written in Kotlin (with `settings.gradle.kts` for the name). A dependency is found where its group and name are written out, as `implementation "org.apache.grails:grails-quartz"`, `implementation("org.apache.grails:grails-quartz")` or `implementation group: 'org.apache.grails', name: 'grails-quartz'`. What is commented out, with `//` or between `/*` and `*/`, is not read as a dependency or a plugin. A plugin or dependency that is declared through a variable, in a loop, in a convention plugin or in another file is not seen, and a profile that is not one of Grails says nothing of the type. Where the command can tell that there is something it did not read, it says so in a line of its own, so that a feature is not taken to be absent because it was not found: a build file that `build.gradle` applies with `apply from`, a dependency that is named by a version catalog (`libs.`), what `build.gradle` declares for other projects in a `subprojects`, `configure` or `project` block (which is not counted for this application), a project without a build file that could be read, and, for a project that has no `settings.gradle` of its own, the build above it, whose `subprojects` and `allprojects` blocks and convention plugins are not read. Name such features with `--features`. The command does not guess: when it cannot work out the type or the package it writes nothing, says what is missing and ends with exit code 1. `--dry-run` shows the record and writes nothing.
+
+The record of such an application says what the application is taken to be, not how it was generated: `.grails/project.yml` has `generationState: adopted`. Its baseline, the copy of every generated file under `.grails/baseline`, is what the version that runs generates for an application of the type, the name, the options and the features in the lines above. No file of the application was generated by it, so the baseline is not a copy of what the application once was: it is what the command line compares the application with from now on. The features that were given with `--features`, and those that were found and that an application of the type and the options does not have by default, are its `requestedFeatures`; a feature that was found and that the application would have anyway stays a default, which `feature add` replaces as it replaces any default (`postgres` in the place of `h2`). Those given with `--exclude-features` are its `excludedFeatures`. That decides what the other commands do with it:
+
+* The `create-*` code generation commands, `add-property` and `install-templates` read the type, the package and the features from it, as from the record of a generated application. `create-job` is there when `grails-quartz` is among the features.
+* `feature add` adds a feature as it does to a generated application: it compares what this version generates with the feature and without it, and puts the difference into the files of the application. Whatever the application has otherwise than the baseline is a change of yours to it: the dependencies an earlier version of Grails wrote in another order, a file you removed, a setting you changed. Such a change is kept, and where a feature changes the very lines the application has otherwise, or the lines next to them, the command names them and writes nothing, as in any other conflict, which "Adding a feature to a project" below describes. The line `The application has ... as generated, ... otherwise and ... not at all` says how close the application is to what this version generates: the more of its files are as generated, the more features are added without a conflict. Two things are done for such an application only, because its files were never the generated ones. A file this version generates and the application does not have, as the `README.md` of an application the Grails shell created, is left out of what a feature changes (`leave`): the feature is added without it, and the command says what it would have added to the file and where the file is kept as this version generates it. And where the lines of a feature have no place in a file because the file is laid out otherwise, three kinds of lines that mean the same wherever they stand are put where they can go, and the command says so under the file:
+
+** *Lines of `build.gradle`.* A Gradle build file has an order: the `buildscript` block, the `plugins` block, the lines that apply plugins, and further down the `dependencies` block. Where everything a feature does to the file is one of the following, each line is put where that order has it:
+*** a dependency that is declared by its coordinates goes to the end of the `dependencies` block, and the dependency of a default the feature takes the place of, as `h2` for `postgres`, is taken out where the block has its very line once;
+*** an `apply plugin: "..."` line, and an `apply from: "..."` line, goes after the last line of the file that applies a plugin or a script; in a file that has none, after its `plugins` block, or else after its `buildscript` block, or else at the top after the comments it starts with;
+*** a plugin that is named by its `id` in the `plugins` block goes to the end of that block; in a file that has none, into a `plugins` block of its own right after the `buildscript` block, which is the one place Gradle takes such a block;
+*** a `classpath` entry goes to the end of the `dependencies` of the `buildscript` block;
+*** an entry a feature adds to a list of text that a block at the margin is given, as `excludes = [ ... ]` of `assets`, goes to the end of that list of the file, after its last entry, which gets the comma that sets the two apart when it has none. That is done when the file has one block of the name with one list of the name in it, whose entries are quoted text, one on a line; an entry the list already has is not put there again.
++
+The form the generator writes is kept: a plugin it applies with `apply plugin:` is applied so in a file that otherwise uses a `plugins` block, and the other way round. Both work there: the plugins of Grails are on the class path of the build once one of them is applied in either form, and a plugin the generator names by `id` with a version is one of the Gradle plugin portal. A line the file already has in its place in the same words is not put there again, and neither is a plugin the file already applies in the other form. The blocks are the ones that start and end at the margin, and a file that has two of a kind, or one inside another block, is not touched by this: the feature is a conflict there.
+** *Settings in a YAML file under `grails-app/conf`.* Keys a feature sets that the generated file does not have are put into a document of their own at the end of the file, which Spring Boot reads after the others. That is done when no document of the file sets one of those keys, or a key above or below one. A value a feature changes, as the driver, the user and the URLs of the data source that `postgres` puts in the place of those of `h2`, is changed where the file has it, and nothing else of the file is: not its indentation, the order of its keys, its documents, or a comment on the line. That is done when the file sets the key exactly once in all its documents, on one line, to the value this version generates without the feature. A value you changed is yours, and the feature is a conflict there; so is a key that is set twice, and a key the feature takes out.
+** *A `BootStrap.groovy` that is as Grails 7 or 8 generated it.* A file under `grails-app/init` that is, but for its package and how its lines end, exactly what the Grails shell or Grails Forge of those versions wrote has nothing of yours in it, so a feature that changes it, as `grails-spring-security`, gives it the content this version generates with the feature, with CR LF at the end of its lines where the file had them.
+** *Lines of `README.md`.* Where a feature only adds lines, they are put at the end of the file.
+
+A feature that changes a file otherwise, as one that applies a Gradle plugin or takes the place of another feature, is merged by lines as everywhere, and is a conflict where its lines meet yours. None of this is done in an application that was generated: there the place of a line is the one the generator gave it, and a line of yours in that place is a conflict.
+* `project show` shows it with the state `adopted`, says that it was written for an application that was there, and ends with the `create-` command for a new application of the same type, options and features.
+* `project regenerate --output` writes that new application to another directory, and `project regenerate --diff` names every file the application has otherwise than it: what an earlier version of Grails generated otherwise and what was changed since, which the command cannot tell apart and says so.
+* `project health` reports the record as one that reads, with its state.
+
+What is still a conflict in such an application is a change that meets something of yours: a value of the configuration you changed and a feature changes too, a class you wrote lines into where a feature writes its own, a line of `build.gradle` that is none of those above, or a block or a list of it that is there twice or inside another block. The conflict names the lines, `feature add --diff` shows what the feature would change, and the copy of each file as this version writes it for this application is under `.grails/baseline/files`: a file that is that copy takes every feature, and `project regenerate --diff` names the files that are not their copies.
+
+When the record is not what the application has, as when a feature was not found because the build declares it through a variable, or an option was assumed wrongly, a feature that is added meets what the application already has and is a conflict, and nothing is written. A feature this version gives every application and yours does not have, as `mockito` for an application of Grails 8, is in the baseline as well, and `--exclude-features` takes it out. Run `project migrate --force` to write the record anew, with `--features`, `--exclude-features`, `--type` and the options saying what the files do not: the files are read again, the features the record names are kept (those `feature add` added since among them) unless `--exclude-features` names them, and everything else is worked out again, so give again the options and the `--exclude-features` you gave before. `--dry-run --force` shows what the record would be. Run without `--force` and without any of these, `project migrate` moves such a record to the version that runs, as it moves the record of a generated application, and says that there is nothing to move when this version wrote it.
+
+The command writes a record without a baseline in two cases, says so, and says what it has to be told: when it assumed the type of the application, as for a plugin whose build does not say whether it has controllers (`--type`), and when this version does not create an application from what was found, as when two features that were found cannot be had together (`--exclude-features`, or the option that says which the application has). Such a record has `generationState: untracked`, the features that were found in its lock and no file in its baseline. The `create-*` commands work with it; `feature add` and `project regenerate` refuse it, change nothing and name `project migrate --force`, which writes the record with a baseline once it is given what was missing. `project show` asks, for such a record, with `--features` for the features that were found as well as for those that were given.
+
+`project migrate` never replaces the record of how an application was generated, with or without `--force`: `--force` writes again a record that `project migrate` wrote. It is run in a project whose `gradle.properties` still names Grails 7 or 8 as well, where no other command of a project is but `project health`: the record is a step of the upgrade, and the other commands, `feature add` among them, are there once the project is on Grails 9. The command changes no file outside `.grails` in either case: the `profile` dependency that the build of Grails 9 refuses is removed from `build.gradle` by hand, as the upgrade notes say. A `grails-forge-cli.yml` is read and left where it is; once the `.grails` directory is there the commands go by it, and warn when the two do not name the same package or the same features, so remove the file when nothing else reads it.
+
+[[projectHealth]]
+=== The state of a project
+
+`project health` says what the files of a project show of its state: what makes its build fail, what the upgrade notes ask for and is not done, and what the guide recommends. It reads the project as text and changes nothing, and runs no Gradle, no generator and nothing of the network, so it answers at once, also in a project that does not build:
+
+[source,console]
+----
+$ grails project health
+| Project legacy on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
+| Error   removed-dependency.profile  build.gradle declares the profile dependency org.apache.grails.profiles:web: Grails 9 has no profiles, and the build fails while it is configured. Fix: Remove the profile line from the dependencies of build.gradle; nothing takes its place
+| Warning record.missing              The project has no record (.grails/project.yml or grails-forge-cli.yml): the commands that create its classes are not there. Fix: grails project migrate writes it from the files of the project; commit .grails
+| Advice  gradle-wrapper.checksum     gradle/wrapper/gradle-wrapper.properties has no distributionSha256Sum, so the wrapper does not check the distribution of Gradle it downloads. Fix: ...
+| 9 checks OK (-v lists them). 1 error, 1 warning, 1 advice, 0 skipped
+| Error project health found 1 error: removed-dependency.profile
+----
+
+Thirteen checks look at the version of Grails the project is on, the Gradle wrapper and the Gradle it names, the versions of Java the build compiles for, `.sdkmanrc`, the dependencies Grails 9 no longer has or deprecates, the record under `.grails`, the Grails wrapper, the `.gitignore` and `.gitattributes` files, the list of the tools of the application, the sources of the tools (imports of Grails 7, and the folder and types Grails 8 had), what an earlier version read and this one does not, and, while an upgrade is under way, the `grails-upgrade` agent skill. Each finding is an `error`, which ends the command with exit code 1, a `warning`, which does so with `--strict`, an `advice`, which never does, or `skipped` where a check could not decide, as for a build file that applies another one, and says why: a check that cannot decide never says it found nothing. Every finding has an id, as `removed-dependency.profile`, and says what to do. `-v` lists the checks that found nothing as well, and `--json` writes every finding as one JSON document for a tool. A project that `create-app` has just generated has no error and no warning.
+
+The command is run in a project whose `gradle.properties` still names Grails 7 or 8, as `project migrate` is, and says there what Grails 9 asks of it, which makes it the list of what is left to do during an upgrade: run it after `update-wrapper` and `project migrate`, and again after each change, until `grails project health --strict` ends with exit code 0. A job can run it with `--strict` to keep a project there. link:{commandLineRef}project-health.html[project health] lists every check and finding with its level and its fix.
+
+=== Adding a feature to a project
+
+`feature add` adds features to a project that already exists, in the directory of the project:
+
+[source,console]
+----
+$ cd myapp
+$ ./grailsw feature add grails-quartz
+| Adding the feature grails-quartz
+    update   README.md
+    update   build.gradle
+    update   grails-app/conf/application.yml
+| Feature grails-quartz added. Commit the changes together with the directory .grails
+----
+
+The names are those `--list-features` shows for the type of the application; several can be given, separated by commas or spaces. The feature of a plugin outside Grails is added in the same way, by the coordinates of the plugin (`grails feature add com.acme:acme-audit-grails:2.3.0`), by its name with `--feature-pack-dir`, or by its name in a feature catalog, with the options the `create-` commands have for it: see xref:plugins#forgeFeaturePackAddToExisting[Adding the Feature of a Pack to an Application That Is There]. `feature list` shows, from the record of the project, the features it has, those that were asked for by name among them, which features `feature add` can add and what each would take the place of, and for each of the others why it cannot be added, such as an option of the project that it would change; it reads the record and writes nothing, and takes the feature packs that are not part of Grails a project was generated with as `feature add` takes them (see link:{commandLineRef}feature-list.html[feature list]). In interactive mode, the TAB key completes the names of the features the project does not have after `feature add`. For a feature the application does not have yet, the project afterwards is the project that the `create-` command would have made with the feature: the same dependencies and build file changes, the same configuration, the same new files, and the same record under `.grails`, in which the feature is now one that was asked for. A feature brings in the features it requires, and the command names them. A feature the application already has, be it by default or because another feature requires it, is left as it is: the command says so and changes nothing, the record included, so such a feature does not become one that was asked for. Review the changes with your version control and commit them together with `.grails`. The command makes no commit and does not need Git.
+
+Two options show what would happen and change nothing:
+
+[cols="1,3"]
+|===
+| Flag | Description
+
+| `--dry-run`
+| Lists the files that would be added, changed and removed, the features that would be replaced, and the conflicts.
+
+| `--diff`
+| Lists them and shows the changes as a diff: at most 400 lines of one file and 2,000 in all, with a line that says how many were left out. Characters that act on a terminal are shown as `?`.
+
+| `--json`
+| With `--dry-run`: writes what `--dry-run` says as one JSON document for a program, with an outcome and a reason for every way the command can end, every file by its exact path, and whether the change can be made. See xref:commandLine#changeResultsForAProgram[The Result of `feature add` and `project regenerate` for a Program].
+|===
+
+Three more commands of `feature` say what there is to add, and change nothing either:
+
+[cols="1,3"]
+|===
+| Command | What it says
+
+| link:{commandLineRef}feature-find.html[feature find] `TEXT`
+| The features that have the text in their name, their title, their description or their category, each with whether the application has it.
+
+| link:{commandLineRef}feature-show.html[feature show] `FEATURE`, also `feature info`
+| One feature: what it is for, the types of application it is for, what it requires, the features of its exclusive group and the one whose place it takes, where its documentation is, whether `feature add` adds it to this application, and the files and the lines of the build files it would add, change and remove here.
+
+| link:{commandLineRef}feature-diff.html[feature diff] `FEATURE...`
+| What `feature add` with the same features would change, as a unified diff on the standard output and nothing else there. It is the diff of `feature add --diff`, and its exit code is 0 when the features can be added, 1 when they cannot, and 2 when they cannot be asked for as they were.
+|===
+
+Outside a project, and with `--type web`, `--type rest-api` and the other types of application, the three speak of a new application of the type: `feature find` lists its features and marks those it has by default, `feature show` shows what a feature changes in it, and `feature diff` shows that as a diff, as the Grails Forge web application does. No two of the commands of `feature` start with the same letter, so one letter is short for each: `f a`, `f l`, `f f`, `f s` (and `f i` for `feature info`) and `f d`.
+
+[source,console]
+----
+$ grails feature find quartz
+$ grails feature show grails-quartz
+$ grails feature diff grails-quartz
+----
+
+==== A feature that takes the place of a default
+
+An application has some features without having been asked for them: `h2` as its database driver, `sitemesh3` for its layouts, `geb-with-testcontainers` for its functional tests. Each is the default of an exclusive group, of which an application has one feature. Adding another feature of the group replaces the default, and the command says so:
+
+[source,console]
+----
+$ ./grailsw feature add postgres
+| Adding the feature postgres, and with it testcontainers
+    postgres replaces h2, the default of the group database-driver
+    update   README.md
+    update   build.gradle
+    update   grails-app/conf/application.yml
+    add      src/test/resources/application-test.yml
+| Feature postgres added, in the place of h2. Commit the changes together with the directory .grails
+----
+
+Afterwards the project is the one `create-app --features postgres` makes: the H2 dependency and the H2 data source are gone from `build.gradle` and `application.yml`, those of PostgreSQL are there, and `.grails/project.yml`, the lock and the baseline list `postgres` and not `h2`, so `project regenerate --diff` finds nothing. What the default wrote is taken out as a difference like any other:
+
+* A line of the default that you did not change is replaced or removed.
+* A line of the default that you changed, the URL of the development database for example, is a conflict, reported like every other conflict, and nothing is written. Put the line back as it was generated, add the feature, and make your change to the new line.
+* A file that only the default wrote is removed when you did not change it, and listed as `remove`. One you changed is a conflict; one you already removed is in the way of nothing.
+
+`--dry-run` and `--diff` show the replacement and the lines and files that would go, and change nothing.
+
+Two things an application was created with by name are not replaced by adding a feature alone:
+
+* *A feature that was asked for.* For an application created with `create-app --features h2`, `h2` is a choice and no default, and so is a feature that an earlier `feature add` named. `feature add postgres` is refused with exit code 2, names both features, their group and the `--replace` option, and changes nothing. See "Replacing a feature that was asked for" below.
+* *An option.* `gorm-hibernate7` would change `--data`, a servlet container `--servlet`, a reloading agent `--reloading`. These are refused with exit code 1, with `--replace` too; `--diff` shows what the change would come to.
+
+==== Replacing a feature that was asked for
+
+`--replace` says that a feature you asked for by name is to make way for the feature that is added:
+
+[source,console]
+----
+$ ./grailsw feature add mysql
+| Error The application has the feature postgres, which was asked for by name, and mysql would take the place of postgres (both are of the group database-driver): an application has one feature of such a group. A feature that was asked for is replaced only with --replace: feature add mysql --replace takes postgres out of the application and its record, as if the application had been created without it, and what you changed in the lines that go is a conflict. Nothing was changed
+$ ./grailsw feature add mysql --replace
+| Adding the feature mysql
+    mysql replaces postgres, which was asked for by name, in the group database-driver
+    update   build.gradle
+    update   grails-app/conf/application.yml
+    update   src/test/resources/application-test.yml
+| Feature mysql added, in the place of postgres. Commit the changes together with the directory .grails
+----
+
+The replacement is made the way a default is replaced, and by the same merge:
+
+* Afterwards the project is the one `create-app --features mysql` makes. `.grails/project.yml` names `mysql` among the features that were asked for and no longer `postgres`, the lock and the baseline are those of that application, `project show` prints the `create-` command with `mysql`, and `project regenerate --diff` finds nothing.
+* The other features that were asked for stay, and several features can be replaced by one command: `feature add mysql,geb-with-testcontainers --replace`. A feature that only the replaced one brought with it goes too, and is listed.
+* The lines of the replaced feature that you changed, the URL of its database for example, are a conflict, reported like every other conflict, and nothing is written. Your changes elsewhere in the same files are kept.
+* A feature that another feature of the application requires is not replaced: `grails-spring-security` stays while the application has `grails-spring-security-ui`, which requires it. The command names the feature that requires it, ends with exit code 2 and changes nothing, with `--replace` or without.
+* `--replace` replaces features of an exclusive group. It does not change an option the application was created with.
+* Where no feature that was asked for is in the way, `--replace` changes nothing of what the command does: a default is replaced as without it, and a feature that takes no place is added.
+* `--replace` puts a feature in the place of one the application has. It does not choose between features that are named together: two features of one exclusive group in one command, as `feature add h2,postgres`, are refused with exit code 2, with `--replace` or without and whichever of them the application has, and the message names both. A feature the application already has is part of the request like any other, so a command that was carried out changes nothing when it is run again.
+
+`--dry-run` and `--diff` can be given with `--replace`, and show the replacement and change nothing.
+
+==== The order of the keys in the configuration
+
+The keys of the YAML files the generator writes (`application.yml`, and the files of an environment) are in an order that depends on the keys alone, not on the features that put them there:
+
+* at the top of a file, and at the top of each environment, `info`, `dataSource`, `environments`, `hibernate` and `grails` come first, in that order, and every other key follows alphabetically;
+* under `environments`, `development`, `test` and `production` come first, then the other environments alphabetically;
+* the entries of `grails.mime.types` and of `grails.cors.mappings` are in the order the feature that sets them has them in, and the entries of a feature that is applied later follow those of an earlier one. The order of these two maps is not layout: Grails takes the first MIME type for a request that does not say what its content is, and for the response to a request that accepts anything when `all` is not among the types, and the first CORS mapping whose pattern matches a request is the one that counts. What is below an entry is in alphabetical order again;
+* everywhere else the keys are in alphabetical order, without regard to case. The elements of a list keep their order.
+
+A feature that is added therefore puts its own keys into the file and moves no other line: `feature add cache` adds `cache:` under `grails:` and leaves the rest of the file where it was, so a change of yours elsewhere in the file is never in its way.
+
+A project whose configuration has its keys in another order keeps that order. This is the case for a project that a build of Grails 9 before this rule generated, where the keys were in the order of the features, and for a file in which you moved a block. The command puts both generated versions of the file into the order of your file before it compares them, so only the keys of the feature arrive, next to the keys they are generated next to, and nothing moves. It says so under the file. The baseline under `.grails/baseline` is written in the order of the generator all the same, so afterwards `project regenerate --diff` names the file as changed: its content is the generated one, and the order is yours. For a project of such an earlier build, `feature add` accepts a baseline whose YAML files differ from what is generated now in the order of their keys only; `project regenerate` holds the baseline to what is generated byte for byte and refuses the project until a feature was added to it.
+
+==== What happens to your changes
+
+The command works from the record of the project. It generates the application again as it was recorded, which has to give exactly the files of the baseline, and once more with the feature added. Only the files that differ between the two are touched, and each of them is looked at in three versions: as it was generated, as it is generated with the feature, and as it is in your project.
+
+[cols="1,3"]
+|===
+| Listed as | What is done
+
+| `add`
+| The feature writes a file the project does not have. It is written.
+
+| `update`
+| The feature changes a file that you did not change. It gets the new content.
+
+| `merge`
+| The feature changes a file that you changed too, in other lines. The changes of the feature are put into your file, and everything you changed stays. Where you had already made a change of the feature yourself, in the place where the feature makes it, the command says under the file that your change and the feature's are the same there.
+
+| `keep`
+| The file already is what the feature makes of it, or a file the feature adds is already there with the content it would get. It is not written.
+
+| `remove`
+| A file that only a default feature wrote, which the feature replaces, and that you did not change. It is removed, with the directories that are empty without it.
+
+| `leave`
+| Only in an application whose record `project migrate` wrote for an application that was there: the feature changes a file this version generates for the application and the application does not have, as a `README.md`. The file is not written and the feature is added without it. The lines under it say what the feature would have added, counted and shown without the empty lines between them, and that the file as this version generates it with the feature is under `.grails/baseline/files`. In an application that was generated, a file you removed is a conflict.
+
+| `conflict`
+| The file cannot be written without losing something of yours. See below.
+|===
+
+A file the feature does not change is not read and not written, whatever you did with it: changed, moved or deleted. A file that is yours and that no feature writes is never touched. A text file whose lines end with CR LF, as on a clone that Git checked out for Windows, counts as unchanged when nothing else differs, keeps its line endings, and gets the lines of the feature with them; a new file has the line endings it is generated with. Binary files are never merged: one that you did not change is replaced, and one that both changed is a conflict. A file that is replaced keeps its permissions; where the feature makes a file executable, the file is made executable.
+
+After the command, the baseline under `.grails/baseline` holds the files as the generator writes them for the application with the feature, not your edited files, so that the next feature is again compared with what was generated.
+
+==== Conflicts
+
+There is a conflict when
+
+* the feature changes lines that you changed too, or lines directly next to them, in another way (the same change made by both in the same place is no conflict: a line of the feature that you already added by hand where the feature adds it is there once),
+* you and the feature both moved a line, or both added the same new line, each to another place: merged, the file would have the line twice, or lose it, so it is a conflict that names the line,
+* you and the feature each have the same top-level key in one document of a YAML file under `grails-app/conf`, in different places: the file would have the key twice, and only one would count. A key is what YAML reads, so `'quartz.autoStartup'` and `"quartz.autoStartup"` in quotes are the key `quartz.autoStartup` of the feature,
+* you and the feature each have the same setting in one document of such a file, written in different ways or in different places: one as a key with dots in it (`quartz.autoStartup: true`) and the other as nested keys (`quartz:` with `autoStartup: false` below it), or both under one key further down. YAML takes the first pair for two keys, Grails for one setting, and which value counts would depend on the order of the lines. The setting of an environment, under `environments`, is another setting and no conflict, and neither is one in another document of the file,
+* your file and the file of the feature are both YAML that reads, and merged by their lines they are not,
+* the feature changes a file that you removed, or that is now a directory or a symbolic link, or that has its name in other letters on a file system that does not tell them apart (`Build.gradle`),
+* the feature changes a binary file that you changed too,
+* the feature takes out a file, because it replaces the default feature that wrote it, and you changed the file,
+* the feature adds a file and the project has another file of that name,
+* the file has more than 200,000 lines, or it differs from the generated one in more than one place and in more than 2,000 lines altogether: such a file is not merged. Lines that were added in one single place, or removed in one single place, are merged whatever their number.
+
+The merge compares lines and knows nothing of what they mean. It takes your change and the change of the feature for two changes only when a generated line that neither of you changed is between them and that line can only be the line it is. Where lines are alike, as empty lines and closing braces are, and one of you added, removed or moved such a line, nothing says which of them a change is next to, and the two changes count as one place. Before a merged file is written, every line of it is counted: it has to be there as often as the generated file, your file and the file of the feature account for. What the merge cannot know is that two different lines mean the same thing. A dependency you declared with a version, with another configuration or with other quotes is, to the merge, another line than the declaration of the feature: both are kept, wherever yours is, and the top of the `dependencies` block is no exception. For `build.gradle` the command looks at the merged file once more and says, under the file, when a `group:artifact` is now declared more than once for one configuration; it changes nothing, and which declaration is to stay is yours to decide. Expect a conflict in two places in particular, because the generator writes there and so do most people. The generator writes dependencies in the order of their configurations, so the lines of a new feature are often the last of the `dependencies { }` block of `build.gradle`; and a feature whose configuration has a top-level key of its own puts it after the sections every application has, which is the end of `application.yml`. A dependency of your own that is the last line of that block is in the way of 8 of the 33 features that change `build.gradle` (the database drivers, MongoDB, Neo4j, Testcontainers and Geb among them), and a setting of your own at the very end of `application.yml` is in the way of 3 of the 14 features that change that file (`grails-quartz`, `spring-ai-ollama` and `spring-boot-virtual-threads`). A dependency that is the first line of the block is in the way of none of them, and neither is a setting above the generated ones. It helps to keep your own dependencies at the top of the block, and your own settings above the generated ones or in a file of their own.
+
+With one conflict, nothing is written: no file of the application, and nothing of the record. The command names every file with a conflict, its reason, the lines of both sides and what to do, and ends with exit code 1:
+
+[source,console]
+----
+$ ./grailsw feature add grails-quartz
+| Adding the feature grails-quartz
+    update   README.md
+    conflict build.gradle: the feature changes lines of this file that were changed in the project too, or lines next to them
+             at line 57 the generated file had no lines
+             the project has 1 line there:
+                     implementation "com.acme:mine:1.0"
+             and the feature has 1 line there:
+                     implementation "org.apache.grails:grails-quartz"
+             Both changed the same place, so neither is taken for the other. Take the lines of the project out of that place, or move them past a line that neither changed, add the feature again, and then put them where they belong
+    update   grails-app/conf/application.yml
+| Error The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed. What is in the way is said with each file; --diff shows what the feature would change. Make room for it and add the feature again
+----
+
+To resolve it, do what the lines under the file say: move your own lines away from the lines the feature changes, restore a file you removed (its generated copy is under `.grails/baseline/files`), or rename a file of yours that has the name of a file the feature adds. `feature add <feature> --diff` shows the whole change of the feature to each file with a conflict, under a line that starts with `rejected:`. Run the command again, and afterwards put your lines where you want them: once the feature is added, they are your changes to the new files like any other.
+
+==== What is refused
+
+The command changes a project only when it can do so safely, and otherwise says why in one line and changes nothing:
+
+* The directory has no record (`.grails/project.yml`), or the record is not complete or was changed by hand, or a file under `.grails/baseline` is missing or is not what was generated. A project that was created by a version before Grails 9, or by hand, has no record until `project migrate` writes one, after which a feature is added to it as to any other; see "The record of an application that was not generated by Grails 9".
+* The project was generated by another version. A feature is added by the version of the command line whose record the project has. The record of an earlier version is moved to the version that runs by `project migrate`, which the message names, and the feature is then added; the record of a later version is not moved back, and the message names that version. Moving the files of a project to a newer version is an upgrade, not something adding a feature does: see "After the version of Grails was changed by hand" below.
+* The application is not generated again as it was recorded. The usual reason is another value of `GRAILS_REPO_URL` than when the project was created: the repositories it gives are part of `build.gradle`.
+* The features cannot be had together with those the application has. The rules are those of the `create-` commands, with the same messages and exit code 2: a feature that does not exist for the type of application, two features of one exclusive group, a feature that was left out with `--exclude-features` when the project was created. Two features of one exclusive group that are named in one command are refused also when the application has one of them, with `--replace` too.
+* The feature is a preset, which an application is made from when it is created, or the feature of a pack whose feature the application already has from another version of the pack. The feature of a plugin outside Grails is added otherwise, by the coordinates of the plugin, with `--feature-pack-dir` or by its name in a feature catalog: see xref:plugins#forgeFeaturePackAddToExisting[Adding the Feature of a Pack to an Application That Is There].
+* The application has the feature of such a pack, or was made from a preset, and the pack or the preset is not there to generate it again. The command needs the very pack the application was generated with: the jar of a plugin is fetched again by the coordinates and the SHA-256 digest of the record, from the repositories of `GRAILS_REPO_URL`, Maven Central and the repository the record names, or from those of `--feature-pack-repository`; a jar with that SHA-256 that is kept on this computer since it was fetched is used in the place of a request, and with `--offline` the jar is that one or the jar of a repository that is a directory. The pack of a directory is given with `--feature-pack-dir`, and its content has to have the digest of the record. A pack that is not the one of the record is refused, and the message names both digests. With `--json`, the reason is `pack-missing` or `pack-differs`. See xref:plugins#forgeFeaturePackAfterCreation[After the Application Is Created].
+* The application already has the feature. The command says so, changes nothing and ends with exit code 0, so running the same command twice is harmless.
+* The feature would take the place of a feature that was asked for by name, when the application was created or with an earlier `feature add`, and `--replace` was not given. Without the option only a default is replaced, see "Replacing a feature that was asked for" above. Exit code 2.
+* The feature would take the place of a feature that another feature of the application requires. Exit code 2, with `--replace` too.
+* The feature would change an option the application was created with: `gorm-hibernate7` takes the place of Hibernate 5 (`--data`), a servlet container or a reloading agent that of the one the application was created with (`--servlet`, `--reloading`). The command does not change options, so it refuses these with exit code 1.
+
+For a feature that would change an option, `--diff` and `--dry-run` show what it would come to: the options that would change, the features that would go, and every file with what would be added to it and what would be removed. Nothing is changed.
+
+[source,console]
+----
+$ ./grailsw feature add gorm-hibernate7 --dry-run
+| To add the feature gorm-hibernate7
+    update   build.gradle
+    ...
+    change   --data hibernate7 in the place of hibernate5
+| Error Adding gorm-hibernate7 would change what the application was created with (--data hibernate7 in the place of hibernate5) ... Nothing was changed
+----
+
+The message goes on to say how an application comes to have the feature.
+
+There are two ways to such a feature today. A new application is created with it (`create-app --data hibernate7`). An existing one is changed by hand, with that diff as the guide. The record under `.grails` then still has the option the application was created with, the files you changed count as changed by you, and a feature that is added later is merged into them as into any file you edited.
+
+==== When the command is interrupted
+
+The files are written as one change. While it is made, there is a journal of it in your home directory, `.grails/forge/transactions/<a name made from the path of the project>/journal`, and the new files and a copy of each file that is replaced are in a directory of the project, `.grails/transactions/<a random name>`, which the generated `.gitignore` excludes. Both are written, and the operating system is asked to put them on the disk, before the first file of the project is replaced; both are removed when the change is complete.
+
+* When a file cannot be written, the files that were already written are put back, and the project is as it was.
+* When the command itself is ended in the middle, or the machine goes down, the next `feature add`, or `project migrate`, finds the journal and ends the change before it does anything else, and says what it did. It goes by what the files are, all of them, before it touches one. If every file is what the change makes of it, the change is complete and stays. If every file is what it was before the change, there is nothing to undo, and only the journal is removed. If some files were written and the others are untouched, the written ones are put back, each named in the message. Until then the record under `.grails` may not read, as when the change had written `forge.lock.yml` and not yet `project.yml`, and `--dry-run` and `--diff` refuse to look at a project that is half changed. `project migrate` ends the change also when the record does not read for that reason, before it says anything of the record.
+* A file that is neither what it was before the change nor what the change makes of it was changed by somebody since. It is not overwritten: nothing at all is put back, the command names the file and the directory with the copies, and it goes on once the file is one of the two, or the project is restored from version control and the journal is removed as the message says.
+* Where the file system has modes, as on Linux and macOS, the mode of a file is part of what the change makes of it. A file the change wrote whose mode was changed since, by `chmod 600` for example, is not put back either, because putting it back would also put back its earlier mode: nothing is put back, and the command names the file with the mode it has and the mode the change gave it. Give the file that mode again, or make it what it was before the change, and run the command again. When the change is complete, nothing is put back, and the file keeps the mode it was given.
+* Each file is compared once more just before it is put back, with its mode, as each is before the change writes it. A file that is saved after the files were looked at, by an editor for example, and before the command comes to it is not overwritten either: the command stops there and names the file, the files it put back by then stay put back, and the journal stays. Keep what was saved in the file elsewhere, make the file what it was before the change or what the change makes of it, and run the command again, which puts back the rest.
+* The journal is found by the path of the project and by your home directory. Under another home directory, in a container for example, or after the project was moved, the command does not know of the interrupted change: it reports the directory under `.grails/transactions` that holds the copies and leaves it alone. Finish there by restoring the project from version control, or go back to where the change was begun.
+
+Only the journal in your home directory says that there is a change to end. Nothing a project comes with can: a `.grails/transactions` directory in a clone or an archive is never read, and the command says that it is there. For that reason a feature is added only by a user with a home directory: the `user.home` of the Java runtime has to be an absolute path of a directory that is yours, and `.grails/forge/transactions` in it must be writable by nobody else. Without one, as for a user without an entry in a container, the command says so and changes nothing; `--dry-run` and `--diff` still work.
+
+Only one command changes a project at a time: `.grails/transactions/lock` is locked while it does, and a second command that is started meanwhile ends with a message. A command works out what it will write before it takes the lock, from the record and the files as it read them when it began, and writes only when each of them is still what it read. When another command changed the project in between, as a `feature add` that ended while `project migrate` was generating the application, the later one names the file that was changed (`.grails/baseline/index.yml was changed while the change of the project was being prepared; nothing of the project was changed`), writes nothing, and is run again. The lock is between the commands of `grails` and no other program. Comparing a file just before it is written or put back leaves only the moment between the comparison and the replacement, and a file that an editor writes at that very moment is still lost, so save your files first and do not edit the project while the command runs.
+
+=== The record over the life of a project
+
+The record under `.grails` is written by Grails and by nothing else: by the `create-` commands, by `feature add` together with the files it changes, and by `project migrate`, for an application that has none and to move the record an earlier version wrote to the version that runs. A build, a change to a file of the application and a change of `grailsVersion` leave it as it is, and a merge of Git merges its files as it merges any file, which a record does not survive when both sides changed it. This section says what the record is after each of them, what the commands then do with it, and how a record that no longer reads is brought back. None of the ways back changes a digest by hand: each ends with a record that Grails wrote.
+
+==== Which generator wrote the record
+
+The lock names the generator that wrote it by its version and by the identity of its build, a SHA-256 digest of what that build generates from: its sources and templates, the feature packs it has in itself, the Grails wrapper it gives an application and the versions it writes into one.
+
+[source,yaml]
+----
+generator:
+  name: grails-forge
+  version: 9.0.1-SNAPSHOT
+  sha256: 3f1c0d9e8b7a6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d
+----
+
+Every copy of a release has the identity of that release, in the command line and on the website alike. Two snapshots of one version have different ones when they generate from different sources, which their version does not tell. `project show` has the identity in its `build` line: `(this build)` when the command line that runs is the build that wrote the record, `(another build than this one, which is ...)` when another build of the same version wrote it, and nothing after it when another version did. `project show --json` has it as `sha256` in `generator`. A record that an earlier snapshot of Grails 9 wrote can have none, and the line says `(not recorded)`.
+
+==== Looking at the record, and generating with it
+
+The commands that read the record do one of two things with it:
+
+* *They look at it.* `project show` shows the record whichever version or build wrote it, and says so when it is not the command line that runs. The code generation commands (`create-controller` and the others), `add-property` and `install-templates` take the type, the package and the features from it in the same way: what they write is of the command line that runs.
+* *They generate the application with it.* `project regenerate` and `feature add` generate the application again as the record says and hold the result to the baseline, so they need the generator that wrote it. With another version they refuse and change nothing: for an earlier version they name `project migrate`, which moves the record to the version that runs, and for a later one they name that version. With another build of the same version they go on when it generates the very files of the baseline, and refuse otherwise, naming both builds and `project migrate`:
+
+[source,console]
+----
+$ ./grailsw feature add cache
+| Error The application cannot be generated again as it was: 1 file is not what the baseline of the project has (README.md). A feature is added to what the same generator makes of the same choices; the repositories given with GRAILS_REPO_URL are among those choices. The record was written by another build of grails-forge 9.0.1-SNAPSHOT than this one (the generator sha256 3f1c... there, 9a0b... here), which does not generate the same files: use the build that generated the application, or move the record to this build. grails project migrate moves the record to this version, from the choices it has, and changes no file of the application outside .grails
+----
+
+When another build of the same version generates the same files, `project regenerate --diff` and `--output` take the lock for the one that was generated, as it differs only in the build that wrote it, and a feature that is added writes a lock that names the build that added it. When it does not, `project migrate` moves the record to the build that runs, as it moves the record of an earlier version: see "After the version of Grails was changed by hand" below.
+
+==== After a merge
+
+Git merges the record like any file, and the result depends on which branches changed it:
+
+* *One branch changed the record and the other did not*, as when one added a feature and the other changed only files of the application: Git takes the record of the branch that changed it, and it reads. Nothing is to be done; `project regenerate --diff` lists the files the other branch changed.
+* *Both branches changed it*, as when each added a feature: the lock ends with a digest of the rest of it, so the two locks always conflict, and `project.yml` and the index of the baseline usually do as well. Every command that reads the record says that it has the markers of a merge conflict, and what to do.
+
+The record is not merged line by line, by hand or by a strategy of Git such as `-X ours` that takes some lines of each side: what that gives does not read, because its files hold the digests of each other. The record of one side is taken instead, and `feature add` adds what the other side added:
+
+[source,console]
+----
+$ git merge cache
+CONFLICT (content): Merge conflict in .grails/forge.lock.yml
+CONFLICT (content): Merge conflict in README.md
+...
+$ git restore --source=HEAD --staged --worktree -- .grails  <1>
+$ git checkout --ours -- README.md  <2>
+$ git add README.md
+$ git show MERGE_HEAD:.grails/project.yml  <3>
+...
+requestedFeatures:
+- name: cache
+...
+$ ./grailsw feature add cache  <4>
+| Adding the feature cache
+    update   README.md
+    keep     build.gradle (it is what the feature makes it already)
+    keep     grails-app/conf/application.yml (it is what the feature makes it already)
+| Feature cache added. Commit the changes together with the directory .grails
+$ ./grailsw project regenerate --diff  <5>
+added    src/main/groovy/com/example/Prices.groovy
+| 1 file is not as the application was generated: 1 added
+$ git add -A
+$ git commit
+----
+<1> The record of this branch, as it was committed. Files of the record that only the other branch has are removed with it.
+<2> Resolve the conflicts of the files of the application as usual. Where the conflict is between lines that the features of the two branches generated in the same place, as their sections of `README.md`, keep the lines of this branch: the next step writes those of the other feature where the generator puts them. `git checkout --ours` takes the whole file of this branch, which is right for a file in which the other branch changed nothing but the lines of its feature; in another file keep the lines of this branch in the conflict only, so that the other changes of the other branch stay.
+<3> The features the other branch asked for are its `requestedFeatures`. In a rebase use `REBASE_HEAD`, and in a cherry-pick `CHERRY_PICK_HEAD`, in the place of `MERGE_HEAD`.
+<4> Add those this record does not have. What the merge brought of a feature is kept, as `keep`, or as `merge` with a line that says your change and the feature's are the same; what is missing is written. A feature that the other branch added with `--replace` is added with `--replace` here as well. When the merge put lines of the feature somewhere else than the generator puts them, the command names them as a conflict and says where they belong; move them there, or take them out, and run it again.
+<5> The record is checked and generated again, and only the files that are not as generated are listed: those you changed. The record is then that of an application created with the features of both branches.
+
+Adding the features of the other branch on this branch before the merge, with `feature add` and a commit, comes to the same and leaves fewer conflicts in the files of the application. The merge then takes the record of this branch, as step 1 does.
+
+==== After the version of Grails was changed by hand
+
+When `grailsVersion` in `gradle.properties` and the dependencies of the build are changed by hand, the record stays as it is: it says which version generated the application, and does not follow the project. The record is then moved to the new version with `project migrate`, run by the command line of that version:
+
+[source,console]
+----
+$ ./grailsw update-wrapper  <1>
+$ ./grailsw project migrate  <2>
+| The record of how the application shop was generated, moved to this version: the application is generated again from the choices the record has, and nothing but the record is written
+    generator  grails-forge 9.0.0 for Grails 9.0.0 (generator sha256 3f1c0d9e8b7a), now grails-forge 9.1.0 for Grails 9.1.0 (generator sha256 9a0b1c2d3e4f)
+    changed  build.gradle
+    changed  gradle.properties
+| 2 files of the baseline, in .grails/baseline/files, are not as this version generates them: 2 changed. The record names this version
+| The record was moved to this version: .grails/project.yml, .grails/forge.lock.yml and the baseline under .grails/baseline were written. No other file of the project was changed. Commit the directory .grails
+...
+$ ./grailsw feature add cache  <3>
+----
+<1> After `grailsVersion` in `gradle.properties` names the new version, `./grailsw` starts the command line of that version. `update-wrapper` replaces the wrapper with that of the new version; commit the files it names. With a command line that is installed, as with SDKMAN! (`sdk install grails 9.1.0`), use that version's `grails` instead.
+<2> The application is generated again in memory, by the new version, from the choices the record has: the type, the name and the package, the options, the features, and the feature packs and the preset, which are given again as `feature add` takes them (`--feature-pack-dir`). The copy of every generated file under `.grails/baseline` and the record become what the new version writes for those choices. No file of the application outside `.grails` is written. `--dry-run` says what would change and writes nothing.
+<3> The commands that generate the application work again. Where a file of the application is not what the new version generates, because the earlier version generated it otherwise, because the upgrade changed it by hand or because you changed it, `feature add` takes the difference for a change of yours: it keeps it and merges what the feature adds around it, and where the feature changes the same lines, or the lines next to them, it reports a conflict and writes nothing. `project regenerate --diff` names those files.
+
+What each command does before the record is moved, and after:
+
+[cols="1,3,3"]
+|===
+| Command | Before `project migrate` | After it
+
+| `project show`
+| Shows the record. It says that the project is on another version of Grails than the record (`gradle.properties` against the record), that another version of the command line generated it, and that `project migrate` moves the record to the version that runs.
+| Shows the record of the new version.
+
+| The code generation commands, `add-property`, `install-templates`
+| Work: the type, the package and the features are taken from the record, and what they write is of the command line that runs.
+| Work, as before.
+
+| `feature add`, `project regenerate`
+| Refuse, change nothing, and name `project migrate`.
+| Work, as for an application the new version generated.
+
+| `project migrate`
+| Moves the record to the version that runs.
+| Says that there is nothing to move, and writes nothing.
+
+| The commands that build and run the application
+| Run the build, which does not read the record.
+| Run the build, as before.
+|===
+
+`project migrate` does not move a record to an earlier version: the command line of a version before the one that wrote the record refuses the move and names that version, as `feature add` and `project regenerate` do. A record that asks for a feature the new version does not have, because it was taken out of Grails or renamed, is not moved either, and the message names the feature: the upgrade notes say what became of it, and until the record is moved, `feature add` and `project regenerate` are run by the command line of the version that wrote it, installed (`sdk use grails 9.0.0`), as `./grailsw` starts the version the project is on now.
+
+==== After a generated dependency or file was removed by hand
+
+The record still has the feature, and says how the application was generated: `project show` lists it, `project regenerate --diff` names the file as `changed`, or as `removed` for a file that is gone, and the code generation commands of the feature, `create-job` of `grails-quartz` for example, are still there. `feature add` with the same feature changes nothing, because the application has it by its record. A feature that is added later keeps the removal, as it keeps any change of yours, and is a conflict only where it changes the lines next to it. To put a line or a file back, take it from the copy the record keeps of every generated file: `diff .grails/baseline/files/build.gradle build.gradle` shows the line. No command takes a feature out of an application and its record in this version.
+
+==== When the record does not read
+
+A command that cannot use the record says why in one line. What to do, by what the line says:
+
+[cols="2,3"]
+|===
+| The line says | What to do
+
+| `has the markers of a merge conflict`
+| Follow the steps of "After a merge" above.
+
+| `was changed after it was written`, `does not belong to`, `is not the baseline ... was written with`, `is not what the generator wrote`, `is not a file of the baseline index`
+| A file of the record was changed by something else than Grails: by hand, by a tool or by a merge. Restore `.grails` from the last commit whose record reads, `git restore --source=HEAD --staged --worktree -- .grails` for the last one of the branch. After a merge, follow "After a merge".
+
+| `is not complete`
+| A file of the record was not committed, or the project was not generated to the end. The line says which.
+
+| `generated by grails-forge` and another version
+| Run `project migrate` with the command line of the version the project is on now, which moves the record of an earlier version to it. See "After the version of Grails was changed by hand".
+
+| `another build of grails-forge`
+| Run `project migrate`, which moves the record to the build that runs, or run the command with the build that generated the application, which the line names by its identity, or with a build that generates the same files.
+|===
+
+When no commit has a record that reads and `project show` still shows it, the `create-` command it prints, run by the version that generated the application in another directory, writes the same record: copy its `.grails` directory into the project, and the files of the project count as changed where they are not what it generated. When `project show` cannot read it either, remove the `.grails` directory and run `project migrate`, which writes the record of an application that was there; `feature add` and `project regenerate` are not available for such a record.

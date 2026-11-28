@@ -114,7 +114,6 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     private Closure onConfigChangeListener;
     private Closure onShutdownListener;
     private Class<?>[] providedArtefacts = {};
-    private Collection profiles = null;
     private Map pluginEnvs;
     private List<String> pluginExcludes = new ArrayList<>();
     private Collection<? extends TypeFilter> typeFilters = new ArrayList<>();
@@ -133,17 +132,6 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         } catch (Throwable e) {
             throw new PluginException("Error initialising plugin for class [" + pluginClass.getName() + "]:" + e.getMessage(), e);
         }
-    }
-
-    @Override
-    public boolean isEnabled(String[] activeProfiles) {
-        if (profiles == null) return true;
-        else {
-            for (String activeProfile : activeProfiles) {
-                if (profiles.contains(activeProfile)) return true;
-            }
-        }
-        return false;
     }
 
     @Override

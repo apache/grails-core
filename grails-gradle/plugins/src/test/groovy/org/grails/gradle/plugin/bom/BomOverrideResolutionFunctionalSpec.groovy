@@ -65,4 +65,16 @@ class BomOverrideResolutionFunctionalSpec extends GradleSpecification {
         result.output.contains('RESOLVED=org.example:grouplib:2.0.0')
         !result.output.contains('RESOLVED=org.example:grouplib:1.0.0')
     }
+
+    def "a configuration the extension excludes keeps the versions it asks for"() {
+        given:
+        setupTestResourceProject('bom-override-resolution')
+
+        when:
+        def result = executeTask('printToolVersions')
+
+        then: 'the override of mylib to 1.0.0, which the project gets, is not applied to it'
+        result.output.contains('TOOL=org.example:mylib:2.0.0')
+        !result.output.contains('TOOL=org.example:mylib:1.0.0')
+    }
 }

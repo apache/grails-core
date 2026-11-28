@@ -121,4 +121,12 @@ tasks.named('assemble') {
     dependsOn(awsElasticBeanstalk)
 }
 
+tasks.named('test', Test).configure { Test test ->
+    // NoFeatureCatalogSpec takes the names of the classes of the command line from its sources, and holds that none
+    // of them is on this class path: when they change, it runs again
+    test.inputs.dir(rootProject.layout.projectDirectory.dir('grails-forge-cli/src/main/groovy'))
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+            .withPropertyName('forgeCliSources')
+}
+
 apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')

@@ -18,7 +18,13 @@
  */
 package org.apache.grails.data.hibernate5.dbmigration.cli
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import java.text.DateFormat
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -74,6 +80,7 @@ import liquibase.util.LiquibaseUtil
 import liquibase.util.StreamUtil
 
 import grails.config.ConfigMap
+import grails.util.BuildSettings
 import org.grails.build.parsing.CommandLine
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 import org.grails.plugins.databasemigration.NoopVisitor
@@ -136,7 +143,8 @@ trait DatabaseMigrationCommand {
         if (getExtension(filename)) {
             return new File(changeLogLocation, filename)
         }
-        if (dataSource) {
+        // a change log of a data source other than the default is named for it, as getChangeLogFileName names the root one
+        if (!isDefaultDataSource(dataSource)) {
             return new File(changeLogLocation, "${filename}-${dataSource}.groovy")
         }
         return new File(changeLogLocation, "${filename}.groovy")
@@ -159,19 +167,130 @@ trait DatabaseMigrationCommand {
         return (Map<String, String>) dataSources.get(dataSourceName)
     }
 
+    /**
+     * Writes the output of a tool to the standard output, or to the file it was given under the rule of
+     * {@link #outputFile}.
+     *
+     * @param filename the file the tool was given; {@code null} or empty for the standard output
+     * @param closure what writes the output
+     */
     void withFileOrSystemOutWriter(String filename, @ClosureParams(value = SimpleType, options = 'java.io.Writer') Closure closure) {
+        withOutputWriter(outputFile(filename), closure)
+    }
+
+    /**
+     * The file a tool writes its output to, for the name it was given: resolved against the directory of the
+     * project, and only where that is inside the project, all links followed, and where no file of the name is
+     * there yet. A tool asks for it before it does anything else, so that a name it would not write to stops it
+     * before it opens the database. Directories of the path that are not there yet are made when the file is
+     * written, inside the project.
+     *
+     * @param filename the name the tool was given; {@code null} or empty for the standard output
+     * @return the file, which {@link #withOutputWriter} and {@link #withOutputStream} create; {@code null} for the
+     * standard output
+     * @throws DatabaseMigrationException when the file would be outside the project, or is there already
+     */
+    File outputFile(String filename) {
         if (!filename) {
+            return null
+        }
+        Path project = BuildSettings.BASE_DIR.toPath().toAbsolutePath()
+        Path projectReal = project.toRealPath()
+        Path given = Paths.get(filename)
+        Path target = realTarget(given.isAbsolute() ? given : project.resolve(given))
+        if (target == null || !target.startsWith(projectReal)) {
+            // a path is false to Groovy when it is not there, so the one that was found is asked for by null
+            Path shown = target != null ? target : given
+            throw new DatabaseMigrationException("The output file ${shown} is outside the project ${projectReal}: name a file inside the project")
+        }
+        if (target == projectReal || Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+            throw new DatabaseMigrationException(thereAlready(target))
+        }
+        target.toFile()
+    }
+
+    /**
+     * Writes the output of a tool to the standard output, or to a new file.
+     *
+     * @param outputFile the file {@link #outputFile} gave; {@code null} for the standard output
+     * @param closure what writes the output
+     */
+    void withOutputWriter(File outputFile, @ClosureParams(value = SimpleType, options = 'java.io.Writer') Closure closure) {
+        if (outputFile == null) {
             closure.call(new PrintWriter(System.out))
             return
         }
-
-        def outputFile = new File(filename)
-        if (outputFile.parentFile && !outputFile.parentFile.exists()) {
-            outputFile.parentFile.mkdirs()
-        }
-        outputFile.withWriter { BufferedWriter writer ->
+        withOutputStream(outputFile) { OutputStream out ->
+            Writer writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))
             closure.call(writer)
+            writer.flush()
         }
+    }
+
+    /**
+     * Writes the output of a tool to the standard output, or to a new file: the file is created, and is not
+     * written when something of the name is there by then. When writing the output fails, the file is removed
+     * again.
+     *
+     * @param outputFile the file {@link #outputFile} gave; {@code null} for the standard output
+     * @param closure what writes the output
+     */
+    void withOutputStream(File outputFile, @ClosureParams(value = SimpleType, options = 'java.io.OutputStream') Closure closure) {
+        if (outputFile == null) {
+            closure.call(System.out)
+            return
+        }
+        Path path = outputFile.toPath()
+        Files.createDirectories(path.parent)
+        OutputStream out
+        try {
+            out = Files.newOutputStream(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
+        } catch (FileAlreadyExistsException ignored) {
+            throw new DatabaseMigrationException(thereAlready(path))
+        }
+        boolean written = false
+        try {
+            closure.call(out)
+            out.flush()
+            written = true
+        } finally {
+            out.close()
+            if (!written) {
+                Files.deleteIfExists(path)
+            }
+        }
+    }
+
+    private String thereAlready(Path file) {
+        "The output file ${file} is there already: remove it or name another file".toString()
+    }
+
+    // where the file of a path is: the nearest directory of the path that is there, with its links followed, and
+    // the names after it, which are not there yet and so are no links; null when the path leads nowhere
+    private Path realTarget(Path absolute) {
+        Path name = absolute.fileName
+        if (name == null) {
+            return null
+        }
+        List<String> missing = []
+        Path existing = absolute.parent
+        while (existing != null && !Files.exists(existing, LinkOption.NOFOLLOW_LINKS)) {
+            missing.add(0, existing.fileName.toString())
+            existing = existing.parent
+        }
+        if (existing == null) {
+            return null
+        }
+        Path target
+        try {
+            target = existing.toRealPath()
+        } catch (IOException ignored) {
+            return null
+        }
+        for (String each : missing) {
+            target = target.resolve(each)
+        }
+        target.resolve(name.toString()).normalize()
     }
 
     boolean isTimeFormat(String time) {
@@ -260,6 +379,7 @@ trait DatabaseMigrationCommand {
                 .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, originalDatabase)
                 .addArgumentValue(PreCompareCommandStep.SNAPSHOT_TYPES_ARG, DiffCommandStep.parseSnapshotTypes(null as String))
                 .addArgumentValue(PreCompareCommandStep.COMPARE_CONTROL_ARG, compareControl)
+                .addArgumentValue(PreCompareCommandStep.OBJECT_CHANGE_FILTER_ARG, diffOutputControl.objectChangeFilter)
                 .addArgumentValue(DiffChangelogCommandStep.CHANGELOG_FILE_ARG, changeLogFilePath)
                 .addArgumentValue(DiffOutputControlCommandStep.INCLUDE_CATALOG_ARG, diffOutputControl.getIncludeCatalog())
                 .addArgumentValue(DiffOutputControlCommandStep.INCLUDE_SCHEMA_ARG, diffOutputControl.getIncludeSchema())

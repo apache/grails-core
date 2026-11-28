@@ -26,7 +26,7 @@ To use the standard user lookup you'll need at a minimum a "`person`" and an "`a
 
 To use the user/group lookup you'll also need a "`group`" domain class. If you are using the recommended approach for mapping many-to-many relationship between "`person`" and "`group`" and between "`group`" and "`authority`" you'll need a domain class for each to map the join tables. You can still additionally use "`requestmap`" with this approach.
 
-The <<core-s2-quickstart>> script creates initial domain classes for you. You specify the package and class names, and it creates the corresponding domain classes. After that you can customize them as you like. You can add additional properties, methods, and so on, as long as the core security-related functionality remains.
+The <<core-s2-quickstart>> command creates initial domain classes for you. You specify the package and class names, and it creates the corresponding domain classes. After that you can customize them as you like. You can add additional properties, methods, and so on, as long as the core security-related functionality remains.
 
 include::domainClasses/personClass.adoc[]
 

@@ -113,26 +113,28 @@ Notice how the common configuration is provided at the top level and then an `en
 === Packaging and Running for Different Environments
 
 
-Grails' link:commandLine.html[command line] has built in capabilities to execute any command within the context of a specific environment. The format is:
+The commands of Grails' link:commandLine.html[command line] that run the build of a project take the environment after their name, as the `grails.env` system property. The format is:
 
 [source,bash]
 ----
-grails <<environment>> <<command name>>
+grails <<command name>> -Dgrails.env=<<environment>>
 ----
 
-In addition, there are 3 preset environments known to Grails: `dev`, `prod`, and `test` for `development`, `production` and `test`. For example to create a WAR for the `test` environment you would run:
-
-[source,bash]
-----
-grails test war
-----
-
-To target other environments you can pass a `grails.env` variable to any command:
+The three preset environments are `development`, `test` and `production`. For example to create a WAR for the `test` environment you would run:
 
 [source,bash]
 ----
-grails -Dgrails.env=UAT run-app
+grails war -Dgrails.env=test
 ----
+
+Other environments are named in the same way:
+
+[source,bash]
+----
+grails run-app -Dgrails.env=UAT
+----
+
+NOTE: Before Grails 9 the environment was given in front of the command, as in `grails test war`. That form is refused: what follows `grails` is the name of a command.
 
 [source,bash]
 ----

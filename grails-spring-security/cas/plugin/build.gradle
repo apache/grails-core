@@ -41,7 +41,6 @@ dependencies {
 	compileOnly 'org.springframework.boot:spring-boot-starter-logging'
 	compileOnly project(':grails-web-boot')
 
-	profile project(':grails-profiles-web-plugin')
 	api project(':grails-spring-security')
 
 	api 'org.apereo.cas.client:cas-client-core'

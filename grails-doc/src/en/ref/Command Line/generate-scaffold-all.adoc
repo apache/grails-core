@@ -1,0 +1,83 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== generate-scaffold-all
+
+=== Purpose
+
+Creates a scaffolded service and a scaffolded controller that uses it, for a domain class
+
+=== Examples
+
+[source,console]
+----
+grails generate-scaffold-all org.bookstore.Book
+grails generate-scaffold-all Book --namespace=admin
+----
+
+=== Description
+
+Dynamic scaffolding generates the actions and the views of a controller, or the methods of a service, when the application runs, for a class that is annotated with `@Scaffold` (see link:{guidePath}scaffolding.html[Scaffolding]).
+
+The `generate-scaffold-all` command writes the service that link:{commandLineRefFromRef}create-scaffold-service.html[create-scaffold-service] writes and the controller that link:{commandLineRefFromRef}create-scaffold-controller.html[create-scaffold-controller] writes with `--service`. For the domain class `org.bookstore.Book`:
+
+* `grails-app/services/org/bookstore/BookService.groovy`
+* `grails-app/controllers/org/bookstore/BookController.groovy`, or `grails-app/controllers/org/bookstore/admin/BookController.groovy` with `--namespace=admin`
+
+Usage:
+
+[source,console]
+----
+grails generate-scaffold-all <domain class> [--namespace=<namespace>] [--serviceExtends=<class>] [--controllerExtends=<class>] [--force]
+----
+
+Arguments:
+
+* `domain class` - The name of one domain class. A domain class of the project is found by its simple name or its full name, and what is created goes into its package. A class the project has no source of, which is a domain class of a plugin or of another project of the build, is given by its full name.
+
+Flags:
+
+* `namespace` - The namespace of the controller: its `static namespace`, the last part of its package, and the directory below the package that it is written to
+* `serviceExtends` - The full name of the class the scaffolded service extends
+* `controllerExtends` - The full name of the class the scaffolded controller extends
+* `force` - Replace files that are there already (`--force`)
+
+=== Running the Command
+
+The command is a tool of the scaffolding plugin (`org.apache.grails:grails-scaffolding`). It only reads and writes files of the project, so it is a standalone tool, in the companion `grails-scaffolding-cli-standalone` of the plugin: `grails` starts it by its name as a Java process of its own, without Gradle and without the application, with the class path the last build of the project wrote down, and the project need not compile (see "A Standalone Tool" in link:{guidePath}commandLine.html#creatingTools[Creating Tools]). `run-tool` and the Gradle task `runTool` run it with the build, without the application. An application that depends on the plugin has the tool, and so has one that declares the standalone tools of the plugin alone (`grailsCliStandalone "org.apache.grails:grails-scaffolding-cli-standalone"`), as a REST API application with the `scaffolding` feature does: that keeps the plugin, GSP and the fields plugin off every class path of the application, of its tests and of its other tools. In a REST API application with the `scaffolding` feature, which has the commands of the plugin and not the plugin (`grailsCli "org.apache.grails:grails-scaffolding-cli"`), a class this command writes can extend a class of the scaffolding plugin, such as `RestfulServiceController` or `GormService`. It compiles, and the running application does not have that class: declare `implementation "org.apache.grails:grails-scaffolding"` in such an application first. There are three ways to run it:
+
+[source,console]
+----
+$ grails generate-scaffold-all org.bookstore.Book                              <1>
+$ grails run-tool generate-scaffold-all org.bookstore.Book                  <2>
+$ ./gradlew runTool -Pargs="generate-scaffold-all org.bookstore.Book"       <3>
+----
+<1> By its name. The build lists the tools of the application and its plugins whenever it compiles the project, and in a project it has not compiled yet `grails` has it list them first. See "Tools of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
+<2> With `run-tool`, which runs it with the build of the project.
+<3> With Gradle alone. `--arg=generate-scaffold-all --arg=org.bookstore.Book` in place of `-Pargs` gives each argument as it is.
+
+=== Failures
+
+A file that is there already is kept: the command warns that it skips the file and goes on. With `--force` the file is replaced.
+
+Without a domain class, with more than one, and with an option it does not have, the command is refused before it runs, with exit code 2 and one line, such as `| Error generate-scaffold-all: DOMAIN-CLASS is required. grails help generate-scaffold-all shows its options`. `grails help generate-scaffold-all` lists the options and the parameter it takes.
+
+When the command fails, the Gradle task fails, and `grails` ends with exit code 1.
+
+Before Grails 9 the Grails shell ran a script of the same name. The plugin has no scripts any more, and the command asks no questions: the name of the domain class has to be given.

@@ -24,9 +24,10 @@ import grails.codegen.model.DomainFieldModifier
 import grails.codegen.model.PropertyDefinition
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
+import org.apache.grails.forge.cli.console.UsageHelp
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
-import org.grails.forge.io.FileSystemOutputHandler
+import org.grails.forge.io.OutputFailedException
 import org.grails.forge.io.OutputHandler
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -120,7 +121,7 @@ class AddPropertyCommand extends CodeGenCommand {
         }
         if (constraintStyle != null) {
             try {
-                property.setConstraintStyle(AbstractMemberDefinition.ConstraintStyle.valueOf(constraintStyle.toUpperCase()))
+                property.setConstraintStyle(AbstractMemberDefinition.ConstraintStyle.valueOf(constraintStyle.toUpperCase(Locale.ROOT)))
             } catch (IllegalArgumentException e) {
                 err('Invalid constraint style: ' + constraintStyle + '. Use: grails, jakarta, or both')
                 return 1
@@ -134,36 +135,47 @@ class AddPropertyCommand extends CodeGenCommand {
             return 1
         }
 
-        File projectDir = FileSystemOutputHandler.getDefaultBaseDirectory()
-        File domainFile = domainFieldModifier.findDomainFile(projectDir, domainClassName)
+        File projectDir = getProjectDirectory()
+        File domainFile
+        try {
+            domainFile = domainFieldModifier.findDomainFile(projectDir, domainClassName)
+        } catch (IllegalStateException e) {
+            // several classes of the name
+            err(e.getMessage())
+            return 1
+        }
 
         if (domainFile == null || !domainFile.exists()) {
             err('Domain class not found: ' + domainClassName)
-            err('Run \'grails create-domain-class ' + domainClassName + '\' first.')
+            err("Run '${UsageHelp.toType(spec, "create-domain-class ${domainClassName}")}' first.")
             return 1
         }
 
-        if (domainFieldModifier.memberExists(domainFile, property.getName())) {
-            err('Property \'' + property.getName() + '\' already exists in ' + domainClassName)
-            return 1
-        }
-
+        String path = getRelativePath(projectDir, domainFile)
         try {
+            if (domainFieldModifier.memberExists(domainFile, property.getName())) {
+                err('Property \'' + property.getName() + '\' already exists in ' + domainClassName)
+                return 1
+            }
             domainFieldModifier.addProperty(domainFile, property)
-            out('@|blue ||@ Added property \'' + property.getName() + '\' to ' + getRelativePath(projectDir, domainFile))
-        } catch (Exception e) {
-            err('Failed to add property: ' + e.getMessage())
+        } catch (IllegalStateException e) {
+            // a class that cannot be parsed, or one the property cannot be added to as it is written: nothing was written
+            err(e.getMessage())
+            return 1
+        } catch (IOException e) {
+            // what the file system says has the path of the file on this computer in it, and is not repeated
+            err("Cannot change ${path}: ${OutputFailedException.reason(e)}")
+            if (showStacktrace()) {
+                e.printStackTrace(spec.commandLine().getErr())
+            }
             return 1
         }
-
+        out('@|blue ||@ Added property \'' + property.getName() + '\' to ' + path)
         return 0
     }
 
-    private String getRelativePath(File base, File file) {
-        try {
-            return base.toPath().relativize(file.toPath()).toString()
-        } catch (Exception e) {
-            return file.getAbsolutePath()
-        }
+    // the path of the class in the project, with / between its steps
+    private static String getRelativePath(File base, File file) {
+        return base.toPath().relativize(file.toPath()).join('/')
     }
 }

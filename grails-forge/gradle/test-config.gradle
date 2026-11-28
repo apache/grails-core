@@ -32,17 +32,83 @@ boolean cacheTests = !doNotCacheTests
 // generated applications is then compiled with classic call sites.
 boolean classicFramework = project.hasProperty('grailsIndy') && !Boolean.parseBoolean(project.property('grailsIndy').toString())
 
+/**
+ * Gives the JVMs of a test task a home of the task's own. The directory is no input of the task: where the
+ * build is checked out does not change what the specs test.
+ */
+final class TestHomeArgumentProvider implements CommandLineArgumentProvider {
+
+    @Internal
+    final Provider<Directory> home
+
+    TestHomeArgumentProvider(Provider<Directory> home) {
+        this.home = home
+    }
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-Duser.home=${home.get().asFile.absolutePath}".toString()]
+    }
+}
+
+/** Empties the home of a test task before its specs run, so that no run reads what an earlier one kept there. */
+final class EmptyTestHome implements Action<Task> {
+
+    private final Provider<Directory> home
+
+    EmptyTestHome(Provider<Directory> home) {
+        this.home = home
+    }
+
+    @Override
+    void execute(Task task) {
+        File directory = home.get().asFile
+        directory.deleteDir()
+        directory.mkdirs()
+    }
+}
+
+// The Gradle user home the specs use without a home of their own: the one the environment names, else the
+// one in the home of whoever runs the build. It is read here, where the home is still that one.
+Provider<String> gradleUserHome = providers.environmentVariable('GRADLE_USER_HOME')
+        .orElse(providers.systemProperty('user.home').map { String home -> new File(home, '.gradle').absolutePath })
+
 tasks.withType(Test).configureEach { Test testTask ->
+    // The command line keeps what it keeps for its user under .grails/forge of the home of the user: the copies
+    // of the feature catalogs, the jars of feature packs and the journal of a change. A spec that runs a command
+    // as it is would read and write the home of whoever runs the build, so every test task has a home of its
+    // own under the build directory, which is empty when its specs start (TestHomeSpec holds each module to it).
+    Provider<Directory> testHome = layout.buildDirectory.dir("test-home/${testTask.name}")
+    testTask.jvmArgumentProviders.add(new TestHomeArgumentProvider(testHome))
+    testTask.doFirst(new EmptyTestHome(testHome))
+    // Gradle takes its user home from the home of the user unless the environment names one. The builds the
+    // specs run, in their own JVM with the Tooling API and with the wrapper, keep the Gradle user home they
+    // had: a new one would download the distribution and every dependency again.
+    testTask.environment('GRADLE_USER_HOME', gradleUserHome.get())
+
     if (forgeTestsEnabled) {
         // Only the modules whose specs build generated applications (TestKit) need the published
         // framework; the unit specs of the other modules run without the publish chain.
         boolean forgeTestsNeedLocalMaven = project.findProperty('forgeTestsNeedLocalMaven') == true
         if (forgeTestsNeedLocalMaven) {
-            testTask.dependsOn(
-                    gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
-                    gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
-            )
-            testTask.environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('../build/local-maven')))
+            // -PprebuiltTestRepository (see settings.gradle): the repository is there already and was checked
+            // when the build was configured, so nothing is published and no module of the framework is built
+            def prebuilt = rootProject.ext.prebuiltTestRepository
+            if (prebuilt) {
+                testTask.environment('GRAILS_REPO_URL', prebuilt.directory.toURI())
+                // the jars are part of what the specs test, and no task of this build makes them
+                testTask.inputs.dir(prebuilt.directory).withPropertyName('prebuiltTestRepository').withPathSensitivity(PathSensitivity.RELATIVE)
+                String staleRepository = prebuilt.warning
+                if (staleRepository) {
+                    testTask.doFirst { Task task -> task.logger.warn('WARNING: {}', staleRepository) }
+                }
+            } else {
+                testTask.dependsOn(
+                        gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
+                        gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
+                )
+                testTask.environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('../build/local-maven')))
+            }
             if (classicFramework) {
                 // Groovy 6 loads a classic-compiled class only with groovy-callsite. The specs pass this
                 // init script to every generated build (GeneratedBuild in the CLI module's test fixtures
@@ -75,4 +141,20 @@ tasks.withType(Test).configureEach { Test testTask ->
     maxParallelForks = rootProject.ext.configuredTestParallel
 
     useJUnitPlatform()
+}
+
+// Coverage is measured only when it is asked for. The JaCoCo plugin puts its agent into every test JVM and
+// the convention plugin writes three reports after every Test task, which an ordinary build of Forge has no
+// use for, so the plugin is applied only when a coverage task is requested by its full name (an abbreviation
+// such as `jAR` is not recognised), as gradle/dependency-analysis.settings.gradle does for its plugin.
+// `./gradlew jacocoAggregateReport` runs the tests of every module and writes
+// build/reports/jacoco/aggregate/jacocoAggregateReport.xml, the file the Coverage workflow uploads;
+// `./gradlew :grails-forge-core:test :grails-forge-core:jacocoTestReport` reports one module.
+// A JVM the specs start themselves (a generated build, the forked command line) carries no agent and is not counted.
+Set<String> coverageTasks = ['jacocoAggregateReport', 'jacocoTestReport'] as Set
+boolean coverageRequested = gradle.startParameter.taskNames.any { String requested ->
+    coverageTasks.contains(requested.substring(requested.lastIndexOf(':') + 1))
+}
+if (coverageRequested) {
+    pluginManager.apply('org.apache.grails.gradle.grails-jacoco')
 }

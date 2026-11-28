@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import jakarta.annotation.Nullable
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.cli.CommonOptionsMixin
+import org.grails.forge.cli.ForgeCommand
 import org.grails.forge.io.ConsoleOutput
 import picocli.CommandLine
 
@@ -42,6 +43,14 @@ class BaseCommand implements ConsoleOutput {
         spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Error|@ ' + message))
     }
 
+    /**
+     * Says a warning about the project or the command line, as distinct from what a command says of
+     * what it did: on the error stream, where the errors are, and not among what a command writes.
+     */
+    void warned(String message) {
+        spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + message))
+    }
+
     void warning(String message) {
         spec.commandLine().getOut().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + message))
     }
@@ -56,12 +65,33 @@ class BaseCommand implements ConsoleOutput {
         spec.commandLine().getOut().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red ' + message + '|@'))
     }
 
+    /**
+     * @return whether the full stack trace is asked for, after the name of the command or in front of it
+     */
     boolean showStacktrace() {
-        return commonOptions.showStacktrace
+        return commonOptions.showStacktrace || (ofCommandLine() != null && ofCommandLine().commonOptions.showStacktrace)
     }
 
+    /**
+     * @return whether verbose output is asked for, after the name of the command or in front of it
+     */
     boolean verbose() {
-        return commonOptions.verbose
+        return commonOptions.verbose || (ofCommandLine() != null && ofCommandLine().commonOptions.verbose)
+    }
+
+    // the command line itself, for an option that was given in front of the command; null for the command line
+    private BaseCommand ofCommandLine() {
+        Object root = spec == null ? null : spec.root().userObject()
+        return root instanceof BaseCommand && !root.is(this) ? (BaseCommand) root : null
+    }
+
+    /**
+     * @return whether the command line was given {@code --non-interactive}: nothing may then wait
+     * for what a user types
+     */
+    boolean nonInteractive() {
+        Object root = spec.root().userObject()
+        return root instanceof ForgeCommand && ((ForgeCommand) root).nonInteractive
     }
 
     @Nullable

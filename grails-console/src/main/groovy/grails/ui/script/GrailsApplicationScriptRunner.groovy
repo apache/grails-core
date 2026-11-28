@@ -62,23 +62,25 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
             System.exit(1)
         }
 
-        def binding = new Binding()
-        binding.setVariable('ctx', ctx)
-
-        Config config = ctx.getBean('grailsApplication', GrailsApplication).config
-        String defaultPackageKey = 'grails.codegen.defaultPackage'
-        GroovyShell sh
-        CompilerConfiguration configuration = CompilerConfiguration.DEFAULT
-        if (config.containsProperty(defaultPackageKey)) {
-            ImportCustomizer importCustomizer = new ImportCustomizer()
-            importCustomizer.addStarImports(config.getProperty(defaultPackageKey, String))
-            configuration.addCompilationCustomizers(importCustomizer)
-        }
-        sh = new GroovyShell(binding, configuration)
-
-        Collection<PersistenceContextInterceptor> interceptors = ctx.getBeansOfType(PersistenceContextInterceptor).values()
-
+        Collection<PersistenceContextInterceptor> interceptors = []
         try {
+            def binding = new Binding()
+            binding.setVariable('ctx', ctx)
+
+            Config config = ctx.getBean('grailsApplication', GrailsApplication).config
+            String defaultPackageKey = 'grails.codegen.defaultPackage'
+            // a configuration of this run: the default one is shared by everything that compiles in this JVM
+            // and refuses to be changed (UnsupportedOperationException)
+            CompilerConfiguration configuration = new CompilerConfiguration(CompilerConfiguration.DEFAULT)
+            if (config.containsProperty(defaultPackageKey)) {
+                ImportCustomizer importCustomizer = new ImportCustomizer()
+                importCustomizer.addStarImports(config.getProperty(defaultPackageKey, String))
+                configuration.addCompilationCustomizers(importCustomizer)
+            }
+            GroovyShell sh = new GroovyShell(binding, configuration)
+
+            interceptors = ctx.getBeansOfType(PersistenceContextInterceptor).values()
+
             scripts.each {
                 try {
                     for (i in interceptors) {
@@ -93,6 +95,12 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
                     System.exit(1)
                 }
             }
+        } catch (Throwable e) {
+            // nothing may leave this method with the context open: in development a thread that watches the
+            // sources of the application keeps the JVM alive until the context is closed, so a failure that
+            // only ended this thread left the JVM, and the build that started it, waiting for ever
+            System.err.println("runScript: The scripts could not be run: $e")
+            System.exit(1)
         } finally {
             try {
                 for (i in interceptors) {

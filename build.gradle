@@ -20,6 +20,7 @@ plugins {
     id 'org.apache.grails.gradle.grails-ij-formatter'
     id 'org.apache.grails.gradle.grails-validate-actions'
     id 'org.apache.grails.buildsrc.test-task-sharding'
+    id 'org.apache.grails.buildsrc.test-repository-marker'
     id 'org.apache.grails.buildsrc.vulnerability-scan-report'
 }
 
@@ -64,8 +65,9 @@ ext {
     testForkHeapMb = findProperty('testForkHeapMb') as Integer ?:
             (isCiBuild ? 768 : localTestForkHeapMb(gradle.startParameter.maxWorkerCount))
     if (testForkHeapMb < 768) {
-        throw new GradleException("-PtestForkHeapMb must be at least 768 (got ${testForkHeapMb}): Grails Test " +
-                'tasks start with -Xms768m. Lower -PmaxTestParallel or --max-workers to use less memory.')
+        throw new GradleException("-PtestForkHeapMb must be at least 768 (got ${testForkHeapMb}): 768m is the heap the " +
+                'Grails Gradle plugin gives a test JVM by default, which the test suites are sized for. ' +
+                'Lower -PmaxTestParallel or --max-workers to use less memory.')
     }
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
@@ -76,7 +78,6 @@ ext {
     testProjects = [ /* Will be populated by subprojects loop below */]
     docProjects = [ /* Will be populated by subprojects loop below */]
     cliProjects = [ /* Will be populated by subprojects loop below */]
-    profileProjects = [ /* Will be populated by subprojects loop below */]
     skillProjects = [ /* Will be populated by subprojects loop below */]
 }
 
@@ -161,10 +162,6 @@ subprojects {
 
     if (name.startsWith('grails-wrapper')) {
         rootProject.ext['cliProjects'] << name
-    }
-
-    if (name.startsWith('grails-profiles')) {
-        rootProject.ext['profileProjects'] << name
     }
 
     if (name.startsWith('grails-skills')) {

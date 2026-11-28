@@ -22,9 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Stream;
 
 /**
  * Helper class for managing the `grails-cli` jar files in the Grails Wrapper home directory.
@@ -78,66 +76,15 @@ public class GrailsWrapperHome {
         return new File(implDirectory, CLI_COMBINED_PROJECT_NAME + "-" + version.version + "-all.jar");
     }
 
-    void cleanupOtherVersions(GrailsVersion toKeep) {
-        File[] children = wrapperDirectory.listFiles();
-        if (children == null) {
-            return;
-        }
-
-        for (File child : children) {
-            if (!child.isDirectory()) {
-                continue;
-            }
-
-            try {
-                GrailsVersion version = new GrailsVersion(child.getName());
-                if (version.equals(toKeep)) {
-                    continue;
-                }
-            } catch (Exception ignored) {
-                // Ignore invalid versions
-            }
-
-            child.delete();
-        }
-    }
-
+    /**
+     * The versions are sorted as {@link GrailsVersion} orders them, the latest first.
+     */
     private GrailsVersion findLatestVersion() {
-        if (versions.isEmpty()) {
-            return null;
-        }
-
-        GrailsVersion lastRelease = null;
-        GrailsVersion lastReleaseCandidate = null;
-        GrailsVersion lastMilestone = null;
-        GrailsVersion lastSnapshot = null;
-        for (GrailsVersion version : versions) {
-            if (version.releaseType == GrailsReleaseType.RELEASE && (lastRelease == null || version.compareTo(lastRelease) > 0)) {
-                lastRelease = version;
-            } else if (version.releaseType == GrailsReleaseType.RC && (lastReleaseCandidate == null || version.compareTo(lastReleaseCandidate) > 0)) {
-                lastReleaseCandidate = version;
-            } else if (version.releaseType == GrailsReleaseType.MILESTONE && (lastMilestone == null || version.compareTo(lastMilestone) > 0)) {
-                lastMilestone = version;
-            } else if (version.releaseType == GrailsReleaseType.SNAPSHOT && (lastSnapshot == null || version.compareTo(lastSnapshot) > 0)) {
-                lastSnapshot = version;
-            }
-        }
-
-        List<GrailsVersion> sortedVersions = Stream.of(
-                lastRelease,
-                lastReleaseCandidate,
-                lastMilestone,
-                lastSnapshot
-            )
-            .filter(Objects::nonNull)
-            .sorted()
-            .toList();
-
-        return sortedVersions.isEmpty() ? null : sortedVersions.get(sortedVersions.size() - 1);
+        return versions.isEmpty() ? null : versions.get(0);
     }
 
     /**
-     * Finds the available versions in the GRAILS_WRAPPER_HOME directory; sorted by smallest version to largest
+     * Finds the available versions in the GRAILS_WRAPPER_HOME directory; sorted as {@link GrailsVersion} orders them, the latest first
      */
     private List<GrailsVersion> determineVersions() {
         File[] children = wrapperDirectory.listFiles();
@@ -168,14 +115,17 @@ public class GrailsWrapperHome {
     }
 
     /**
-     * Locate the “Grails" home by:
-     * 1. using the specified home
-     * 2. using the environment variable
-     * 3. Looking in the current directory for a GRAILS_MARKERS or for a .grails directory
-     * and all parent directories.  If none, is found, the current directory will be returned.
-     * There is a special case for the current directory if inside of the grails core repository.
+     * Locates the home of the wrapper, where the command line it downloads is kept in {@code wrapper}:
+     * <ol>
+     * <li>the directory that is given,</li>
+     * <li>the directory the environment variable {@code GRAILS_WRAPPER_HOME} names,</li>
+     * <li>{@code .grails} of the home directory of the user.</li>
+     * </ol>
+     * The home is never looked for in a project. Any directory can be named, the {@code .grails} directory of
+     * a project among them; the downloads are then in its {@code wrapper} directory.
      *
-     * @return the GRAILS_WRAPPER_HOME directory
+     * @param grailsHomeOverride the directory to use, or null
+     * @return the home directory of the wrapper
      * @throws IOException if canonicalization fails
      */
     public static File findGrailsHome(String grailsHomeOverride) throws IOException {
@@ -187,9 +137,6 @@ public class GrailsWrapperHome {
         if (environmentOverride != null && !environmentOverride.isEmpty()) {
             return validateGrailsHome(environmentOverride, "GRAILS_WRAPPER_HOME environment variable");
         }
-
-        // TODO: this previously allowed grails home to be in the grails project directory, but may no longer be needed
-        //return locateGrailsHome(new File("."));
 
         File userHome = new File(System.getProperty("user.home")).getCanonicalFile();
         File grailsHome = new File(userHome, ".grails");
@@ -212,15 +159,4 @@ public class GrailsWrapperHome {
 
         return possibleHome;
     }
-
-    private static boolean exists(File baseDirectory, String name) {
-        File file = new File(baseDirectory, name);
-        return file.exists();
-    }
-
-    private static boolean directoryExists(File baseDirectory, String name) {
-        File file = new File(baseDirectory, name);
-        return file.exists() && file.isDirectory();
-    }
 }
-

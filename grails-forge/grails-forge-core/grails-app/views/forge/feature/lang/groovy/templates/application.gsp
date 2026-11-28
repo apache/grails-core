@@ -41,11 +41,11 @@ import org.springframework.security.web.SecurityFilterChain
 <% } %>
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
-<% if (applicationType.equals(ApplicationType.PLUGIN) || applicationType.equals(ApplicationType.WEB_PLUGIN)) { %>
+<% if (applicationType.isPlugin()) { %>
 import grails.plugins.metadata.PluginSource
 <% } %>
 
-<% if (applicationType.equals(ApplicationType.PLUGIN) || applicationType.equals(ApplicationType.WEB_PLUGIN)) { %>
+<% if (applicationType.isPlugin()) { %>
 @PluginSource
 <% } %>
 @CompileStatic

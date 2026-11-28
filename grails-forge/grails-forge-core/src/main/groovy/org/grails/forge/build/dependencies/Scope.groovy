@@ -29,6 +29,19 @@ class Scope {
     public static final Scope IMPLEMENTATION = new Scope(Source.MAIN, Arrays.asList(Phase.COMPILATION, Phase.RUNTIME))
     public static final Scope COMPILE_ONLY = new Scope(Source.MAIN, Collections.singletonList(Phase.COMPILATION))
     public static final Scope CONSOLE = new Scope(Source.MAIN, Collections.singletonList(Phase.CONSOLE))
+    /**
+     * The commands of the application and the libraries they need: on the class path the build runs a command
+     * with and on the compile and test class paths, never on the class path the application runs with or in
+     * what is packaged. The {@code grailsCli} configuration of the Grails Gradle plugin.
+     */
+    public static final Scope GRAILS_CLI = new Scope(Source.MAIN, Collections.singletonList(Phase.GRAILS_CLI))
+    /**
+     * The tools of plugins that run as a process of their own (the {@code -cli-standalone} companions) and the libraries only
+     * those tools need: on the class path such a tool is started with, on the class paths the build runs a tool with and on
+     * the test class paths, never on the class path the application runs with or in what is packaged. The
+     * {@code grailsCliStandalone} configuration of the Grails Gradle plugin.
+     */
+    public static final Scope GRAILS_CLI_STANDALONE = new Scope(Source.MAIN, Collections.singletonList(Phase.GRAILS_CLI_STANDALONE))
     public static final Scope DEVELOPMENT_ONLY = new Scope(Source.MAIN, Collections.singletonList(Phase.DEVELOPMENT_ONLY))
     public static final Scope RUNTIME_ONLY = new Scope(Source.MAIN, Collections.singletonList(Phase.RUNTIME))
     public static final Scope TEST_IMPLEMENTATION = new Scope(Source.TEST, Arrays.asList(Phase.COMPILATION, Phase.RUNTIME))
@@ -37,7 +50,6 @@ class Scope {
     public static final Scope TEST_COMPILE_ONLY = new Scope(Source.TEST, Collections.singletonList(Phase.COMPILATION))
     public static final Scope TEST_RUNTIME_ONLY = new Scope(Source.TEST, Collections.singletonList(Phase.RUNTIME))
     public static final Scope OPENREWRITE = new Scope(Source.MAIN, Collections.singletonList(Phase.OPENREWRITE))
-    public static final Scope PROFILE = new Scope(Source.MAIN, Collections.singletonList(Phase.PROFILE))
     public static final Scope INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES = new Scope(Source.MAIN, Collections.singletonList(Phase.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES))
     public static final Scope CLASSPATH = new Scope(Source.BUILDSCRIPT, Collections.singletonList(Phase.BUILD))
 

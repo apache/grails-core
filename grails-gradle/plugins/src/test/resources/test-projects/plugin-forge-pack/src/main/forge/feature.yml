@@ -1,0 +1,14 @@
+format: 1
+kind: feature
+templateApi: 1
+name: acme-audit
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+title: Acme Audit Trail
+description: Adds the Acme audit plugin
+files:
+  - from: Audit.groovy.gsp
+    to: 'src/main/groovy/{packagePath}/{className}Audit.groovy'
+  - from: conf/audit.txt
+    to: grails-app/conf/audit.txt

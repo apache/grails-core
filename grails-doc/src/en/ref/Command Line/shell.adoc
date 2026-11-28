@@ -17,33 +17,27 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == shell
-
-
 
 === Purpose
 
-
 Starts an instance of the Groovy terminal shell with an initialized Grails runtime.
-
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
 grails shell
+grails shell -Dgrails.env=test
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails <<environment>>* shell
+grails shell [--debug-jvm] [-Dname=value]... [-- <<gradle arguments>>]
 ----
 
 Starts the Grails shell, which is an extended version of the regular Groovy shell. Within the binding of the shell there are a couple of useful variables:
@@ -53,12 +47,4 @@ Starts the Grails shell, which is an extended version of the regular Groovy shel
 
 These are useful as they allow access to the conventions within Grails and Spring beans.
 
-Example Shell:
-
-[source,groovy]
-----
-Groovy Shell (1.8.0, JVM: 1.6.0_26)
-Type 'help' or '\h' for help.
------------------------------------
-groovy:000>
-----
+`shell` runs the Gradle task `shell` of the project for the development environment, or for the one `-Dgrails.env=NAME` names, with the terminal the command was given in: what is typed goes to the shell until it is left. `--debug-jvm` starts the JVM of the shell suspended, waiting for a debugger on port 5005. With `--non-interactive` the command is refused. What follows `--` is given to Gradle as it is. The command starts the Gradle wrapper of the project as a process, which is given the terminal, in interactive mode too. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.

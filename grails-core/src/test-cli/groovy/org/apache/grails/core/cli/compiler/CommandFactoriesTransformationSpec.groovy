@@ -44,6 +44,9 @@ class CommandFactoriesTransformationSpec extends Specification {
         path                                                                    || expected
         '/work/my-plugin/src/cli/groovy/com/example/cli/AuditCommand.groovy'    || true
         '/work/my-plugin/src/cli/java/com/example/cli/AuditCommand.java'        || true
+        '/work/my-plugin/src/standalone/groovy/com/example/RenderTool.groovy'   || true
+        '/work/my-plugin/src/standalone/java/com/example/RenderTool.java'       || true
+        '/work/my-plugin/src/standalone/resources/META-INF/grails-cli.factories' || false
         '/work/my-plugin/src/main/groovy/com/example/RuntimeClass.groovy'       || false
         '/work/my-plugin/src/cli/resources/META-INF/grails-cli.factories'       || false
         '/work/my-plugin/grails-app/commands/example/BackupCommand.groovy'      || false
@@ -67,7 +70,29 @@ class CommandFactoriesTransformationSpec extends Specification {
                 'Object getTarget() { null }'), targetDir)
 
         then:
-        cliFactories(targetDir).getProperty(CommandFactoriesTransformation.APPLICATION_COMMAND_CLASS.name) == 'example.RestoreCommand'
+        cliFactories(targetDir).getProperty(CommandFactoriesTransformation.GRAILS_TOOL_CLASS.name) == 'example.RestoreCommand'
+    }
+
+    def "a standalone tool is registered under the key of the tool contract, beside one registered by hand in src/standalone/resources"() {
+        given: 'a registration written by hand, where the resources of the standalone source set are'
+        File handWritten = new File(tempDir, 'src/standalone/resources/META-INF/grails-cli.factories')
+        handWritten.parentFile.mkdirs()
+        handWritten.text = "${CommandFactoriesTransformation.GRAILS_TOOL_CLASS.name}=example.ReportJavaTool\n"
+        File targetDir = new File(tempDir, 'build/classes/groovy/standalone')
+
+        when:
+        compile(new File(tempDir, 'src/standalone/groovy/example/RenderTool.groovy'), '''
+            package example
+
+            class RenderTool implements org.apache.grails.core.cli.StandaloneTool {
+                boolean handle(org.apache.grails.core.cli.ExecutionContext executionContext) { true }
+            }
+        ''', targetDir)
+
+        then:
+        cliFactories(targetDir).getProperty(CommandFactoriesTransformation.GRAILS_TOOL_CLASS.name).tokenize(',').sort() ==
+                ['example.RenderTool', 'example.ReportJavaTool']
+        new File(targetDir, 'META-INF/grails-tools/example.RenderTool.json').text.contains('"target":"standalone"')
     }
 
     @TempDir

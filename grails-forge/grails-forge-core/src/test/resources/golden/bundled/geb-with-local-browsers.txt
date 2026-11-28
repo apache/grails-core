@@ -1,0 +1,183 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: geb
+order: 400
+adds: spock
+relies on: gsp
+dependency: integrationTestImplementationTestFixtures org.apache.grails:grails-geb without a version
+dependency: testImplementation org.seleniumhq.selenium:selenium-api without a version
+dependency: testImplementation org.seleniumhq.selenium:selenium-support without a version
+dependency: testImplementation org.seleniumhq.selenium:selenium-remote-driver without a version
+dependency: testRuntimeOnly org.seleniumhq.selenium:selenium-firefox-driver without a version
+dependency: testRuntimeOnly org.seleniumhq.selenium:selenium-safari-driver without a version
+
+# web
+title: Geb Functional Testing with locally installed browsers
+description: Configures Geb to run functional tests against browsers installed on your machine. Selenium Manager downloads the WebDriver binary that matches each browser.
+category: Testing
+documentation: https://github.com/apache/grails-geb#readme
+thirdPartyDocumentation: https://groovy.apache.org/geb/manual/current/
+visible: true
+dependentFeatures: []
+== README.md
+- ## Feature geb-with-testcontainers documentation
+- - [Grails Geb Functional Testing for Grails with Testcontainers documentation](https://github.com/apache/grails-geb#readme)
++ ## Feature geb-with-local-browsers documentation
++ - [Grails Geb Functional Testing with locally installed browsers documentation](https://github.com/apache/grails-geb#readme)
+== build.gradle
++     testImplementation "org.seleniumhq.selenium:selenium-api"
++     testImplementation "org.seleniumhq.selenium:selenium-remote-driver"
++     testImplementation "org.seleniumhq.selenium:selenium-support"
++     testRuntimeOnly "org.seleniumhq.selenium:selenium-firefox-driver"
++     testRuntimeOnly "org.seleniumhq.selenium:selenium-safari-driver"
++     def gebEnv = providers.systemProperty('geb.env')
++     if (gebEnv.present) {
++         systemProperty('geb.env', gebEnv.get())
++     }
+== src/integration-test/groovy/example/grails/FooSpec.groovy
+- import grails.plugin.geb.ContainerGebSpec
+- class FooSpec extends ContainerGebSpec {
++ import geb.spock.GebSpec
++ class FooSpec extends GebSpec {
+== src/integration-test/resources/GebConfig.groovy
++ import org.openqa.selenium.chrome.ChromeDriver
++ import org.openqa.selenium.chrome.ChromeOptions
++ import org.openqa.selenium.firefox.FirefoxDriver
++ import org.openqa.selenium.firefox.FirefoxOptions
++ import org.openqa.selenium.safari.SafariDriver
++ 
++ environments {
++ 
++     // You need to configure in Safari -> Develop -> Allowed Remote Automation
++     safari {
++         driver = { new SafariDriver() }
++     }
++ 
++     // run via “./gradlew -Dgeb.env=chrome iT”
++     chrome {
++         driver = { new ChromeDriver() }
++     }
++ 
++     // run via “./gradlew -Dgeb.env=chromeHeadless iT”
++     chromeHeadless {
++         driver = {
++             ChromeOptions o = new ChromeOptions()
++             o.addArguments('headless')
++             new ChromeDriver(o)
++         }
++     }
++ 
++     // run via “./gradlew -Dgeb.env=firefoxHeadless iT”
++     firefoxHeadless {
++         driver = {
++             FirefoxOptions o = new FirefoxOptions()
++             o.addArguments('-headless')
++             new FirefoxDriver(o)
++         }
++     }
++ 
++     // run via “./gradlew -Dgeb.env=firefox iT”
++     firefox {
++         driver = { new FirefoxDriver() }
++     }
++ }
+
+# rest_api
+not for this kind of application
+
+# web_plugin
+title: Geb Functional Testing with locally installed browsers
+description: Configures Geb to run functional tests against browsers installed on your machine. Selenium Manager downloads the WebDriver binary that matches each browser.
+category: Testing
+documentation: https://github.com/apache/grails-geb#readme
+thirdPartyDocumentation: https://groovy.apache.org/geb/manual/current/
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature geb-with-local-browsers documentation
++ 
++ - [Grails Geb Functional Testing with locally installed browsers documentation](https://github.com/apache/grails-geb#readme)
++ 
++ - [https://groovy.apache.org/geb/manual/current/](https://groovy.apache.org/geb/manual/current/)
++ 
+== build.gradle
++     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
++     testImplementation "org.seleniumhq.selenium:selenium-api"
++     testImplementation "org.seleniumhq.selenium:selenium-remote-driver"
++     testImplementation "org.seleniumhq.selenium:selenium-support"
++     testRuntimeOnly "org.seleniumhq.selenium:selenium-firefox-driver"
++     testRuntimeOnly "org.seleniumhq.selenium:selenium-safari-driver"
++     def gebEnv = providers.systemProperty('geb.env')
++     if (gebEnv.present) {
++         systemProperty('geb.env', gebEnv.get())
++     }
+== src/integration-test/groovy/example/grails/FooSpec.groovy
++ package example.grails
++ import geb.spock.GebSpec
++ import grails.testing.mixin.integration.Integration
++ 
++ /**
++  * See https://grails.apache.org/docs/latest/guide/testing.html#functionalTesting and https://groovy.apache.org/geb/manual/current/
++  * for more instructions on how to write functional tests with Grails and Geb.
++  */
++ @Integration
++ class FooSpec extends GebSpec {
++ 
++     void 'should display the correct title on the home page'() {
++         when: 'visiting the home page'
++             go('/')
++ 
++         then: 'the page title is correct'
++             title == 'Welcome to Grails'
++     }
++ }
+== src/integration-test/resources/GebConfig.groovy
++ import org.openqa.selenium.chrome.ChromeDriver
++ import org.openqa.selenium.chrome.ChromeOptions
++ import org.openqa.selenium.firefox.FirefoxDriver
++ import org.openqa.selenium.firefox.FirefoxOptions
++ import org.openqa.selenium.safari.SafariDriver
++ 
++ environments {
++ 
++     // You need to configure in Safari -> Develop -> Allowed Remote Automation
++     safari {
++         driver = { new SafariDriver() }
++     }
++ 
++     // run via “./gradlew -Dgeb.env=chrome iT”
++     chrome {
++         driver = { new ChromeDriver() }
++     }
++ 
++     // run via “./gradlew -Dgeb.env=chromeHeadless iT”
++     chromeHeadless {
++         driver = {
++             ChromeOptions o = new ChromeOptions()
++             o.addArguments('headless')
++             new ChromeDriver(o)
++         }
++     }
++ 
++     // run via “./gradlew -Dgeb.env=firefoxHeadless iT”
++     firefoxHeadless {
++         driver = {
++             FirefoxOptions o = new FirefoxOptions()
++             o.addArguments('-headless')
++             new FirefoxDriver(o)
++         }
++     }
++ 
++     // run via “./gradlew -Dgeb.env=firefox iT”
++     firefox {
++         driver = { new FirefoxDriver() }
++     }
++ }
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+not for this kind of application
+

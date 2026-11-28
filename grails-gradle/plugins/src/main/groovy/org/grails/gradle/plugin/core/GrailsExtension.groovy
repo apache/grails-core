@@ -21,6 +21,7 @@ package org.grails.gradle.plugin.core
 import groovy.transform.CompileStatic
 
 import org.apache.tools.ant.taskdefs.condition.Os
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.provider.Property
@@ -52,13 +53,10 @@ class GrailsExtension {
         this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
         this.gorm = project.objects.newInstance(GrailsGormOptions)
         this.i18n = project.objects.newInstance(GrailsI18nOptions)
+        this.forgePackTest = project.objects.newInstance(GrailsForgePackTestOptions)
         this.cliAutoProvision = project.objects.property(Boolean).convention(project.provider {
             def fromProperty = project.findProperty('grailsCliAutoProvision')
             fromProperty == null ? Boolean.TRUE : Boolean.parseBoolean(fromProperty as String)
-        })
-        this.legacyCommandSupport = project.objects.property(Boolean).convention(project.provider {
-            def fromProperty = project.findProperty('grailsLegacyCommandSupport')
-            fromProperty == null ? Boolean.FALSE : Boolean.parseBoolean(fromProperty as String)
         })
         this.bom = project.objects.property(String)
         // Use set() rather than convention() so that clearing the value (bom = null,
@@ -68,28 +66,44 @@ class GrailsExtension {
     }
 
     /**
-     * Whether the plugin auto-provisions the CLI tier onto the {@code grailsCli} configuration.
-     * When enabled (the default), the plugin adds {@code org.apache.grails:grails-core-cli} (the
-     * command contract) and {@code org.apache.grails:grails-console} (the command runner), and
-     * discovers every companion {@code -cli} artifact advertised by the application's dependency
-     * graph — a plugin advertises its companion through the {@code Grails-Cli-Artifact} manifest
-     * attribute of its runtime jar. Plugin commands (e.g. the {@code dbm-*} or scaffolding
-     * commands) therefore work with no additional build configuration. Opt out with
+     * What a build is told that still asks for the bridge that ran the commands of Grails 7, with
+     * {@code grails { legacyCommandSupport = true }} or the project property
+     * {@code grailsLegacyCommandSupport}.
+     *
+     * @since 9.0
+     */
+    public static final String LEGACY_COMMAND_SUPPORT_REMOVED =
+            'legacyCommandSupport was removed in Grails 9: commands of Grails 7 are not run; see the upgrade notes'
+
+    /**
+     * Whether the plugin auto-provisions the tools of the project and its plugins. When enabled (the
+     * default), the plugin adds {@code org.apache.grails:grails-core-cli} (the tool API) and
+     * {@code org.apache.grails:grails-console} (the runner) to {@code grailsCli}, and the tool API to
+     * {@code grailsCliStandalone}, and discovers every companion advertised by the application's
+     * dependency graph — a plugin advertises its companions through the {@code Grails-Cli-Artifact}
+     * and {@code Grails-Cli-Standalone-Artifact} manifest attributes of its runtime jar, and each goes
+     * to the scope of its kind. The tools of plugins (e.g. the {@code dbm-*} or scaffolding tools)
+     * therefore work with no additional build configuration. Opt out with
      * {@code grails { cliAutoProvision = false }} (or the {@code grailsCliAutoProvision} project
-     * property) and declare `grailsCli` dependencies explicitly.
+     * property) and declare {@code grailsCli} and {@code grailsCliStandalone} dependencies explicitly.
      */
     final Property<Boolean> cliAutoProvision
 
     /**
-     * Whether the plugin auto-provisions the Grails 7 application-command compatibility bridge
-     * ({@code org.apache.grails:grails-core-cli-legacy}) onto the execution-only
-     * {@code grailsCliLegacy} configuration. Disabled by default. When enabled <strong>and</strong>
-     * {@link #cliAutoProvision} is also enabled, unchanged Grails 7 command plugins keep working
-     * without a re-release. Opt in with {@code grails { legacyCommandSupport = true }} (or the
-     * {@code grailsLegacyCommandSupport} project property) while leaving modern CLI companion
-     * auto-provisioning alone, or disable both with {@code cliAutoProvision = false}.
+     * The bridge that ran the commands of Grails 7 was removed: a build that sets this to
+     * {@code true} fails with {@link #LEGACY_COMMAND_SUPPORT_REMOVED}. {@code false}, which is what
+     * Grails 9 does, is taken as it is. Kept for one major version so that the build says why, rather
+     * than that the property does not exist; remove the line from the build.
+     *
+     * @param enabled whether the build asks for the bridge
+     * @deprecated the bridge for the commands of Grails 7 was removed
      */
-    final Property<Boolean> legacyCommandSupport
+    @Deprecated
+    void setLegacyCommandSupport(boolean enabled) {
+        if (enabled) {
+            throw new GradleException(LEGACY_COMMAND_SUPPORT_REMOVED)
+        }
+    }
 
     /**
      * Whether to invoke native2ascii on resource bundles
@@ -194,6 +208,38 @@ class GrailsExtension {
      */
     void i18n(@DelegatesTo(value = GrailsI18nOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
         configureClosure.delegate = this.i18n
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
+
+    /**
+     * How the Forge feature pack of a plugin is tested by the task {@code forgePackTest}, configured
+     * through the nested {@code forgePackTest} block. Only a plugin with a pack in
+     * {@code src/main/forge} has use for it:
+     *
+     * <pre>
+     * grails {
+     *     forgePackTest {
+     *         fixture('mongo') {
+     *             applicationType = 'rest-api'
+     *             options = [data: 'mongodb']
+     *         }
+     *     }
+     * }
+     * </pre>
+     *
+     * @since 9.0
+     */
+    final GrailsForgePackTestOptions forgePackTest
+
+    /**
+     * Configures the nested {@link #forgePackTest} options.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsForgePackTestOptions}
+     * @since 9.0
+     */
+    void forgePackTest(@DelegatesTo(value = GrailsForgePackTestOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.forgePackTest
         configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
         configureClosure.call()
     }

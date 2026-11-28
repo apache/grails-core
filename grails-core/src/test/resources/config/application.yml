@@ -15,7 +15,6 @@
 
 ---
 grails:
-  profile: web
   somekey: somevalue
 a1:
   a2: 1

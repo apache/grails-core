@@ -21,17 +21,21 @@ package org.grails.forge.build.dependencies
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
 import jakarta.annotation.Nullable
-import org.grails.forge.template.Writable
+import java.util.regex.Pattern
 
 @CompileStatic
 final class Dependency {
+
+    /** A capability as a build file names it: {@code group:name}, of the characters of coordinates */
+    private static final Pattern CAPABILITY = Pattern.compile(/[A-Za-z0-9][A-Za-z0-9_.\-]*:[A-Za-z0-9][A-Za-z0-9_.\-]*/)
 
     private final Scope scope
     private final String groupId
     private final String artifactId
     private final String version
     private final String versionProperty
-    private final Writable extension
+    private final List<DependencyExclusion> exclusions
+    private final List<String> capabilities
     private final boolean requiresLookup
     private final int order
     private final boolean annotationProcessorPriority
@@ -43,7 +47,8 @@ final class Dependency {
                        String artifactId,
                        String version,
                        String versionProperty,
-                       Writable extension,
+                       List<DependencyExclusion> exclusions,
+                       List<String> capabilities,
                        boolean requiresLookup,
                        boolean annotationProcessorPriority,
                        int order,
@@ -54,25 +59,13 @@ final class Dependency {
         this.artifactId = artifactId
         this.version = version
         this.versionProperty = versionProperty
-        this.extension = extension
+        this.exclusions = Collections.unmodifiableList(new ArrayList<DependencyExclusion>(exclusions))
+        this.capabilities = Collections.unmodifiableList(new ArrayList<String>(capabilities))
         this.requiresLookup = requiresLookup
         this.annotationProcessorPriority = annotationProcessorPriority
         this.order = order
         this.pom = pom
         this.enforced = enforced
-    }
-
-    private Dependency(Scope scope,
-                       String groupId,
-                       String artifactId,
-                       String version,
-                       String versionProperty,
-                       boolean requiresLookup,
-                       boolean annotationProcessorPriority,
-                       int order,
-                       boolean pom,
-                       boolean enforced) {
-        this(scope, groupId, artifactId, version, versionProperty, null, requiresLookup, annotationProcessorPriority, order, pom, enforced)
     }
 
     Scope getScope() {
@@ -101,6 +94,23 @@ final class Dependency {
         return order
     }
 
+    /**
+     * @return the transitive dependencies this dependency is declared without, in the order they were added
+     */
+    @Nonnull
+    List<DependencyExclusion> getExclusions() {
+        return exclusions
+    }
+
+    /**
+     * @return the capabilities, each {@code group:name}, that the variant of this dependency is selected by, in the
+     * order they were added; none for the variant Gradle selects by default
+     */
+    @Nonnull
+    List<String> getCapabilities() {
+        return capabilities
+    }
+
     boolean isPom() {
         return pom
     }
@@ -124,6 +134,8 @@ final class Dependency {
                 artifactId,
                 coordinate.getVersion(),
                 null,
+                exclusions,
+                capabilities,
                 false,
                 annotationProcessorPriority,
                 order,
@@ -138,6 +150,8 @@ final class Dependency {
                 artifactId,
                 version,
                 versionProperty,
+                exclusions,
+                capabilities,
                 requiresLookup,
                 annotationProcessorPriority,
                 order,
@@ -176,7 +190,8 @@ final class Dependency {
         private String artifactId
         private String version
         private String versionProperty
-        private Writable extension
+        private final List<DependencyExclusion> exclusions = new ArrayList<>()
+        private final List<String> capabilities = new ArrayList<>()
         private boolean requiresLookup
         private int order = 0
         private boolean template = false
@@ -236,10 +251,6 @@ final class Dependency {
 
         Builder annotationProcessor() {
             return scope(Scope.ANNOTATION_PROCESSOR)
-        }
-
-        Builder profile() {
-            return scope(Scope.PROFILE)
         }
 
         Builder integrationTestImplementationTestFixtures() {
@@ -311,9 +322,38 @@ final class Dependency {
             }
         }
 
+        /**
+         * Excludes a transitive dependency of this dependency.
+         *
+         * @param groupId the group of the dependency to exclude
+         * @param artifactId its artifact, or {@code null} to exclude every artifact of the group
+         */
         @Nonnull
-        Builder extension(@Nullable Writable extension) {
-            this.extension = extension
+        Builder exclude(@Nonnull String groupId, @Nullable String artifactId) {
+            if (template) {
+                return copy().exclude(groupId, artifactId)
+            }
+            this.exclusions.add(new DependencyExclusion(groupId, artifactId))
+            return this
+        }
+
+        /**
+         * Selects the variant of this dependency that has the capability, as Gradle's
+         * {@code capabilities { requireCapability('group:name') }} does: the Jakarta EE variant of a library that
+         * publishes one beside its default variant, for example.
+         *
+         * @param capability the capability, {@code group:name}
+         */
+        @Nonnull
+        Builder requireCapability(@Nonnull String capability) {
+            if (template) {
+                return copy().requireCapability(capability)
+            }
+            Objects.requireNonNull(capability, 'The capability of a dependency must be set')
+            if (!CAPABILITY.matcher(capability).matches()) {
+                throw new IllegalArgumentException("The capability of a dependency is 'group:name', but is '${capability}'")
+            }
+            this.capabilities.add(capability)
             return this
         }
 
@@ -365,6 +405,8 @@ final class Dependency {
                     artifactId,
                     version,
                     versionProperty,
+                    exclusions,
+                    capabilities,
                     requiresLookup,
                     annotationProcessorPriority,
                     order,
@@ -384,9 +426,8 @@ final class Dependency {
                     builder.version(version)
                 }
             }
-            if (extension != null) {
-                builder.extension(extension)
-            }
+            builder.exclusions.addAll(exclusions)
+            builder.capabilities.addAll(capabilities)
             return builder.order(order).pom(pom).enforced(enforced)
         }
     }

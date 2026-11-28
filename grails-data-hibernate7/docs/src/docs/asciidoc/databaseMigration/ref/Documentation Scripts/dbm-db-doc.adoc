@@ -21,35 +21,27 @@ under the License.
 
 ====== Purpose
 
-Generates Javadoc-like documentation based on current database and change log.
+Generates Javadoc-like documentation based on the current database and change log.
 
 ====== Description
 
-Writes to the folder specified by the `destination` parameter, or to the `grails.plugin.databasemigration.dbDocLocation` configuration option (defaults to `target/dbdoc`).
+Writes the documentation to the directory `DIRECTORY` names, relative to the directory of the project, or to the one the configuration option `grails.plugin.databasemigration.dbDocLocation` names, and without either to `build/dbdoc`.
 
 Usage:
-[source,java]
+[source,console]
 ----
-grails <<environment>> dbm-db-doc <<destination>> --contexts=<<contexts>> --dataSource=<<dataSource>>
+grails dbm-db-doc [--contexts=CONTEXTS] [--dataSource=DATASOURCE] [--defaultSchema=SCHEMA] [DIRECTORY]
 ----
 
-Required arguments: _none_ .
+Required arguments: _none_.
 
 Optional arguments:
 
-* `destination` - The path to write to
-* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be included
-* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+* `DIRECTORY` - The directory to write the documentation to.
+* `--contexts` - The contexts of the change sets to take, separated by commas: only the change sets of one of them are taken. Without it, the contexts `grails.plugin.databasemigration.contexts` configures, or every change set.
+* `--dataSource` - The data source to work with, by its name under `dataSources` in `application.[yml|groovy]`, as `--dataSource=reports`. Without it, the default data source.
+* `--defaultSchema` - The schema of the database to work in where the change log names none.
 
-NOTE: Note that the `contexts` and `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
-[source,groovy]
-----
-grails dbm-db-doc "--contexts=<<contexts>>" "--dataSource=<<dataSource>>"
-----
+The tool runs in the application, which the build of the project starts around it, for the `development` environment. For another environment, name it in front of the name of the tool with `run-tool`, as `grails run-tool -Dgrails.env=production dbm-db-doc`, or give it to the build, as `./gradlew -Dgrails.env=production runTool --arg=dbm-db-doc` or `./gradlew -Dgrails.env=production dbmDbDoc`; after the name of the tool, `-Dgrails.env` is an argument of the tool and selects no environment.
 
-NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`, the value should be `reports`.
-
-[source,groovy]
-----
---dataSource=reports
-----
+The value of an option follows `=` or is the next argument: `--dataSource=reports` and `--dataSource reports` are the same. `grails help dbm-db-doc` lists the options and parameters the tool takes. An option it does not take, an argument more than it takes and a required argument that is missing are refused before the application is started, with exit code 2 and one line, as `| Error dbm-db-doc: --datasource is not one of its options. grails help dbm-db-doc shows its options`.

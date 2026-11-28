@@ -1,0 +1,97 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+
+# web
+title: Compile Static
+description: Compiles controllers, services and tag libraries statically, and GSP views in applications that use GSP, by enabling the Grails Gradle plugin's compileStatic options.
+category: Configuration
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++ grails {
++     compileStatic {
++         controllers = true
++         services = true
++         tagLibs = true
++         gsp = true
++     }
++ }
++ 
+
+# rest_api
+title: Compile Static
+description: Compiles controllers, services and tag libraries statically, and GSP views in applications that use GSP, by enabling the Grails Gradle plugin's compileStatic options.
+category: Configuration
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++ grails {
++     compileStatic {
++         controllers = true
++         services = true
++         tagLibs = true
++     }
++ }
++ 
+
+# web_plugin
+title: Compile Static
+description: Compiles controllers, services and tag libraries statically, and GSP views in applications that use GSP, by enabling the Grails Gradle plugin's compileStatic options.
+category: Configuration
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++ grails {
++     compileStatic {
++         controllers = true
++         services = true
++         tagLibs = true
++         gsp = true
++     }
++ }
++ 
+
+# plugin
+title: Compile Static
+description: Compiles controllers, services and tag libraries statically, and GSP views in applications that use GSP, by enabling the Grails Gradle plugin's compileStatic options.
+category: Configuration
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++ grails {
++     compileStatic {
++         controllers = true
++         services = true
++         tagLibs = true
++     }
++ }
++ 
+
+# rest_api_plugin
+title: Compile Static
+description: Compiles controllers, services and tag libraries statically, and GSP views in applications that use GSP, by enabling the Grails Gradle plugin's compileStatic options.
+category: Configuration
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== build.gradle
++ grails {
++     compileStatic {
++         controllers = true
++         services = true
++         tagLibs = true
++     }
++ }
++ 
+

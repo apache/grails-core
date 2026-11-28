@@ -19,8 +19,10 @@
 package org.grails.forge.util
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.grails.forge.application.Project
 import org.grails.forge.application.ProjectIdentifier
+import org.grails.forge.feature.FeatureSelectionException
 import java.util.regex.Pattern
 import java.util.stream.Collectors
 
@@ -37,8 +39,26 @@ final class NameUtils {
     }
 
     static ProjectIdentifier parseProjectIdentifier(String name) throws IllegalArgumentException {
+        return parseProjectIdentifier(name, true)
+    }
+
+    /**
+     * @param name the name of an application, with or without its package
+     * @param portable whether a package is refused that could not be checked out on Windows, as it is
+     * for a new application; the package of an application there already is, is taken as it is
+     * @since 9.0
+     */
+    static ProjectIdentifier parseProjectIdentifier(String name, boolean portable) throws IllegalArgumentException {
         if (!isValidAppName(name)) {
-            throw new IllegalArgumentException('"' + name + '" is not a valid app name')
+            throw new IllegalArgumentException('"' + said(name) + '" is not a valid app name')
+        }
+        // what is not one line of text, or is a path, is no name: said here, where the name is given,
+        // and not where a file of the application cannot be written
+        if (portable && PackDescriptorParser.hasUnsafeCharacter(name)) {
+            throw new IllegalArgumentException('"' + said(name) + '" is not a valid app name: it has a character that is not shown, such as a control character')
+        }
+        if (portable && (name.contains('/') || name.contains('\\'))) {
+            throw new IllegalArgumentException('"' + said(name) + '" is not a valid app name: it has a path separator')
         }
         String packageName
         String appName
@@ -48,19 +68,40 @@ final class NameUtils {
             packageName = createPackageName(appName)
         } else {
             if (parts.length == 0) {
-                throw new IllegalArgumentException('Cannot create a valid package name for [' + name + ']. Please specify a name that is also a valid Java package.')
+                throw new IllegalArgumentException('Cannot create a valid package name for [' + said(name) + ']. Please specify a name that is also a valid Java package.')
             }
             int lastIdx = parts.length - 1
             appName = parts[lastIdx]
             packageName = Arrays.stream(parts).limit(lastIdx).collect(Collectors.joining('.'))
         }
         if (!isValidJavaPackage(packageName)) {
-            throw new IllegalArgumentException('Cannot create a valid package name for [' + packageName + ']. Please specify a name that is also a valid Java package.')
+            throw new IllegalArgumentException('Cannot create a valid package name for [' + said(packageName) + ']. Please specify a name that is also a valid Java package.')
         }
         if (!isValidAppName(appName)) {
-            throw new IllegalArgumentException('"' + appName + '" is not a valid app name')
+            throw new IllegalArgumentException('"' + said(appName) + '" is not a valid app name')
+        }
+        // the package is the directories of the sources: a project with a directory Windows cannot
+        // make could not be checked out there
+        for (String part : packageName.split('\\.')) {
+            if (portable && PackDescriptorParser.isDeviceName(part)) {
+                throw new IllegalArgumentException("The package ${packageName} has the part ${part}, which is the name of a device on Windows, " +
+                        'so the project could not be checked out there')
+            }
+        }
+        if (portable && PackDescriptorParser.isDeviceName(appName)) {
+            throw new IllegalArgumentException("The name ${appName} is the name of a device on Windows, so a directory of that name could not be made there")
+        }
+        // the name is a directory and part of the names of files: what not every file system takes
+        // for one, such as a name that ends with a space or has a colon, is no name for an application
+        if (portable && !PackDescriptorParser.isPathBelowRoot(appName)) {
+            throw new IllegalArgumentException('"' + said(appName) + '" is not a valid app name: not every file system takes it as the name of a directory')
         }
         return new ProjectIdentifier(packageName, appName)
+    }
+
+    // a name as a message repeats it: nothing in it that a terminal or the command line acts on, and not all of a long one
+    private static String said(String name) {
+        return name == null || name.isEmpty() ? String.valueOf(name) : FeatureSelectionException.shown(name)
     }
 
     /**
@@ -73,7 +114,16 @@ final class NameUtils {
     }
 
     static Project parse(String name) throws IllegalArgumentException {
-        ProjectIdentifier projectIdentifier = parseProjectIdentifier(name)
+        return parse(name, true)
+    }
+
+    /**
+     * @param name the name of an application, with or without its package
+     * @param portable see {@link #parseProjectIdentifier(String, boolean)}
+     * @since 9.0
+     */
+    static Project parse(String name, boolean portable) throws IllegalArgumentException {
+        ProjectIdentifier projectIdentifier = parseProjectIdentifier(name, portable)
         String packageName = projectIdentifier.getPackageName()
         String appName = projectIdentifier.getName()
         String packagePath = packageName.replace('.', '/')
@@ -236,7 +286,7 @@ final class NameUtils {
         }
 
         if (name.indexOf('-') == -1) {
-            return name.substring(0, 1).toUpperCase() + name.substring(1)
+            return name.substring(0, 1).toUpperCase(Locale.ROOT) + name.substring(1)
         }
 
         StringBuilder buf = new StringBuilder()
@@ -245,7 +295,7 @@ final class NameUtils {
             if (token == null || token.length() == 0) {
                 continue
             }
-            buf.append(token.substring(0, 1).toUpperCase())
+            buf.append(token.substring(0, 1).toUpperCase(Locale.ROOT))
                     .append(token.substring(1))
         }
         return buf.toString()
@@ -291,7 +341,7 @@ final class NameUtils {
     static String getLogicalPropertyName(String className, String trailingName) {
         if (!isBlank(className) && !isBlank(trailingName)) {
             if (className.length() == trailingName.length() + 1 && className.endsWith(trailingName)) {
-                return className.substring(0, 1).toLowerCase()
+                return className.substring(0, 1).toLowerCase(Locale.ROOT)
             }
         }
         return getLogicalName(getPropertyName(className), trailingName)
@@ -403,7 +453,7 @@ final class NameUtils {
         if (i > -1) {
             packageName = className.substring(0, i)
         }
-        return packageName.toLowerCase()
+        return packageName.toLowerCase(Locale.ROOT)
     }
 
     /**
@@ -432,7 +482,7 @@ final class NameUtils {
         if (name.endsWith('.groovy')) {
             name = name.substring(0, name.length() - 7)
         }
-        return getNaturalName(name).replaceAll('\\s', '-').toLowerCase()
+        return getNaturalName(name).replaceAll('\\s', '-').toLowerCase(Locale.ROOT)
     }
 
     /**
@@ -483,7 +533,7 @@ final class NameUtils {
         }
 
         if (name.length() == 1) {
-            return name.toUpperCase()
+            return name.toUpperCase(Locale.ROOT)
         } else {
             StringBuilder sb = new StringBuilder()
             sb.append(name.charAt(name.length() - 1))
@@ -518,7 +568,7 @@ final class NameUtils {
      * @return The converted property name
      */
     static String getNaturalNameOfEnum(String name) {
-        return getNaturalName(camelCase(name.toLowerCase()))
+        return getNaturalName(camelCase(name.toLowerCase(Locale.ROOT)))
     }
 
     /**
@@ -572,7 +622,8 @@ final class NameUtils {
         if (isBlank(packageName)) {
             return false
         }
-        final String[] parts = packageName.split('\\.')
+        // with the empty parts a dot at the end leaves, which are no identifiers
+        final String[] parts = packageName.split('\\.', -1)
         for (String part : parts) {
             if (!isValidJavaIdentifier(part)) {
                 return false
@@ -709,7 +760,7 @@ final class NameUtils {
         }
 
         if (suffix.length() == 1) {
-            return Character.isUpperCase(suffix.charAt(0)) ? suffix.toLowerCase() : null
+            return Character.isUpperCase(suffix.charAt(0)) ? suffix.toLowerCase(Locale.ROOT) : null
         }
         if (Character.isUpperCase(suffix.charAt(1))) {
             // "aProperty", "AProperty"

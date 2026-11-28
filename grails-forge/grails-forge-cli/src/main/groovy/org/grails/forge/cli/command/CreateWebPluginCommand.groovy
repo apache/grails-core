@@ -19,6 +19,7 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import jakarta.annotation.Nonnull
@@ -26,9 +27,10 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.WebPluginAvailableFeatures
 import org.grails.forge.application.generator.ProjectGenerator
+import org.grails.forge.cli.ForgeContext
 import picocli.CommandLine
 
-@CommandLine.Command(name = CreateWebPluginCommand.NAME, description = 'Creates an Grails Web Plugin')
+@CommandLine.Command(name = CreateWebPluginCommand.NAME, description = 'Creates a Grails plugin with a web layer')
 @Component
 @Scope('prototype')
 @CompileStatic
@@ -39,6 +41,12 @@ class CreateWebPluginCommand extends CreateCommand {
     @CommandLine.Option(names = ['-f', '--features'], paramLabel = 'FEATURE', split = ',', description = 'The features to use. Possible values: ${COMPLETION-CANDIDATES}', completionCandidates = WebPluginAvailableFeatures)
     List<String> features = new ArrayList<>()
 
+    /** On a Forge application that is started when the command first needs it. */
+    CreateWebPluginCommand(ForgeContext context) {
+        super(context, WebPluginAvailableFeatures, ApplicationType.WEB_PLUGIN)
+    }
+
+    @Autowired
     CreateWebPluginCommand(WebPluginAvailableFeatures availableFeatures,
                                   ContextFactory contextFactory,
                                   ProjectGenerator projectGenerator) {

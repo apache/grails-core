@@ -25,6 +25,11 @@ under the License.
 ////
 NOTE: This file serves as the centralized reference index for all CLI commands, constraints, domain class methods, tags, and more. Each section includes modular AsciiDoc files stored under `ref/`. When adding a new command or feature, update this file accordingly to maintain navigation integrity.
 ////
+[[ref-command-line-add-property]]
+==== add-property
+
+include::ref/Command Line/add-property.adoc[]
+
 [[ref-command-line-bug-report]]
 ==== bug-report
 
@@ -50,12 +55,12 @@ include::ref/Command Line/console.adoc[]
 
 include::ref/Command Line/create-app.adoc[]
 
-[[ref-command-line-create-command]]
-==== create-command
+[[ref-command-line-create-tool]]
+==== create-tool
 [[ref-command-line-assemble]]
 ==== assemble
 
-include::ref/Command Line/create-command.adoc[]
+include::ref/Command Line/create-tool.adoc[]
 include::ref/Command Line/assemble.adoc[]
 
 [[ref-command-line-create-controller]]
@@ -72,11 +77,6 @@ include::ref/Command Line/create-domain-class.adoc[]
 ==== create-functional-test
 
 include::ref/Command Line/create-functional-test.adoc[]
-
-[[ref-command-line-create-hibernate-cfg-xml]]
-==== create-hibernate-cfg-xml
-
-include::ref/Command Line/create-hibernate-cfg-xml.adoc[]
 
 [[ref-command-line-create-integration-test]]
 ==== create-integration-test
@@ -98,19 +98,14 @@ include::ref/Command Line/create-job.adoc[]
 
 include::ref/Command Line/create-plugin.adoc[]
 
-[[ref-command-line-create-profile]]
-==== create-profile
+[[ref-command-line-create-rest-api-plugin]]
+==== create-rest-api-plugin
+
+include::ref/Command Line/create-rest-api-plugin.adoc[]
+
 [[ref-command-line-create-rest-api]]
 ==== create-rest-api
 
-include::ref/Command Line/create-profile.adoc[]
-include::ref/Command Line/create-rest-api.adoc[]
-// NOTE: These commands share overlapping functionality and are grouped together for CLI reference continuity.
-
-[[ref-command-line-create-script]]
-==== create-script
-
-include::ref/Command Line/create-script.adoc[]
 include::ref/Command Line/create-rest-api.adoc[]
 
 [[ref-command-line-create-service]]
@@ -141,15 +136,35 @@ include::ref/Command Line/dependency-report.adoc[]
 include::ref/Command Line/docs.adoc[]
 include::ref/Command Line/create-web-plugin.adoc[]
 
+[[ref-command-line-create-scaffold-controller]]
+==== create-scaffold-controller
+
+include::ref/Command Line/create-scaffold-controller.adoc[]
+
+[[ref-command-line-create-scaffold-service]]
+==== create-scaffold-service
+
+include::ref/Command Line/create-scaffold-service.adoc[]
+
 [[ref-command-line-generate-all]]
 ==== generate-all
 
 include::ref/Command Line/generate-all.adoc[]
 
+[[ref-command-line-generate-async-controller]]
+==== generate-async-controller
+
+include::ref/Command Line/generate-async-controller.adoc[]
+
 [[ref-command-line-generate-controller]]
 ==== generate-controller
 
 include::ref/Command Line/generate-controller.adoc[]
+
+[[ref-command-line-generate-scaffold-all]]
+==== generate-scaffold-all
+
+include::ref/Command Line/generate-scaffold-all.adoc[]
 
 [[ref-command-line-generate-views]]
 ==== generate-views
@@ -171,11 +186,6 @@ include::ref/Command Line/install-templates.adoc[]
 
 include::ref/Command Line/list-plugins.adoc[]
 
-[[ref-command-line-list-profiles]]
-==== list-profiles
-
-include::ref/Command Line/list-profiles.adoc[]
-
 [[ref-command-line-package-plugin]]
 ==== package-plugin
 
@@ -186,17 +196,80 @@ include::ref/Command Line/package-plugin.adoc[]
 
 include::ref/Command Line/package.adoc[]
 
+[[ref-command-line-list-features]]
+==== list-features
+
+include::ref/Command Line/list-features.adoc[]
+
+[[ref-command-line-feature-add]]
+==== feature add
+
+include::ref/Command Line/feature-add.adoc[]
+
+[[ref-command-line-feature-list]]
+==== feature list
+
+include::ref/Command Line/feature-list.adoc[]
+
+[[ref-command-line-feature-find]]
+==== feature find
+
+include::ref/Command Line/feature-find.adoc[]
+
+[[ref-command-line-feature-show]]
+==== feature show
+
+include::ref/Command Line/feature-show.adoc[]
+
+[[ref-command-line-feature-diff]]
+==== feature diff
+
+include::ref/Command Line/feature-diff.adoc[]
+
+[[ref-command-line-gradle]]
+==== gradle
+
+include::ref/Command Line/gradle.adoc[]
+
 [[ref-command-line-plugin-info]]
 ==== plugin-info
 
 include::ref/Command Line/plugin-info.adoc[]
 
-[[ref-command-line-profile-info]]
-==== profile-info
-==== list-features
+[[ref-command-line-plugin-list]]
+==== plugin list
 
-include::ref/Command Line/profile-info.adoc[]
-include::ref/Command Line/list-features.adoc[]
+include::ref/Command Line/plugin-list.adoc[]
+
+[[ref-command-line-plugin-find]]
+==== plugin find
+
+include::ref/Command Line/plugin-find.adoc[]
+
+[[ref-command-line-plugin-show]]
+==== plugin show
+
+include::ref/Command Line/plugin-show.adoc[]
+
+[[ref-command-line-project-health]]
+==== project health
+
+include::ref/Command Line/project-health.adoc[]
+
+[[ref-command-line-project-migrate]]
+==== project migrate
+
+include::ref/Command Line/project-migrate.adoc[]
+
+[[ref-command-line-project-regenerate]]
+==== project regenerate
+
+include::ref/Command Line/project-regenerate.adoc[]
+
+[[ref-command-line-project-show]]
+==== project show
+
+include::ref/Command Line/project-show.adoc[]
 
 [[ref-command-line-run-app]]
 ==== run-app
@@ -235,6 +308,11 @@ include::ref/Command Line/stop-app.adoc[]
 ==== test-app
 
 include::ref/Command Line/test-app.adoc[]
+
+[[ref-command-line-update-wrapper]]
+==== update-wrapper
+
+include::ref/Command Line/update-wrapper.adoc[]
 
 [[ref-command-line-war]]
 ==== war

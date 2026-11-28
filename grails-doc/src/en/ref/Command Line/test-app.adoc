@@ -17,43 +17,38 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == test-app
-
-
 
 === Purpose
 
-
-Runs all Grails unit and integration tests and generates reports. The command returns appropriate response codes for embedding with continuous integration servers.
-
+Runs the tests of a Grails project, in every test phase of the project, and generates reports. The command returns appropriate response codes for embedding with continuous integration servers.
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
 grails test-app
 grails test-app Foo
 grails test-app Foo Bar
+grails test-app --unit
+grails test-app --functional
+grails test-app --unit --integration Foo
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails <<environment>>* test-app <<names>>* [-unit] [-integration] [-continuous]
+grails test-app [--unit] [--integration] [--<<phase>>]... [--clean] [--continuous] [--debug-jvm] [--tests=<<name>>]... [-Dname=value]... [<<names>>...] [-- <<gradle arguments>>]
 ----
 
-Fired Events:
+Runs every test phase of the project, for the test environment unless `-Dgrails.env=NAME` after the command names another one. A test phase is a `Test` task of the Gradle build of the project: the unit tests in `src/test/groovy` (the task `test`), the integration tests in `src/integration-test/groovy` (the task `integrationTest`), and every phase the project adds, such as a `functionalTest` phase of the link:{guidePath}testing.html#testPhases[`testPhases`] extension, a test suite of Gradle, or a `Test` task of a plugin of the build. The unit tests are run first, then the integration tests, then the other phases. The command runs the Gradle task `testApp` of the Grails Gradle plugin, which knows the phases of the project.
 
+By default all tests are executed, but you can specify the names of the tests as arguments, as class names or as patterns:
 
-Executes the Grails unit and integration tests located in the `src/test/groovy` and `src/integration-test/groovy` directories. By default all tests are executed, but you can specify the names of the tests (without the "Tests" or other test type suffix) as argument to the command:
-
-[source,groovy]
+[source,console]
 ----
 grails test-app *Foo*
 grails test-app *Foo* *Bar*
@@ -61,28 +56,54 @@ grails test-app *Foo* *Bar*
 
 The first example will execute a test called `FooSpec.groovy` whilst the second will execute `FooSpec.groovy` and `BarSpec.groovy` if they exist.
 
+A name is looked for in every phase that is run, and the tests are run where they are found: a test that is among the unit tests alone does not fail the integration tests, nor the other way round. The command ends with 1 when no phase has a test for a name, and Gradle names the filter that matched nothing. A phase that is left out with `-- -x TASK`, or that the build skips (an `onlyIf`, `enabled = false`), is not looked in: what it found in an earlier build does not count.
+
 The task of finding tests that match the pattern you provide is passed to Gradle. Take a look at the section in their docs titled link:https://docs.gradle.org/current/userguide/java_plugin.html#test_filtering[Test filtering] for more information.
 
-You can also choose to only run the unit or integration tests:
+==== Selecting test phases
 
-[source,groovy]
-----
-grails test-app -unit
-grails test-app -integration
-----
+A phase is selected with a switch of its name, and several switches select several phases:
 
-=== Continuous Testing
-
-[source,groovy]
+[source,console]
 ----
-grails
-grails> test-app -continuous
+grails test-app --unit
+grails test-app --functional
+grails test-app --unit --functional BookSpec
 ----
 
-The `-continuous` option starts Grails' `DirectoryWatcher`. It watches `.groovy` and `.java` files in `grails-app`, `src/main/groovy`, `src/test/groovy`, and `src/integration-test/groovy`. Creating or changing a watched file reruns the tests selected by the command options and test name patterns.
+* `--unit` is the task `test` and `--integration` the task `integrationTest`.
+* The switch of any other phase is the name of its task without the ending `Test`, in lower case, with a hyphen where the name of the task has a capital letter: `--functional` is `functionalTest` and `--end-to-end` is `endToEndTest`. A `Test` task whose name does not end in `Test`, such as a test suite `smoke`, has the switch of its own name: `--smoke`.
+* An option of the command is never the switch of a phase. A project with a task `cleanTest` or `continuousTest` has no switch `--clean` or `--continuous` for it: such a phase is run by its task, `grails gradle cleanTest`. The same holds for a task whose name cannot be written as a switch, and for a task `functional` beside a task `functionalTest`, where the switch is that of `functionalTest`.
+* A phase the project adds has no switch with one dash; `-unit` and `-integration` are taken as the command of earlier versions took them.
 
-Continuous mode does not run tests when it starts. It is intended for the Grails interactive CLI, where the watcher remains active until you exit the CLI. A one-off `grails test-app -continuous` command exits immediately because `DirectoryWatcher` runs on a daemon thread. Stop interactive continuous testing by exiting the CLI or pressing Ctrl+C.
+Only the build of the project knows its phases. It lists them, together with the tools of the application, whenever it compiles the project, and when you run `grails gradle grailsToolCatalog`; `grails help test-app` and the completion of the command line then show a switch for each phase, and a switch that is neither an option nor a phase is refused with exit code 2 and the phases there are. While the build has not listed the phases, or when a build file was changed since it did, a switch that is no option of the command is taken for a phase, and Gradle fails when the project has no such phase and names the ones it has:
 
-This is not Gradle's `--continuous` mode. Grails does not pass `--continuous` to Gradle, and `--watch` is not an alias for `-continuous`. Files outside the watched directories, including Java source directories such as `src/main/java`, do not trigger a rerun.
+[source,console]
+----
+$ grails test-app --acceptance
+...
+> This project has no test phase acceptance; its test phases are: unit, integration, functional.
+----
+
+There, a switch that is one letter away from an option of the command, such as `--continous`, is refused as a mistyped option. An option of Gradle is not a switch of the command: give it after `--`, as in `grails test-app -- --info`.
+
+A phase the project adds is run by `grails test-app` without a switch like every other phase. To leave a slow phase out, name the phases that are wanted, or leave its task out of the build: `grails test-app -- -x functionalTest`.
+
+Options:
+
+* `--unit` - Run the unit tests: the task `test`.
+* `--integration` - Run the integration tests: the task `integrationTest`.
+* `+--<<phase>>+` - Run another test phase of the project, as described above.
+* `--clean` - Run every test again, also where nothing changed.
+* `--continuous` - Run the tests again whenever a file they depend on changes: the continuous build of Gradle, which runs the tests when it starts.
+* `--debug-jvm` - Start the JVM of the tests suspended, waiting for a debugger on port 5005. Where several phases run tests, their JVMs are started one after the other and each waits in its turn: name the phase, or the test, that is to be debugged.
+* `--tests=NAME` - Another way to name a test; can be given more than once.
+* `-Dname=value` - A system property for the build. Can be given more than once.
+
+`--unit`, `--integration`, `--clean`, `--continuous` and `--debug-jvm` are also taken with one dash, as the command of earlier versions took them.
+
+What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.
+
+The task `testApp` is part of the Grails Gradle plugin of Grails 9. In a project whose build has an earlier version of that plugin, Gradle says that there is no task `testApp` and the command ends with 1: upgrade the project first.
 
 See the link:{guidePath}testing.html[Testing] section for examples on how to combine the different options to target tests.

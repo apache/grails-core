@@ -1,0 +1,289 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: [grails-spring-security]
+conflicts: []
+oneOf: null
+order: 400
+adds: scaffolding
+adds: grails-spring-security
+dependency: implementation org.apache.grails:grails-spring-security-ui without a version
+dependency: implementation org.apache.grails:grails-mail without a version
+
+# web
+title: Grails Spring Security UI Plugin
+description: Supplements the Grails Spring Security Core plugin - added automatically when selected - with the Spring Security UI plugin's administration screens, rendered through the application's own layout: user and role CRUD, registration and forgot-password flows (sending mail requires SMTP configuration), all on the same classic User/Role/UserRole domain model.
+category: Spring Security
+documentation: https://grails.apache.org/docs/latest/grails-spring-security-ui/
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: [grails-spring-security]
+== README.md
++ ## Feature grails-spring-security documentation
++ 
++ - [Grails Spring Security Plugin documentation](https://grails.apache.org/docs/latest/grails-spring-security/)
++ 
++ ## Feature grails-spring-security-ui documentation
++ 
++ - [Grails Spring Security UI Plugin documentation](https://grails.apache.org/docs/latest/grails-spring-security-ui/)
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-mail"
++     implementation "org.apache.grails:grails-spring-security"
++     implementation "org.apache.grails:grails-spring-security-ui"
+== grails-app/conf/application.groovy
++ // The plugin denies every URL without a rule (rejectIfNoRule): these rules open
++ // the public pages and restrict the user administration to ROLE_ADMIN.
++ grails.plugin.springsecurity.userLookup.userDomainClassName = 'example.grails.User'
++ grails.plugin.springsecurity.userLookup.authorityJoinClassName = 'example.grails.UserRole'
++ grails.plugin.springsecurity.authority.className = 'example.grails.Role'
++ grails.plugin.springsecurity.ui.encodePassword = true
++ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
++     [pattern: '/',                    access: ['permitAll']],
++     [pattern: '/error',               access: ['permitAll']],
++     [pattern: '/index',               access: ['permitAll']],
++     [pattern: '/index.gsp',           access: ['permitAll']],
++     [pattern: '/shutdown',            access: ['permitAll']],
++     [pattern: '/assets/**',           access: ['permitAll']],
++     [pattern: '/**/js/**',            access: ['permitAll']],
++     [pattern: '/**/css/**',           access: ['permitAll']],
++     [pattern: '/**/images/**',        access: ['permitAll']],
++     [pattern: '/**/favicon.ico',      access: ['permitAll']],
++     [pattern: '/register/**',         access: ['permitAll']],
++     [pattern: '/user/**',             access: ['ROLE_ADMIN']],
++     [pattern: '/role/**',             access: ['ROLE_ADMIN']],
++     [pattern: '/registrationCode/**', access: ['ROLE_ADMIN']],
++     [pattern: '/securityInfo/**',     access: ['ROLE_ADMIN']],
++ ]
+== grails-app/conf/application.yml
++   mail:
++     default:
++       from: do.not.reply@localhost
+== grails-app/controllers/example/grails/UserController.groovy
++ package example.grails
++ 
++ import grails.plugin.scaffolding.RestfulServiceController
++ import grails.plugin.scaffolding.annotation.Scaffold
++ 
++ @Scaffold(RestfulServiceController<User>)
++ class UserController {
++ }
+== grails-app/domain/example/grails/Role.groovy
++ package example.grails
++ 
++ import groovy.transform.EqualsAndHashCode
++ import groovy.transform.ToString
++ 
++ @EqualsAndHashCode(includes = 'authority')
++ @ToString(includes = 'authority', includeNames = true, includePackage = false)
++ class Role implements Serializable {
++ 
++     private static final long serialVersionUID = 1
++ 
++     String authority
++ 
++     Role(String authority) {
++         this()
++         this.authority = authority
++     }
++ 
++     static constraints = {
++         authority unique: true, nullable: false
++     }
++ 
++     static mapping = {
++         cache true
++     }
++ }
+== grails-app/domain/example/grails/User.groovy
++ package example.grails
++ 
++ import groovy.transform.EqualsAndHashCode
++ import groovy.transform.ToString
++ 
++ @EqualsAndHashCode(includes = 'username')
++ @ToString(includes = 'username', includeNames = true, includePackage = false)
++ class User implements Serializable {
++ 
++     private static final long serialVersionUID = 1
++ 
++     String username
++     String password
++     boolean enabled = true
++     boolean accountExpired
++     boolean accountLocked
++     boolean passwordExpired
++ 
++     String email
++ 
++     User(String username, String password, String email = null) {
++         this()
++         this.username = username
++         this.password = password
++         this.email = email
++     }
++ 
++     Set<Role> getAuthorities() {
++         UserRole.findAllByUser(this)*.role
++     }
++ 
++     static mapping = {
++         table name: '`user`'
++     }
++ 
++     static constraints = {
++         email nullable: true, email: true, unique: true
++         username unique: true, nullable: false
++         password nullable: false
++     }
++ }
+== grails-app/domain/example/grails/UserRole.groovy
++ package example.grails
++ 
++ import grails.gorm.DetachedCriteria
++ import groovy.transform.ToString
++ import org.codehaus.groovy.util.HashCodeHelper
++ 
++ @ToString(cache = true, includeNames = true, includePackage = false)
++ class UserRole implements Serializable {
++ 
++     private static final long serialVersionUID = 1
++ 
++     User user
++     Role role
++ 
++     UserRole(User u, Role r) {
++         this()
++         user = u
++         role = r
++     }
++ 
++     @Override
++     boolean equals(other) {
++         if (!(other instanceof UserRole)) {
++             return false
++         }
++ 
++         other.user?.id == user?.id && other.role?.id == role?.id
++     }
++ 
++     @Override
++     int hashCode() {
++         int hashCode = HashCodeHelper.initHash()
++         if (user) hashCode = HashCodeHelper.updateHash(hashCode, user.id)
++         if (role) hashCode = HashCodeHelper.updateHash(hashCode, role.id)
++         return hashCode
++     }
++ 
++     static UserRole get(long userId, long roleId) {
++         criteriaFor(userId, roleId).get()
++     }
++ 
++     static boolean exists(long userId, long roleId) {
++         criteriaFor(userId, roleId).count()
++     }
++ 
++     private static DetachedCriteria criteriaFor(long userId, long roleId) {
++         UserRole.where {
++             user == User.load(userId) &&
++             role == Role.load(roleId)
++         }
++     }
++ 
++     static UserRole create(User user, Role role, boolean flush = false) {
++         def instance = new UserRole(user: user, role: role)
++         instance.save(flush: flush, insert: true)
++         instance
++     }
++ 
++     static boolean remove(User u, Role r, boolean flush = false) {
++         if (u == null || r == null) return false
++ 
++         int rowCount = UserRole.where { user == u && role == r }.deleteAll()
++ 
++         if (flush) { UserRole.withSession { it.flush() } }
++ 
++         rowCount
++     }
++ 
++     static void removeAll(User u, boolean flush = false) {
++         if (u == null) return
++ 
++         UserRole.where { user == u }.deleteAll()
++ 
++         if (flush) { UserRole.withSession { it.flush() } }
++     }
++ 
++     static void removeAll(Role r, boolean flush = false) {
++         if (r == null) return
++ 
++         UserRole.where { role == r }.deleteAll()
++ 
++         if (flush) { UserRole.withSession { it.flush() } }
++     }
++ 
++     static constraints = {
++         user nullable: false
++         role nullable: false, unique: 'user'
++     }
++ 
++     static mapping = {
++         version false
++     }
++ }
+== grails-app/init/example/grails/BootStrap.groovy
++     def springSecurityService
++         User.withTransaction {
++             def password = UUID.randomUUID().toString()
++             def adminRole = new Role('ROLE_ADMIN').save(failOnError: true)
++             def admin = new User('admin', springSecurityService.encodePassword(password)).save(failOnError: true)
++             UserRole.create(admin, adminRole, true)
++             log.warn "Generated admin credentials: admin / $password"
++         }
+== grails-app/services/example/grails/UserService.groovy
++ package example.grails
++ 
++ import grails.plugin.scaffolding.annotation.Scaffold
++ 
++ @Scaffold(User)
++ class UserService {
++ }
+== src/test/groovy/example/grails/UserSpec.groovy
++ package example.grails
++ 
++ import grails.testing.gorm.DataTest
++ import spock.lang.Specification
++ 
++ class UserSpec extends Specification implements DataTest {
++ 
++     Class[] getDomainClassesToMock() {
++         [User, Role, UserRole]
++     }
++ 
++     void 'username and password are required'() {
++         expect:
++         !new User('', '').validate()
++         new User('admin', 'secret').validate()
++     }
++ 
++     void 'authorities derive from role assignments'() {
++         given:
++         def user = new User('admin', 'secret').save(failOnError: true, flush: true)
++         def role = new Role('ROLE_ADMIN').save(failOnError: true, flush: true)
++         UserRole.create(user, role, true)
++ 
++         expect:
++         user.authorities*.authority == ['ROLE_ADMIN']
++     }
++ }
+
+# rest_api
+not for this kind of application
+
+# web_plugin
+not for this kind of application
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+not for this kind of application
+

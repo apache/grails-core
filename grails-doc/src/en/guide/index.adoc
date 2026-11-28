@@ -275,80 +275,30 @@ include::commandLine/interactiveMode.adoc[]
 
 include::commandLine/creatingCustomScripts.adoc[]
 
-[[creatingCustomCommands]]
-=== Creating Custom Commands
+[[creatingTools]]
+=== Creating Tools
 
-include::commandLine/creatingCustomCommands.adoc[]
+include::commandLine/creatingTools.adoc[]
 
-[[profiles]]
-== Application Profiles
+[[applicationTypes]]
+== Application Types, Features and Feature Packs
 
-include::profiles.adoc[]
+include::applicationTypes.adoc[]
 
-[[standardProfiles]]
-=== Standard Grails Profiles
+[[applicationFeatures]]
+=== The Features of an Application
 
-include::profiles/standardProfiles.adoc[]
+include::applicationTypes/applicationFeatures.adoc[]
 
-[[webProfile]]
-==== Web Profile
+[[customizingGeneration]]
+=== Customizing What a New Application Gets
 
-include::profiles/webProfile.adoc[]
+include::applicationTypes/customizingGeneration.adoc[]
 
-[[restAPIProfile]]
-==== REST API Profile
+[[profilesReplaced]]
+=== What Became of Profiles
 
-include::profiles/restAPIProfile.adoc[]
-
-[[pluginProfile]]
-==== Plugin Profile
-
-include::profiles/pluginProfile.adoc[]
-
-[[webPluginProfile]]
-==== Web Plugin Profile
-
-include::profiles/webPluginProfile.adoc[]
-
-[[restAPIPluginProfile]]
-==== REST API Plugin Profile
-
-include::profiles/restAPIPluginProfile.adoc[]
-
-[[profileProfile]]
-==== Profile Profile
-
-include::profiles/profileProfile.adoc[]
-
-[[creatingProfiles]]
-=== Creating Profiles
-
-include::profiles/creatingProfiles.adoc[]
-
-[[profileInheritance]]
-=== Profile Inheritance
-
-include::profiles/profileInheritance.adoc[]
-
-[[publishingProfiles]]
-=== Publishing Profiles
-
-include::profiles/publishingProfiles.adoc[]
-
-[[profileStructure]]
-=== Understanding Profiles
-
-include::profiles/profileStructure.adoc[]
-
-[[profileCommands]]
-=== Creating Profile Commands
-
-include::profiles/profileCommands.adoc[]
-
-[[profileFeatures]]
-=== Creating Profile Features
-
-include::profiles/profileFeatures.adoc[]
+include::applicationTypes/profilesReplaced.adoc[]
 
 [[GORM]]
 == Object Relational Mapping (GORM)
@@ -735,10 +685,10 @@ include::webServices/REST/restfulControllers/restControllersStepByStep.adoc[]
 
 include::webServices/REST/restfulControllers/generatingRestControllers.adoc[]
 
-[[restProfile]]
-==== The REST Profile
+[[restApiApplication]]
+==== The REST API Application Type
 
-include::webServices/REST/restProfile.adoc[]
+include::webServices/REST/restApiApplication.adoc[]
 
 [[jsonViews]]
 ==== JSON Views
@@ -1376,6 +1326,11 @@ include::contributing.adoc[]
 [[ref-command-line]]
 === Command Line
 
+[[ref-command-line-add-property]]
+==== add-property
+
+include::ref/Command Line/add-property.adoc[]
+
 [[ref-command-line-bug-report]]
 ==== bug-report
 
@@ -1401,11 +1356,6 @@ include::ref/Command Line/console.adoc[]
 
 include::ref/Command Line/create-app.adoc[]
 
-[[ref-command-line-create-command]]
-==== create-command
-
-include::ref/Command Line/create-command.adoc[]
-
 [[ref-command-line-create-controller]]
 ==== create-controller
 
@@ -1420,11 +1370,6 @@ include::ref/Command Line/create-domain-class.adoc[]
 ==== create-functional-test
 
 include::ref/Command Line/create-functional-test.adoc[]
-
-[[ref-command-line-create-hibernate-cfg-xml]]
-==== create-hibernate-cfg-xml
-
-include::ref/Command Line/create-hibernate-cfg-xml.adoc[]
 
 [[ref-command-line-create-integration-test]]
 ==== create-integration-test
@@ -1446,16 +1391,6 @@ include::ref/Command Line/create-job.adoc[]
 
 include::ref/Command Line/create-plugin.adoc[]
 
-[[ref-command-line-create-profile]]
-==== create-profile
-
-include::ref/Command Line/create-profile.adoc[]
-
-[[ref-command-line-create-script]]
-==== create-script
-
-include::ref/Command Line/create-script.adoc[]
-
 [[ref-command-line-create-service]]
 ==== create-service
 
@@ -1465,6 +1400,11 @@ include::ref/Command Line/create-service.adoc[]
 ==== create-taglib
 
 include::ref/Command Line/create-taglib.adoc[]
+
+[[ref-command-line-create-tool]]
+==== create-tool
+
+include::ref/Command Line/create-tool.adoc[]
 
 [[ref-command-line-create-unit-test]]
 ==== create-unit-test
@@ -1481,15 +1421,35 @@ include::ref/Command Line/dependency-report.adoc[]
 
 include::ref/Command Line/docs.adoc[]
 
+[[ref-command-line-create-scaffold-controller]]
+==== create-scaffold-controller
+
+include::ref/Command Line/create-scaffold-controller.adoc[]
+
+[[ref-command-line-create-scaffold-service]]
+==== create-scaffold-service
+
+include::ref/Command Line/create-scaffold-service.adoc[]
+
 [[ref-command-line-generate-all]]
 ==== generate-all
 
 include::ref/Command Line/generate-all.adoc[]
 
+[[ref-command-line-generate-async-controller]]
+==== generate-async-controller
+
+include::ref/Command Line/generate-async-controller.adoc[]
+
 [[ref-command-line-generate-controller]]
 ==== generate-controller
 
 include::ref/Command Line/generate-controller.adoc[]
+
+[[ref-command-line-generate-scaffold-all]]
+==== generate-scaffold-all
+
+include::ref/Command Line/generate-scaffold-all.adoc[]
 
 [[ref-command-line-generate-views]]
 ==== generate-views
@@ -1511,11 +1471,6 @@ include::ref/Command Line/install-templates.adoc[]
 
 include::ref/Command Line/list-plugins.adoc[]
 
-[[ref-command-line-list-profiles]]
-==== list-profiles
-
-include::ref/Command Line/list-profiles.adoc[]
-
 [[ref-command-line-package-plugin]]
 ==== package-plugin
 
@@ -1526,15 +1481,75 @@ include::ref/Command Line/package-plugin.adoc[]
 
 include::ref/Command Line/package.adoc[]
 
+[[ref-command-line-feature-add]]
+==== feature add
+
+include::ref/Command Line/feature-add.adoc[]
+
+[[ref-command-line-feature-list]]
+==== feature list
+
+include::ref/Command Line/feature-list.adoc[]
+
+[[ref-command-line-feature-find]]
+==== feature find
+
+include::ref/Command Line/feature-find.adoc[]
+
+[[ref-command-line-feature-show]]
+==== feature show
+
+include::ref/Command Line/feature-show.adoc[]
+
+[[ref-command-line-feature-diff]]
+==== feature diff
+
+include::ref/Command Line/feature-diff.adoc[]
+
+[[ref-command-line-gradle]]
+==== gradle
+
+include::ref/Command Line/gradle.adoc[]
+
 [[ref-command-line-plugin-info]]
 ==== plugin-info
 
 include::ref/Command Line/plugin-info.adoc[]
 
-[[ref-command-line-profile-info]]
-==== profile-info
+[[ref-command-line-plugin-list]]
+==== plugin list
 
-include::ref/Command Line/profile-info.adoc[]
+include::ref/Command Line/plugin-list.adoc[]
+
+[[ref-command-line-plugin-find]]
+==== plugin find
+
+include::ref/Command Line/plugin-find.adoc[]
+
+[[ref-command-line-plugin-show]]
+==== plugin show
+
+include::ref/Command Line/plugin-show.adoc[]
+
+[[ref-command-line-project-health]]
+==== project health
+
+include::ref/Command Line/project-health.adoc[]
+
+[[ref-command-line-project-migrate]]
+==== project migrate
+
+include::ref/Command Line/project-migrate.adoc[]
+
+[[ref-command-line-project-regenerate]]
+==== project regenerate
+
+include::ref/Command Line/project-regenerate.adoc[]
+
+[[ref-command-line-project-show]]
+==== project show
+
+include::ref/Command Line/project-show.adoc[]
 
 [[ref-command-line-run-app]]
 ==== run-app
@@ -1550,6 +1565,11 @@ include::ref/Command Line/run-command.adoc[]
 ==== run-script
 
 include::ref/Command Line/run-script.adoc[]
+
+[[ref-command-line-run-tool]]
+==== run-tool
+
+include::ref/Command Line/run-tool.adoc[]
 
 [[ref-command-line-schema-export]]
 ==== schema-export
@@ -1580,6 +1600,11 @@ include::ref/Command Line/stop-app.adoc[]
 ==== test-app
 
 include::ref/Command Line/test-app.adoc[]
+
+[[ref-command-line-update-wrapper]]
+==== update-wrapper
+
+include::ref/Command Line/update-wrapper.adoc[]
 
 [[ref-command-line-war]]
 ==== war

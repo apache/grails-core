@@ -20,7 +20,7 @@ package org.grails.plugins.databasemigration.liquibase
 
 import liquibase.exception.CommandExecutionException
 import org.apache.grails.data.hibernate7.dbmigration.cli.ApplicationContextDatabaseMigrationCommandSpec
-import org.apache.grails.data.hibernate7.dbmigration.cli.DbmUpdateCommand
+import org.apache.grails.data.hibernate7.dbmigration.cli.DbmUpdateTool
 
 class GroovyPreconditionSpec extends ApplicationContextDatabaseMigrationCommandSpec {
 
@@ -36,7 +36,7 @@ class GroovyPreconditionSpec extends ApplicationContextDatabaseMigrationCommandS
 
     def "changeSet precondition is satisfied"() {
         given:
-            def command = createCommand(DbmUpdateCommand)
+            def command = createCommand(DbmUpdateTool)
             command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: 'John Smith', id: '1') {
@@ -56,7 +56,7 @@ databaseChangeLog = {
 }
 """
         when:
-            command.handle(getExecutionContext(DbmUpdateCommand))
+            command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
             executedChangeSets == ['1']
@@ -64,7 +64,7 @@ databaseChangeLog = {
 
     def "changeSet precondition is not satisfied by using a simple assertion"() {
         given:
-            def command = createCommand(DbmUpdateCommand)
+            def command = createCommand(DbmUpdateTool)
             command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: 'John Smith', id: '1') {
@@ -91,7 +91,7 @@ databaseChangeLog = {
 }
 """
         when:
-            command.handle(getExecutionContext(DbmUpdateCommand))
+            command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
             executedChangeSets == ['2']
@@ -99,7 +99,7 @@ databaseChangeLog = {
 
     def "changeSet precondition is not satisfied by using an assertion with a message"() {
         given:
-            def command = createCommand(DbmUpdateCommand)
+            def command = createCommand(DbmUpdateTool)
             command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: 'John Smith', id: '1') {
@@ -126,7 +126,7 @@ databaseChangeLog = {
 }
 """
         when:
-            command.handle(getExecutionContext(DbmUpdateCommand))
+            command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
             executedChangeSets == ['2']
@@ -134,7 +134,7 @@ databaseChangeLog = {
 
     def "changeSet precondition is not satisfied by calling the fail method"() {
         given:
-            def command = createCommand(DbmUpdateCommand)
+            def command = createCommand(DbmUpdateTool)
             command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: 'John Smith', id: '1') {
@@ -161,7 +161,7 @@ databaseChangeLog = {
 }
 """
         when:
-            command.handle(getExecutionContext(DbmUpdateCommand))
+            command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
             executedChangeSets == ['2']
@@ -169,7 +169,7 @@ databaseChangeLog = {
 
     def "changeSet precondition is not satisfied by throwing an exception"() {
         given:
-            def command = createCommand(DbmUpdateCommand)
+            def command = createCommand(DbmUpdateTool)
             command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: 'John Smith', id: '1') {
@@ -196,7 +196,7 @@ databaseChangeLog = {
 }
 """
         when:
-            command.handle(getExecutionContext(DbmUpdateCommand))
+            command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
             executedChangeSets == ['2']
@@ -204,7 +204,7 @@ databaseChangeLog = {
 
     def "databaseChangeLog precondition is not satisfied"() {
         given:
-            def command = createCommand(DbmUpdateCommand)
+            def command = createCommand(DbmUpdateTool)
             command.changeLogFile << """
 databaseChangeLog = {
     preConditions {
@@ -231,7 +231,7 @@ databaseChangeLog = {
 }
 """
         when:
-            command.handle(getExecutionContext(DbmUpdateCommand))
+            command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
             def e = thrown(CommandExecutionException)
@@ -241,7 +241,7 @@ databaseChangeLog = {
 
     def "checks the available variables"() {
         given:
-            def command = createCommand(DbmUpdateCommand)
+            def command = createCommand(DbmUpdateTool)
             command.changeLogFile << """
 databaseChangeLog = {
     changeSet(author: 'John Smith', id: '1') {
@@ -276,7 +276,7 @@ databaseChangeLog = {
 }
 """
         when:
-            command.handle(getExecutionContext(DbmUpdateCommand))
+            command.handle(getExecutionContext(DbmUpdateTool))
 
         then:
             executedChangeSets == ['1','2']

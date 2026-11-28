@@ -1,0 +1,7 @@
+// A stand-in for Forge, which this build cannot resolve: the classes of the names the plugin starts, which
+// take the directory of a pack and answer the way Forge does. Java, so it compiles without a repository.
+plugins {
+    id 'java-library'
+}
+
+group = 'org.example.forge'

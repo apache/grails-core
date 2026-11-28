@@ -23,6 +23,7 @@ import com.github.difflib.DiffUtils
 import com.github.difflib.UnifiedDiffUtils
 import com.github.difflib.patch.Patch
 import jakarta.annotation.Nullable
+import org.apache.grails.forge.core.state.ProjectState
 import org.springframework.stereotype.Component
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
@@ -98,7 +99,10 @@ class FeatureDiffer {
                 outputHandler,
                 ConsoleOutput.NOOP
         )
-        Map<String, String> oldProject = outputHandler.getProject()
+        // The state under .grails is left out: its baseline repeats every file of the application, and
+        // its manifest and lock name each other and the baseline by digest, so that a difference of
+        // them, applied to a project by hand, would leave a state that does not read
+        Map<String, String> oldProject = withoutState(outputHandler.getProject())
 
         outputHandler = new MapOutputHandler()
         projectGenerator.generate(
@@ -107,7 +111,7 @@ class FeatureDiffer {
                 outputHandler,
                 generatorContext
         )
-        Map<String, String> newProject = outputHandler.getProject()
+        Map<String, String> newProject = withoutState(outputHandler.getProject())
 
         for (Map.Entry<String, String> entry: newProject.entrySet()) {
             String oldFile = oldProject.remove(entry.getKey())
@@ -161,6 +165,16 @@ class FeatureDiffer {
                 consoleOutput.out('\n')
             }
         }
+    }
+
+    private static Map<String, String> withoutState(Map<String, String> project) {
+        Map<String, String> files = new LinkedHashMap<>()
+        for (Map.Entry<String, String> entry : project.entrySet()) {
+            if (!ProjectState.isStatePath(entry.getKey())) {
+                files.put(entry.getKey(), entry.getValue())
+            }
+        }
+        return files
     }
 
     private List<String> toLines(String file) {

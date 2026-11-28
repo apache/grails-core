@@ -136,6 +136,12 @@ tasks.named('processResources', ProcessResources) {
     from(writeProps)
 }
 
+// CreatingToolsExamplesSpec compiles the example tools of the guide's page on tools, which it reads from the checkout
+tasks.named('testCli', Test) {
+    inputs.file(rootProject.layout.projectDirectory.file('grails-doc/src/en/guide/commandLine/creatingTools.adoc'))
+            .withPropertyName('creatingToolsGuide').withPathSensitivity(PathSensitivity.NONE)
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')

@@ -1,0 +1,1283 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+A plugin can describe what an application needs in order to use it: the dependency on the plugin, settings, files. That description is a _feature pack_. With it, the plugin is a feature that can be selected when an application is created, like the features Grails itself offers.
+
+NOTE: Feature packs are new in Grails 9 and the first form of them is described here: a pack is given to the `create-` commands as a directory, or is that of a published plugin that is given by its coordinates, or by the name of its feature when you name a feature catalog that has the plugin for that name. The list of published plugins does not record feature packs yet and is not such a catalog.
+
+
+==== The Layout of a Pack
+
+
+A plugin keeps its pack in `src/main/forge`:
+
+[source]
+----
+src/main/forge/
+    feature.yml          <1>
+    templates/           <2>
+        AuditConfig.groovy.gsp
+        audit.properties
+----
+<1> The descriptor: what the feature is called and what it adds.
+<2> The files the descriptor names. Nothing else in `src/main/forge` is part of the pack.
+
+When the directory exists, the `org.apache.grails.gradle.grails-plugin` Gradle plugin puts `feature.yml` and `templates` into `META-INF/grails-forge` of the plugin's jar and records the name of the pack in the jar's manifest as `Grails-Forge-Pack`. A pack is published with the plugin; there is nothing else to configure. The build fails when the pack could not be read from the jar: when `src/main/forge` has templates and no `feature.yml`, when `src/main/forge` itself or a file or a directory under `templates` is a symbolic link, and when a file is one Gradle leaves out of every archive, such as `.gitignore` or `.DS_Store`. Give such a file another name in the pack and its real name in `to`; this is for a file in a directory of its own, since the `.gitignore` at the root of the application is written by Grails and a pack cannot write it too.
+
+The pack is read only from a jar in the form the `jar` task writes by default; a jar that is built with `zip64 = true`, or that is given a comment or a launch script afterwards, is <<forgeFeaturePackJar,refused>> by the command that would use the pack.
+
+
+==== The Descriptor
+
+
+[source,yaml]
+.src/main/forge/feature.yml
+----
+format: 1
+kind: feature
+templateApi: 1
+name: acme-audit
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+title: Acme Audit Trail
+description: Records who changed which domain instance
+applicationTypes: [web, rest-api]
+requires: [database-migration]
+dependencies:
+  - scope: implementation
+    coordinates: com.acme:acme-audit-grails
+    version: '2.3.0'
+configuration:
+  acme.audit.enabled: true
+  environments:
+    test:
+      acme.audit.enabled: false
+files:
+  - from: AuditConfig.groovy.gsp
+    to: 'src/main/groovy/{packagePath}/AuditConfig.groovy'
+  - from: audit.properties
+    to: grails-app/conf/audit.properties
+readme: The audit trail is configured in `AuditConfig`.
+instructions: |
+  Run `./gradlew dbmGormDiff` to generate the migration of the audit tables.
+----
+
+[cols="1,3"]
+|===
+|Key |Meaning
+
+|`format`, `kind`, `templateApi`
+|Required. `1`, `feature` and `1`. A descriptor whose `kind` is `preset` is that of a preset, which an application is made from: see xref:applicationTypes#presets[Making Applications from a Preset].
+
+|`name`
+|Required. The name the feature is selected by: lowercase letters, digits and single hyphens, starting with a letter. It cannot be the name of a feature Grails offers.
+
+|`compatibility`
+|Required. The versions of Grails (`grails`) and of the generator (`forge`) the pack is for. `[9.0.0,10.0.0)` is 9.0.0 and later and before 10.0.0, `[9.1,)` is 9.1.0 and later, `9.0.0` is that release only, and several intervals are separated by commas. A snapshot, milestone or release candidate counts as the release it leads to. A pack that is not for the Grails that generates the application is refused.
+
+|`title`, `description`, `category`, `documentation`
+|`description` is what `--list-features` shows for the feature, under its `category`. `title` and `documentation`, a link, are for tools that present features.
+
+|`thirdPartyDocumentation`
+|A link to the documentation of what the plugin integrates, for the `README.md` of the application.
+
+|`applicationTypes`
+|The kinds of application the feature can be selected for: `web`, `rest-api`, `plugin`, `web-plugin`, `rest-api-plugin`. All of them when left out.
+
+|`requires`
+|Features that are selected with this one. They can be features of Grails or of other packs given to the same command. Two packs can require each other: both are selected, whichever of them is named. A required feature cannot be left out with `--exclude-features`. The feature of another pack can be named by its full name, `group:artifact#name`, as in `requires: ['com.acme:acme-base-grails#acme-base']`: see below the table.
+
+|`conflicts`
+|Features this one cannot be used with. The application is refused, before anything of it is written, when it would have one of them, whether that feature was selected, is there by default or was brought in by another feature. A full name, `group:artifact#name`, is the feature of that plugin only.
+
+|`oneOf`
+|An exclusive group the feature belongs to, such as `acme-audit-store`: only one feature of a group can be selected. The group is one of packs; a pack cannot join a group of Grails, such as `database-driver`.
+
+|`dependencies`
+|Dependencies of the application. `scope` is a Gradle configuration (`implementation`, `compileOnly`, `runtimeOnly`, `developmentOnly`, `grailsCli`, `grailsCliStandalone`, `testImplementation`, `testCompileOnly`, `testRuntimeOnly`, `testAndDevelopmentOnly`, `integrationTestImplementationTestFixtures`) or `buildscript`, for a dependency of the build itself, which is on the class path of the build script. `grailsCli` and `grailsCliStandalone` are the scopes of the Grails Gradle plugin for the tools of an application and what they need (see xref:commandLine#creatingTools[Creating Tools]): `grailsCli` for the tools of `src/cli` and `grailsCliStandalone` for the standalone tools, never on the class path the application runs with or in what is packaged. `grailsCliStandalone` is the scope for the `-cli-standalone` artifact of a plugin whose standalone tools an application uses without the plugin, as the `scaffolding` feature gives a REST API application `org.apache.grails:grails-scaffolding-cli-standalone`, and `grailsCli` the one for a `-cli` artifact, which brings the plugin with it to the class path of the tools. `coordinates` is `group:artifact`, `version` is optional and left out when the Grails BOM or a platform manages it, `excludes` lists `group:artifact` or `group` to exclude, and `capabilities` lists `group:name` capabilities that select a variant of the dependency, as `requireCapability` does in a Gradle build: `capabilities: ['org.ehcache:ehcache-jakarta']` declares `implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }`. Two features that declare one dependency with different exclusions or capabilities cannot be selected together. With `when`, the dependency is there only for an application the <<forgeFeaturePackConditions,condition>> holds of.
+
+|`platforms`
+|BOMs to import, with `coordinates` and `version`, and `when` for a condition.
+
+|`buildPlugins`
+|Gradle plugins to apply, by `id` and optional `version`. `apply: true` applies the plugin with `apply plugin:` after the `plugins` block, for a plugin that is on the class path of the build through a `buildscript` dependency. `when` is a condition.
+
+|`build.properties`, `build.propertyComments`
+|Entries for `gradle.properties`, and lines of comment that are written above them, each one line of printable ASCII characters.
+
+|`build.extensions`
+|Code for `build.gradle`, by the name of the block it goes into, for example `assets: minifyJs = false`. A name is identifiers joined by dots, of which one can be a call with one argument, as in `tasks.withType(Test).configureEach`; `tasks.bootRun` configures the task `bootRun`. In place of the code, a list of at most 20 parts, each with its `text` and a `when`, gives the block the parts whose condition holds, in their order.
+
+|`build.blocks`
+|Text that is added to `build.gradle` as it is, at one of three places: `afterPlugins`, `afterDependencies` and `end`. For what no named block holds, such as a method the build script declares.
+
+|`configuration`
+|Settings for `application.yml`. Settings under `environments.<name>` apply to that environment. In place of the mapping, a list of entries, each with its `values` and a `when`, sets the values whose condition holds; an entry with `environmentFile: <name>` writes its values to the configuration file of that environment (`application-<name>.yml`; for `test`, the one among the resources of the tests) in place of `application.yml`.
+
+|`files`
+|Files to write. `from` is a path under `templates`; `to` is the path in the application and can use `{name}`, `{packageName}`, `{packagePath}`, `{className}`, `{naturalName}` and `{propertyName}`. `when` is a condition. `template: false` writes a file whose name ends with `.gsp` as it is, and `executable: true` writes the file as one that can be run.
+
+|`parameters`
+|The options the feature takes, which whoever creates the application sets with `--feature-option`: see <<forgeFeaturePackParameters,below>>.
+
+|`artefacts`
+|The commands the feature gives the `grails` command in an application that has it, each of which writes a class from a template of the pack: see <<forgeFeaturePackArtefacts,below>>.
+
+|`requiresJdk`
+|The lowest version of Java the feature can be used with, as a number such as `25`. An application for an earlier one is refused when the feature is selected.
+
+|`readme`, `readmeLinks`
+|A paragraph for the application's `README.md`, and links for its list of links, each with a `label` and an `href`, at most 20.
+
+|`instructions`
+|What is to be done once the application has the feature, for whoever created it: see <<forgeFeaturePackInstructions,below>>. It is shown and written nowhere.
+|===
+
+A name in `requires` and `conflicts` is the feature of that name, of Grails or of whichever pack has it. A full name, `group:artifact#name`, is the feature `name` of the pack of the plugin `group:artifact` and of no other: of the jar of that plugin, in whichever version the command took it, by its coordinates or from a feature catalog. The pack of a directory or of a file is the pack of no plugin, so a full name does not name it, even when the feature has that name. A feature that is required by its full name is selected by its name, which is the name `features` has in a template. When no pack of that plugin with that feature was given for the type of the application, the application is refused, and the message names the plugin and the feature, so that the plugin can be given by its coordinates; a feature that conflicts by its full name is refused only beside the feature of the pack of that plugin.
+
+[[forgeFeaturePackConditions]]
+A `when` is a condition on the application that is created. It is data, which the generator evaluates: nothing of the pack is run for it. A condition is a mapping with one key:
+
+[cols="2,3"]
+|===
+|Condition |Holds when
+
+|`{ feature: grails-spring-security }`
+|the application has the feature, however it came to have it
+
+|`{ group: database-driver }`
+|the application has a feature of the exclusive group
+
+|`{ applicationType: [web, web-plugin] }`
+|the application is of the type, or of one of the types
+
+|`{ option: { data: mongodb } }`
+|the option has the value, or one of a list of values. The options are `data`, `servlet` and `reloading`, with the values the `create-` commands take, and `none` where the application has none
+
+|`{ jdkAtLeast: 25 }`
+|the application is for that version of Java or a later one
+
+|`{ parameter: { store: collection } }`
+|the <<forgeFeaturePackParameters,parameter>> of the pack has the value, or one of a list of values
+
+|`{ anyOf: [...] }`, `{ allOf: [...] }`, `{ not: ... }`
+|one, all or none of them hold: each a condition, or the name of a feature
+|===
+
+A condition has at most 50 conditions in all, nested at most 5 deep.
+
+[source,yaml]
+----
+dependencies:
+  - scope: implementation
+    coordinates: com.acme:acme-audit-mongodb
+    version: '2.3.0'
+    when: { option: { data: mongodb } }
+  - scope: implementation
+    coordinates: com.acme:acme-audit-sql
+    version: '2.3.0'
+    when: { not: { option: { data: mongodb } } }
+configuration:
+  - values:
+      acme.audit.user: true
+    when: { feature: grails-spring-security }
+files:
+  - from: AuditController.groovy.gsp
+    to: 'grails-app/controllers/{packagePath}/AuditController.groovy'
+    when: { applicationType: [web, rest-api] }
+----
+
+What `checkForgePack` checks of a pack does not depend on its conditions: every template is rendered, whatever the `when` of its file.
+
+A pack only adds. It cannot change what another selected feature gives the application: a setting, a build property or the version of a dependency that is already there with another value is an error, and so is a file another feature writes, such as the `.gitignore` and the `.gitattributes` at the root of an application. A descriptor with an unknown key, or a destination outside the application, is refused with a message that names the key.
+
+
+[[forgeFeaturePackParameters]]
+==== Parameters
+
+
+A pack can leave a choice to whoever creates the application. It declares the choice as a parameter, with the value it has when nothing is said:
+
+[source,yaml]
+.src/main/forge/feature.yml
+----
+parameters:
+  - name: store
+    type: choice
+    choices: [table, collection]
+    default: table
+    description: Where audit events are kept
+  - name: retention
+    type: string
+    default: '90'
+    description: The days an audit event is kept
+  - name: console
+    type: boolean
+    default: false
+    description: Whether audit events are also written to the console
+dependencies:
+  - scope: implementation
+    coordinates: com.acme:acme-audit-mongodb
+    version: '2.3.0'
+    when: { parameter: { store: collection } }
+----
+
+[cols="1,3"]
+|===
+|Key |Meaning
+
+|`name`
+|Required. The name a template reads the parameter by: at most 40 letters and digits, starting with a lower case letter, as in `retentionDays`.
+
+|`type`
+|Required. `string`, a line of text; `boolean`, `true` or `false`; or `choice`, one of the values `choices` lists.
+
+|`choices`
+|For a `choice`: the 2 to 20 values it can have.
+
+|`default`
+|Required. The value the parameter has when none is given, which is one it can have. The text of a `string` is put in quotes when it could be read as a number, as `'90'` is.
+
+|`description`
+|What the parameter is for, which is shown where the options of the feature are listed.
+|===
+
+A pack can declare 20 parameters. A value that is text is one line of at most 200 characters that is not blank and has no control characters. It is data: nothing of it is run, and it is written wherever the templates of the pack write it, so a template that writes one into a source file has to write it as that file reads text.
+
+A parameter is set with `--feature-option`, which takes the name of the feature, a dot, the name of the parameter and the value, and can be given more than once:
+
+[source,console]
+----
+$ grails create-app com.example.shop \
+    --features=com.acme:acme-audit-grails:2.3.0 \
+    --feature-option acme-audit.store=collection \
+    --feature-option acme-audit.retention=30
+----
+
+The feature is named by its name, also when its plugin was given by its coordinates. The name of a feature and the name of a parameter have neither a dot nor an equals sign, so the value is everything after the first equals sign, as it is. An option of a feature the application does not have, an option the feature does not declare and a value the parameter cannot have are mistakes in the command line: the command ends with exit code 2 and says what the feature takes, and nothing is created. What the feature of a pack takes is said with what the pack adds when the application is created, and `--list-features` says it for every pack that is given to it:
+
+[source]
+----
+| The feature acme-audit takes options, each given as --feature-option acme-audit.NAME=VALUE:
+    store=table|collection (default table)  Where audit events are kept
+    retention=text (default 90)  The days an audit event is kept
+    console=true|false (default false)  Whether audit events are also written to the console
+----
+
+A template reads the value as `parameters.<name>`: text, or `true` or `false` for a `boolean`. A parameter that was not set has its default, and a name the pack does not declare is an error, as for every other name of a template. A condition asks for it with `parameter`, as above.
+
+[source,gsp]
+.src/main/forge/templates/audit.properties.gsp
+----
+audit.store=${parameters.store}
+audit.retention=${parameters.retention}
+<% if (parameters.console) { %>
+audit.console=true
+<% } %>
+----
+
+The options that were given are recorded with the other options of the application, in `.grails/project.yml` and `.grails/forge.lock.yml`, under `featureOptions`; an option that was not given is not recorded, since the pack, which the record holds to its digest, gives it its value. So `feature add` and `project regenerate` generate the application again with the same values, and `project show` has the options in the command line it prints and in the `featureOptions` member of its `--json` document. An application that was given no option of a feature has no `featureOptions` in its record, and the record is otherwise unchanged: it is still format 1.
+
+`feature add` takes `--feature-option` for the features it adds. The options of a feature the application has are those of its record, and an option that is given for such a feature is refused: to change one, create the application again with the command line `project show` prints. `checkForgePack` renders every template with each value of every `boolean` and `choice` parameter, the default first, and with the default of every `string`. The applications of `forgePackTest` are generated with the defaults of the parameters: a fixture cannot set one yet. A preset cannot set the parameters of the features it asks for; they are set on the command line.
+
+
+[[forgeFeaturePackInstructions]]
+==== Instructions
+
+
+The `instructions` of a pack are for the next step that the pack cannot take itself, as the instructions of a profile were: a command to run, a value to set. A `create-` command shows them once the application is created, and `feature add` once it added the feature, after everything else the command says:
+
+[source]
+----
+| Application created at /home/me/shop
+| The feature acme-audit says what to do next:
+    Run `./gradlew dbmGormDiff` to generate the migration of the audit tables.
+----
+
+They are shown as text: nothing of them is run or filled in, and a command they name is one you run. A descriptor whose instructions have a control character, such as the escape that changes the colours of a terminal, is refused. At most 30 lines are shown, each of at most 200 characters; the command says how many lines it left out. `feature add --dry-run --json` has them in the `instructions` member of its document. They are not written into the application: what should stay with it belongs in `readme`. The hosted application generator at https://start.grails.org does not show instructions.
+
+
+[[forgeFeaturePackArtefacts]]
+==== Commands That Create Classes
+
+
+A plugin that has a kind of class of its own, a job, a listener, a report, can give the `grails` command a command that writes one, as `create-controller` writes a controller. The descriptor declares it under `artefacts`:
+
+[source,yaml]
+----
+artefacts:
+  - name: audit-listener                                                   <1>
+    description: Creates a listener of audit events                        <2>
+    suffix: AuditListener                                                  <3>
+    template: artefacts/AuditListener.groovy                               <4>
+    to: grails-app/services/{packagePath}/{className}AuditListener.groovy  <5>
+    testTemplate: artefacts/AuditListenerSpec.groovy                       <6>
+    testTo: src/test/groovy/{packagePath}/{className}AuditListenerSpec.groovy
+----
+<1> The command is `create-` and this name: `create-audit-listener`. Lower case letters and digits in words joined by hyphens, at most 40 characters.
+<2> One line of at most 200 characters, which `help` shows with the name of the feature after it. Without one the command is described as `Creates a class (audit-listener)`.
+<3> What the kind of class adds to the name of a class. A name that is given with it, `OrderAuditListener`, is taken without it, as `create-job` takes `ReportJob`. It can be left out.
+<4> The template of the class, a file under `templates` of the pack.
+<5> Where the class is written in the application. The path has the placeholders of `files[].to` and has to have `{className}`.
+<6> The template and the path of a test, both or neither.
+
+A pack can declare 20 of them. The templates are those of the `create-` commands of the command line: text in which tokens are replaced, and nothing else. They are never GSP and nothing of them is run, whatever the name of the file ends with:
+
+[cols="2,5"]
+|===
+|Token |Replaced by
+
+|`@artifact.package@`
+|The declaration of the package, `package com.example`, as a line of its own with an empty line after it. For a class without a package neither is written.
+
+|`@artifact.package.name@`, `@artifact.package.path@`
+|The name of the package, `com.example`, and the package as a path, `com/example`.
+
+|`@artifact.name@`
+|The name of the class without the `suffix`: `Order` for `create-audit-listener Order` and for `create-audit-listener OrderAuditListener`.
+
+|`@artifact.propertyName@`
+|That name with a lower-case first letter: `order`.
+|===
+
+[source,groovy]
+.src/main/forge/templates/artefacts/AuditListener.groovy
+----
+@artifact.package@
+class @artifact.name@AuditListener {
+
+    void onEvent(Map event) {
+    }
+}
+----
+
+Everything else in a template is written as it is, a `${...}` and a `<% %>` included. A template has to be text in UTF-8 of at most 256 KiB, and a token that starts with `@artifact.` and is none of the five is refused when the pack is read. The Gradle plugin of Grails replaces `@info.app.name@`, `@info.app.version@` and `@info.app.grailsVersion@` in the resources of a project, and leaves `src/main/forge` alone: a template reaches the jar byte for byte.
+
+When an application is created with the feature, and when `feature add` adds it, the templates are written into the application as they are, under `src/main/templates/features/<name of the feature>/` and the path they have in the pack:
+
+[source]
+----
+src/main/templates/features/acme-audit/artefacts/AuditListener.groovy
+src/main/templates/features/acme-audit/artefacts/AuditListenerSpec.groovy
+----
+
+They are generated files like every other the pack writes: they are committed with the application, they are in its record with their digests, and `project regenerate --diff` names one that was changed. The record of the application, `.grails/forge.lock.yml`, has the commands under the feature. From then on the `grails` command needs neither the pack nor the project generator for them: in a project whose record has the feature it lists the commands in `help` and `help --json` (with the `origin` `feature:acme-audit`), completes their names in the interactive console, finds them by their short forms, and writes the class from the template in the project:
+
+[source,console]
+----
+$ grails create-audit-listener Order
+| Rendered audit-listener to grails-app/services/com/example/OrderAuditListener.groovy
+| Rendered audit-listener to src/test/groovy/com/example/OrderAuditListenerSpec.groovy
+----
+
+The command does what `create-controller` and the other commands of the command line do: it writes all of its files or none, keeps a file that is there unless it is given `-f` or `--force`, and writes only into the project (see xref:commandLine#creatingClassesWithGrails[Creating Classes with the `grails` Command]). Since the template is a file of the project, a team changes it there, and the command uses what it finds. A template that is not there any more is not replaced by one of the pack: the command writes nothing and names the path, and the file is restored from version control or from the copy the record keeps of it under `.grails/baseline/files`. `install-templates` neither writes nor replaces these templates.
+
+Names:
+
+* A pack cannot take the name of a command of the command line itself or of the Grails shell: `controller`, `service`, `domain-class`, `job`, `app`, `plugin`, `script` and the others are refused when the pack is read, with `artefacts[0].name: create-service is a command of the command line itself, or was one of the Grails shell, and a pack gives none of that name`.
+* Two features of one application cannot give the same command: such an application is refused when it is created, and `feature add` refuses the second feature.
+* A tool of the application or of one of its plugins that has the same name gives way to the command of the feature, as it gives way to a command of the command line itself. `help` says so, and that tool is still run with `grails run-tool <name>`.
+* A short form is looked up among the commands of the command line itself first, then among those of the features, then among the tools of the application: a command of a feature never makes a short form of `grails` itself stand for two commands, or for another one.
+
+Outside a project, and in an application without the feature, there is no such command, and the name is refused like any name that is no command, with one more line: `A feature can give the command line a command of this name. It is a command in the project of an application that has the feature`. The completion script for bash and zsh is written when the distribution is built and knows nothing of a project, so it does not complete these commands; the interactive console does. The hosted generator at https://start.grails.org takes no pack of a plugin, so an application created there has the commands of the features of Grails only. No feature of Grails declares one in this release (`create-job` of `grails-quartz` is a command of the command line itself); one that did would have its templates and its record written there as on the command line, since it is the same generator.
+
+A preset declares no `artefacts`: it asks for the feature that has them.
+
+
+==== Templates
+
+
+A file whose name ends with `.gsp` is a template. It is rendered when the application is generated; every other file is written as it is. A template is GSP, and this is all the generator reads in it:
+
+[cols="1,3"]
+|===
+|In the template |Is
+
+|`${...}`
+|An expression: its value is written, unescaped.
+
+|`<% ... %>`, `<%= ... %>`
+|A scriptlet, and a scriptlet whose value is written.
+
+|`%{ ... }%`
+|A scriptlet, in its other form.
+
+|`<%-- ... --%>`, `%{-- ... --}%`
+|A comment, which is left out.
+
+|`<%@ page import="..." %>`
+|A directive of the page.
+
+|`<g:if>`, `<g:elseif>`, `<g:else>`, `<g:unless>`, `<g:each>`, `<g:while>`, `<g:collect>`, `<g:findAll>`, `<g:grep>`, `<g:def>`
+|The ten <<forgeFeaturePackTags,instruction tags>>.
+
+|A backslash directly in front of one of the above, or of any tag
+|An <<forgeFeaturePackEscapes,escape>>.
+|===
+
+Everything else is text and is written as it is, character for character: every other tag, and also what a GSP of a web application would read and a template has no use for, `@{ ... }` and `!{ ... }!`. A line that holds nothing but scriptlets, directives and comments writes nothing, not even its line break.
+
+// example::template[]
+[source,gsp]
+.src/main/forge/templates/AuditConfig.groovy.gsp
+----
+package ${project.packageName}
+
+class AuditConfig {
+<% if (features.contains('grails-spring-security')) { %>
+    boolean recordUser = true
+<% } %>
+    String application = '${project.name}'
+}
+----
+
+For an application `com.example.shop` without Spring Security, this writes:
+
+// example::template-written[]
+[source,groovy]
+----
+package com.example
+
+class AuditConfig {
+    String application = 'shop'
+}
+----
+
+
+A template can refer to these names. Any other name is an error, so a misspelled name fails the generation and does not write an incomplete file.
+
+[cols="1,3"]
+|===
+|Name |Value
+
+|`project.name`
+|The name of the application, `shop`
+
+|`project.packageName`, `project.packagePath`
+|Its package, `com.example`, and the package as a path, `com/example`
+
+|`project.className`, `project.propertyName`, `project.naturalName`
+|The name as that of a class (`Shop`), of a property (`shop`), and as words (`Shop`)
+
+|`features`
+|The names of all features of the application, sorted
+
+|`applicationType`
+|`web`, `rest-api`, `web-plugin`, `plugin` or `rest-api-plugin`
+
+|`options.jdk`
+|The version of Java the application is for, as a number
+
+|`options.data`, `options.servlet`, `options.reloading`
+|What the application has of what the `--data`, `--servlet` and `--reloading` options choose, written as the values of those options, such as `hibernate7`, `tomcat` and `devtools`. Where the application has none, the value is `none`: a plugin has no servlet container unless one is asked for
+
+|`grailsVersion`
+|The version of Grails the application is generated for
+
+|`pack.name`
+|The name of the feature of the pack
+
+|`parameters`
+|The value of each <<forgeFeaturePackParameters,parameter>> the descriptor declares, by its name, as `parameters.store`: `true` or `false` for a `boolean`, and text for the others
+|===
+
+These names are template API 1, the one `templateApi: 1` in the descriptor asks for. `parameters` was added to it before the first release of Grails 9: a template that does not use the name is rendered as it was. A template API does not change once it is released: when a later version of Grails gives templates more, that is template API 2, and a pack that declares 1 is still given exactly the names above. A pack that declares a template API the generator does not have is refused, with the ones it has in the message.
+
+A template has to be text in UTF-8, and a file of a pack can have at most 1 MiB, before and after it is rendered.
+
+A template that cannot be compiled, or that fails while it is rendered, stops the generation before any file is written. The message names the template and the line of it the error is on, for example `The template AuditConfig.groovy.gsp of the feature acme-audit cannot be rendered: line 4: ...`. For an error in a scriptlet or an expression of several lines, the line is the one it starts on; a block or an instruction tag that is never closed is reported on the last line of the template.
+
+A template is compiled into one method of a class, and a method has a size it cannot be over. A template with too much in it is refused with `it has more expressions, scriptlets and instructions than the page of one template can hold: divide it into several files`, long before its text is 1 MiB: a template holds about 1,500 expressions, or 2,000 instruction tags, or 3,800 tags that are text, a start tag and an end tag counting as one each, and fewer when it has several of these kinds. A view of an application is far below that.
+
+
+[[forgeFeaturePackTags]]
+==== Tags in a Template
+
+
+The ten instruction tags are run when the application is generated, and are not written to the file. They take the attributes they take in a view, with these differences:
+
+* The `test` of `<g:if>`, `<g:elseif>`, `<g:unless>` and `<g:while>` has to be one expression, `test="${...}"`. In a view `test="false"` and `test="1 == 2"` are text, and text is always true; in a template they are refused.
+* `env` is refused. It would ask for the environment the generator runs in; the environment of the application is not known when it is generated.
+* A `>` ends a tag, also inside the quotes of an attribute, unless it is inside an expression: write `expr="${it > 1}"`, not `expr="it > 1"`.
+
+// example::instructions[]
+[source,gsp]
+.src/main/forge/templates/audit.properties.gsp
+----
+audit.store=<g:if test="${options.data == 'mongodb'}">collection</g:if><g:else>table</g:else>
+audit.types=<g:each in="${['create', 'update']}" var="type">${type};</g:each>
+----
+
+writes, for an application that does not use MongoDB:
+
+// example::instructions-written[]
+[source,properties]
+----
+audit.store=table
+audit.types=create;update;
+----
+
+A line that holds only a tag still writes its line break; only a line of scriptlets, directives and comments writes nothing. So an instruction tag suits a choice within a line, and a scriptlet a choice of whole lines.
+
+*Every other tag is text.* The generator has no tag libraries. `<g:link>`, `<g:message>`, `<g:render>`, `<g:form>`, `<sec:ifLoggedIn>`, `<asset:javascript>`, `<tmpl:row>` and any other `<prefix:name>` are written to the file exactly as the template has them, with their attributes, their body and their end tag. An attribute such as `params="[id: 1]"` or `model="[book: book]"` is written as it is. This is what a pack wants when the file it writes is a view of the application. A tag named like an instruction in another namespace, such as `<my:if>`, is text as well.
+
+WARNING: `<g:set>` is a tag of a tag library, so in a template it is written out and sets nothing. For a value the template itself needs, use `<g:def var="x" value="${...}"/>` or a scriptlet. The same holds for `<g:message>`, `<g:render>`, `<g:include>` and `<g:formatDate>`: they are for the application, and the generator does not run them.
+
+`${...}` is evaluated wherever it stands, also in the attributes and the body of a tag that is text, and an instruction tag in the body of such a tag is run:
+
+// example::text-tags[]
+[source,gsp]
+----
+<g:form controller="${project.propertyName}Audit" params="[max: 10]">
+<g:if test="${options.servlet != 'none'}">    <g:submitButton name="search"/>
+</g:if></g:form>
+----
+
+writes, for an application named `shop`:
+
+// example::text-tags-written[]
+[source,gsp]
+----
+<g:form controller="shopAudit" params="[max: 10]">
+    <g:submitButton name="search"/>
+</g:form>
+----
+
+
+===== Writing a View
+
+
+A view has GSP of its own, which has to reach the application and must not be evaluated when it is generated.
+
+A view with nothing to fill in is not a template. Give it a name in the pack that does not end with `.gsp`, and its real name in `to`. It is then written byte for byte:
+
+[source,yaml]
+----
+files:
+  - from: book/show.gsp.txt
+    to: grails-app/views/book/show.gsp
+----
+
+In a template, the tags of the view need nothing, since they are text; neither does `@{ model="..." }`, the first line of a view that scaffolding generates. What the generator would read is written with a backslash in front of it, and the backslash is not written.
+
+[[forgeFeaturePackEscapes]]
+[cols="1,3"]
+|===
+|In the template |Writes
+
+|`\${`
+|`${`, an expression of the view
+
+|`\<%`
+|`<%`, which starts a scriptlet, a `<%@ page %>` directive or a `<%-- --%>` comment of the view
+
+|`\%{`
+|`%{`, which starts a scriptlet or a `%{-- --}%` comment of the view, or is text such as the `%{http_code}` of a `curl` command
+
+|`\<%{`
+|`<%{`: the backslash in front of `<%` also takes the `%{` that begins with the same `%`, which starts nothing. For a `<` of the view directly in front of a `%{ }%` scriptlet of the template, write the `<` as an expression: `${'<'}%{ ... }%`.
+
+|`\<g:if`, `\</g:if` and the other nine
+|The instruction tag, for the view to run
+
+|`\<g:link`, `\</g:link`, `\<sec:ifLoggedIn` and any other tag
+|The tag, as without the backslash. So it is safe to put a backslash in front of every tag of a view, without knowing which ones are instructions.
+
+|`\\${...}`, `\\<% ... %>`, `\\<g:if ...>`
+|One backslash, and then the expression, scriptlet or instruction is run. Backslashes directly in front of one of these count in twos: each two write one, and one left over is the escape. `C:\Users\\${project.name}` writes `C:\Users\shop`.
+
+|`\\\${`
+|`\${`: one backslash, and the expression is written and not evaluated
+
+|`\` anywhere else: `\n`, `\$5`, `c:\dir`, `\<p>`, `\@{`
+|Itself. Only backslashes directly in front of `${`, `<%`, `%{` or a tag are an escape.
+|===
+
+Nothing is needed where these end: `}`, `%>`, `--%>` and `--}%` are text.
+
+// example::escapes[]
+[source,gsp]
+----
+\${book.title} costs $5; \\${project.name} and \\\${book.id}
+\<g:each in="\${books}">\<g:link action="show">x\</g:link>\</g:each>
+C:\Users\\${project.name}\file @{ model="Book book" } !{ x }! \n
+token: \${{ secrets.TOKEN }}; curl -w "\%{http_code}"
+----
+
+writes, for an application named `shop`:
+
+// example::escapes-written[]
+[source,gsp]
+----
+${book.title} costs $5; \shop and \${book.id}
+<g:each in="${books}"><g:link action="show">x</g:link></g:each>
+C:\Users\shop\file @{ model="Book book" } !{ x }! \n
+token: ${{ secrets.TOKEN }}; curl -w "%{http_code}"
+----
+
+To turn a view into a template:
+
+. Where the view already has backslashes directly in front of a `${`, a `<%`, a `%{` or a tag, double them.
+. Put a backslash in front of every `${`, `<%` and `%{`, and in front of the start and end tags of the ten instructions, or of every tag. Where a `<%` is directly followed by a `{`, the two share the `%` and the one backslash in front of the `<%` is for both: `\<%{` writes `<%{`.
+. Remove the backslash where the generator is to fill something in.
+
+// example::view[]
+[source,gsp]
+.src/main/forge/templates/book/show.gsp.gsp
+----
+\%{-- Shows a book of \${grailsApplication.config.info.app.name}. --}%
+\<%@ page import="${project.packageName}.Book" %>
+<h1>\${book.title} in ${project.naturalName}</h1>
+\<g:if test="\${book.authors}">
+    \<g:each in="\${book.authors}" var="author">
+        <g:link action="show" id="\${author.id}" params="[from: 'book']">\${author.name}</g:link>
+    \</g:each>
+\</g:if>
+\<% if (book.isbn) { %><p>\${book.isbn}</p>\<% } %>
+<g:render template="row" model="[book: book]"/>
+----
+
+writes, for an application `com.example.shop`:
+
+// example::view-written[]
+[source,gsp]
+----
+%{-- Shows a book of ${grailsApplication.config.info.app.name}. --}%
+<%@ page import="com.example.Book" %>
+<h1>${book.title} in Shop</h1>
+<g:if test="${book.authors}">
+    <g:each in="${book.authors}" var="author">
+        <g:link action="show" id="${author.id}" params="[from: 'book']">${author.name}</g:link>
+    </g:each>
+</g:if>
+<% if (book.isbn) { %><p>${book.isbn}</p><% } %>
+<g:render template="row" model="[book: book]"/>
+----
+
+What is inside an expression, a scriptlet or a comment of the template is theirs: nothing in it is escaped or made text.
+
+
+==== Checking a Pack
+
+
+A plugin with a pack has it checked when the plugin is checked:
+
+[source,console]
+----
+$ ./gradlew check
+----
+
+`check` runs the task `checkForgePack`, which can also be run by itself. It reads the pack with the generator, the way the pack is read when an application is created, and fails the build with the problems it finds, one on a line, up to 50 of them. A problem of a key of the descriptor starts with that key, such as `files[0].to:`; one of the pack as a whole, such as a missing `feature.yml`, has none. It checks:
+
+* the whole descriptor: unknown keys, missing or malformed values, destinations outside the application;
+* every file the descriptor names: that it is there under `templates`, is a file and not a link, and is not too large;
+* `compatibility`: that the pack is for the version of Grails, and for the version of the generator, it is checked with;
+* every command under `artefacts`: its name, its paths, and its templates, which have to be text in UTF-8 of at most 256 KiB with no token but the five a command replaces. These templates are not rendered and not counted in the line the check ends with: nothing of them is run;
+* every template: that it compiles, and that it renders without an error. A name the template API does not have, such as a misspelled `project.pakageName`, is an error. The problem names the line of the template, as the message does when an application is created. A tag that is not one of the ten <<forgeFeaturePackTags,instruction tags>> is no problem: it is output, and is not looked up in a tag library.
+
+The templates are found through the descriptor, so while the descriptor has a problem only its problems are reported: the templates are checked once it can be read.
+
+A pack with a symbolic link is not checked at all. When `src/main/forge` is a link, or a file or a directory under `templates` is one, also one no file of the descriptor is under, `checkForgePack` and `forgePackTest` fail before the generator is started, with the message the `jar` task fails with: `src/main/forge is a link, which the directory of a feature pack cannot be`, or `The feature pack in src/main/forge has a link, which a pack cannot have:` and the path of the link. A link is never followed, so what it leads to is not read, and a pack that passed the check is checked again whenever one of its files changes. Keep the files of the pack in `src/main/forge` itself. The `grails` command is given a directory by whoever runs it: a directory named with `--feature-pack-dir` that is a link is read as the directory the link leads to, and a `feature.yml`, a `templates` or a file under it that is a link is refused there too.
+
+No application is generated. A template is compiled once and rendered for a few applications that are made up, and a problem names the one it was found for. All of them are named `com.example.shop` and have the feature of the pack, the features it `requires` and no other feature. With all five `applicationTypes` they are:
+
+[cols="1,1,1,1,1"]
+|===
+|`applicationType` |`options.jdk` |`options.data` |`options.servlet` |`options.reloading`
+
+|`web`
+|`21`
+|`hibernate5`
+|`tomcat`
+|`devtools`
+
+|`rest-api`
+|`25`
+|`hibernate7`
+|`jetty`
+|`jrebel`
+
+|`web-plugin`
+|`26`
+|`mongodb`
+|`undertow`
+|`none`
+
+|`plugin`
+|`21`
+|`neo4j`
+|`none`
+|`devtools`
+
+|`rest-api-plugin`
+|`25`
+|`hibernate5`
+|`tomcat`
+|`jrebel`
+|===
+
+A descriptor with fewer `applicationTypes` has those in the first column, in this order and starting over when they run out. So every value of an option is rendered once, and a typing error in what a template does for one value is found. What a template does only for an application that is not in the table is not rendered, and an error there is found only when such an application is created:
+
+* for a feature the pack does not require, for example inside `if (features.contains('grails-spring-security'))`;
+* for a combination that is not a row of the table, such as `hibernate7` with `undertow`;
+* for another name or package than `com.example.shop`.
+
+Try the pack out for those, as described below. Rendering a template runs its code, as creating an application does. Neither is checked what depends on the other features of an application: that no other feature sets a setting, a build property or the version of a dependency of the pack differently, or writes one of its files.
+
+A plugin without `src/main/forge` skips the task. The task is up to date when neither the pack nor the generator changed. Building the jar does not run it: `jar`, `assemble` and `publishToMavenLocal` package a pack that was not checked. `check` and `build` fail for a pack that cannot be used, and so does publishing the plugin to a repository with the `maven-publish` plugin (`publish` and the `publish...Repository` tasks), which checks the pack first.
+
+NOTE: Every task that publishes a plugin with a pack to a Maven repository checks the pack, a repository that is a directory (`file:`) included. So such a plugin cannot be published, even to a directory, unless the generator for its `grailsVersion` can be resolved from the repositories of the build, or another one is declared as shown below. `publishToMavenLocal` is the exception: it installs the plugin with a pack nobody checked.
+
+The task takes a check for passed only when the generator says, in one line and nothing else, that it checked the pack. That keeps an accident from passing: a template that ends the JVM, or writes to the standard output itself, fails the task. It is no protection against a template written to imitate that line, and is not meant as one: the templates of a pack are code of its author.
+
+The generator runs in a JVM of its own, with the Java of the toolchain of the project, and is not a dependency of the plugin. It is resolved from the repositories of the build as `org.apache.grails.forge:grails-forge-core`, in the version of Grails the plugin is built with (`grailsVersion`), with the versions of its own dependencies it was published with: `groovy.version` and the overrides of BOM properties of the project do not apply to it. When no repository of the build has it the task fails and says so. To check the pack with another version, declare it:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    grailsForgePackTooling 'org.apache.grails.forge:grails-forge-core:9.0.1'
+}
+----
+
+
+==== Testing a Pack with Applications
+
+
+The check renders the templates of a pack for applications that are made up. The task `forgePackTest` goes the whole way: the generator creates real applications with the feature of the pack selected, as a `create-` command does, and each of them is then built with its own Gradle wrapper. It finds what the check cannot: a dependency that does not resolve, a build file block that does not work, a source file that does not compile, a setting or a file another feature of the application also has.
+
+[source,console]
+----
+$ ./gradlew forgePackTest
+----
+
+The task runs only when it is asked for. `check`, `build` and the tasks that publish the plugin do not run it, because of what it costs: every application is a Grails build of its own, which downloads its Gradle distribution and its dependencies the first time and takes minutes rather than seconds. The builds use the Gradle user home of the build of the plugin, so what one of them downloads is there for the next, and the Java of the toolchain of the plugin. A plugin without `src/main/forge` skips the task, and the task is up to date when the pack, the generator, the publications of the plugin and what is configured below are as they were when it last passed.
+
+The applications are built with the plugin as this build has just built it. When the plugin applies `maven-publish`, `forgePackTest` builds every Maven publication of the project first (its artifacts, its POM and its Gradle module metadata) and puts them into `build/forge-pack-repository`, a Maven repository of the task that the applications resolve from before any other. Where the descriptor declares the plugin in `dependencies` with the version the build has, an application gets the plugin from there, whatever the local Maven repository or another repository has of the same version, and without `publishToMavenLocal`; a descriptor that declares another version gets that one from the other repositories. The publications are inputs of the task: a plugin whose code changed is tested again although its version did not change. A plugin without a Maven publication gives the applications no repository of its own, and they resolve it from the repositories below, as any other dependency.
+
+Each application is a _fixture_. Without configuration there is one for each of the `applicationTypes` of the descriptor, named after its type (`web`, `rest-api`, `web-plugin`, `plugin`, `rest-api-plugin`), with the options every application has by default and no feature but that of the pack and the ones every application of the type has. All of them are named `com.example.shop`. In each the task runs `assemble`, which compiles the application and packages it and runs none of its tests.
+
+Fixtures, and how they are built, are configured in the `grails` block of the plugin. Once a fixture is named, the named ones are the only ones, and they are generated and built in the order of their names:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    forgePackTest {
+        fixture('web')                               // <1>
+        fixture('mongo') {
+            applicationType = 'rest-api'             // <2>
+            options = [data: 'mongodb', jdk: '25']   // <3>
+            features = ['views-markup']             // <4>
+        }
+        tasks = ['assemble', 'test']                 // <5>
+        arguments = ['--stacktrace']                 // <6>
+        repositories = ['https://repo.example.org/maven'] // <7>
+        mavenLocal = true                            // <8>
+        offline = false                              // <9>
+        fixtureTimeout = java.time.Duration.ofMinutes(45) // <10>
+    }
+}
+----
+<1> A fixture has a name of lower case letters, digits and single hyphens, which names its directory and its log. Its type of application is `web` unless it says otherwise.
+<2> One of `web`, `rest-api`, `web-plugin`, `plugin` and `rest-api-plugin`.
+<3> Any of `data`, `servlet`, `reloading` and `jdk`, with the values the `create-` commands take. An option that is left out has its default.
+<4> Features to select besides that of the pack.
+<5> The tasks to run in each application. The default is `assemble`.
+<6> Further arguments for the Gradle of each application.
+<7> The repositories the applications resolve from before the ones every generated application has: addresses, which have to be `https`, paths of directories, `mavenLocal()` or `mavenCentral()`. See below for the default and for addresses with a password.
+<8> Puts the local Maven repository before the others, after the repository of the publications of the plugin, for a Grails or another plugin that was installed with `publishToMavenLocal`. Not by default. The plugin itself needs it only when it has no Maven publication.
+<9> Builds the applications with `--offline`, which works once everything they need is in the Gradle user home. `./gradlew forgePackTest --offline-fixtures` does the same for one run, and so does running the build of the plugin itself with `--offline`.
+<10> How long the build of one application can take. The default is 30 minutes. A build that takes longer is stopped, with every process it started, and its fixture is one that could not be built; the other fixtures are still built.
+
+The repositories are written into the build files of the applications the way `GRAILS_REPO_URL` writes them for a `create-` command. The value that variable has in the environment of the build is not used.
+
+Without `repositories`, the applications get the Maven repositories the build script of the plugin declares in its `repositories` block, by their addresses alone: without their credentials and without their content filters. Maven Central and the local Maven repository are recognized by what they are, not by the name a repository has. Two kinds of repository are left out, and the task says so in a warning each time it runs:
+
+* a repository whose address has a user or a password in it (`https://user:password@host/...`). The warning names its host only;
+* a repository whose address is not `https` and not a directory, such as an `http` repository with `allowInsecureProtocol` or an `s3:` one, which a generated application cannot be given.
+
+Repositories that are declared in `settings.gradle` are not seen at all. Name any of these in `repositories` if the applications need it.
+
+WARNING: An address you list in `repositories` is written into `build.gradle` of every generated application, and into the copy the application keeps under `.grails`, exactly as you list it, a user and a password included. The log of an application can show it too. The task itself keeps it out of what it prints, of `report.txt` and of what Gradle records of the task's inputs. Do not list an address with a password in a build script that is shared; pass it in from a Gradle property or an environment variable, and treat `build/forge-pack-fixtures` and `build/forge-pack-test` as holding it.
+
+The applications are generated in `build/forge-pack-fixtures/<fixture>`, where they stay to be looked at until the task runs again, and everything the build of one writes goes to `build/forge-pack-test/<fixture>/build.log`. `build/forge-pack-test/report.txt` says of each fixture whether it was built. When an application cannot be built, the others are still built, and the task then fails with, for each that failed, the tasks that failed, where the application and the whole log are, and what Gradle says went wrong, or the last lines of the log when it does not say.
+
+Only `build/forge-pack-test` is an output of the task. The applications are not, and neither is `build/forge-pack-repository`: when `build/forge-pack-fixtures` is deleted, or an application in it is changed, a task that is up to date stays up to date and does not generate them again. Run `./gradlew forgePackTest --rerun` for that, or delete `build/forge-pack-test`.
+
+An application is generated the way a `create-` command generates it, with one addition: an application without a `settings.gradle`, which is every application unless a feature adds one, gets one that only names it. Without it Gradle would find the settings of the plugin above the application and refuse to build it.
+
+A fixture the generator refuses fails the task before anything is built, with what the generator says, as a `create-` command would say it: a fixture of a type the pack is not for, a feature there is not, an option the pack conflicts with, a template that fails for that application. So does a pack with a problem in its descriptor.
+
+The generator is the one `checkForgePack` runs, resolved from `grailsForgePackTooling` as described above.
+
+
+==== Trying a Pack Out
+
+
+The `create-` commands take a pack from a directory with `--feature-pack-dir`, and its feature is then selected like any other:
+
+[source,console]
+----
+$ grails create-app com.example.shop \
+    --features=acme-audit \
+    --feature-pack-dir=/path/to/acme-audit/src/main/forge
+----
+
+The command names every pack the application is made with and says what it adds before it writes anything: the templates and build file blocks, which are code, first, then every file it writes outside the sources, the source files, plugins, properties and dependencies. `--list-features` with the same option lists the feature of the pack among the others. The option can be given more than once.
+
+WARNING: A pack is code. Its templates run when the application is generated, with everything the command can do, and what it adds to `build.gradle` runs when the application is built. Use a pack only when you trust where it comes from.
+
+
+==== Using the Pack of a Published Plugin
+
+
+Once the plugin is published, its feature is selected by giving the coordinates of the plugin, with its version, to `--features`, alone or among the names of other features:
+
+[source,console]
+----
+$ grails create-app com.example.shop \
+    --features=h2,com.acme:acme-audit-grails:2.3.0
+----
+
+The command takes the jar of that one version from a Maven repository, reads the pack in it and selects the feature of the pack, under the name the pack gives it. Nothing else of the plugin is fetched, none of its dependencies are resolved and nothing of the jar is run. The version is always given, and is one version: a range, a version with a `+` and `latest.release` are refused. A snapshot version can be given; the latest build of it is used and the file name of that build is recorded. The jar that was fetched is kept on your computer, by its SHA-256, and is used in the place of a request when a jar is asked for with that SHA-256; see <<forgePackJars,The Jars on Your Computer>>.
+
+A pack does not add its plugin to the application by itself: the descriptor declares the plugin in `dependencies`, as in the example above. The command warns when the pack of a plugin does not declare that plugin, since the application is then generated without it. It also warns when the pack declares the plugin in another version than the one the pack was taken from, and says which version the application gets; a dependency without a version, which a BOM of the build manages, gets no warning.
+
+The jar is looked for in the repositories of the `GRAILS_REPO_URL` environment variable, in their order, and then in Maven Central. That variable is written for the build of the application, so an entry of it that a pack cannot be taken from is left out with a warning and is not an error: an entry that is not `https` or a directory, a directory that is not given by its absolute path, and an entry with a user name and password in it. Credentials are not sent, and no message repeats an address with them. To look somewhere else, name the repositories with `--feature-pack-repository`, which can be given more than once. Only those repositories are asked then, so the coordinates of a private plugin are sent nowhere else:
+
+[source,console]
+----
+$ grails create-app com.example.shop \
+    --features=com.acme:acme-audit-grails:2.3.0 \
+    --feature-pack-repository=https://repo.acme.example/maven
+----
+
+The address of a repository is `https`, or `file:` for a directory laid out as a Maven repository, such as `file:///home/me/.m2/repository`. An `http` address is refused, and an address cannot carry a user name, a password or a query: a repository that asks for credentials cannot be used yet. A host is a name, or an address written as four numbers with dots or in brackets; other ways of writing an address, such as one number, are refused. A redirect is followed only to another `https` address, and a repository on the internet is not followed to an address of your own computer or of a private network, when the redirect names such an address itself. A jar can have at most 64 MiB; it is read into memory and written to no file. A repository that does not answer a request, or stops in the middle of an answer, is waited for for 60 seconds, and one file for 5 minutes.
+
+A repository that does not have the jar is passed over and the next one is asked. Any other failure ends the command, and the next repository is not asked: a repository that cannot be reached, one that answers with an error, a time-out, or a jar that fails a check below. The error is one line that names the coordinates and every repository that was asked with the reason. A repository that answers that access to the jar is refused (HTTP 401 or 403) ends the search too, and the message says so: the jar may be there, and asking the next repository would send the coordinates of a private plugin to it. A jar that was fetched and holds no pack that can be used is reported with the coordinates, the repository and every problem of its descriptor, each on a line; so is a pack whose feature has the name of a feature of Grails. In all of these cases nothing is created and the exit code is 1. A pack that requires a feature the application does not have is refused like any selection that cannot be had, with exit code 2, and the message names the coordinates the pack was taken by: name the missing feature, or the plugin that has it, in `--features`. Coordinates or an option that cannot be read are a mistake in the command line, with exit code 2 and the usage of the command.
+
+Before anything is written, the command says where each pack came from and the SHA-256 of the jar that was read:
+
+[source]
+----
+| Feature pack acme-audit from com.acme:acme-audit-grails:2.3.0 (https://repo.acme.example/maven/), sha256 5f2c...
+    the jar matches the sha256 checksum the repository publishes for it
+    dependencies: implementation com.acme:acme-audit-grails:2.3.0
+----
+
+`--list-features` with coordinates takes the jar too, and prints the first two of these lines before the list.
+
+When the repository publishes a `.sha256` or `.sha1` file for the jar, the jar is checked against it and refused when it differs; when it gives neither, the command says that the jar was not checked. A checksum of the repository shows that the download is complete. It does not show who published the jar. To use only a jar you have looked at, give its SHA-256 with `--feature-pack-sha256`; a jar with another one is refused before it is opened:
+
+[source,console]
+----
+$ grails create-app com.example.shop \
+    --features=com.acme:acme-audit-grails:2.3.0 \
+    --feature-pack-sha256=com.acme:acme-audit-grails:2.3.0=5f2c...
+----
+
+[[forgeFeaturePackJar]]
+The jar has to be a plain jar, as Gradle, Maven and the `jar` tool of the JDK write one, and all of it is checked before the pack in it is read. A file can be made that one program reads as one jar and another program as a different jar, so that the jar you looked at is not the one that is used. Such a file is refused, and the error says what is wrong with it:
+
+* a jar with a comment at its end, or with anything in front of it (such as the launch script of an executable jar), after it or between its entries;
+* a jar in the ZIP64 format, which a jar with more than 65,534 entries or of 4 GiB needs, and which Gradle writes for any jar built with `zip64 = true`;
+* an entry that is encrypted, or compressed with anything but deflate;
+* two entries of one name, or an entry that is a file where another entry has a directory;
+* an entry whose name is not a relative path in UTF-8, or has a backslash or a control character in it;
+* an entry with an extra field other than those tools write for the times and the owner of a file: one kind of extra field is a second name for the entry, which some programs read as its name;
+* an entry whose content does not have the length and the CRC-32 the jar gives for it, or for which the jar gives them twice and differently. This is checked for every entry of the jar, not only for those of the pack.
+
+A jar can have 64 MiB, the names of its entries 4 MiB together, and its entries 256 MiB together when they are not compressed. A signed jar is read as any other, with the entries of its signature.
+
+The signature of a signed jar is not verified. The coordinates, the version and the SHA-256 of each such pack are written to `.grails/forge.lock.yml` of the application, with the feature of the pack in the list of its features, and with them the repository when it is an `https` address. The name of the file is not written; for a snapshot the SHA-256 is what tells one build from another. A directory is not written, since its path names your computer.
+
+===== Selecting the Feature of a Plugin by Its Name
+
+A feature of a published plugin can also be selected by the name of the feature, when a _feature catalog_ is named that has a plugin for the name:
+
+[source,console]
+----
+$ grails create-app com.example.shop --features=h2,acme-audit \
+    --feature-catalog=https://catalog.acme.example/index.json
+----
+
+A catalog is named with `--feature-catalog`, which can be given more than once, or with the `GRAILS_FORGE_CATALOG` environment variable, which holds addresses separated by semicolons. When neither names one, the plugin index the `GRAILS_PLUGIN_INDEX` environment variable names is the catalog: the same index `list-plugins` and `plugin-info` then read, so the feature `plugin-info` names for a plugin is the one selected by that name. There is no catalog unless you name one: without one, a name that is not a feature of Grails is refused as a feature that does not exist, at once, and nothing is asked of the network or written to your computer. A catalog has the format of the list of published plugins of Grails, `grails-plugins-index.json` of https://github.com/apache/grails-plugins-metadata, with a `pack` entry in the versions that have a feature pack. That list does not publish packs yet, so today a catalog is a file of your own in its format, and the list itself, when it is named, is read and has no feature. The address of a catalog is `https`, or `file:` for a file, under the rules for the address of a repository above; `none`, for the option or the variable, means no catalog.
+
+WARNING: Naming a catalog trusts it as much as the plugins themselves. A catalog decides which plugin and version a name means, it can name the repository the jar is fetched from, and it supplies the SHA-256 the jar is checked against. A pack is code that writes into your application and its build. Whoever can change the catalog can therefore have a name run a pack of their choosing, and the SHA-256 does not stand in the way, because it comes from the same catalog: it shows that the jar is the one the catalog means, not that anybody else has looked at it. Name only a catalog whose maintainer you would also let choose your plugins, and prefer coordinates with `--feature-pack-sha256` when you want to decide yourself.
+
+A name given to `--features` is looked up in the catalogs when it is not a feature of Grails, for any type of application, and not the feature of a pack that was given as a directory or by coordinates. The command then chooses a version and says, before it asks any repository for the plugin, what the catalog made of the name and where the jar is looked for. After that everything is as if the coordinates had been given: the jar is checked in the same way and the same lines are printed, with two more:
+
+[source]
+----
+| The feature acme-audit is taken as com.acme:acme-audit-grails:2.3.0, which the feature catalog https://catalog.acme.example/index.json (sha256 91ab...) names for it, with the SHA-256 5f2c.... Asking https://repo.maven.apache.org/maven2/, and then https://repo.acme.example/maven/, the repository the catalog names
+| Feature pack acme-audit from com.acme:acme-audit-grails:2.3.0 (https://repo.acme.example/maven/), sha256 5f2c...
+    the coordinates are those the feature catalog https://catalog.acme.example/index.json (sha256 91ab...) has for the feature acme-audit
+    the SHA-256 is the one that same catalog gives for the jar: the jar is the one the catalog means, which nobody else has checked
+    the jar matches the sha256 checksum the repository publishes for it
+----
+
+The jar is the main jar of the version the catalog lists the pack under. The list of published plugins has versions that were published under other coordinates, or to another repository, than the plugin has now (`org.grails.plugins:grails-mail` was `org.grails.plugins:mail` up to 4.0.2), and gives such a version coordinates and a repository of its own; the jar is then taken by those. This is never done silently: the line that is printed before anything is asked names the plugin, the coordinates that are fetched and the repository the catalog names, and the coordinates that were fetched are what the state of the project records.
+
+[source]
+----
+| The feature mail is taken as org.grails.plugins:mail:4.0.2, the coordinates the catalog gives for version 4.0.2 of the plugin org.grails.plugins:grails-mail, which the feature catalog ...
+----
+
+A pack cannot name an artifact of its own. A jar with another SHA-256 than the catalog gives is refused before it is opened, and the pack in the jar has to have the name that was asked for.
+
+*Which version.* The version that is chosen is the latest release of the plugin whose pack is for the type of application that is created, for this version of Grails and for this version of the command. A release is a version made of numbers and dots only; which is the latest is found by comparing the versions, whatever their order in the catalog. A snapshot, a milestone or a release candidate is never chosen for a name, neither is a version the catalog says has no artifact, and neither is any version of a plugin the catalog marks as deprecated: the command says so, with the reason the catalog gives, and names the coordinates, by which such a version can still be used. A pack is for a version of Grails when both say so: the range the pack declares, and the range of the descriptor of the plugin, which the catalog has as `grailsVersion` (`7.0.0 > *`). Neither is taken over the other; a version whose `grailsVersion` cannot be read is left out, and the others of the plugin are still found.
+
+*The BOM of the application.* An application is generated with a BOM of Grails, which manages the versions of Grails' own plugins: `org.apache.grails:grails-bom`, `org.apache.grails:grails-hibernate7-bom` with `--data hibernate7`, or `org.apache.grails:grails-neo4j-bom` with `--data neo4j` or the feature `gorm-neo4j`. The BOM has the version of the command, and the command knows what it manages (about 270 artifacts, among them all of `org.apache.grails`; not what Spring Boot's BOM manages). When the BOM of the application manages the artifact that would be fetched, the version it manages it at is the one that is taken, and no other: the build would have the plugin in that version whatever pack was read. When the catalog has no pack for that version, the name is refused, and the message names the BOM, the version and the coordinates by which another version can be insisted on. An artifact the BOM does not manage is taken in its latest release. With the Micronaut feature the application gets `grails-micronaut-bom` or `grails-hibernate7-micronaut-bom`, whose versions the command does not have: a name is then not looked up at all, and the plugin is given by its coordinates. The BOM is decided from the options and the features of Grails on the command line before a catalog is read; should the features of the application, once all are known, give it another BOM, the command says so and creates nothing.
+
+*Which plugin.* A name of Grails is always the feature of Grails, whatever type of application it is for, and is never looked up: when a catalog that was read for another name has a plugin with a feature of such a name, the command says that the feature of Grails is the one that is used. When more than one plugin of the catalogs has a feature of the name that was asked for, the command refuses the name and lists the plugins; one of them is then selected by its full name, `group:artifact#name`:
+
+[source,console]
+----
+$ grails create-app com.example.shop \
+    --features='com.acme:acme-audit-grails#acme-audit'
+----
+
+With several catalogs, the first one named that lists a plugin at all, by its `group:artifact`, is the one that speaks for that plugin, also when it has no pack for it or not the name that is asked for; what a later catalog says of the same plugin is not looked at. The feature of one pack is selected once however it is asked for: by its name, its full name and the coordinates of its plugin together are one selection and one download.
+
+*Where the jar is looked for.* In the repositories you have, in this order: those of `GRAILS_REPO_URL` and Maven Central. Only when none of them has the jar is the repository asked that the catalog names for the version or for the plugin, if it names one; it has to be an `https` address that is not of your computer or of a private network. When `--feature-pack-repository` is given, only the repositories it names are asked, and the one of the catalog is not.
+
+*When a catalog is read.* Only when a name has to be looked up. A command that selects only features of Grails, packs of directories and coordinates makes no request for a catalog. `--list-features` reads one only when a name given with `--features` has to be looked up, as creating the application would. To see what the catalogs offer, use `--list-catalog-features`, which lists each feature that can be selected by its name with the plugin and the version that would be taken.
+
+*The copy on your computer.* A catalog that was read from an `https` address is kept as a file in `.grails/forge/catalogs` of your home directory. The file holds the catalog as it was read and nothing else, under a name made from the address. For 24 hours the copy is used and the catalog is not asked for again; `--refresh` asks for it again at once. When a catalog cannot be read and there is an older copy, the copy is used and the command says so, with the time the copy was read and how old it is (not with `--refresh`). A catalog that is a file is read every time and is not copied. A copy is trusted no more and no less than the catalog: it is read with the same checks. The three directories `.grails`, `forge` and `catalogs` are created readable and writable by you alone; when one of them is a link, is not owned by the user who runs the command, or can be written to by its group or by everybody, no copy is read or written, and the command says so once, with which directory it is and what is wrong with it. A `.grails` that was there before can be such a directory: with a umask of `002`, which is common on Linux, it was created writable by your group, and `chmod go-w ~/.grails` makes it yours alone. With `--offline` the command then says that no copy is read, and why, rather than that there is none. The directory can be deleted at any time.
+
+[[forgePackJars]]
+*The jars on your computer.* The jar of a plugin that was fetched from an `https` repository for its pack is kept as a file in `.grails/forge/packs` of your home directory, beside the copies of the catalogs. The command line fetches these jars itself, before there is a project or a build, so the cache of Gradle and the local Maven repository have no part in it: the command reads and writes neither. A jar is kept under its SHA-256, as `<sha256>.jar`, and beside it a small file ending in `.last` records, for a repository and coordinates, which jar was last fetched from there. A jar is kept only once it was read whole, matched the checksum the repository publishes and the SHA-256 that was asked for, and held a pack that can be used; it is written beside its place and then moved into it, so a download that fails leaves nothing behind. A jar of a repository that is a directory is read from the directory every time and is not kept.
+
+A kept jar is used in the place of a request only by its SHA-256:
+
+* *The SHA-256 is known before the jar is fetched*: it is in the record of the application (`feature add`, `feature list`, `project regenerate`, `project migrate`), it was given with `--feature-pack-sha256`, or a catalog gives it. When a jar with that SHA-256 is kept, and one of the repositories that would be asked is one the jar was fetched from for those coordinates, the kept jar is read, no repository is asked, and that repository is recorded as where the jar was found. The bytes are hashed again every time the file is read: a file whose bytes do not have the SHA-256 of its name is removed with a warning, and the jar is fetched again.
+* *No SHA-256 is known*, as with coordinates alone: the jar is fetched every time, a release as much as a snapshot, because what a repository has under coordinates is only known by asking it. The jar is then kept.
+* *`--refresh`* fetches every jar, whatever is kept, and keeps what it fetched.
+
+The command says when it used a kept jar, with the file: `the jar is the copy that is kept on this computer, ..., which has that SHA-256`, in the place of the line about the checksum of the repository, which was not asked. The directory is created readable and writable by you alone and is held to the rules of the directory of the catalogs: when `.grails`, `forge` or `packs` is a link, is not owned by the user who runs the command, or can be written to by its group or by everybody, no jar is read from it or kept in it, and the command says which directory it is and what is wrong with it. Nothing in the directory is removed for its age or its size. It holds only copies and can be deleted at any time; what is needed is fetched again.
+
+*Without a network.* `--offline` makes no request to the network: a catalog is read from its copy, however old, of which the command says the age, or from a file, and the jar of a plugin is taken from a repository that is a directory, such as the local Maven repository, or from the jars that are kept on your computer. A jar whose SHA-256 is known is used when a jar with that SHA-256 is kept, whichever repository it was fetched from. Without a SHA-256, the jar that was last fetched from one of the repositories that are named, for those very coordinates, is used, and the command says that it is the last one fetched and that whether the repository still has it is not known. What is not there is reported, with the coordinates, the SHA-256 when one was asked for and the directory that was looked in, and nothing is created.
+
+*When something is wrong.* A catalog that cannot be read, is too large or is not a catalog ends the command with exit code 1 and one line that names the catalog and the reason; nothing is created. This is so only for a command that needed the catalog. A version of a plugin whose entry cannot be used is left out, and the other versions of the plugin, an older release among them, are still found; so is every other plugin. What is wrong with a plugin as a whole, such as its `coords`, its `maven-repo`, or one version listed twice, leaves the plugin out. `--list-catalog-features` lists what was left out and why. A name that no catalog has does not exist, as before, with exit code 2, and the message says in which catalogs it was looked for. So do a name that more than one plugin has and a name whose plugin has no version that can be chosen.
+
+A catalog is a JSON document in the format of `grails-plugins-index.json`: an array of plugins, of at most 4 MiB, with at most 5,000 plugins, 1,000 versions of a plugin and 200,000 values. What is read of it:
+
+[source,json]
+----
+[
+  {
+    "coords": "org.grails.plugins:grails-mail",
+    "name": "Mail",
+    "desc": "Provides a convenient DSL for sending email",
+    "maven-repo": "https://repo1.maven.org/maven2",
+    "versions": [
+      {
+        "version": "5.0.3",
+        "grailsVersion": "9.0.0 > *",
+        "pack": {
+          "format": 1,
+          "kind": "feature",
+          "name": "mail",
+          "templateApi": 1,
+          "applicationTypes": ["web", "rest-api"],
+          "compatibility": { "grails": "[9.0.0,10.0.0)", "forge": "[9.0.0,10.0.0)" },
+          "sha256": "5f2c..."
+        }
+      },
+      {
+        "version": "4.0.2",
+        "grailsVersion": "6.0.0 > *",
+        "coords": "org.grails.plugins:mail",
+        "maven-repo": "https://repo.grails.org/plugins"
+      }
+    ]
+  }
+]
+----
+
+Of a plugin, `coords` (at most 120 characters) and `versions` are required; of a version, `version` (at most 60 characters). A version can have `coords` and `maven-repo` of its own, `grailsVersion`, and `artifactAvailable`, which is `false` for a version that is not offered. `deprecated` with a text that says why marks a plugin as deprecated (`true` does too; `false`, an empty text, and the text `false` do not). A `pack` is what the list's indexer copies from the descriptor of the feature pack in the jar, and the SHA-256 of the jar: everything shown is required except `applicationTypes`, which is left out for a pack that is for every type of application. It is not written by hand. Other properties are not read.
+
+The `format` of a `pack` is read before anything else of it, and says how the rest is written. A pack of another format than `1` is one a later version of the command line reads: nothing else of it is read, by these rules or any other, and its version is passed over, counted in a line of `--list-catalog-features`, and is not an error. The older versions of the plugin, with a pack of format `1`, are still offered, so publishing a release with a pack of a later format does not take the plugin away from those who have this version. Of a pack of format `1`, a `kind` other than `feature` and `preset` and a type of application this version does not know are not errors either: a pack of another kind is never selected by a name, and a pack whose `applicationTypes` are all unknown here is selected for none of the types there are. A `templateApi` that is not `1` is a pack a later version renders, and is passed over in the same way. `create-app`, `plugin-info` and `list-plugins` read the packs of an index by these one set of rules.
+
+[[forgeFeaturePackAfterCreation]]
+==== After the Application Is Created
+
+
+The application keeps a record of how it was generated in `.grails`, which is committed with it (see link:commandLine.html#creatingProject[Creating a Grails Project]). `feature add` and `project regenerate` work from that record by generating the application again as it was, in memory, and holding the result to the copy of every generated file the record has. An application with the feature of a pack that is not part of Grails is generated again only with that very pack, so the pack has to be there again, and has to be the same:
+
+* *A pack of a published plugin* is recorded by the coordinates and the version of the jar and its SHA-256. The command fetches the jar again by them, from the repositories of `GRAILS_REPO_URL`, then Maven Central, then the repository the record names for it; `--feature-pack-repository` names the repositories to ask in their place. A jar with the SHA-256 of the record that is <<forgePackJars,kept on your computer>> is used in the place of a request, and the command says so; with `--offline` it is that jar or the jar of a repository that is a directory, and no repository of the network is asked. The command says which jar it fetches and where it asks before it asks. A jar with another SHA-256 is refused before it is opened. Where the jar came from this time does not matter: the record says where it was found when the application was created.
+* *A pack of a directory* is recorded by the SHA-256 of its content: `feature.yml` and the files under `templates` it names, as the bytes they are, each with its path in the pack. The command is given the directory again with `--feature-pack-dir`, wherever it is now. A directory whose content has another digest is refused, and the message names both. Nothing else of the directory counts, so a copy in another place, on another computer, in a clone of the repository that holds it, is the same pack; a template whose line endings Git changed on checkout is not, which `src/main/forge/** eol=lf` in `.gitattributes` keeps from happening.
+
+Here the plugin is in `acme-audit` in the home directory, and the application is created beside it:
+
+[source,console]
+----
+$ grails create-app com.example.shop --features acme-audit --feature-pack-dir ~/acme-audit/src/main/forge
+...
+| Application created at /home/me/shop
+| The feature acme-audit is that of a feature pack that is not part of Grails: feature add and project regenerate work for the application only with that very pack, which its record names by its SHA-256 (the jar of a plugin is fetched again by its coordinates; the pack of a directory is given again with --feature-pack-dir)
+$ cd shop
+$ grails feature add grails-quartz --feature-pack-dir ~/acme-audit/src/main/forge
+----
+
+A relative path is read from the directory the command runs in, and `feature add` runs in the directory of the application: after `cd shop`, the same pack is one directory further up than it was for the `create-` command. A path from the home directory, as here, or an absolute path, is the same in both.
+
+The `create-` command says this once the application is created, and `project show` says it among its notes, in its `--json` document too, where a feature of a pack of a directory has its `contentSha256`.
+
+What works and what does not, once an application has the feature of such a pack:
+
+[cols="2,3"]
+|===
+|Command |With a pack that is not part of Grails
+
+|`feature add` of a feature of Grails, or of another pack
+|Works, with the same pack; refused without it, or with another, and nothing is changed.
+
+|`project regenerate`
+|Works, with the same pack, as `feature add`.
+
+|`feature list`
+|Works with the same pack, given as to `feature add`: it lists the features `feature add` can add with it. Without the pack it lists what the application has and says which pack it needs and how it is given.
+
+|`project show`
+|Works without the pack: it reads the record only.
+
+|`feature add` of the feature of a pack the application does not have
+|Works, as described in <<forgeFeaturePackAddToExisting,Adding the Feature of a Pack to an Application That Is There>>.
+
+|A newer version of the pack
+|Not done by a command: `feature add` refuses a pack whose feature the application has and changes nothing. The record names one version; to move to another, create the application again with it (the command line `project show` prints, with the new version) and merge the difference, or change the files by hand.
+
+|A command line of another version of Grails
+|`feature add` and `project regenerate` are refused, as they are for every application, until `project migrate` moves the record of the earlier version to the one that runs. It generates the application again with the very pack, which is given again as `feature add` takes it (`--feature-pack-dir`, or fetched again by the coordinates and the SHA-256 of the record), and refuses without it.
+|===
+
+
+[[forgeFeaturePackAddToExisting]]
+==== Adding the Feature of a Pack to an Application That Is There
+
+`feature add` adds the feature of a pack to an application that was created without it, and takes the pack as the `create-` commands take it: with the same options, from the same repositories, by the same checks.
+
+[source,console]
+----
+$ grails feature add com.acme:acme-audit-grails:2.3.0
+$ grails feature add acme-audit --feature-pack-dir ~/acme-audit/src/main/forge
+$ grails feature add acme-audit --feature-catalog https://plugins.acme.example/catalog.json
+----
+
+* *By the coordinates of the plugin*, `group:artifact:version`. The jar is taken from the repositories of `GRAILS_REPO_URL` and then Maven Central, or from those `--feature-pack-repository` names, is checked against the checksum the repository publishes, and is held to the SHA-256 that `--feature-pack-sha256 group:artifact:version=sha256` gives, as described in <<forgeFeaturePackJar,Using the Pack of a Published Plugin>>. With `--offline` only a repository that is a directory is asked.
+* *By the name of the feature, with the directory of the pack*, `--feature-pack-dir`: for a pack that is not published, or is kept beside the applications.
+* *By a name of a feature catalog*, or the full name `group:artifact#name`: the catalog says the plugin, the version for the BOM of Grails the application has, the SHA-256 and where the jar can be had, as it does for a `create-` command. A catalog is named with `--feature-catalog`, `GRAILS_FORGE_CATALOG` or `GRAILS_PLUGIN_INDEX`; a name of Grails is never looked up.
+
+Before it writes anything the command says where the pack comes from, which jar it is and what the pack adds, and `--dry-run` and `--diff` say it and write nothing. A pack adds dependencies, build plugins, build script code and files to the application: add one only when you trust where it comes from.
+
+To look at a pack before its feature is added, name the feature to link:{commandLineRef}feature-show.html[feature show] as you would name it to `feature add`, with the same options:
+
+[source,console]
+----
+$ grails feature show com.acme:acme-audit-grails:2.3.0
+$ grails feature show acme-audit --feature-pack-dir ~/acme-audit/src/main/forge
+$ grails feature show acme-audit --feature-catalog https://plugins.acme.example/catalog.json
+----
+
+It takes the pack by the same steps, writes nothing in the application, and says where the pack comes from and the SHA-256 of its jar, the files and the lines of the build files `feature add` would write in this application, the options the feature takes with `--feature-option`, the commands it gives, what the pack says to do afterwards, and whether `feature add` would add it or why not; `--json` has each of these for a tool. link:{commandLineRef}feature-diff.html[feature diff] shows the same change as a diff, and link:{commandLineRef}feature-find.html[feature find] looks through the features of a directory pack and of a feature catalog for a text. Outside a project, and with `--type`, the three speak of a new application of the type that is created with the pack.
+
+The application and its record are afterwards those of an application that was created with the pack: `project.yml` names the feature among those that were asked for, with the coordinates and the version of its plugin, and `forge.lock.yml` has the SHA-256 of the jar, or of the content of a pack of a directory, and the catalog a name was taken from. Everything in <<forgeFeaturePackAfterCreation,After the Application Is Created>> holds from then on: the next `feature add`, `feature list` and `project regenerate` need that very pack again. The files are written all of them or none; where the pack writes a file the application has otherwise, or changes lines you changed, the command names them and changes nothing, the record included.
+
+What is refused, with nothing changed: a preset (an application is made from a preset when it is created, with `--preset`); a pack whose feature is not among the features that are added; and another version of a pack whose feature the application has. Naming the plugin the application already has the feature of changes nothing. The features a pack `requires`, and those it `conflicts` with, by name or by full name, are resolved as when an application is created, and a required feature of another pack needs that pack given too. The same works for an application of Grails 7 or 8 that link:{commandLineRef}project-migrate.html[project migrate] gave its record.
+
+[[forgeFeaturePackCompanyWorkflow]]
+==== A Pack of Your Organisation, from Start to Finish
+
+
+This is the whole way for a pack that an organisation keeps for its own applications, from the plugin that holds it to a feature that is added to an application long after it was created. The plugin is `com.acme:acme-audit-grails`, published to the repository `https://repo.acme.example/maven`, which can be read without credentials.
+
+. *Write and check the pack.* The pack is in `src/main/forge` of the plugin, as described above, with `src/main/forge/** eol=lf` in `.gitattributes`. `./gradlew checkForgePack` checks it, and `./gradlew forgePackTest` creates and builds applications with it; configure fixtures for the types and options your applications use.
+. *Publish it.* `./gradlew publish` publishes the plugin with the pack in its jar, and checks the pack first.
+. *Name the catalog, if you want names.* To select the feature by its name, keep a catalog: a JSON file in the format of the plugin index above, at an `https` address of your organisation, with a `pack` entry for each version whose jar has a pack, copied from its descriptor, and the SHA-256 of the jar as it was published (`sha256sum acme-audit-grails-2.3.0.jar`). Without a catalog, the plugin is given by its coordinates, and `--feature-pack-sha256` holds it to the digest you checked.
+. *Set up each computer.* Name the repository and the catalog in the environment of whoever creates applications:
++
+[source,console]
+----
+$ export GRAILS_REPO_URL=https://repo.acme.example/maven
+$ export GRAILS_PLUGIN_INDEX=https://catalog.acme.example/grails-plugins-index.json
+$ grails plugin-info com.acme:acme-audit-grails     # names the feature, the version an application gets and how it is created
+----
++
+With `GRAILS_PLUGIN_INDEX` set, `list-plugins` and `plugin-info` list the plugins of your catalog, and not those of the Grails plugin index.
+. *Create the application.* `grails create-app com.example.shop --features acme-audit` (or `--features com.acme:acme-audit-grails:2.3.0`). Before anything is written, the command says which jar the name was taken as, from where, and its SHA-256; compare it with the one you published. The record names the coordinates, the version and the digest.
+. *Commit it*, with its `.grails` directory, whose own `.gitignore` and `.gitattributes` have Git keep every file of it as it is.
+. *Clone it elsewhere.* A clone has the record; the computer it is on needs `GRAILS_REPO_URL` as it was when the application was created, since the repositories are part of what the application was generated from, and access to the repository of the jar.
+. *Work without the network.* The build of the application works offline once Gradle has what it needs. `feature add`, `feature list` and `project regenerate` work with `--offline` on a computer that fetched the jar before, since the jar is <<forgePackJars,kept there>> by the SHA-256 the record has: `grails feature add grails-quartz --offline`. On a computer that never fetched it, put the jar into a repository that is a directory, such as the local Maven repository (any tool that installs `com.acme:acme-audit-grails:2.3.0` there will do), and run the command with `--offline --feature-pack-repository file://$HOME/.m2/repository`.
+. *Add a feature.* `grails feature add grails-quartz` fetches the jar again by the coordinates and the digest of the record, generates the application again with it, and adds the feature, keeping what you changed in the files.
+. *Upgrade.* A new version of the pack, or a new version of Grails, is not applied by a command: create the application again with the new version and merge the difference, following the upgrade notes of Grails for a new release of Grails.
+
+A pack that is not published, but kept in the same Git repository as the applications, beside them (`forge/acme-audit` next to `shop`, say), goes the same way without steps 2 to 4: the application is created in the root of the repository with `--feature-pack-dir forge/acme-audit`, and changed in `shop` with `--feature-pack-dir ../forge/acme-audit`, and its record holds the digest of the content of the pack, so everyone who clones the repository gives the same pack, and a pack that was changed since is refused until the application is created again with it.
+
+What this way does not have, today: a repository or a catalog that needs credentials cannot be read by the command line (an address with a user and a password is refused, and `~/.m2/settings.xml` is not read), and the command line keeps no copy of a jar it fetched, so every `feature add` and `project regenerate` fetches the jar again, or needs a repository that is a directory without the network.
+
+
+[[forgeFeaturePackCapabilities]]
+==== What a Pack Can Do
+
+
+Many features of Grails are written as feature packs inside the command line, in the same format. The pack of a plugin can say what such a pack says, with the exceptions of the table below, each of which is there for a reason: a pack is given by somebody other than the user and the framework, so what it does has to be seen by whoever selects it, and the same selection has to give the same application.
+
+[cols="3,2,2,4"]
+|===
+|What |The pack of a plugin |A pack of Grails |Why
+
+|`name`, `title`, `description`, `category`, `documentation`, `thirdPartyDocumentation`, `applicationTypes`, `compatibility`, `requires`, `conflicts`
+|Yes
+|Yes
+|
+
+|`dependencies` with every scope, `buildscript` among them, `excludes`, `capabilities` and `when`; `platforms`; `buildPlugins` with `apply` and `when`
+|Yes
+|Yes
+|
+
+|`build.properties`, `build.propertyComments`, `build.extensions` with conditional parts and names with a call, `build.blocks`
+|Yes
+|Yes
+|
+
+|`configuration`, with conditional entries and `environmentFile`; `files` with `when`, `template: false` and `executable: true`; `readme`, `readmeLinks`, `instructions`; `requiresJdk`
+|Yes
+|Yes
+|
+
+|`parameters`, the options of the feature, with `--feature-option`
+|Yes
+|Yes
+|
+
+|`artefacts`, the commands that create classes from templates of the pack
+|Yes
+|Yes
+|
+
+|Conditions (`when`) on the type of the application, its features and groups, its options, its version of Java and the parameters of the pack
+|Yes
+|Yes
+|
+
+|Templates: template API 1, the ten instruction tags, the escapes
+|Yes. Compiled when the application is generated
+|Yes. Compiled when Grails is built
+|A template of a plugin is in the jar as its source, so that it can be read before it is used.
+
+|A setting, a build property, the version of a dependency or a file another feature of the application also has
+|Refused: a pack only adds
+|Not compared
+|What the features of Grails give each other is tested with every release of Grails; what a pack of somebody else would replace in an application is not, and nobody selecting it would be told.
+
+|An exclusive group (`oneOf`)
+|A group of packs
+|Also a group of Grails, such as `database-driver`, with the settings a driver gives the data source (`dataSource`, `dataSourceOfDriver`)
+|A feature of a group of Grails takes the place of the default of that group, as a driver takes that of `h2`: a pack would then remove a feature of Grails from the application, which is not adding.
+
+|Being selected without being named (`default`), adding features once the defaults are chosen (`adds`, `reliesOn`)
+|No. Other features are selected with `requires`
+|Yes
+|The features of an application are the ones that were asked for and the ones those require, which the command lists. A pack that selects itself, or selects features by a condition that is asked while the selection is still made, would make the selection depend on the order the features are looked at in.
+
+|Being hidden (`visible: false`)
+|No
+|Yes
+|A feature of a pack is always listed, and named when the application is created.
+
+|Its place among the features (`order`)
+|No: the default place
+|Yes
+|The place of a feature decides which features are applied before it, and so what it finds of them. The features of Grails have places that were chosen with each other; every pack of a plugin has the one default place, where what it gives is compared with what the others give, and where the order of two packs is that of their names, whatever they say. The order of the features is part of what makes an application <<forgeFeaturePackSameEveryTime,the same every time>>.
+
+|The version this release of Grails has for an artifact (`versionOfForge`, `artifactOfForge`, `versionsOfForge` and the name of that kind in a template), a page of the guide of Grails as the documentation (`guideOfGrails`)
+|No. A dependency without a `version` has the one the BOM of the application manages
+|Yes
+|The table of versions is a part of the command line and changes with every release of it, without notice: a pack that read it would generate another application with every release, although neither the pack nor its record changed.
+
+|Selected by its name
+|When it was given as a directory, by its coordinates, or with a catalog that is named
+|Always, and on https://start.grails.org
+|A pack is code: it is used when the user names where it comes from. The hosted generator runs no code of others.
+
+|`feature add` and `project regenerate` of an application that has it
+|With the same pack, held to its digest
+|Always
+|The application is generated again as it was, which takes the very pack.
+|===
+
+Neither kind of pack can make an entry of `gradle.properties` conditional or add to `settings.gradle`: a build property is set for every application the feature is in, and the settings of a build are written by the feature `gradle-settings-file`. The commands a pack gives the command line are those of `artefacts`, which write a class from a template in which names are replaced: a pack brings no command that runs code of its own. What runs code of the plugin is a tool of the plugin, see xref:commandLine#creatingTools[Creating Tools].
+
+[[forgeFeaturePackSameEveryTime]]
+==== What Is the Same Every Time
+
+
+Reproducibility requires the same generator, pack contents, options and repository inputs. The rules below keep generated bytes independent of the directory, default language, time zone and character set. They do not make arbitrary template code deterministic. Rebuilding a published jar also requires the same resolved dependencies and build toolchain; the Grails release verification uses the exact JDK distribution and version of the release and its recorded `SOURCE_DATE_EPOCH`. It does not promise identical bytecode across different JDKs or untested operating systems.
+
+*The jar.* The files of a pack go into the jar as the bytes they are in `src/main/forge`: nothing in them is replaced and no line ending is changed. Each archive input tree is traversed in reproducible order: in each directory, files before subdirectories, each group sorted by name. The declared order of archive inputs is retained. Entries have one fixed time, files have the permissions `rw-r--r--` and directories `rwxr-xr-x`, whatever the source files have on the computer that builds. These are the Gradle version used by Grails's archive defaults, so leave `preserveFileTimestamps`, `reproducibleFileOrder` and the permissions of the `jar` task as they are. The pack-specific manifest attribute contains its name only. What two computers can still differ in is the source bytes: Git can check a text file out with the line endings of the platform, and a template is rendered with the line endings it has. Keep pack checkout line endings fixed:
+
+[source]
+..gitattributes
+----
+src/main/forge/** eol=lf
+----
+
+*The order of the features.* The features of an application are a set. Reordering the names in `--features`, `--exclude-features` or one `feature add`, or the `--feature-pack-dir` options for distinct packs, does not change the generated application or its record. Compatible additive features can be added together or successively to an otherwise unchanged generated application with the same result. Existing user edits are merged and preserved; a selection that changes earlier choices can be refused. The features are applied in one order: by the phase of the feature, which for an external pack is the default phase, and within a phase by the name of the feature, character by character as the names are written, so `acme-audit` comes before `acme-audit-store` and that before `acme-b`. No language's rules for sorting are used.
+
+*The order within a file.* What follows from that order, and what does not:
+
+[cols="1,3"]
+|===
+|In the application |Order
+
+|The dependencies in `build.gradle`
+|By the dependency's order value, then the configuration's order, then group and artifact. External pack dependencies have the default order value. Two dependencies that are the same to that sort, such as the same artifact for `developmentOnly` and `testAndDevelopmentOnly`, retain feature order and then declaration order.
+
+|The plugins in `build.gradle`
+|By the plugin's order value, then in the order of the features, and those of one feature as its `buildPlugins` lists them. Plugins of external packs have the default order value. A plugin that another feature has already applied is not applied again and stays where it is.
+
+|The lines of a `build.extensions` block, the entries of `gradle.properties`, the paragraphs of `README.md`
+|In the order of the features, and those of one feature as its descriptor lists them.
+
+|The settings in `application.yml`
+|Sorted by key, after the sections every application starts with. The order of the features and of the descriptor does not matter.
+
+|Imports contributed by compiled build plugins
+|Sorted by the complete import line and deduplicated, with LF line endings. The current external pack format does not expose this contribution channel.
+
+|Files
+|A file is written by one feature; a second feature that writes it is refused.
+|===
+
+So where two packs add to the same place, the one whose feature has the earlier name comes first. `requires` selects another feature; it does not put that feature before this one. Keep tightly ordered contributions in one pack, in declaration order.
+
+*Templates.* A template gives the same text for the same application when it uses the model and nothing else. `features` is sorted. Do not write the time, a random value, an environment variable, a system property, a path of the computer or the name of its user into a file, and do not go through a `HashMap` or `HashSet` to write lines. Text is turned to upper or lower case with `Locale.ROOT` (`name.toLowerCase(Locale.ROOT)`), and numbers and dates are formatted with it (`String.format(Locale.ROOT, ...)`): without it the text depends on the language of whoever generates the application, and `TITLE` in lower case is not `title` in Turkish. `feature add` renders the recorded selection again and checks it against the baseline; when that replay differs, it refuses the addition.
+
+*The record.* In `.grails`, the features that were asked for and those that were left out are sorted by name, each once; the features of the lock are in the order they were applied in; the files of the baseline index are sorted by path. Paths are written with `/`, the files end their lines with a line feed and are UTF-8. A pack that was given as a directory is recorded by the name of its feature and the SHA-256 of its content, never by where it was; a pack that was taken from a repository by its coordinates, its version and the SHA-256 of its jar.
+
+*Resolution inputs.* Catalog and repository order is meaningful: the first catalog that lists a plugin owns that plugin's entry, and repositories are tried in the configured order. For an artifact managed by the application's Grails BOM, catalog selection requires that exact version; otherwise it selects the latest compatible numeric release. Numerically equal versions such as `2.3` and `2.3.0` are distinct coordinates; the lexicographically greatest spelling wins the tie, independently of their order in the catalog. Ranges, `+` and `latest.*` selectors are refused for explicit pack coordinates. Changing a catalog, repository order or `GRAILS_REPO_URL` changes the inputs, so it need not give the same output.
+
+*What deliberately varies.* A snapshot can resolve to different bytes later, and a cached catalog is normally used for 24 hours. The record keeps the chosen version and SHA-256; `project show` includes a digest pin for resolved artifacts. File modification times normally reflect generation time; a valid `SOURCE_DATE_EPOCH` fixes them. Neither time is written into the committed generation record. Transaction journals, cache freshness, temporary files and run state are machine-local: journals identify the absolute project path so an interrupted change can be recovered, and are not part of the committed baseline. The SBOM of a framework jar uses the release epoch in a release build and a fixed epoch in a developer build, so compare jars within the same mode, not between these two modes.
+
+The hosted application generator at https://start.grails.org offers the features of Grails only: it takes neither a pack nor the coordinates of a plugin, and reads no catalog.

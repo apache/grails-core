@@ -1,9 +1,0 @@
-description: Adds support for JSON Views to the project
-build:
-    plugins:
-        - org.apache.grails.gradle.grails-gson
-dependencies:
-    - scope: implementation
-      coords: "org.apache.grails:grails-views-gson"
-    - scope: implementation
-      coords: "org.apache.grails:grails-data-mongodb-gson-templates"

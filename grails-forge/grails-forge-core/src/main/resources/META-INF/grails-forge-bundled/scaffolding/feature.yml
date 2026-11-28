@@ -1,0 +1,42 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+format: 1
+kind: feature
+templateApi: 1
+name: scaffolding
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+title: Scaffolding
+description: The Scaffolding Plugin simplifies generating CRUD interfaces for domain classes. It is useful for rapid prototyping and creates basic data management user interfaces with minimal manual code.
+guideOfGrails: guide/scaffolding.html
+applicationTypes: [web, web-plugin, rest-api, rest-api-plugin]
+default: { applicationType: [web, web-plugin] }
+# a REST API has JSON views and no GSP, which is how the tools of the plugin tell from the record that it is given JSON views
+adds:
+  - feature: gsp
+    when: { applicationType: [web, web-plugin] }
+# a web application has the plugin, which also scaffolds pages at run time; a REST API has its tools and their templates
+# only, which generate sources and run as a process of their own: the companion -cli-standalone does not depend on the
+# plugin, so the plugin, GSP and the fields plugin stay off every class path of the application, its tests and its tools
+dependencies:
+  - scope: implementation
+    coordinates: org.apache.grails:grails-scaffolding
+    when: { applicationType: [web, web-plugin] }
+  - scope: grailsCliStandalone
+    coordinates: org.apache.grails:grails-scaffolding-cli-standalone
+    when: { applicationType: [rest-api, rest-api-plugin] }

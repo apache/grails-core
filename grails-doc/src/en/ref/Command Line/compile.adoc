@@ -19,27 +19,24 @@ under the License.
 
 == compile
 
-
-
 === Purpose
 
-
-The `compile` command executes the compile phase of the Grails pre-packaging process, which compiles Groovy and Java sources.
-
+The `compile` command compiles the Groovy and Java sources of the project.
 
 === Examples
 
-
+[source,console]
 ----
 grails compile
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails compile
+grails compile [-Dname=value]... [-- <<gradle arguments>>]
 ----
+
+`compile` runs the Gradle task `classes` of the project. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.

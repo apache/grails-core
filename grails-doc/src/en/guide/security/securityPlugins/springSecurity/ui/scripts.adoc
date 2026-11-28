@@ -18,7 +18,18 @@ under the License.
 ////
 
 [[ui-scripts]]
-== Scripts
+== Commands
+
+The plugin has two tools. They only write files of the project, so the `grails` command line starts each as a Java process of its own, without Gradle and without the application (they are standalone tools, in the companion `grails-spring-security-ui-cli-standalone` of the plugin; see xref:commandLine#creatingTools[Creating Tools]), so the project need neither compile nor be able to start. `grails run-tool` and the Gradle task `runTool` run them with the build, which compiles the project first.
+
+[source,bash]
+----
+./gradlew runTool -Pargs="s2ui-override user com.yourcompany.yourapp"
+----
+
+The `grails` command runs the same tool: `grails s2ui-override user com.yourcompany.yourapp`, or `grails run-tool s2ui-override user com.yourcompany.yourapp`.
+
+Up to Grails 8 the two were scripts of the plugin, which the Grails shell ran by their names, as in `grails s2ui-override user com.yourcompany.yourapp`. The tools take the same arguments and write the same files; the Gradle task `runScriptCommand`, which ran the scripts in earlier builds of Grails 9, does not run them any more.
 
 include::scripts/s2ui-override.adoc[]
 include::scripts/s2ui-create-challenge-questions.adoc[]

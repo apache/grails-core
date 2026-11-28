@@ -69,7 +69,6 @@ class PropertySourceConfigSpec extends Specification {
 
         expect:
         config.a1 == [a2: 3, b2: 4, c2: [a3: 3, b2: 4, c3: 1], d2: 1, e2: 2]
-        config.grails.profile == 'web'
         config.grails.containsKey('somekey') == true
     }
 

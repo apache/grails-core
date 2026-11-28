@@ -17,20 +17,26 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == package
-
-
 
 === Purpose
 
-
-Runs the packaging phase of Grails' runtime. This is mainly useful when used by other scripts.
-
+The `package` command creates the archive of the project for deployment. It is another name of link:assemble.html[assemble] and of link:war.html[war].
 
 === Examples
 
+[source,console]
 ----
 grails package
 ----
 
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails package [--clean] [-Dname=value]... [-- <<gradle arguments>>]
+----
+
+`package` runs the Gradle task `assemble` for the production environment. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.

@@ -1,0 +1,85 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== feature add
+
+=== Purpose
+
+Adds features to the application in the current directory: its files and its record become those of an application that was created with them.
+
+=== Examples
+
+[source,console]
+----
+grails feature add grails-quartz
+grails feature add grails-quartz,views-json
+grails feature add postgres
+grails feature add postgres --diff
+grails feature add mysql --replace
+grails feature add grails-quartz --dry-run
+grails feature add postgres --dry-run --json
+grails feature add com.acme:acme-audit-grails:2.3.0
+grails feature add acme-audit --feature-pack-dir ~/acme-audit/src/main/forge
+grails feature add acme-audit --feature-catalog https://plugins.acme.example/catalog.json
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails feature add [--dry-run] [--diff] [--json] [--replace] [--feature-option=FEATURE.NAME=VALUE]... [--feature-pack-dir=DIRECTORY]...
+                   [--feature-pack-repository=URL]... [--feature-pack-sha256=COORDINATES=SHA256]... [--feature-catalog=URL]... [--refresh] [--offline]
+                   <<feature>>[,<<feature>>...]...
+----
+
+Arguments:
+
+* `feature` - The features to add. Several are separated by commas or spaces. Each is one of:
+** the name of a feature of Grails, as the `create-` commands list them with link:list-features.html[--list-features] and link:feature-list.html[feature list] lists those that can be added;
+** the coordinates of a published plugin that has a link:{guidePath}plugins.html#forgeFeaturePacks[feature pack], `group:artifact:version`, as `--features` of the `create-` commands takes them;
+** the name of the feature of a pack that is given as a directory with `--feature-pack-dir`;
+** a name, or a full name `group:artifact#name`, that a feature catalog has.
+
+Options:
+
+* `--dry-run` - Say which files would be added, changed and removed, which features would be replaced, and which conflicts there are, and change nothing.
+* `--diff` - Show the changes that would be made to the files, as a diff, and change nothing.
+* `--json` - With `--dry-run`: write what adding the features comes to as one JSON document for a tool to read, and nothing else: the outcome, the reason, the files with their paths in the project and what would be done to each, and whether the change can be made.
+* `--replace` - Replace a feature that was asked for by name with the feature that takes its place, as `mysql` takes that of a `postgres` the application was created with. Without it only a feature the application has by default is replaced. It changes nothing when no such feature is in the way, and it does not choose between features of one exclusive group that are named together: those are refused.
+* `--feature-option=FEATURE.NAME=VALUE` - An option of a feature that is added, which the feature pack of the feature declares as a parameter, also of a pack that is added with it. An option of a feature the application has is refused: those are what its record says. Can be given more than once.
+* `--feature-pack-dir=DIRECTORY` - The directory of a feature pack that is not part of Grails. One whose feature is named is added. One the application has (from a directory, or the preset it was made from) is given again, and its content has to have the SHA-256 the record has. Can be given more than once.
+* `--feature-pack-repository=URL` - A Maven repository to take the jar of a plugin from: one that is added by its coordinates or by a name of a catalog, and one whose feature pack the application has, or its preset, which is fetched again. `https`, or `file:` for a directory. When the option is given, only the repositories it names are asked; without it, those of `GRAILS_REPO_URL` and then Maven Central, and for a jar the application has then the repository the record names for it. Can be given more than once.
+* `--feature-pack-sha256=COORDINATES=SHA256` - The SHA-256 the jar of a plugin that is added by its coordinates has to have, as `group:artifact:version=sha256`. A jar with another one is refused before it is opened. Can be given more than once.
+* `--feature-catalog=URL` - A feature catalog, in which a name that is neither a feature of Grails nor that of a pack that was given is looked up, as the `create-` commands look it up: `https`, or `file:` for a file; `none` for no catalog. Without the option the catalogs of `GRAILS_FORGE_CATALOG` are read, else the plugin index `GRAILS_PLUGIN_INDEX` names, and without either none. Can be given more than once.
+* `--refresh` - Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch the jar of a plugin again and not take the copy of it that is kept in `.grails/forge/packs` of the home directory.
+* `--offline` - Ask nothing of the network: the jar of a plugin is taken from the copy of it that is kept in `.grails/forge/packs` of the home directory since it was fetched, or from a repository that is a directory, and a feature catalog from its copy on this computer or from a file.
+
+`feature add` is the `add` command of the `feature` command. It works from the record of the project in its `.grails` directory, so it is a command of a project that Grails 9 generated, and of one that link:project-migrate.html[project migrate] gave its record: an application of Grails 7 or 8 that was upgraded. The record `project migrate` writes for such an application has a copy of every file this version generates for an application of the same type, options and features, and a feature is added against that copy: where the application has a file otherwise, that is a change of yours like any other, which is kept, and where a feature changes the same lines nothing is written and the lines are named. Only where `project migrate` could write no such copy, and said what it has to be told for one, is the application refused and nothing changed. The record of an application that an earlier version of Grails 9 generated is refused too, with `project migrate`, which moves it to the version that runs; afterwards a feature is added, and where the application is not what that version generates, the difference is kept as a change of yours. The files you changed keep your changes. When a feature changes what you changed too, or a file it writes is there already, nothing is written and the files are named. A feature the application already has is left as it is.
+
+A feature that takes the place of one the application has by default replaces it: `postgres` replaces `h2`, the default database driver, and `grails-layout` replaces `sitemesh3`. The dependency and the configuration of the default are taken out, those of the feature are put in, the record no longer lists the default, and the command says which feature it replaced. Lines of the default that you changed, such as the URL of the H2 database, are a conflict like any other. A feature that was asked for by name, when the application was created (`create-app --features h2`) or with an earlier `feature add`, is not replaced by adding another alone: the command refuses with exit code 2, names both features and the `--replace` option, and changes nothing. With `--replace` it is replaced as a default is, the command says which features it replaced, and the record is that of an application that was created with the new feature in the place of the old one. A feature that another feature of the application requires is not replaced, with the option or without, and the feature that requires it is named. `--replace` does not choose between features that are named together: two features of one exclusive group in one command, as `feature add h2,postgres`, are refused with exit code 2, with `--replace` or without and whichever of them the application has. A command that was carried out changes nothing when it is run again. A feature that would change an option the application was created with (`--servlet`, `--data`, `--reloading`, `--jdk`) is refused, with `--replace` too. A feature the application was created without, with `--exclude-features`, is refused with exit code 2 by a line that says so and names that option, and `feature list` gives the same reason for it. `gorm-neo4j` gives the application `grails-neo4j-bom` in the place of `grails-bom` in its build files, as `create-app` would; it is refused in an application with Hibernate 7 or `grails-micronaut`, and `gorm-hibernate7` and `grails-micronaut` are refused in an application with GORM for Neo4j, since no BOM of Grails manages them together.
+
+With `--dry-run --json` the command writes one JSON document on the standard output and nothing else. Its `outcome` is `no-changes`, `changes`, `conflicts`, `refused`, `invalid-record` or `failed`, its `reason` a code that says why for every outcome but the first two, `applicable` whether the change can be made, and `files` every file by its exact path in the project with the `action` the list above shows for it. The exit code is the one the command ends with without `--json`. `--json` without `--dry-run`, or with `--diff`, is a mistake in the command line (exit code 2). See link:{guidePath}commandLine.html#changeResultsForAProgram[The Result of `feature add` and `project regenerate` for a Program] for every member, outcome and reason.
+
+The feature of a link:{guidePath}plugins.html#forgeFeaturePacks[feature pack] that is not part of Grails is added as the `create-` commands select it, by the same rules: a plugin by its coordinates, whose jar is taken from the repositories of `GRAILS_REPO_URL` and then Maven Central, or from those `--feature-pack-repository` names, checked against the checksum the repository publishes and held to the SHA-256 `--feature-pack-sha256` gives; a pack of a directory by its name, with `--feature-pack-dir`; and a name, or a full name `group:artifact#name`, by a feature catalog, which says the plugin, the version and the SHA-256. Before anything is written the command says where the pack comes from, which jar it is, and what the pack adds: its dependencies, build plugins, configuration and files. A pack is code that changes the build of the application: add one only when you trust where it comes from. The record then names the pack as the record of an application that was created with it does, in `project.yml` and `forge.lock.yml`, so `feature list`, `project show`, `project regenerate` and the next `feature add` treat the application as one that was created with it. The files are written all of them or none, as for a feature of Grails, and a conflict leaves the application and its record as they were. What a pack `requires` and what it `conflicts` with is resolved as when an application is created. A preset is not added: an application is made from a preset when it is created. A pack whose feature the application has is not replaced by another version of it, and naming the plugin the application has the feature of, by its coordinates or by the full name of the feature, changes nothing.
+
+An application that has the feature of a feature pack that is not part of Grails gets a further feature only with that very pack, since it is generated again with it: the jar of a plugin is fetched again by the coordinates, the version and the SHA-256 its record has, and says so before it is asked for; the pack of a directory is given again with `--feature-pack-dir`, and its content has to have the SHA-256 the record has. A pack that is missing or is another is refused with exit code 1, and nothing is changed. See link:{guidePath}plugins.html#forgeFeaturePackAfterCreation[After the Application Is Created].
+
+See "Adding a feature to a project" in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project] for what is merged, what is a conflict and what is refused.

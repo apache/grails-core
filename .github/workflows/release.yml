@@ -94,7 +94,7 @@ jobs:
         id: sdkmanrc
         uses: ./.github/actions/sdkmanrc-java
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: ${{ steps.sdkmanrc.outputs.java-distribution }}
           java-version: ${{ steps.sdkmanrc.outputs.java-version }}
@@ -718,7 +718,7 @@ jobs:
         id: sdkmanrc
         uses: ./.github/actions/sdkmanrc-java
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: ${{ steps.sdkmanrc.outputs.java-distribution }}
           java-version: ${{ steps.sdkmanrc.outputs.java-version }}

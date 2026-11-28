@@ -26,12 +26,14 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -53,9 +55,17 @@ class CompilePlugin implements Plugin<Project> {
             'grailsAutoConfigurationImportsInputRegistered'
 
     static final String GRAILS_FACTORIES_PATH = 'src/main/resources/META-INF/grails.factories'
+
+    /**
+     * The hand-authored factories files of the tools: of the project's sources, of the tools the build runs
+     * ({@code src/cli}) and of the tools that run as a process of their own ({@code src/standalone}), the
+     * folders {@code ToolBuildNames.CLI_SOURCE_FOLDER} and {@code ToolBuildNames.STANDALONE_SOURCE_FOLDER}
+     * of grails-gradle-model name.
+     */
     static final List<String> CLI_FACTORIES_PATHS = [
             'src/main/resources/META-INF/grails-cli.factories',
             'src/cli/resources/META-INF/grails-cli.factories',
+            'src/standalone/resources/META-INF/grails-cli.factories',
     ].asImmutable()
     private static final String GRAILS_FACTORIES_INPUT_REGISTERED = 'grailsFactoriesInputRegistered'
     private static final String CLI_FACTORIES_INPUT_REGISTERED = 'grailsCliFactoriesInputRegistered'
@@ -73,9 +83,39 @@ class CompilePlugin implements Plugin<Project> {
     private static void configureCompile(Project project) {
         configureJavaVersion(project)
         configureJars(project)
+        configureCompanionPackages(project)
         configureCompiler(project)
         configureCallSiteModule(project)
         configureReproducible(project)
+    }
+
+    /**
+     * Registers {@link CompanionPackagesTask} for a module that publishes the companions of its tools, which
+     * fails when a package is in two of the jars of the module: the runtime jar, {@code -cli} and
+     * {@code -cli-standalone}. It runs with {@code check} and before the tests of the tools,
+     * {@code testCli}.
+     */
+    private static void configureCompanionPackages(Project project) {
+        project.pluginManager.withPlugin(SbomPlugin.CLI_ARTIFACT_PLUGIN_ID) {
+            TaskProvider<CompanionPackagesTask> packages = project.tasks.register(CompanionPackagesTask.TASK_NAME, CompanionPackagesTask) {
+                CompanionPackagesTask task ->
+                    task.group = 'verification'
+                    task.description = 'Fails when a package is in two of the jars of the module: the runtime jar and the companions of its tools.'
+                    task.projectPath.set(project.path)
+                    for (String jarTask : ['jar', 'cliJar', 'standaloneJar']) {
+                        if (project.tasks.names.contains(jarTask)) {
+                            task.jars.from(project.tasks.named(jarTask, Jar).flatMap { Jar jar -> jar.archiveFile })
+                        }
+                    }
+                    task.report.convention(project.layout.buildDirectory.file('reports/companion-packages/packages.txt'))
+            }
+            project.tasks.named('check').configure { Task check ->
+                check.dependsOn(packages)
+            }
+            project.tasks.matching { Task task -> task.name == 'testCli' }.configureEach { Task testCli ->
+                testCli.dependsOn(packages)
+            }
+        }
     }
 
     /**
@@ -234,7 +274,8 @@ class CompilePlugin implements Plugin<Project> {
     /**
      * Mirrors {@code FactoriesCompileInput} from the Grails Gradle plugins, which is not on build-logic's
      * classpath, and marks the task the same way, so a module that also applies those plugins registers
-     * each input once. A cli tier's compilation is covered by the plugin that creates it.
+     * each input once. The compilations of the tools' own source sets are covered by the plugin that
+     * creates them.
      */
     static void registerFactoriesInputs(Project project, GroovyCompile task) {
         if (!task.extensions.extraProperties.has(GRAILS_FACTORIES_INPUT_REGISTERED)) {

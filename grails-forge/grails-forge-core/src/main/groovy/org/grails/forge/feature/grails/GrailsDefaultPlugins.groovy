@@ -28,10 +28,14 @@ import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
 import org.grails.forge.options.Options
 import org.grails.forge.template.URLTemplate
+import org.grails.forge.util.NameUtils
 
 @Component
 @CompileStatic
 class GrailsDefaultPlugins implements DefaultFeature {
+
+    private static final List<String> LOCALES = ['cs', 'da', 'de', 'es', 'fr', 'it', 'ja', 'nb', 'nl', 'pl', 'pt_BR', 'pt_PT',
+                                                 'ru', 'sk', 'sv', 'th', 'zh_CN', 'zh_TW'].asImmutable()
 
     @Override
     boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
@@ -63,29 +67,33 @@ class GrailsDefaultPlugins implements DefaultFeature {
                             .implementation())
                 })
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader()
-        generatorContext.addTemplate('messages_properties', new URLTemplate('grails-app/i18n/messages.properties', classLoader.getResource('i18n/messages.properties'), false))
-        generatorContext.addTemplate('messages_cs_properties', new URLTemplate('grails-app/i18n/messages_cs.properties', classLoader.getResource('i18n/messages_cs.properties')))
-        generatorContext.addTemplate('messages_da_properties', new URLTemplate('grails-app/i18n/messages_da.properties', classLoader.getResource('i18n/messages_da.properties')))
-        generatorContext.addTemplate('messages_de_properties', new URLTemplate('grails-app/i18n/messages_de.properties', classLoader.getResource('i18n/messages_de.properties')))
-        generatorContext.addTemplate('messages_es_properties', new URLTemplate('grails-app/i18n/messages_es.properties', classLoader.getResource('i18n/messages_es.properties')))
-        generatorContext.addTemplate('messages_fr_properties', new URLTemplate('grails-app/i18n/messages_fr.properties', classLoader.getResource('i18n/messages_fr.properties')))
-        generatorContext.addTemplate('messages_it_properties', new URLTemplate('grails-app/i18n/messages_it.properties', classLoader.getResource('i18n/messages_it.properties')))
-        generatorContext.addTemplate('messages_ja_properties', new URLTemplate('grails-app/i18n/messages_ja.properties', classLoader.getResource('i18n/messages_ja.properties')))
-        generatorContext.addTemplate('messages_nb_properties', new URLTemplate('grails-app/i18n/messages_nb.properties', classLoader.getResource('i18n/messages_nb.properties')))
-        generatorContext.addTemplate('messages_nl_properties', new URLTemplate('grails-app/i18n/messages_nl.properties', classLoader.getResource('i18n/messages_nl.properties')))
-        generatorContext.addTemplate('messages_pl_properties', new URLTemplate('grails-app/i18n/messages_pl.properties', classLoader.getResource('i18n/messages_pl.properties')))
-        generatorContext.addTemplate('messages_pt_BR_properties', new URLTemplate('grails-app/i18n/messages_pt_BR.properties', classLoader.getResource('i18n/messages_pt_BR.properties')))
-        generatorContext.addTemplate('messages_pt_PT_properties', new URLTemplate('grails-app/i18n/messages_pt_PT.properties', classLoader.getResource('i18n/messages_pt_PT.properties')))
-        generatorContext.addTemplate('messages_ru_properties', new URLTemplate('grails-app/i18n/messages_ru.properties', classLoader.getResource('i18n/messages_ru.properties')))
-        generatorContext.addTemplate('messages_sk_properties', new URLTemplate('grails-app/i18n/messages_sk.properties', classLoader.getResource('i18n/messages_sk.properties')))
-        generatorContext.addTemplate('messages_sv_properties', new URLTemplate('grails-app/i18n/messages_sv.properties', classLoader.getResource('i18n/messages_sv.properties')))
-        generatorContext.addTemplate('messages_th_properties', new URLTemplate('grails-app/i18n/messages_th.properties', classLoader.getResource('i18n/messages_th.properties')))
-        generatorContext.addTemplate('messages_zh_CN_properties', new URLTemplate('grails-app/i18n/messages_zh_CN.properties', classLoader.getResource('i18n/messages_zh_CN.properties')))
-        generatorContext.addTemplate('messages_zh_TW_properties', new URLTemplate('grails-app/i18n/messages_zh_TW.properties', classLoader.getResource('i18n/messages_zh_TW.properties')))
+        // An application has the bundles under the base name messages. A plugin has them under its own name, the
+        // only base name the build of a plugin takes (generateI18nDescriptor): Spring resolves a base name to the
+        // first match on the class path, so messages.properties of a plugin and of the application that uses it
+        // would shadow one another
+        String baseName = bundleBaseName(generatorContext)
+        generatorContext.addTemplate('messages_properties',
+                new URLTemplate("grails-app/i18n/${baseName}.properties", classLoader.getResource('i18n/messages.properties'), false))
+        for (String locale : LOCALES) {
+            generatorContext.addTemplate("messages_${locale}_properties",
+                    new URLTemplate("grails-app/i18n/${baseName}_${locale}.properties", classLoader.getResource("i18n/messages_${locale}.properties")))
+        }
     }
 
     @Override
     String getCategory() {
         return Category.SERVER
+    }
+
+    /**
+     * @return the base name of the message bundles of the project: {@code messages} for an application, and the
+     * name of the plugin, as the framework derives it from the name of the plugin class, for a plugin
+     */
+    static String bundleBaseName(GeneratorContext generatorContext) {
+        ApplicationType applicationType = generatorContext.getApplicationType()
+        if (applicationType.isPlugin()) {
+            return NameUtils.getPluginName(generatorContext.getProject().getClassName() + 'GrailsPlugin.groovy')
+        }
+        return 'messages'
     }
 }

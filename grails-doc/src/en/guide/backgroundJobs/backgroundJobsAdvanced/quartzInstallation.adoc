@@ -30,7 +30,7 @@ No further setup is required. By default the plugin uses Quartz's in-memory `RAM
 
 ===== Creating your first job
 
-Use the link:{commandLineRef}create-job.html[create-job] command to generate a job under `grails-app/jobs`:
+Use the link:{commandLineRef}create-job.html[create-job] command to generate a job under `grails-app/jobs`. It is a command of a project whose record lists the `grails-quartz` feature: an application that was created with the feature, or one it was added to with `grails feature add grails-quartz`. After adding the dependency by hand as above, run `grails feature add grails-quartz` once: it keeps the line you wrote and records the feature. The command writes the job from a template of the `grails` command line; the plugin itself brings no command and no script.
 
 [source,bash]
 ----
@@ -49,8 +49,8 @@ class MyJob {
         simple repeatInterval: 5000L // execute the job every 5 seconds
     }
 
-    void execute() {
-        println 'Job run!'
+    def execute() {
+        // execute job
     }
 }
 ----

@@ -1,0 +1,40 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+What a new application gets beyond the features of Grails is added with a _feature pack_: a descriptor and templates that say which dependencies, build plugins, build script code, settings and files an application needs for something. A feature pack belongs to a plugin. It is kept in `src/main/forge` of the plugin, is put into the jar of the plugin when the plugin is built, and is published with it: there is nothing else to publish or to register.
+
+The feature of a pack is selected like a feature of Grails, when a project is created:
+
+[source,console]
+----
+$ grails create-app com.example.shop --features com.acme:acme-audit-grails:2.3.0 <1>
+$ grails create-app com.example.shop --features acme-audit --feature-pack-dir ../acme-audit/src/main/forge <2>
+$ grails create-app com.example.shop --features acme-audit --feature-catalog https://catalog.acme.example/index.json <3>
+----
+<1> By the coordinates of the published plugin. The jar is taken from the repositories of `GRAILS_REPO_URL` and then Maven Central, or from those `--feature-pack-repository` names, and `--feature-pack-sha256` says which jar it has to be.
+<2> From a directory, for a pack that is being written.
+<3> By the name of the feature, where a feature catalog that you name says which plugin has it, and in which version.
+
+To give the applications of an organisation their own starting point, with the dependencies, the settings and the files every one of them has, write a plugin with a feature pack and publish it to the repository of the organisation; or write a _preset_, which also names the type of application, gives the options their defaults and asks for features, and which an application is made from with `--preset`: see xref:applicationTypes#presets[Making Applications from a Preset]. A pack can add dependencies, BOMs and build plugins, build script code, configuration, and files from templates, and can require other features or refuse to be used with them. A pack only adds: it cannot change a setting, a dependency version or a file that another feature of the application gives it.
+
+A feature pack is code: what it adds to the build is run by Gradle, and it writes files into the application. Use a pack, a repository and a catalog only when you trust where they come from.
+
+xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation], in the chapter on plugins, is the guide to writing a pack: its layout, the descriptor, the templates, checking it, testing it with applications, and using the pack of a published plugin. The options the `create-` commands have for packs are in xref:commandLine#creatingProject[Creating a Grails Project].
+
+In this version the feature of a pack is selected when a project is created. `feature add` adds the features of Grails only: it refuses the feature of a pack, and adds a feature of Grails to an application that has one only with that very pack, which `feature list` takes too. See xref:plugins#forgeFeaturePackAfterCreation[After the Application Is Created].

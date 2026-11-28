@@ -1,0 +1,63 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: embedded-servlet
+default: servlet=tomcat
+dependency: implementation org.springframework.boot:spring-boot-starter-tomcat without a version
+dependency: implementation org.springframework.boot:spring-boot-tomcat without a version
+
+# web
+title: Embedded Tomcat
+description: spring-boot-starter-tomcat
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter-tomcat"
++     implementation "org.springframework.boot:spring-boot-tomcat"
+
+# rest_api
+title: Embedded Tomcat
+description: spring-boot-starter-tomcat
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter-tomcat"
++     implementation "org.springframework.boot:spring-boot-tomcat"
+
+# web_plugin
+title: Embedded Tomcat
+description: spring-boot-starter-tomcat
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter-tomcat"
++     implementation "org.springframework.boot:spring-boot-tomcat"
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+title: Embedded Tomcat
+description: spring-boot-starter-tomcat
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter-tomcat"
++     implementation "org.springframework.boot:spring-boot-tomcat"
+

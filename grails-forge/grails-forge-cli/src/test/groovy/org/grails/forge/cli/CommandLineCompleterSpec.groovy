@@ -18,7 +18,9 @@
  */
 package org.grails.forge.cli
 
+import java.util.function.Consumer
 import org.jline.reader.Candidate
+import org.jline.reader.Completer
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.DefaultParser
@@ -29,6 +31,7 @@ import picocli.CommandLine
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class CommandLineCompleterSpec extends Specification {
 
@@ -48,7 +51,7 @@ class CommandLineCompleterSpec extends Specification {
 
     void 'an empty prompt offers every command and the options of the root command'() {
         expect:
-        complete('').containsAll(['create-app', 'create-webapp', 'create-restapi', 'create-plugin', 'create-web-plugin',
+        complete('').containsAll(['create-app', 'create-webapp', 'create-restapi', 'create-plugin', 'create-web-plugin', 'create-rest-api-plugin',
                                   '--help', '--version'])
     }
 
@@ -70,6 +73,30 @@ class CommandLineCompleterSpec extends Specification {
         !offered.contains('create-plugin')
     }
 
+    void 'the other names of a command are offered with the names, and an option after one is completed from its command'() {
+        expect:
+        complete('ru').containsAll(['run', 'run-app', 'run-script', 'run-tool'])
+        complete('st').containsAll(['stats', 'stop', 'stop-app'])
+        complete('run --de').contains('--detach')
+        complete('stop --he').contains('--help')
+    }
+
+    @Unroll
+    void "the console offers neither exit nor quit, which end it and are no commands, as it offers no other word that is none: '#typed'"() {
+        given:
+        InteractiveShell shell = new InteractiveShell(commandLine, { String[] args -> } as Consumer<String[]>, null)
+
+        when:
+        List<String> offered = complete(shell.completer(), typed)
+
+        then:
+        !offered.contains('exit')
+        !offered.contains('quit')
+
+        where:
+        typed << ['', 'e', 'ex', 'exi', 'exit', 'q', 'qu', 'qui', 'quit']
+    }
+
     void 'the completer needs a command to complete from'() {
         when:
         new CommandLineCompleter(null)
@@ -80,10 +107,13 @@ class CommandLineCompleterSpec extends Specification {
     }
 
     private List<String> complete(String typed) {
+        return complete(new CommandLineCompleter(commandLine.commandSpec), typed)
+    }
+
+    private List<String> complete(Completer completer, String typed) {
         LineReader reader = LineReaderBuilder.builder().terminal(terminal).build()
         List<Candidate> candidates = []
-        new CommandLineCompleter(commandLine.commandSpec)
-                .complete(reader, new DefaultParser().parse(typed, typed.length()), candidates)
+        completer.complete(reader, new DefaultParser().parse(typed, typed.length()), candidates)
         candidates*.value()
     }
 }

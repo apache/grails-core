@@ -1,9 +1,0 @@
-description: Adds Asset Pipeline to a Grails project
-build:
-    plugins:
-        - cloud.wondrify.asset-pipeline
-dependencies:
-    - scope: build
-      coords: "cloud.wondrify:asset-pipeline-gradle"
-    - scope: runtimeOnly
-      coords: "cloud.wondrify:asset-pipeline-grails"

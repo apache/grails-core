@@ -1,0 +1,284 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: [cache]
+conflicts: []
+oneOf: cache-provider
+dependency: implementation org.ehcache:ehcache without a version
+dependency: runtimeOnly org.glassfish.jaxb:jaxb-runtime without a version
+
+# web
+title: Ehcache
+description: Caches with Ehcache 3 through JCache (JSR-107): the cache manager of the Cache plugin, grailsCacheManager, is defined in grails-app/conf/spring/resources.groovy over the caches of grails-app/conf/ehcache.xml, and a cache that file does not configure is created from its default template when it is first used.
+category: Cache
+documentation: https://grails.apache.org/docs/VERSION/guide/cache.html#cacheEhcache
+thirdPartyDocumentation: https://www.ehcache.org/
+visible: true
+dependentFeatures: [cache]
+== README.md
++ ## Feature cache documentation
++ - [Grails Cache documentation](https://grails.apache.org/docs/VERSION/guide/cache.html)
++ ## Feature cache-ehcache documentation
++ - [Grails Ehcache documentation](https://grails.apache.org/docs/VERSION/guide/cache.html#cacheEhcache)
++ - [https://www.ehcache.org/](https://www.ehcache.org/)
++ 
++ 
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-cache"
++     implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") }; exclude group: "org.glassfish.jaxb", module: "jaxb-runtime" }
++     runtimeOnly "org.glassfish.jaxb:jaxb-runtime"
+== grails-app/conf/application.yml
++   cache:
++     clearAtStartup: false
++     enabled: true
+== grails-app/conf/ehcache.xml
++ <?xml version="1.0" encoding="UTF-8"?>
++ <!--
++     The caches of the application, for Ehcache 3. The cache manager of the Grails Cache plugin,
++     grailsCacheManager in grails-app/conf/spring/resources.groovy, caches with them through JCache (JSR-107).
++     A cache that is not configured here is created from the template that jsr107:defaults names when it is
++     first used, so @Cacheable('anything') caches without a line here.
++ -->
++ <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
++         xmlns="http://www.ehcache.org/v3"
++         xmlns:jsr107="http://www.ehcache.org/v3/jsr107"
++         xsi:schemaLocation="http://www.ehcache.org/v3 https://www.ehcache.org/schema/ehcache-core.xsd
++                             http://www.ehcache.org/v3/jsr107 https://www.ehcache.org/schema/ehcache-107-ext.xsd">
++ 
++     <service>
++         <jsr107:defaults default-template="default"/>
++     </service>
++ 
++     <!-- what every cache that is not configured below has -->
++     <cache-template name="default">
++         <expiry>
++             <ttl unit="minutes">10</ttl>
++         </expiry>
++         <heap unit="entries">1000</heap>
++     </cache-template>
++ 
++     <!-- an example: the cache of @Cacheable('example'), which keeps fewer entries than the template -->
++     <cache alias="example" uses-template="default">
++         <heap unit="entries">100</heap>
++     </cache>
++ </config>
+== grails-app/conf/spring/resources.groovy
++ import org.springframework.cache.jcache.JCacheManagerFactoryBean
++ 
++ import example.grails.JCacheGrailsCacheManager
++ 
++     // the caches of grails-app/conf/ehcache.xml, through JCache (JSR-107)
++     jCacheManager(JCacheManagerFactoryBean) {
++         cacheManagerUri = 'classpath:ehcache.xml'
++     }
++     // the cache manager of the Grails Cache plugin, which its annotations, tags and admin service cache with
++     grailsCacheManager(JCacheGrailsCacheManager, ref('jCacheManager'))
+== src/main/groovy/example/grails/JCacheGrailsCacheManager.groovy
++ package example.grails
++ 
++ import groovy.transform.CompileStatic
++ 
++ import javax.cache.CacheException
++ import javax.cache.CacheManager
++ import javax.cache.configuration.MutableConfiguration
++ 
++ import org.springframework.cache.Cache
++ import org.springframework.cache.jcache.JCacheCache
++ import org.springframework.cache.jcache.JCacheCacheManager
++ 
++ import org.grails.plugin.cache.GrailsCacheManager
++ 
++ /**
++  * The cache manager of the Grails Cache plugin, grailsCacheManager in grails-app/conf/spring/resources.groovy:
++  * the caches of a JCache (JSR-107) cache manager, which is Ehcache's with the caches of grails-app/conf/ehcache.xml.
++  *
++  * A cache it does not have is created when it is first asked for, as the cache manager the plugin has by default
++  * creates one, so a name in an annotation needs no configuration: Ehcache gives it the template that
++  * jsr107:defaults names in ehcache.xml. Its values are kept as they are, as in the caches of ehcache.xml, and not
++  * copied by serialization, which the caches JCache creates otherwise do.
++  */
++ @CompileStatic
++ class JCacheGrailsCacheManager extends JCacheCacheManager implements GrailsCacheManager {
++ 
++     JCacheGrailsCacheManager(CacheManager cacheManager) {
++         super(cacheManager)
++     }
++ 
++     @Override
++     boolean cacheExists(String name) {
++         cacheManager.getCache(name) != null
++     }
++ 
++     @Override
++     boolean destroyCache(String name) {
++         boolean exists = cacheExists(name)
++         cacheManager.destroyCache(name)
++         // forgets the cache that was destroyed, which is created again when it is next asked for
++         initializeCaches()
++         exists
++     }
++ 
++     @Override
++     protected Cache getMissingCache(String name) {
++         javax.cache.Cache<Object, Object> cache = cacheManager.getCache(name)
++         if (cache == null) {
++             try {
++                 cache = cacheManager.createCache(name, new MutableConfiguration<Object, Object>().setStoreByValue(false))
++             } catch (CacheException e) {
++                 // another thread created it first; if none did, the cache could not be created, and this says why
++                 cache = cacheManager.getCache(name)
++                 if (cache == null) {
++                     throw e
++                 }
++             }
++         }
++         new JCacheCache(cache, allowNullValues)
++     }
++ }
+
+# rest_api
+title: Ehcache
+description: Caches with Ehcache 3 through JCache (JSR-107): the cache manager of the Cache plugin, grailsCacheManager, is defined in grails-app/conf/spring/resources.groovy over the caches of grails-app/conf/ehcache.xml, and a cache that file does not configure is created from its default template when it is first used.
+category: Cache
+documentation: https://grails.apache.org/docs/VERSION/guide/cache.html#cacheEhcache
+thirdPartyDocumentation: https://www.ehcache.org/
+visible: true
+dependentFeatures: [cache]
+== README.md
++ ## Feature cache documentation
++ - [Grails Cache documentation](https://grails.apache.org/docs/VERSION/guide/cache.html)
++ ## Feature cache-ehcache documentation
++ - [Grails Ehcache documentation](https://grails.apache.org/docs/VERSION/guide/cache.html#cacheEhcache)
++ - [https://www.ehcache.org/](https://www.ehcache.org/)
++ 
++ 
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-cache"
++     implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") }; exclude group: "org.glassfish.jaxb", module: "jaxb-runtime" }
++     runtimeOnly "org.glassfish.jaxb:jaxb-runtime"
+== grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++ grails:
++   cache:
++     clearAtStartup: false
++     enabled: true
++   codegen:
++     defaultPackage: example.grails
+== grails-app/conf/ehcache.xml
++ <?xml version="1.0" encoding="UTF-8"?>
++ <!--
++     The caches of the application, for Ehcache 3. The cache manager of the Grails Cache plugin,
++     grailsCacheManager in grails-app/conf/spring/resources.groovy, caches with them through JCache (JSR-107).
++     A cache that is not configured here is created from the template that jsr107:defaults names when it is
++     first used, so @Cacheable('anything') caches without a line here.
++ -->
++ <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
++         xmlns="http://www.ehcache.org/v3"
++         xmlns:jsr107="http://www.ehcache.org/v3/jsr107"
++         xsi:schemaLocation="http://www.ehcache.org/v3 https://www.ehcache.org/schema/ehcache-core.xsd
++                             http://www.ehcache.org/v3/jsr107 https://www.ehcache.org/schema/ehcache-107-ext.xsd">
++ 
++     <service>
++         <jsr107:defaults default-template="default"/>
++     </service>
++ 
++     <!-- what every cache that is not configured below has -->
++     <cache-template name="default">
++         <expiry>
++             <ttl unit="minutes">10</ttl>
++         </expiry>
++         <heap unit="entries">1000</heap>
++     </cache-template>
++ 
++     <!-- an example: the cache of @Cacheable('example'), which keeps fewer entries than the template -->
++     <cache alias="example" uses-template="default">
++         <heap unit="entries">100</heap>
++     </cache>
++ </config>
+== grails-app/conf/spring/resources.groovy
++ import org.springframework.cache.jcache.JCacheManagerFactoryBean
++ 
++ import example.grails.JCacheGrailsCacheManager
++ 
++     // the caches of grails-app/conf/ehcache.xml, through JCache (JSR-107)
++     jCacheManager(JCacheManagerFactoryBean) {
++         cacheManagerUri = 'classpath:ehcache.xml'
++     }
++     // the cache manager of the Grails Cache plugin, which its annotations, tags and admin service cache with
++     grailsCacheManager(JCacheGrailsCacheManager, ref('jCacheManager'))
+== src/main/groovy/example/grails/JCacheGrailsCacheManager.groovy
++ package example.grails
++ 
++ import groovy.transform.CompileStatic
++ 
++ import javax.cache.CacheException
++ import javax.cache.CacheManager
++ import javax.cache.configuration.MutableConfiguration
++ 
++ import org.springframework.cache.Cache
++ import org.springframework.cache.jcache.JCacheCache
++ import org.springframework.cache.jcache.JCacheCacheManager
++ 
++ import org.grails.plugin.cache.GrailsCacheManager
++ 
++ /**
++  * The cache manager of the Grails Cache plugin, grailsCacheManager in grails-app/conf/spring/resources.groovy:
++  * the caches of a JCache (JSR-107) cache manager, which is Ehcache's with the caches of grails-app/conf/ehcache.xml.
++  *
++  * A cache it does not have is created when it is first asked for, as the cache manager the plugin has by default
++  * creates one, so a name in an annotation needs no configuration: Ehcache gives it the template that
++  * jsr107:defaults names in ehcache.xml. Its values are kept as they are, as in the caches of ehcache.xml, and not
++  * copied by serialization, which the caches JCache creates otherwise do.
++  */
++ @CompileStatic
++ class JCacheGrailsCacheManager extends JCacheCacheManager implements GrailsCacheManager {
++ 
++     JCacheGrailsCacheManager(CacheManager cacheManager) {
++         super(cacheManager)
++     }
++ 
++     @Override
++     boolean cacheExists(String name) {
++         cacheManager.getCache(name) != null
++     }
++ 
++     @Override
++     boolean destroyCache(String name) {
++         boolean exists = cacheExists(name)
++         cacheManager.destroyCache(name)
++         // forgets the cache that was destroyed, which is created again when it is next asked for
++         initializeCaches()
++         exists
++     }
++ 
++     @Override
++     protected Cache getMissingCache(String name) {
++         javax.cache.Cache<Object, Object> cache = cacheManager.getCache(name)
++         if (cache == null) {
++             try {
++                 cache = cacheManager.createCache(name, new MutableConfiguration<Object, Object>().setStoreByValue(false))
++             } catch (CacheException e) {
++                 // another thread created it first; if none did, the cache could not be created, and this says why
++                 cache = cacheManager.getCache(name)
++                 if (cache == null) {
++                     throw e
++                 }
++             }
++         }
++         new JCacheCache(cache, allowNullValues)
++     }
++ }
+
+# web_plugin
+not for this kind of application
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+not for this kind of application
+

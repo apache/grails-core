@@ -56,9 +56,10 @@ class ViewJsonSpec extends ApplicationContextSpec implements CommandOutputFixtur
         template.contains("testImplementation \"org.apache.grails:grails-testing-support-views-gson\"")
     }
 
-    void "test default gson views are present"() {
+    @Unroll
+    void "test default gson views are present for #applicationType application"() {
         when:
-        final def output = generate(ApplicationType.REST_API, new Options(DevelopmentReloading.DEVTOOLS))
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
         output.containsKey("grails-app/views/application/index.gson")
@@ -66,6 +67,34 @@ class ViewJsonSpec extends ApplicationContextSpec implements CommandOutputFixtur
         output.containsKey("grails-app/views/notFound.gson")
         output.containsKey("grails-app/views/errors/_errors.gson")
         output.containsKey("grails-app/views/object/_object.gson")
+
+        where:
+        applicationType << [ApplicationType.REST_API]
+    }
+
+    void "a REST API plugin has no gson views of its own, which would be those of the applications that use it"() {
+        when:
+        final def output = generate(ApplicationType.REST_API_PLUGIN, new Options(DevelopmentReloading.DEVTOOLS))
+
+        then:
+        !output.keySet().any { it.startsWith('grails-app/views/') }
+    }
+
+    void "test views-json gradle plugins and dependencies are present for a REST API plugin, which is built as a plugin"() {
+        when:
+        final def output = generate(ApplicationType.REST_API_PLUGIN, new Options(DevelopmentReloading.DEVTOOLS))
+        final String build = output['build.gradle']
+
+        then:
+        build.contains("apply plugin: \"org.apache.grails.gradle.grails-plugin\"")
+        build.contains("apply plugin: \"org.apache.grails.gradle.grails-gson\"")
+        build.contains("implementation \"org.apache.grails:grails-views-gson\"")
+        build.contains("implementation \"org.apache.grails:grails-data-mongodb-gson-templates\"")
+        build.contains("testImplementation \"org.apache.grails:grails-testing-support-views-gson\"")
+
+        and:
+        !build.contains("apply plugin: \"org.apache.grails.gradle.grails-web\"")
+        !build.contains("apply plugin: \"org.apache.grails.gradle.grails-gsp\"")
     }
 
     @Unroll

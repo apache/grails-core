@@ -86,21 +86,31 @@ done
 
 export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging
 cd "${SRC_DIR}/bin"
-echo "Checking Shell CLI ..."
-./grails-shell-cli create-app ShellApp
-echo "✅ Generated Shell App"
-
-echo "Verifying Shell App dependencies resolve ..."
-DEP_OUTPUT=$(cd ShellApp && ./gradlew dependencies 2>&1) || { echo "❌ Shell App dependency resolution failed"; exit 1; }
-if echo "$DEP_OUTPUT" | grep -q 'FAILED'; then
-  echo "❌ Shell App has unresolvable dependencies:"
-  echo "$DEP_OUTPUT" | grep 'FAILED'
+echo "Checking that the distribution has the grails command and no other ..."
+for REMOVED in grails-shell-cli grails-shell-cli.bat grails-forge-cli grails-forge-cli.bat; do
+  if [ -e "${REMOVED}" ]; then
+    echo "❌ ${REMOVED} is in the distribution: the grails command is the only one since Grails 9"
+    exit 1
+  fi
+done
+for REQUIRED in grails grails.bat; do
+  if [ ! -f "${REQUIRED}" ]; then
+    echo "❌ Missing required file: bin/${REQUIRED}"
+    exit 1
+  fi
+done
+if ! grep -q 'org.apache.grails.forge.cli.GrailsCli' grails; then
+  echo "❌ The grails command does not start org.apache.grails.forge.cli.GrailsCli"
   exit 1
 fi
-echo "✅ Shell App dependencies resolved"
+echo "✅ Only the grails command is in the distribution"
 
-echo "Checking Forge CLI ..."
-./grails-forge-cli create-app -x -g mongodb -f gradle-settings-file ForgeApp
+echo "Checking the grails command ..."
+./grails --version
+./grails help > /dev/null
+echo "✅ The grails command starts"
+
+./grails create-app -x -g mongodb -f gradle-settings-file ForgeApp
 echo "✅ Generated Forge App"
 
 echo "Verifying Forge App dependencies resolve ..."

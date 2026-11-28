@@ -27,47 +27,60 @@ WARNING: This target is _not_ intended to be used for application deployment. Th
 
 === Examples
 
-[source,groovy]
+[source,console]
 ----
 grails run-app
-grails run-app -https // with HTTPS
+grails run-app --https // with HTTPS
+grails run-app --port=8081
 grails run-app --query-tail // capture the statements it runs for the query-tail command
-grails test run-app
+grails run-app -Dgrails.env=test
+grails run-app --detach
+grails run // run is another name of run-app
 ----
 
 === Description
 
 Usage:
 
-[source,groovy]
+[source,console]
 ----
-grails <<env>>* run-app
+grails run-app [--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--detach | --foreground] [--ready-timeout=SECONDS] [<<options of the application and its plugins>>] [-Dname=value]... [-Pname=value]... [-- <<gradle arguments>>]
 ----
 
-Arguments:
+`run` is another name of the command, as in the Grails shell: `grails run --detach` is `grails run-app --detach`. A Groovy script, which `grails run app.groovy` ran outside a project in the Grails shell, is no argument of the command: it is refused with exit code 2 and the command that runs it with the application started around it, link:run-script.html[run-script] `app.groovy`.
 
-* `debug-jvm` - Run the application using a debug JVM (port 5005) in order to attach a remote debugger.
-* `port` - The port to use
-* `host` - The host to bind to
-* `https` - Start an HTTPS server (on port 8443 by default) alongside the main server. Just to be clear, the application will be accessible via HTTPS _and_ HTTP. A self-signed key will be generated. Intended for development use only.
-* `query-tail` - Capture every statement GORM runs, SQL, Cypher or a MongoDB command, with the controller and action serving it, for the link:{commandLineRefFromRef}query-tail.html[query-tail] command. The application starts with `grails.gorm.queryTail.enabled` set, and pays nothing for the capture when started without the flag.
+`run-app` runs the Gradle task `bootRun` of the project for the development environment, or for the one `-Dgrails.env=NAME` after the command names. It stays with the application until it ends or the command is cancelled, by Ctrl-C or by link:stop-app.html[stop-app] in another terminal; in interactive mode it returns to the prompt when the application answers on its port and leaves it running until link:stop-app.html[stop-app].
 
-Supported system properties:
+Options:
 
-* `grails.server.port.http`/`server.port` - Specifies the HTTP port to run the server on (defaults to 8080)
-* `grails.server.port.https` - Specifies the HTTPS port to run the server on (defaults to 8443)
-* `grails.server.host`/`server.host` - Specifies the host name to run the server on (defaults to localhost)
+* `--debug-jvm` - Start the JVM of the application suspended, waiting for a debugger on port 5005.
+* `--port=PORT` - The port the application answers on. Without it, the port its configuration names, or 8080.
+* `--host=HOST` - The address the application binds to. When the command does not stay with the application, it waits for it at that address, which has to be one of the loopback of this computer, as `127.0.0.1`, `127.0.0.2` or `::1` are; with no address, `localhost`, or the address that stands for all (`0.0.0.0`, `::`), it waits at `127.0.0.1` and `::1`. Any other address needs `--foreground`.
+* `--https` - Serve HTTPS, on port 8443 unless a port is given or configured, with a self-signed certificate that is created in `build/ssl` when there is none. Intended for development use only. With `-Dgrails.server.ssl.key-store=FILE`, before or after `--`, the application uses that key store instead, with the passwords of its configuration.
+* `--detach` - Return when the application answers on its port, and leave it running until `stop-app`, also when `grails` has ended. Its output is in `.grails/run/app.log`. The port the command waits on has to be plain: `--port`, `-Dgrails.server.port` (also after `--`, where the last one given counts, as for Gradle), the environment variable `SERVER_PORT` or a number in `grails-app/conf/application.yml`, whose documents, environments and Spring profiles are read as the application reads them; otherwise it starts nothing and asks for `--port`. The address is read from `application.yml` also when `--port` is given: when it cannot be read there, as from a file that is not valid YAML, whose line and column the command names, it starts nothing and asks for `--host`.
+* `--foreground` - Stay with the application until it ends, also in interactive mode.
+* `--ready-timeout=SECONDS` - How long the application is given to answer when the command does not stay with it (300 by default); it is stopped when it has not by then.
+* `-Dname=value` - A system property for the build. Can be given more than once.
+* `-Pname=value` - A project property for the build. Can be given more than once.
 
+Options of the application and its plugins:
 
-This command starts Grails in an embedded servlet container that can serve HTTP requests. The default container is http://tomcat.apache.org[Tomcat] but alternative containers are supported by altering the Spring boot starter in `build.gradle`.
+The application and its plugins can declare more options of `run-app`, each of which sets a property of the application that is started. `grails help run-app` lists them in the project, each with the artifact that declares it and the property it sets. They are known once a build has compiled the project, which lists them in `.grails/cache/tool-catalog.json`; before that, and outside a project, such an option is refused with exit code 2 and a line that says how the options are listed (`grails gradle grailsToolCatalog`).
+
+* `--query-tail` - Declared by Grails Data (its command line artifact, `grails-datamapping-core-cli`, which every application with GORM has): capture every statement GORM runs, SQL, Cypher or a MongoDB command, with the controller and action serving it, for the link:{commandLineRefFromRef}query-tail.html[query-tail] tool. It sets `grails.gorm.queryTail.enabled=true` for the application. See link:{guidePath}conf.html#queryTail[Finding Query-Heavy Pages with query-tail].
+
+A declared option is given to the build as the system property `-Dgrails.NAME=VALUE`, which the Grails Gradle plugin hands the application as `NAME`. See link:{guidePath}commandLine.html#declaredRunAppOptions[Options the application and its plugins declare] in the user guide, and link:{guidePath}commandLine.html#runAppOptions[Adding Options to run-app from a Plugin] for how a plugin declares one.
+
+What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.
+
+This command starts Grails in an embedded servlet container that can serve HTTP requests. The default container is https://tomcat.apache.org[Tomcat] but alternative containers are supported by altering the Spring boot starter in `build.gradle`.
 
 [source,groovy]
 ----
 // use Jetty
-runtime "org.springframework.boot:spring-boot-starter-jetty"
-
+runtimeOnly "org.springframework.boot:spring-boot-starter-jetty"
 // or use Undertow (provided by the Grails Undertow plugin)
-runtime "org.apache.grails:grails-undertow"
+runtimeOnly "org.apache.grails:grails-undertow"
 ----
 
 For more information see the Spring Boot documentation on {springBootHowTo}webserver.html#page-title[Embedded Containers].

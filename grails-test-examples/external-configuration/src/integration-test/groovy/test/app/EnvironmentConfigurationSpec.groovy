@@ -44,9 +44,6 @@ class EnvironmentConfigurationSpec extends Specification {
     @Autowired
     ConfigurableEnvironment springEnvironment
 
-    @Value('${grails.profile:unknown}')
-    String grailsProfile
-
     @Value('${dataSource.url:not-set}')
     String dataSourceUrl
 
@@ -88,11 +85,6 @@ class EnvironmentConfigurationSpec extends Specification {
         then: "test-specific URL is used"
         config.getProperty('dataSource.url', String)?.contains('testDb') ||
         config.getProperty('dataSource.url', String)?.contains('mem')
-    }
-
-    def "grails profile is correctly set"() {
-        expect: "profile is web"
-        grailsProfile == 'web'
     }
 
     // ========== Configuration Property Access Tests ==========

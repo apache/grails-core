@@ -1,0 +1,183 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: database-driver
+adds: testcontainers
+adds: gorm-hibernate5 when not anyOf(gorm-hibernate5, gorm-hibernate7)
+dependency: runtimeOnly org.postgresql:postgresql without a version
+
+# web
+title: PostgresSQL
+description: Add PostgresSQL driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "org.postgresql:postgresql"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-postgresql"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-   username: sa
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: org.postgresql.Driver
++   username: postgres
++       url: jdbc:postgresql://localhost:5432/devDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/testDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:postgresql:12:///postgres
+
+# rest_api
+title: PostgresSQL
+description: Add PostgresSQL driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "org.postgresql:postgresql"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-postgresql"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-   username: sa
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: org.postgresql.Driver
++   username: postgres
++       url: jdbc:postgresql://localhost:5432/devDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/testDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:postgresql:12:///postgres
+
+# web_plugin
+title: PostgresSQL
+description: Add PostgresSQL driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "org.postgresql:postgresql"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-postgresql"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-   username: sa
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: org.postgresql.Driver
++   username: postgres
++       url: jdbc:postgresql://localhost:5432/devDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/testDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:postgresql:12:///postgres
+
+# plugin
+title: PostgresSQL
+description: Add PostgresSQL driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ 
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "org.postgresql:postgresql"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-postgresql"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-   username: sa
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: org.postgresql.Driver
++   username: postgres
++       url: jdbc:postgresql://localhost:5432/devDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/testDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:postgresql:12:///postgres
+
+# rest_api_plugin
+title: PostgresSQL
+description: Add PostgresSQL driver and default configuration.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
+-     runtimeOnly "com.h2database:h2"
++     runtimeOnly "org.postgresql:postgresql"
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-postgresql"
++     testImplementation "org.testcontainers:testcontainers-spock"
+== grails-app/conf/application.yml
+-   driverClassName: org.h2.Driver
+-   username: sa
+-       url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+-       url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
++   driverClassName: org.postgresql.Driver
++   username: postgres
++       url: jdbc:postgresql://localhost:5432/devDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/testDb?tcpKeepAlive=true
++       url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true
+== src/test/resources/application-test.yml
++ dataSource:
++   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:postgresql:12:///postgres
+

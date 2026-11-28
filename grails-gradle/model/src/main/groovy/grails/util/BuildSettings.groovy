@@ -51,15 +51,6 @@ class BuildSettings {
      */
     public static final String MAIN_CLASS_NAME = 'org.grails.MAIN_CLASS_NAME'
 
-    /**
-     * The name of the profile being used
-     */
-    public static final String PROFILE = 'grails.profile'
-    /**
-     * Specifies the profile repositories to use
-     */
-    public static final String PROFILE_REPOSITORIES = 'grails.profiles.repositories'
-
     public static final String BUILD_SCOPE = 'build'
     public static final String COMPILE_SCOPE = 'compileClasspath'
     public static final String RUNTIME_SCOPE = 'runtimeClasspath'

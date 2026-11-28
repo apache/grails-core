@@ -17,30 +17,27 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == bug-report
 
-
-
 === Purpose
-
 
 The bug-report command packages up the sources of your application (excluding jars, static resources etc.) into a ZIP file. The file name includes the application name and a timestamp. This is useful for reporting issues to the https://github.com/apache/grails-core/issues[Grails Issue Tracker]
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
 grails bug-report
+grails bug-report --force
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails bug-report
+grails bug-report [-f]
 ----
+
+The ZIP file is written to the build directory and holds every file under `grails-app` and `src`, and `build.gradle`: the configuration under `grails-app/conf` is in it as it is, and the command names the `application*.yml`, `application*.groovy` and `application*.properties` files it put into the ZIP file before it says what it created, so look through them for passwords before attaching it. Links are not followed. Left out are files that are keys or lists of secrets by their name (such as `.env`, `*.jks`, `*.p12`, `*.pem`, `*.key`, `id_rsa*`, `credentials*`, `secrets*`, `.netrc`, and copies of them that end with `.bak`, `.old` or `~`), directories named `build` or `.gradle` at any depth, files that have another name elsewhere on the file system (hard links), and files with a control character in their name. An existing ZIP file of the same name is replaced only with `-f` or `--force`, and nothing is written when the sources are more than 10000 files or more than 256 MiB.

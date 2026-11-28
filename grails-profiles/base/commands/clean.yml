@@ -1,8 +1,0 @@
-description: Cleans a Grails application's compiled sources
-minArguments: 0
-usage: |
- clean
-steps:
- - command: gradle
-   tasks:
-     - clean

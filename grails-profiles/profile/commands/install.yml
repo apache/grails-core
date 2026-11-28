@@ -1,8 +1,0 @@
-description: Installs a profile into the local Maven cache
-minArguments: 0
-usage: |
- install
-steps:
- - command: gradle
-   tasks:
-     - install

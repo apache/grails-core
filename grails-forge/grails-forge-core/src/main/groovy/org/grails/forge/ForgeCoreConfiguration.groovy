@@ -19,10 +19,12 @@
 package org.grails.forge
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.core.pack.BundledPackFeatures
 import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.FilterType
+import org.springframework.context.annotation.Import
 
 /**
  * Registers the generator beans: every Spring component under {@code org.grails.forge}, which is the
@@ -46,5 +48,6 @@ import org.springframework.context.annotation.FilterType
                 )
         ]
 )
+@Import(BundledPackFeatures)
 @CompileStatic
 class ForgeCoreConfiguration { }

@@ -92,7 +92,7 @@ NOTE: Enabling StringCharArrayAccessor would show IllegalReflectiveAccess warnin
 
 ### Changes in profile.yml and feature.yml files in Grails Profiles
 
-The format of how dependencies are defined in features and profiles has been changed. See the section on link:profiles.html[Application Profiles] for more information.
+The format of how dependencies are defined in features and profiles has been changed. See the section on Application Profiles of the Grails 5 guide for more information; Grails 9 has link:applicationTypes.html#profilesReplaced[no profiles].
 
 ### Deprecation of dot navigation of Grails configuration
 

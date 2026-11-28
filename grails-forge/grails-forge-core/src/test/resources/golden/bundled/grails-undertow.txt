@@ -1,0 +1,67 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: embedded-servlet
+default: servlet=undertow
+dependency: implementation org.apache.grails:grails-undertow without a version
+
+# web
+title: Embedded Undertow
+description: grails-undertow
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: servlet undertow
+== build.gradle
++     implementation "org.apache.grails:grails-undertow"
+
+# rest_api
+title: Embedded Undertow
+description: grails-undertow
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: servlet undertow
+== build.gradle
++     implementation "org.apache.grails:grails-undertow"
+
+# web_plugin
+title: Embedded Undertow
+description: grails-undertow
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: servlet undertow
+== build.gradle
++     implementation "org.apache.grails:grails-undertow"
+
+# plugin
+title: Embedded Undertow
+description: grails-undertow
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: servlet undertow
+== build.gradle
++     implementation "org.apache.grails:grails-undertow"
+
+# rest_api_plugin
+title: Embedded Undertow
+description: grails-undertow
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: servlet undertow
+== build.gradle
++     implementation "org.apache.grails:grails-undertow"
+

@@ -29,6 +29,7 @@ import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.FeatureFilter
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 
@@ -76,13 +77,34 @@ class ForgeRequestSupport {
      * is a client error, unlike an unknown filter on a feature listing.
      */
     static Options options(String reloading, String gorm, String servlet, String javaVersion, OperatingSystem operatingSystem) {
-        new Options(
+        Options options = new Options(
                 selection('development reloading', reloading, parseEnum(DevelopmentReloading, reloading), DevelopmentReloading.DEFAULT_OPTION),
                 selection('Grails Data implementation', gorm, GormImpl.parse(gorm), GormImpl.DEFAULT_OPTION),
                 selection('servlet container', servlet, parseEnum(ServletImpl, servlet), ServletImpl.DEFAULT_OPTION),
                 selection('JDK version', javaVersion, parseJdk(javaVersion), JdkVersion.DEFAULT_OPTION),
                 operatingSystem
         )
+        return options.withGiven(given(options))
+    }
+
+    /**
+     * The options a request chose. The Forge UI sends every option with every request, also those the
+     * user left as they were, so a request cannot say that an option was given: an option counts as
+     * chosen when its value is not the default, and a value that repeats the default is the same as
+     * leaving the option out. A default gives way to the features that are selected; a choice does not.
+     */
+    static Set<OptionName> given(Options options) {
+        Set<OptionName> given = EnumSet.noneOf(OptionName)
+        if (options.developmentReloading != DevelopmentReloading.DEFAULT_OPTION) {
+            given.add(OptionName.RELOADING)
+        }
+        if (options.gormImpl != GormImpl.DEFAULT_OPTION) {
+            given.add(OptionName.DATA)
+        }
+        if (options.servletImpl != ServletImpl.DEFAULT_OPTION) {
+            given.add(OptionName.SERVLET)
+        }
+        return given
     }
 
     static Map<String, Object> error(String message) {

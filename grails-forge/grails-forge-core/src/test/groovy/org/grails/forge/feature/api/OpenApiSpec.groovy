@@ -74,12 +74,13 @@ class OpenApiSpec extends ApplicationContextSpec implements CommandOutputFixture
 
     void 'is offered for an application but not for a plugin'() {
         when:
-        def feature = beanContext.getBean(OpenApi)
+        def feature = beanContext.getBean(org.grails.forge.feature.FeatureRegistry).all().find { it.name == 'openapi' }
 
         then:
         feature.supports(ApplicationType.WEB)
         feature.supports(ApplicationType.REST_API)
         !feature.supports(ApplicationType.WEB_PLUGIN)
+        !feature.supports(ApplicationType.REST_API_PLUGIN)
         !feature.supports(ApplicationType.PLUGIN)
     }
 

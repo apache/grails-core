@@ -17,48 +17,96 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == plugin-info
-
-
 
 === Purpose
 
-
-Displays detailed info about a plugin
-
+Says what is known of one Grails plugin: its versions, what it is for, its license, where its documentation, issues and sources are, and the line that adds it to the build of an application. The command is also there as link:plugin-show.html[plugin show] and `plugin info`.
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
-grails plugin-info shiro
+grails plugin-info cache
+grails plugin-info org.apache.grails:grails-cache
+grails plugin-info audit-logging --snapshots
+grails plugin-info cache --json
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails plugin-info <<name>>
+grails plugin-info [--snapshots] [--offline] [--json] [--plugin-index=URL] PLUGIN
 ----
 
-This command will display more detailed info about a given plugin such as the author, location of documentation and so on. An example of the output of the geb plugin can be seen below:
+Arguments:
 
-[source,groovy]
+* `PLUGIN` - The plugin: its name or its artifact, as link:list-plugins.html[list-plugins] has them, or its coordinates as `group:artifact`. The `grails-` most artifacts begin with can be left out, so `cache`, `grails-cache`, `Cache` and `org.apache.grails:grails-cache` are the same plugin.
+
+Options:
+
+* `--snapshots` - Lists the snapshot versions among the versions as well.
+* `--offline` - Asks nothing of the network: what the command line knows of a plugin of this release of Grails is said, and what a plugin index that is a file and a repository that is a directory have.
+* `--plugin-index=URL` - The plugin index to read in the place of that of Grails, as for `list-plugins`.
+* `--json` - Writes what the command says as one JSON document for a tool to read.
+
+The command works in the directory of a project and outside one. An example:
+
+[source,console]
 ----
-| Plugin Info: geb
-| Latest Version: 1.0.1-SNAPSHOT
-| All Versions: 1.0-SNAPSHOT,1.0.0.M1,1.0.0.M2,1.0.0.M3,1.0.0.M4,1.0.0,1.0.0.BUILD-SNAPSHOT,1.0.1-SNAPSHOT
-| Title: Geb Plugin
+$ grails plugin-info cache
+Plugin: Cache (org.apache.grails:grails-cache)
 
-Plugin that adds Geb functional testing code generation features.
+Caches the results of service methods and of parts of views, with annotations and tags
 
-* License: APACHE
-* Documentation: https://github.com/apache/grails-core/tree/HEAD/grails-geb#readme
+* Version for Grails 9.0.0: 9.0.0, which org.apache.grails:grails-bom manages
+* Latest Version: 9.0.0
+* All Versions (https://repo.maven.apache.org/maven2/): 7.0.0, 7.0.1, 8.0.0, 9.0.0
+* Grails Version: 9.0.0 > *
+* License: Apache-2.0
 * Issue Tracker: https://github.com/apache/grails-core/issues
 * Source: https://github.com/apache/grails-core
+* Feature: cache. In the directory of an application: grails feature add cache
+* Definition:
+
+dependencies {
+    implementation 'org.apache.grails:grails-cache'
+}
 ----
+
+What is said comes from three places:
+
+* the two lists of link:list-plugins.html[list-plugins]: the plugins of this release of Grails, which the command line has in itself, and the Grails plugin index, which is read from the network;
+* the `maven-metadata.xml` of the plugin in a Maven repository, for its versions. A repository that is a directory can be the local Maven repository, in which `publishToMavenLocal` of Gradle and `mvn install` write `maven-metadata-local.xml` in its place: of a directory that file is read when it has no `maven-metadata.xml`, and a repository of the network is asked for `maven-metadata.xml` only;
+* the `<artifact>-<version>-plugin.xml` that a Grails plugin publishes beside its jar, for its title, description, license and the addresses of its documentation, issue tracker and sources. It is read for the version an application of this Grails gets, or else for the latest release.
+
+The repositories that are asked are those of the `GRAILS_REPO_URL` environment variable, in its order, then Maven Central, then the repository the plugin index names for the plugin. A repository that does not have a file is passed over; one that fails in another way is said in a warning and ends the search, so that the coordinates of a plugin are sent to no repository after one that refused them. Whatever cannot be read, the command says what is known without it.
+
+The lines mean:
+
+* *Version for Grails* - the version an application of this Grails gets: the one a Grails BOM manages, or else the latest release in the plugin index whose descriptor says it is for this Grails.
+* *Latest Version* and *All Versions* - as the repository has them, or else as the plugin index has them. Snapshots are left out unless `--snapshots` is given.
+* *Grails Version* - the versions of Grails the descriptor of the plugin says it is for, such as `7.0.0 > *`.
+* *Feature* - the feature of the command line that adds the plugin to an application, with its configuration, where there is one: `grails feature add` adds it to the application of the current directory, and `--features` of the create commands to a new one.
+* *Feature pack* - the feature of a link:{guidePath}plugins.html#forgeFeaturePacks[feature pack] the plugin index records for a version of the plugin, with the version an application of this Grails is created with and two command lines that create one with it: by the coordinates of the plugin, and by the name of the feature with the plugin index as the feature catalog. Each creates the application with that plugin in that version when it is typed as it is shown, in the same environment. The command is the create command of the first type of application the pack is for: `create-app` for a web application, else `create-restapi`, `create-web-plugin`, `create-plugin` or `create-rest-api-plugin`. The version is the one that command chooses from a catalog: the latest release whose pack this version of the command line reads and that is for that type and this Grails, or the version a Grails BOM manages. When no version is, the line says why, and so it does for a pack whose feature has the name of a feature of Grails, which no application is created with: that name selects the feature of Grails, and a pack of that name is refused. A version whose pack has a format a later version of the command line reads is not looked at.
++
+The coordinates are followed by `--feature-pack-repository` and the repository the plugin index names for that version when it is not one of `GRAILS_REPO_URL` or Maven Central, the only repositories asked for a plugin given by its coordinates. The name is given as `group:artifact#name` when another plugin of the index has a feature of that name. It is followed by `--feature-catalog` and the plugin index unless the environment makes the index the one catalog of the create commands (`GRAILS_PLUGIN_INDEX` names it, and `GRAILS_FORGE_CATALOG` is not set), and by `--refresh` when the index is an `https` address, so that the create command reads the index as `plugin-info` read it, and not from the copy it keeps for a day. An argument with a character a shell acts on is put between single quotes.
+* *Definition* - the line for the `dependencies` block of `build.gradle`. It has no version when a Grails BOM manages the plugin, and the version otherwise.
+
+A plugin that is in neither list is looked for in the repositories when it is given by its coordinates, which is how a plugin of your own repository is described:
+
+[source,console]
+----
+GRAILS_REPO_URL=https://repo.example.com/maven grails plugin-info com.example:example-audit
+----
+
+A plugin that is not known ends the command with exit code 1 and one line that names the plugins whose names are like what was typed. A name that more than one plugin has is answered with their coordinates.
+
+Everything the plugin index and a repository say is shown as text and nothing of it is run: control characters are taken out, an address that is not an `http` or `https` address is not shown, and no jar is downloaded.
+
+With `--json` the document has `format` (1), `pluginIndex`, `notes` and `plugin`, with `name`, `coordinates`, `ofGrails`, `title`, `description`, `grailsVersion`, `version`, `managedBy`, `latestVersion`, `versions`, `versionsFrom`, `requiresGrails`, `license`, `documentation`, `issueTracker`, `source`, `deprecated`, `dependency`, `features` and `featurePacks`, one entry for each feature of the packs the plugin index records, with its `name`, whether it is `offered`, and the `version`, `coordinates` and `applicationTypes` of the pack that is, with the `applicationType` (`web`, `rest-api`, `web-plugin`, `plugin` or `rest-api-plugin`) the version is chosen for, or the `reason` none is. For a plugin that is not known, `plugin` is `null` and `error` says why.
+
+`plugin-info`, link:plugin-show.html[plugin show] and `plugin info` are one command with three names, and none is deprecated: `grails plugin show` takes the same argument and options and writes the same, and names `plugin list` in the place of `list-plugins` where it names the list of the plugins.

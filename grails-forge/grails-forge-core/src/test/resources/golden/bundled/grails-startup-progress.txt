@@ -1,0 +1,55 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: implementation org.apache.grails:grails-startup-progress without a version
+
+# web
+title: Startup Progress Page
+description: Shows a progress page on the application's port while the application starts, instead of the port refusing connections, and a report of how long each stage of the start took once it is running. bootRun opens a browser on the page.
+category: Development Tools
+documentation: https://grails.apache.org/docs/VERSION/guide/gettingStarted.html#startupProgress
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-startup-progress documentation
++ - [Grails Startup Progress Page documentation](https://grails.apache.org/docs/VERSION/guide/gettingStarted.html#startupProgress)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-startup-progress"
+== gradle.properties
++ # Opens a browser on the startup progress page under bootRun. Delete this line to turn it off for everyone;
++ # for yourself, set it to false in ~/.gradle/gradle.properties or run: ./gradlew bootRun -Pgrails.startup.progress.openBrowser=false
++ grails.startup.progress.openBrowser=true
+
+# rest_api
+title: Startup Progress Page
+description: Shows a progress page on the application's port while the application starts, instead of the port refusing connections, and a report of how long each stage of the start took once it is running. bootRun opens a browser on the page.
+category: Development Tools
+documentation: https://grails.apache.org/docs/VERSION/guide/gettingStarted.html#startupProgress
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-startup-progress documentation
++ - [Grails Startup Progress Page documentation](https://grails.apache.org/docs/VERSION/guide/gettingStarted.html#startupProgress)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-startup-progress"
+== gradle.properties
++ # Opens a browser on the startup progress page under bootRun. Delete this line to turn it off for everyone;
++ # for yourself, set it to false in ~/.gradle/gradle.properties or run: ./gradlew bootRun -Pgrails.startup.progress.openBrowser=false
++ grails.startup.progress.openBrowser=true
+
+# web_plugin
+not for this kind of application
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+not for this kind of application
+

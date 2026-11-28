@@ -1,0 +1,55 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== project show
+
+=== Purpose
+
+Says how the application in the current directory was generated: its type, name and package, its options, the features that were asked for and left out, and every feature it has.
+
+=== Examples
+
+[source,console]
+----
+grails project show
+grails project show --json
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails project show [--json]
+----
+
+Options:
+
+* `--json` - Write the record and the command as one JSON document for a tool to read.
+
+`project show` is the `show` command of the `project` command. It reads the record of the project in its `.grails` directory. Its last line is the `create-` command that creates the application again, with the version of the command line that generated it. For an application whose record link:project-migrate.html[project migrate] wrote, it says so, shows what the application is taken to be, and the last line is the command for a new application of the same type, options and features. The `state` row is `adopted` for the record with a baseline, which is what this version generates for those choices and what `feature add` adds a feature against, and `untracked` for a record without one, to which no feature is added by a command. For a record without a baseline, the command asks with `--features` for the features that were found in the project as well as for those that were given to `project migrate`, and a line before it names the ones that were found. A feature of the record that a `create-` command does not select by name, as the feature of an option, is not named: it comes with the type of application, an option or another feature. With `--json`, `requestedFeatures` are the features that were given and `addedFeatures` the others of the record.
+
+Every option of the `create-` command is listed with the value the application was generated with, also an option that was not given, and marked: `default` when the value is what the running version of the command line takes when the option is not given, `differs from the current default: VALUE` when it is not, and `not recorded` when the record does not have it, in which case the current default is shown. The defaults of the `create-` commands can change from one version of Grails to the next; the record keeps the values, and the `create-` command in the last line has every option whose recorded value is not the current default. For an application that was made from a preset it has `--jdk`, `--servlet`, `--data` and `--reloading` whatever their values: a preset gives these options defaults of its own, which the record does not have, so an option given in place of the one of the preset, also one whose value is the default of Grails, stays what it was. The marks compare with the defaults of the command line, not with those of the preset. With `--json` the list is the member `effectiveOptions` (`name`, `option`, `value`, `default`, `status`) and the features that were not asked for are `addedFeatures`.
+
+The `build` line has the identity of the build of the generator that wrote the record, a SHA-256 digest that tells two snapshots of one version apart, and says whether it is the build of the command line that runs (`generator.sha256` with `--json`). A note says when the project is now on another version of Grails than the record, as after `grailsVersion` was changed by hand: the record says how the application was generated, and link:project-migrate.html[project migrate] moves the record of an earlier version to the version that runs, after which `project regenerate` and `feature add` run with it. A record of a later version is run by the command line of that version. See "The record over the life of a project" in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project].
+
+For an application that was made from a preset, `project show` has a `preset` line with the name of the preset and the coordinates of its artifact, and the `create-` command has `--preset` with those coordinates, and the options as said above; with `--json` the preset is the member `preset` (`name`, `coordinates`, `version`). The options that were given for features with `--feature-option` are `feature option` lines, are in the `create-` command, and with `--json` are the member `featureOptions`, by the name of the feature and then of the option; it is empty for an application that was given none. See link:{guidePath}applicationTypes.html#presets[Making Applications from a Preset].
+
+See "How a project was generated, and generating it again" in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project] for the output and the JSON document.

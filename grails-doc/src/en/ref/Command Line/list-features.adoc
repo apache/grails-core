@@ -21,15 +21,15 @@ under the License.
 
 === Purpose
 
-Output the available features and their descriptions for a given `create-\<<application-type>>` command. Such as: `create-app`, `create-plugin`, `create-web-plugin`, etc.
+Output the available features and their descriptions for a given `create-\<<application-type>>` command. Such as: `create-app`, `create-plugin`, `create-web-plugin`, `create-rest-api-plugin`, etc.
 
-NOTE: The `--list-features` flag is only supported by the Forge CLI and must be used with `grails -t forge`.
+NOTE: The `--list-features` flag is an option of the commands that create a project.
 
 === Examples
 
 [source,console]
 ----
-$ grails -t forge create-app --list-features
+$ grails create-app --list-features
 ----
 
 === Description
@@ -37,19 +37,40 @@ $ grails -t forge create-app --list-features
 Usage:
 [source,console]
 ----
-$ grails -t forge create-app --list-features
-$ grails -t forge create-plugin --list-features
+$ grails create-app --list-features
+$ grails create-plugin --list-features
 ----
 
-Lists the features that are available. Note: Typical output looks like this:
+Lists the features that are available for the type of application, by category. Typical output looks like this, where `...` stands for the categories that are left out here:
 
 [source,shell]
 ----
-grails> create-restapi --list-features
+$ grails create-restapi --list-features
 Available Features
 (+) denotes the feature is included by default
-  Name                                Description
-  ----------------------------------  ---------------------------------
+  Name                               Description
+  ---------------------------------  ---------------
+
+  Database
+  database-migration                 Add support for Liquibase database migrations. The Database Migration Plugin helps you manage database schema changes while developing Grails applications.
+  gorm-async                         Adds the asynchronous programming model for Grails Data, including the AsyncEntity trait and the async namespace.
+  gorm-hibernate5 (+)                Configure Grails Data for using Hibernate 5.
+  gorm-hibernate7                    Configure Grails Data for using Hibernate 7.
+  gorm-mongodb                       Configure Grails Data for using MongoDB.
+  gorm-neo4j                         Configure GORM for using Neo4j
+  h2 (+)                             Add the H2 database with default configuration. H2 is a lightweight in-memory database, perfect for development and testing.
+  mongo-sync                         Add support for the MongoDB Synchronous Driver.
+  mysql                              Add MySQL driver and default configuration
+  postgres                           Add PostgresSQL driver and default configuration.
+  sqlserver                          Add Microsoft SQL Server driver and default configuration.
+
+  View Rendering
+  gsp                                GSP (Groovy Server Pages) is the server-side view technology used in Grails. It is designed to be familiar to developers with experience in ASP or JSP, while providing a more flexible, expressive, and intuitive way to build web pages.
+  views-json (+)                     JSON views are written in Groovy, end with the file extension gson and reside in the grails-app/views directory. They provide a DSL for producing output in the JSON format.
+  views-markup                       Markup views are written in Groovy, end with the file extension gml and reside in the grails-app/views directory. They provide a DSL for producing output in the XML.
+
+  ...
+----------------------------------  ---------------------------------
   AI
   grails-spring-ai                    Integrates Spring AI: a chat client over the provider of your choice, chat responses streamed from controller actions, and scripted models for tests.
   spring-ai-anthropic                 Uses Anthropic Claude models through Spring AI, with the API key taken from the ANTHROPIC_API_KEY environment variable.
@@ -64,7 +85,7 @@ Available Features
 
   Cache
   cache                               The Grails Cache plugin provides powerful and easy to use caching functionality to Grails applications and plugins.
-  cache-ehcache                       The Grails Cache Ehcache plugin extends the Cache plugin and uses Ehcache as the storage provider for cached content.
+  cache-ehcache                       Caches with Ehcache 3 through JCache (JSR-107): the cache manager of the Cache plugin, grailsCacheManager, is defined in grails-app/conf/spring/resources.groovy over the caches of grails-app/conf/ehcache.xml, and a cache that file does not configure is created from its default template when it is first used.
 
   Client
   micronaut-http-client               Adds support for the Micronaut HTTP client
@@ -119,3 +140,5 @@ Available Features
   views-json (+)                      JSON views are written in Groovy, end with the file extension gson and reside in the grails-app/views directory. They provide a DSL for producing output in the JSON format.
   views-markup                        Markup views are written in Groovy, end with the file extension gml and reside in the grails-app/views directory. They provide a DSL for producing output in the XML.
 ----
+
+The options of the command that are given with `--list-features` decide the defaults the list marks, such as the Grails Data implementation of `--data`. A feature that no Grails BOM covers together with a feature the project has by default says so after its description, as `gorm-neo4j` does with `--data hibernate7`: `(cannot be combined with gorm-hibernate7: no Grails BOM covers both)`. The command refuses such a feature.

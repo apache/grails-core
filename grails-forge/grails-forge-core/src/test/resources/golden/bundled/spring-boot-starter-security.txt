@@ -1,0 +1,185 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: spring-security
+order: 400
+adds: scaffolding
+dependency: implementation org.springframework.boot:spring-boot-starter-security without a version
+
+# web
+title: Spring Boot Starter Security
+description: Secures the application with a lightweight, plain Spring Security setup that does NOT use any Grails plugins: spring-boot-starter-security, a GORM-backed User domain implementing UserDetails, form login and logout, a scaffolded user admin, and a bootstrapped admin account with a generated password.
+category: Spring Security
+documentation: https://docs.spring.io/spring-boot/reference/web/spring-security.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature spring-boot-starter-security documentation
++ 
++ - [Grails Spring Boot Starter Security documentation](https://docs.spring.io/spring-boot/reference/web/spring-security.html)
++ 
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter-security"
+== grails-app/controllers/example/grails/UserController.groovy
++ package example.grails
++ 
++ import grails.plugin.scaffolding.RestfulServiceController
++ import grails.plugin.scaffolding.annotation.Scaffold
++ 
++ @Scaffold(RestfulServiceController<User>)
++ class UserController {
++ }
+== grails-app/domain/example/grails/User.groovy
++ package example.grails
++ 
++ import org.springframework.security.core.GrantedAuthority
++ import org.springframework.security.core.authority.SimpleGrantedAuthority
++ import org.springframework.security.core.userdetails.UserDetails
++ 
++ class User implements UserDetails {
++ 
++     String username
++     String password
++     boolean enabled = true
++     boolean accountNonExpired = true
++     boolean accountNonLocked = true
++     boolean credentialsNonExpired = true
++ 
++     static hasMany = [roles: String]
++ 
++     static mapping = {
++         table 'users'
++     }
++ 
++     static constraints = {
++         username nullable: false, blank: false, unique: true
++         password nullable: false, blank: false, password: true
++     }
++ 
++     @Override
++     Collection<GrantedAuthority> getAuthorities() {
++         roles.collect { new SimpleGrantedAuthority(it) }
++     }
++ }
+== grails-app/init/example/grails/Application.groovy
++ import org.springframework.security.config.annotation.web.builders.HttpSecurity
++ import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
++ import org.springframework.security.crypto.factory.PasswordEncoderFactories
++ import org.springframework.security.crypto.password.PasswordEncoder
++ import org.springframework.security.web.SecurityFilterChain
++ 
++ @EnableWebSecurity
++ 
++     def beans = {
++ 
++         bean(PasswordEncoder) {
++             PasswordEncoderFactories.createDelegatingPasswordEncoder()
++         }
++ 
++         bean('filterChain', SecurityFilterChain) { HttpSecurity http ->
++             http
++                 .authorizeHttpRequests {
++                     it.requestMatchers('/', '/index', '/index.gsp', '/error', '/favicon.ico', '/assets/**').permitAll()
++                       .requestMatchers('/user/**').hasRole('ADMIN')
++                       .anyRequest().authenticated()
++                 }
++                 .formLogin { }
++                 .logout { it.logoutSuccessUrl('/') }
++             http.build()
++         }
++     }
+== grails-app/init/example/grails/BootStrap.groovy
++ import org.springframework.security.crypto.factory.PasswordEncoderFactories
++         User.withTransaction {
++             def passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder()
++             def password = UUID.randomUUID().toString()
++             new User(username: 'admin', password: passwordEncoder.encode(password), roles: ['ROLE_ADMIN']).save(failOnError: true)
++             log.warn "Generated admin credentials: admin / $password"
++             // A second, non-admin account: the URL rules in Application distinguish ROLE_ADMIN
++             // from an ordinary logged-in user, and without this nothing exercises that.
++             def userPassword = UUID.randomUUID().toString()
++             new User(username: 'user', password: passwordEncoder.encode(userPassword), roles: ['ROLE_USER']).save(failOnError: true)
++             log.warn "Generated user credentials: user / $userPassword"
++         }
++ 
+== grails-app/services/example/grails/UserService.groovy
++ package example.grails
++ 
++ import grails.gorm.transactions.Transactional
++ import grails.plugin.scaffolding.annotation.Scaffold
++ import org.springframework.security.core.userdetails.UserDetails
++ import org.springframework.security.core.userdetails.UserDetailsService
++ import org.springframework.security.core.userdetails.UsernameNotFoundException
++ 
++ @Scaffold(User)
++ class UserService implements UserDetailsService {
++ 
++     @Override
++     @Transactional(readOnly = true)
++     UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
++         Optional.ofNullable(User.findByUsername(username, [fetch: [roles: 'join']]))
++                 .orElseThrow { new UsernameNotFoundException(username) }
++     }
++ }
+== src/test/groovy/example/grails/UserSpec.groovy
++ package example.grails
++ 
++ import grails.testing.gorm.DomainUnitTest
++ import spock.lang.Specification
++ 
++ class UserSpec extends Specification implements DomainUnitTest<User> {
++ 
++     void 'a user without a username and a password is rejected'() {
++         given:
++         User user = new User()
++ 
++         expect:
++         !user.validate()
++ 
++         and:
++         with(user.errors) {
++             getFieldError('username').code == 'nullable'
++             getFieldError('password').code == 'nullable'
++         }
++     }
++ 
++     void 'a user whose username and password are blank is rejected'() {
++         given: 'the values are assigned directly, since the map constructor binds an empty string to null'
++         User user = new User()
++         user.username = ''
++         user.password = ''
++ 
++         expect:
++         !user.validate()
++ 
++         and:
++         with(user.errors) {
++             getFieldError('username').code == 'blank'
++             getFieldError('password').code == 'blank'
++         }
++     }
++ 
++     void 'a user with a username and a password is accepted'() {
++         expect:
++         new User(username: 'admin', password: 'secret', roles: ['ROLE_ADMIN']).validate()
++     }
++ 
++     void 'the authorities derive from the roles'() {
++         expect:
++         new User(username: 'admin', password: 'secret', roles: ['ROLE_ADMIN']).authorities*.authority == ['ROLE_ADMIN']
++     }
++ }
+
+# rest_api
+not for this kind of application
+
+# web_plugin
+not for this kind of application
+
+# plugin
+not for this kind of application
+
+# rest_api_plugin
+not for this kind of application
+

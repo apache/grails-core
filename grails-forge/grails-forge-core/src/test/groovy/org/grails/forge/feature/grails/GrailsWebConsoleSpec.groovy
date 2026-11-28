@@ -22,9 +22,13 @@ package org.grails.forge.feature.grails
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.generator.GeneratorContext
+import org.apache.grails.forge.core.pack.PackFeature
+import org.grails.forge.application.ApplicationType
+import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.feature.Features
+import org.grails.forge.fixture.CommandOutputFixture
 
-class GrailsWebConsoleSpec extends ApplicationContextSpec {
+class GrailsWebConsoleSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     void "test grails-web-console feature"() {
         when:
@@ -51,5 +55,20 @@ class GrailsWebConsoleSpec extends ApplicationContextSpec {
         then:
         ctx.configuration.containsKey("environments.production.grails.plugin.console.enabled")
         ctx.configuration.containsKey("environments.production.grails.plugin.console.fileStore.remote.enabled")
+    }
+
+    void "the feature is a pack of Forge and gives what the compiled feature gave"() {
+        when:
+        Map<String, String> output = generate(["grails-web-console"])
+
+        then: 'the version of the plugin is the one Forge knows, which the pack does not name'
+        output['build.gradle'] =~ /(?m)^    runtimeOnly "org\.grails\.plugins:grails-web-console:\d[^"]*"$/
+        output['README.md'].contains('## Feature grails-web-console documentation\n\n' +
+                '- [Grails Web Console documentation](https://github.com/grails-plugins/grails-web-console/#readme)\n')
+        output['grails-app/conf/application.yml'].contains(
+                '      plugin:\n        console:\n          enabled: false\n          fileStore:\n            remote:\n              enabled: false')
+
+        and:
+        beanContext.getBean(FeatureRegistry).require(ApplicationType.WEB, 'grails-web-console') instanceof PackFeature
     }
 }

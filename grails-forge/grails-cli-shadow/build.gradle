@@ -16,6 +16,7 @@
  */
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.github.jengelman.gradle.plugins.shadow.transformers.PropertiesFileTransformer
+import org.apache.grails.forge.buildlogic.shadowjar.GrailsGroovyExtensionTransformer
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowLicenseTransform
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
 
@@ -33,35 +34,23 @@ group = 'org.apache.grails'
 
 dependencies {
     implementation platform("org.apache.grails:grails-bom:$projectVersion")
-
-    // shell-cli dependencies
-    implementation 'org.apache.grails:grails-shell-cli'
-    implementation('org.springframework.boot:spring-boot-cli') {
-        exclude group: 'jline', module: 'jline'
-    }
     implementation 'org.apache.groovy:groovy'
-    implementation 'org.apache.groovy:groovy-ant'
-    implementation 'org.apache.groovy:groovy-templates'
 
-    // The commands are pulled from the shellCliDependencies in the shell project, but they are not in the shell jar file,
-    // so they must be added here. To keep the jar file smaller, only a subset is included here
-    implementation 'org.apache.grails:grails-core' // for ApplicationContextCommandFactory to lookup commands
-    implementation 'org.apache.grails:grails-url-mappings' // for UrlMappingsReportCommand
-    // profiles will add additional libraries as needed to surface commands
-
-    // forge dependencies
     implementation project(':grails-forge-cli'), {
-        // exclude the slf4j-nop dependency because the simple slf4j implementation is already included
-        // which will cause a duplicate warning message
+        // the Forge CLI on its own binds slf4j-nop; the launcher binds the simple implementation below,
+        // and two bindings on one class path make SLF4J warn on every start
         exclude group: 'org.slf4j', module: 'slf4j-nop'
     }
+    // the logging of the launcher: warnings and errors on the standard error, as the
+    // simplelogger.properties of grails-forge-cli configures it
+    runtimeOnly 'org.slf4j:slf4j-simple'
 }
 
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
 shadowJarTask.configure { ShadowJar it ->
     it.archiveClassifier = 'all'
 
-    // services & custom grails.factories have to be merged since commands can be created from both sources
+    // services & custom grails.factories are one file per jar at the same path, so they are merged
     it.mergeServiceFiles()
     it.mergeServiceFiles('META-INF/grails.factories')
     // the Forge CLI starts a Grails application: Spring Boot finds its auto-configurations and
@@ -69,23 +58,42 @@ shadowJarTask.configure { ShadowJar it ->
     // letting the first jar win
     it.mergeServiceFiles('META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports')
     it.transform(PropertiesFileTransformer) {
-        // the views registries of the Forge plugin and the Forge CLI, each naming its own compiled pages
+        // the views registry of the Forge plugin, which names its compiled pages, merged with any other there is
         paths = ['META-INF/spring.factories', 'gsp/views.properties']
         mergeStrategy = 'append'
     }
 
-    // groovy extensions are shipped with grails-core
-    it.mergeGroovyExtensionModules()
+    // Keep the intermediate jar reproducible too: Shadow's transformer writes a timestamp comment.
+    it.transform(GrailsGroovyExtensionTransformer)
 
     // combines all NOTICE files
     it.transform(GrailsShadowNoticeTransform) {
         it.projectName = 'Apache Grails'
         it.inceptionYear = '2005'
     }
+    // JSON Schema Validator, which the MCP Java SDK validates tool input with, has a NOTICE in its repository and none in
+    // its jar: it is merged with the others by the transform above
+    it.from(rootProject.layout.projectDirectory.file('../licenses/NOTICE-json-schema-validator.txt')) { CopySpec spec ->
+        spec.into('META-INF')
+        spec.rename { 'NOTICE-json-schema-validator' }
+    }
 
-    // combines all LICENSE files
+    // Combines all LICENSE files. The jars of the MCP Java SDK and of reactive-streams have no LICENSE of their own, so
+    // their licenses follow the Apache License here, with the components they are of. The grails-cli jar is made from
+    // this one and takes these texts from it, so they are added here only.
+    String licenseSeparator = '\n--------------------------------------------------------------------------\n\n'
     it.transform(GrailsShadowLicenseTransform) {
-        it.licenseText = rootProject.layout.projectDirectory.file('../licenses/LICENSE-Apache-2.0.txt').getAsFile().text
+        it.licenseText = rootProject.layout.projectDirectory.file('../licenses/LICENSE-Apache-2.0.txt').getAsFile().text +
+                licenseSeparator +
+                'The following components are licensed under the MIT License:\n\n' +
+                '    io.modelcontextprotocol.sdk:mcp\n' +
+                '    io.modelcontextprotocol.sdk:mcp-core\n' +
+                '    io.modelcontextprotocol.sdk:mcp-json-jackson3\n\n' +
+                rootProject.layout.projectDirectory.file('../licenses/LICENSE-MIT-mcp-java-sdk.txt').getAsFile().text.trim() + '\n' +
+                licenseSeparator +
+                'The following component is licensed under the MIT No Attribution License (MIT-0):\n\n' +
+                '    org.reactivestreams:reactive-streams\n\n' +
+                rootProject.layout.projectDirectory.file('../licenses/LICENSE-MIT-0.txt').getAsFile().text.trim() + '\n'
     }
 
     it.exclude(

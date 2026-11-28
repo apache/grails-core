@@ -139,8 +139,9 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
                                BomPropertyOverridesExtension extension) {
         def bomCoordinates = new LinkedHashSet<String>()
 
+        Set<String> excluded = new LinkedHashSet<String>(extension.excludedConfigurations.get())
         if (extension.autoDetect.get()) {
-            bomCoordinates.addAll(detectDeclaredBoms(configurations))
+            bomCoordinates.addAll(detectDeclaredBoms(configurations, excluded))
         }
 
         for (String explicit : extension.boms.get()) {
@@ -163,7 +164,7 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
         // Resolvable/consumable configurations inherit the constraints through the
         // declarable configurations they extend.
         configurations.configureEach {
-            if (it.canBeDeclared) {
+            if (it.canBeDeclared && !excluded.contains(it.name)) {
                 managedVersions.applyTo(dependencies, it.name)
             }
         }
@@ -176,9 +177,22 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
      * so the call path stays free of Project references. Visible for testing.
      */
     static Set<String> detectDeclaredBoms(ConfigurationContainer configurations) {
+        detectDeclaredBoms(configurations, Collections.<String>emptySet())
+    }
+
+    /**
+     * Scans the configurations as {@link #detectDeclaredBoms(ConfigurationContainer)} does, without
+     * those of the given names: a platform declared on a configuration the overrides are not applied
+     * to belongs to what that configuration is for, and its properties are not the project's to
+     * override.
+     */
+    static Set<String> detectDeclaredBoms(ConfigurationContainer configurations, Set<String> excluded) {
         def coordinates = new LinkedHashSet<String>()
 
         configurations.each {
+            if (excluded.contains(it.name)) {
+                return
+            }
             for (Dependency dep : it.dependencies) {
                 if (!(dep instanceof ModuleDependency)) {
                     continue

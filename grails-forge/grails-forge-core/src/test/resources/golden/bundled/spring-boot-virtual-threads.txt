@@ -1,0 +1,85 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: threading
+
+# web
+title: Spring Boot Virtual Threads
+description: Enables Virtual Threads in Spring Boot for JDK 25+.
+category: Spring Framework
+documentation: https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature spring-boot-virtual-threads documentation
++ - [Grails Spring Boot Virtual Threads documentation](https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads)
++ 
++ 
+== grails-app/conf/application.yml
++ spring.threads.virtual.enabled: false
+
+# rest_api
+title: Spring Boot Virtual Threads
+description: Enables Virtual Threads in Spring Boot for JDK 25+.
+category: Spring Framework
+documentation: https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature spring-boot-virtual-threads documentation
++ - [Grails Spring Boot Virtual Threads documentation](https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads)
++ 
++ 
+== grails-app/conf/application.yml
++ spring.threads.virtual.enabled: false
+
+# web_plugin
+title: Spring Boot Virtual Threads
+description: Enables Virtual Threads in Spring Boot for JDK 25+.
+category: Spring Framework
+documentation: https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature spring-boot-virtual-threads documentation
++ 
++ - [Grails Spring Boot Virtual Threads documentation](https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads)
++ 
+== grails-app/conf/application.yml
++ spring.threads.virtual.enabled: false
+
+# plugin
+title: Spring Boot Virtual Threads
+description: Enables Virtual Threads in Spring Boot for JDK 25+.
+category: Spring Framework
+documentation: https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature spring-boot-virtual-threads documentation
++ 
++ - [Grails Spring Boot Virtual Threads documentation](https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads)
++ 
+== grails-app/conf/application.yml
++ spring.threads.virtual.enabled: false
+
+# rest_api_plugin
+title: Spring Boot Virtual Threads
+description: Enables Virtual Threads in Spring Boot for JDK 25+.
+category: Spring Framework
+documentation: https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature spring-boot-virtual-threads documentation
++ - [Grails Spring Boot Virtual Threads documentation](https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads)
++ 
++ 
+== grails-app/conf/application.yml
++ spring.threads.virtual.enabled: false
+

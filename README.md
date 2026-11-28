@@ -70,28 +70,29 @@ To create an Apache Grails Application with the wrapper follow these steps:
 
 1. Extract the wrapper to your preferred location.
 2. Set the environment variable `PREFERRED_GRAILS_VERSION` to the preferred version.
-3. Run the wrapper command `grailsw -t forge create-app` to create a new Apache Grails Application.
+3. Run the wrapper command `grailsw create-app` to create a new Apache Grails Application.
 
-Please note, that the wrapper supports either the legacy `Apache Grails Shell` or the newer `Apache Grails Forge` CLI.
-For more detailed information about it, see the [documentation](https://grails.apache.org/docs/snapshot/index.html).
+The wrapper downloads the `grails` command line of that version and starts it. For more detailed information about it,
+see the [documentation](https://grails.apache.org/docs/snapshot/index.html).
 
 #### Wrapper - Running Commands inside a Apache Grails Project
 
 For running commands, the Grails Wrapper will always pull the Apache Grails version from `gradle.properties` and ignore
-any environment variables. Type `grailsw -t shell help` to see the available commands. For more detailed information
+any environment variables. Type `grailsw help` to see the available commands. For more detailed information
 about it, see the [documentation](https://grails.apache.org/docs/snapshot/index.html).
 
-### grails-shell-cli
+A wrapper committed in an application that was created with Apache Grails 7 or 8 replaces itself when the application
+is upgraded to Apache Grails 9: set `grailsVersion` in `gradle.properties` to the Apache Grails 9 version, run
+`grailsw update-wrapper` and commit `grailsw`, `grailsw.bat` and `grails-wrapper.jar`, as the upgrade notes of the
+documentation describe. The Apache Grails 9 wrapper also starts the command lines of Apache Grails 7 and 8.
 
-The legacy Apache Grails CLI is the command line interface that IntelliJ uses to interact with existing Apache Grails
-Applications. It can be used to generate applications or it can be used to interact with existing ones. To use it,
-download it to your preferred location from the [grails-forge](https://github.com/apache/grails-core/releases) release
-page. You can use the command `./grails-shell-cli help` to see what's possible.
+### grails
 
-### grails-forge-cli
-
-The newer Apache Grails CLI is available from the [grails-forge](https://github.com/apache/grails-core/releases)
-release page. You can use the command `./grails-forge-cli --help` to see what's possible.
+The Apache Grails CLI creates applications and plugins and runs the commands of an existing Apache Grails
+Application. To use it, download the binary distribution to your preferred location from the
+[release](https://github.com/apache/grails-core/releases) page. You can use the command `./grails help` to see
+what's possible. Since Apache Grails 9 it is the only command of the distribution: the `grails-shell-cli` and
+`grails-forge-cli` commands, the `-t`/`--type` option and the `GRAILS_PREFERRED_SHELL` environment variable are gone.
 
 ### SDKMAN
 
@@ -100,8 +101,7 @@ SDKMAN is installed, this command installs the latest available version:
 
      sdk install grails
 
-Apache Grails versions installed via SDKMAN! include the following commands `grails`, `grails-shell-cli`, &
-`grails-forge-cli`. The grails command simply delegates to forge or the legacy shell. For further information on SDKMAN,
+Apache Grails versions installed via SDKMAN! include the `grails` command. For further information on SDKMAN,
 please see their [website](https://sdkman.io/).
 
 ## Starting your Grails Application

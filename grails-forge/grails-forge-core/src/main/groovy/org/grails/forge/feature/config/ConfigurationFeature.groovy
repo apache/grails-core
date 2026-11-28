@@ -40,6 +40,11 @@ interface ConfigurationFeature extends OneOfFeature {
     }
 
     @Override
+    default String getGroup() {
+        return 'configuration'
+    }
+
+    @Override
     default String getCategory() {
         return Category.CONFIGURATION
     }

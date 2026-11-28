@@ -1,0 +1,176 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+// The build has no repositories, and the configuration cache resolves the classpaths of the
+// scheduled compile tasks even when they have no sources, so nothing external is declared.
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+
+// Forge is in no repository this build has, so the pack is checked by a stand-in that is started and
+// read the way Forge is. A test that wants the Forge the plugin resolves by itself, or something that
+// is not Forge, says so.
+if (providers.gradleProperty('notForge').present) {
+    dependencies {
+        grailsForgePackTooling files('not-forge')
+    }
+} else if (!providers.gradleProperty('forgeOfGrails').present) {
+    dependencies {
+        grailsForgePackTooling 'org.example.forge:forge-stub'
+    }
+}
+
+// What the Grails plugins do to the versions of a configuration of the project, and must not do to the
+// class path of Forge: the same two modules on both, from a repository of descriptors without jars, with
+// a BOM whose property the build overrides and a Groovy the build forces.
+if (providers.gradleProperty('versionsOfTheProject').present || providers.gradleProperty('withRepository').present) {
+    repositories {
+        maven {
+            url = uri("${projectDir}/maven-repo")
+        }
+    }
+}
+// What a repository has a part of: a module without its jar, or one that needs modules nobody has.
+if (providers.gradleProperty('toolingExtra').present) {
+    dependencies {
+        grailsForgePackTooling providers.gradleProperty('toolingExtra').get()
+    }
+}
+if (providers.gradleProperty('versionsOfTheProject').present) {
+    apply plugin: 'org.apache.grails.gradle.bom-property-overrides'
+
+    dependencies {
+        implementation platform('org.example:tool-bom:1.0.0')
+        implementation 'org.example:toollib'
+        implementation 'org.apache.groovy:groovy:1.0.0'
+        grailsForgePackTooling 'org.example:toollib:1.0.0'
+        grailsForgePackTooling 'org.apache.groovy:groovy:1.0.0'
+    }
+
+    ['runtimeClasspath', 'grailsForgePackTooling'].each { String name ->
+        def root = configurations.named(name).flatMap { it.incoming.resolutionResult.rootComponent }
+        tasks.register("print${name.capitalize()}") {
+            doLast {
+                root.get().dependencies.each { println "${name}=${it.selected.moduleVersion}" }
+            }
+        }
+    }
+}
+
+if (providers.gradleProperty('published').present) {
+    apply plugin: 'maven-publish'
+
+    group = 'org.example'
+    version = '1.0.0'
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.java
+            }
+        }
+        repositories {
+            maven {
+                url = uri(layout.buildDirectory.dir('published'))
+            }
+        }
+    }
+}
+
+// How forgePackTest is told what to generate and how to build it. Without any of these it has the
+// fixtures Forge makes of the pack, the task assemble and the repositories of this build.
+if (providers.gradleProperty('fixtures').present) {
+    String named = providers.gradleProperty('fixtures').get()
+    grails {
+        forgePackTest {
+            fixture('alpha') {
+                options = [data: 'mongodb', jdk: '25']
+                features = ['one', 'two']
+            }
+            named.split(',').findAll { it }.each { String each ->
+                fixture(each.split(':')[0]) {
+                    applicationType = each.split(':')[1]
+                }
+            }
+        }
+    }
+}
+if (providers.gradleProperty('fixtureBuild').present) {
+    grails {
+        forgePackTest {
+            tasks = ['build', 'check']
+            arguments = ['--stacktrace']
+        }
+    }
+}
+if (providers.gradleProperty('fixtureRepositories').present) {
+    grails {
+        forgePackTest {
+            repositories = ['https://repo.example.org/maven', 'mavenCentral()']
+        }
+    }
+}
+// Repositories that are not what their names say, one with a password in its address, one that is not
+// https, and the two Gradle has a name for. Nothing is resolved from them.
+if (providers.gradleProperty('oddRepositories').present) {
+    repositories {
+        maven {
+            name = 'MavenRepoMirror'
+            url = uri('https://mirror.example.org/maven')
+        }
+        maven {
+            name = 'MavenLocalCopy'
+            url = uri("${projectDir}/maven-repo")
+        }
+        maven {
+            url = uri('https://alice:hunter2@secret.example.org/maven')
+        }
+        maven {
+            url = uri('http://plain.example.org/maven')
+            allowInsecureProtocol = true
+        }
+        mavenCentral()
+        mavenLocal()
+    }
+}
+if (providers.gradleProperty('fixtureSecretRepository').present) {
+    grails {
+        forgePackTest {
+            repositories = ['https://alice:hunter2@secret.example.org/maven']
+        }
+    }
+}
+if (providers.gradleProperty('fixtureTimeout').present) {
+    int seconds = providers.gradleProperty('fixtureTimeout').get() as int
+    grails {
+        forgePackTest {
+            fixtureTimeout = java.time.Duration.ofSeconds(seconds)
+        }
+    }
+}
+if (providers.gradleProperty('fixtureMavenLocal').present) {
+    grails {
+        forgePackTest {
+            mavenLocal = true
+        }
+    }
+}
+if (providers.gradleProperty('fixtureOffline').present) {
+    grails {
+        forgePackTest {
+            offline = true
+        }
+    }
+}
+if (providers.gradleProperty('fixtureOption').present) {
+    String option = providers.gradleProperty('fixtureOption').get()
+    grails {
+        forgePackTest {
+            fixture('odd') {
+                options = [(option): 'a value']
+            }
+        }
+    }
+}

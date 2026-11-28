@@ -24,7 +24,7 @@ All of the plugin's classes are designed for extensibility; the classes are all 
 
 The core cache plugin registers a `grailsCacheManager` Spring bean, and the extension plugins replace this bean with one that creates and manages caches for that implementation. The default implementation is an instance of link:{api}grails/plugin/cache/GrailsConcurrentMapCacheManager.html[GrailsConcurrentMapCacheManager] which uses link:{api}grails/plugin/cache/GrailsConcurrentMapCache.html[GrailsConcurrentMapCache] as its cache implementation. It uses a `java.util.concurrent.ConcurrentHashMap` to store cached values.
 
-You can customize the cache manager by replacing the `grailsCacheManager` Spring bean in `resources.groovy` with your own; either subclass link:{api}grails/plugin/cache/GrailsConcurrentMapCacheManager.html[GrailsConcurrentMapCacheManager] (e.g. to override the `createConcurrentMapCache()` method) or by implementing the link:{api}org/grails/plugin/cache/GrailsCacheManager.html[GrailsCacheManager] interface.
+You can customize the cache manager by replacing the `grailsCacheManager` Spring bean in `resources.groovy` with your own; either subclass link:{api}grails/plugin/cache/GrailsConcurrentMapCacheManager.html[GrailsConcurrentMapCacheManager] (e.g. to override the `createConcurrentMapCache()` method) or by implementing the link:{api}org/grails/plugin/cache/GrailsCacheManager.html[GrailsCacheManager] interface. An application created with the `cache-ehcache` feature does so with a `JCacheCacheManager` of Spring, see <<cacheEhcache,Ehcache through JCache>>.
 
 === Fragment caching
 

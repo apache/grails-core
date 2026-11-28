@@ -27,6 +27,7 @@ import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
 /**
@@ -56,10 +57,27 @@ abstract class GradleSpecification extends Specification {
         // The TestKit directory is the Gradle user home of the builds, so every test project runs with the
         // configuration cache, as generated applications do, and fails on any configuration cache problem.
         // A test passes --no-configuration-cache to run a build without it.
+        // The daemon does not watch the file system: every test of a spec has its project in the same
+        // directory, which is deleted and copied again between two builds of one daemon, and on a busy
+        // machine the next build started with what the daemon remembered of a file of the test before.
+        // It then stored that as an input of the configuration, and the build after it found the file
+        // changed and did not reuse the configuration cache, although nothing had touched the file.
         Files.writeString(testKitDir.resolve('gradle.properties'), '''\
             org.gradle.configuration-cache=true
             org.gradle.configuration-cache.problems=fail
+            org.gradle.vfs.watch=false
             '''.stripIndent())
+        // A coverage run names the JaCoCo agent and the file it writes (see the build file of this module): the
+        // builds run in daemons of their own, which the agent of the test JVM does not see, so the daemons
+        // are started with it. The heap is the one the test projects ask for in their own gradle.properties,
+        // which these arguments replace because the Gradle user home is read after the project.
+        String coverageAgent = System.getProperty('grails.testkit.coverage.agent')
+        if (coverageAgent) {
+            String destination = System.getProperty('grails.testkit.coverage.destfile')
+            Files.writeString(testKitDir.resolve('gradle.properties'),
+                    "org.gradle.jvmargs=-Xmx1g -javaagent:${coverageAgent}=destfile=${destination},append=true\n",
+                    StandardOpenOption.APPEND)
+        }
         gradleRunner = GradleRunner.create()
                 .withPluginClasspath()
                 .withTestKitDir(testKitDir.toFile())

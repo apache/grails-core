@@ -80,6 +80,27 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
         !service.cache.get(tokenValue)
     }
 
+    void "throw token not found exception if there is no principal to remove for a given token"() {
+        when:
+        service.removeToken('token-does-not-exists')
+
+        then:
+        thrown(TokenNotFoundException)
+    }
+
+    void "throw token not found exception if the principal of a given token was removed before"() {
+        given:
+        def tokenValue = '12345'
+        service.storeToken(tokenValue, new User('foo', 'bar', []))
+        service.removeToken(tokenValue)
+
+        when:
+        service.removeToken(tokenValue)
+
+        then:
+        thrown(TokenNotFoundException)
+    }
+
     void "throw illegal state exeption if grails cache manager was not injected"() {
         given:
         service.grailsCacheManager = null

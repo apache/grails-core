@@ -38,6 +38,7 @@ class GradleBuild {
     private final List<GradleDependency> dependencies
     private final List<GradleDependency> buildscriptDependencies
     private final List<GradlePlugin> plugins
+    private final BuildFileContributions contributions
 
     GradleBuild() {
         this(GradleDsl.GROOVY, Collections.emptyList(), Collections.emptyList())
@@ -55,6 +56,17 @@ class GradleBuild {
                        @Nonnull List<GradlePlugin> plugins,
                        @Nonnull List<GradleRepository> buildRepositories,
                        @Nonnull List<GradleRepository> repositories) {
+        this(gradleDsl, dependencies, buildscriptDependencies, plugins, buildRepositories, repositories, new BuildFileContributions())
+    }
+
+    GradleBuild(@Nonnull GradleDsl gradleDsl,
+                       @Nonnull List<GradleDependency> dependencies,
+                       @Nonnull List<GradleDependency> buildscriptDependencies,
+                       @Nonnull List<GradlePlugin> plugins,
+                       @Nonnull List<GradleRepository> buildRepositories,
+                       @Nonnull List<GradleRepository> repositories,
+                       @Nonnull BuildFileContributions contributions) {
+        this.contributions = contributions
         this.dsl = gradleDsl
         this.dependencies = dependencies
         this.buildscriptDependencies = buildscriptDependencies
@@ -120,9 +132,23 @@ class GradleBuild {
 
     @Nonnull
     String renderExtensions() {
-        return renderWritableExtensions(Stream.concat(
-                buildscriptDependencies.stream().map(GradleDependency::getExtension).filter(Objects::nonNull),
-                plugins.stream().map(GradlePlugin::getExtension)))
+        return renderWritableExtensions(plugins.stream().map(GradlePlugin::getExtension))
+    }
+
+    /**
+     * @return the named blocks the features contributed, see {@link BuildFileContributions#renderExtensions()}
+     */
+    @Nonnull
+    String renderContributedExtensions() {
+        return contributions.renderExtensions()
+    }
+
+    /**
+     * @return the blocks the features added at the anchor, see {@link BuildFileContributions#renderBlocks(BuildFileAnchor)}
+     */
+    @Nonnull
+    String renderBlocks(@Nonnull BuildFileAnchor anchor) {
+        return contributions.renderBlocks(anchor)
     }
 
     @Nonnull
@@ -138,7 +164,8 @@ class GradleBuild {
                 .forEach(writable -> {
                     try {
                         writable.write(outputStream)
-                        outputStream.write(System.lineSeparator().getBytes(StandardCharsets.UTF_8))
+                        // a line feed, as every other line of the file ends, on every platform
+                        outputStream.write('\n'.getBytes(StandardCharsets.UTF_8))
                     } catch (IOException e) {
                         if (LOG.isErrorEnabled()) {
                             LOG.error('IO Exception rendering Gradle Plugin extension')
@@ -148,15 +175,19 @@ class GradleBuild {
         return new String(outputStream.toByteArray(), StandardCharsets.UTF_8)
     }
 
+    /**
+     * @return the import lines of the plugins, each once and ended with a line feed, in the order of
+     * the lines: the same file whichever plugin was added first and whatever the platform ends a line with
+     */
     @Nonnull
     Set<String> getPluginsImports() {
-        Set<String> imports = new HashSet<>()
+        Set<String> imports = new TreeSet<>()
         for (GradlePlugin p : plugins) {
             Set<String> pluginImports = p.getBuildImports()
             if (pluginImports != null) {
                 imports.addAll(pluginImports)
             }
         }
-        return imports.stream().map(it -> it + System.lineSeparator()).collect(Collectors.toSet())
+        return imports.stream().map(it -> it + '\n').collect(Collectors.toCollection(LinkedHashSet::new))
     }
 }

@@ -51,7 +51,7 @@ This will transitively install the <<springSecurityCore,Spring Security Core>> p
 $ grails s2-quickstart com.testacl User Role
 ....
 
-The ACL support uses domain classes and includes them in the JAR file, but to allow customizing them (e.g. to enable Hibernate 2^nd^-level caching) there's a script that copies the domain classes into your application, <<acl-s2-create-acl-domains>>. There's no need to run this script if the default configuration is sufficient.
+The ACL support uses domain classes and includes them in the JAR file, but to allow customizing them (e.g. to enable Hibernate 2^nd^-level caching) there's a command that copies the domain classes into your application, <<acl-s2-create-acl-domains>>. There's no need to run this command if the default configuration is sufficient.
 
 Note that you cannot change the domain class names or packages since the plugin references them by name. Grails allows you to override plugin artifacts by creating (or copying and modifying existing) classes with the same name and package in your application.
 

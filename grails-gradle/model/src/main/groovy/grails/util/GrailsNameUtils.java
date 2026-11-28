@@ -348,7 +348,9 @@ public class GrailsNameUtils {
         if (name.endsWith(".groovy")) {
             name = name.substring(0, name.length() - 7);
         }
-        return getNaturalName(name).replaceAll("\\s", "-").toLowerCase();
+        // of no language: with the locale of the computer the name of a command would be another in
+        // Turkish, where the lower case of I is not i, and what a build writes of it would be too
+        return getNaturalName(name).replaceAll("\\s", "-").toLowerCase(Locale.ROOT);
     }
 
     /**

@@ -216,7 +216,7 @@ group('imageServing').conditionalOnClass(name: 'com.example.ManagedFileAccessPro
 
 This is the shape real auto-configurations take — Spring Boot's own `JacksonAutoConfiguration` carries four nested `@ConditionalOnClass` configuration classes — and it is the only shape that works for a bean whose *own signature* names a class that may be absent. A condition is read from the bytecode before anything is loaded, but a `@Bean` method's parameter and return types are resolved when its configuration class is parsed, so guarding such a bean on the method is not reliably safe; moving it into a group moves the guard onto a class that is never parsed when the condition fails. Spring finds the nested class unaided, since `ConfigurationClassParser` processes a configuration class's member classes. Groups take the condition qualifiers and `.annotate(...)`; they do not nest, and the closure takes no parameters, since it declares a class rather than a bean.
 
-=== Diagnostics
+===== Diagnostics
 
 Three mistakes the DSL used to accept are now compile errors, because each of them fails at runtime in a way that is hard to trace back:
 
@@ -229,7 +229,7 @@ Three mistakes the DSL used to accept are now compile errors, because each of th
 An anonymous inner class written in a bean body keeps the class the `beans` block was written on as its outer class — Groovy fixes that when it creates the class, and it cannot be moved afterwards. Wherever the beans land somewhere else — a *plugin descriptor*'s generated sibling, or a `group(...)`'s static nested class — the enclosing-instance field is retyped to that new home while the outer class stays the old one, so nothing reachable only through it survives. Such a class may use its own members, anything it inherits, Groovy's extension methods (`println`, `with`, `tap`, `join`), and static members of the enclosing class when Groovy compiles the reference to a direct static access. A method's `@CompileStatic` can enable that access, but not inside another method marked `@CompileDynamic` or `@CompileStatic(TypeCheckingMode.SKIP)`. Inside a method marked `@CompileStatic`, a nested anonymous method follows the enclosing class's mode unless it opts out; its own `@CompileStatic` does not enable static access on a dynamic host. An unannotated enclosing method imposes neither restriction. Qualifying a static member with its declaring class avoids these differences. An unqualified reference that requires the retyped enclosing instance — a member the block declared, a member the descriptor itself declares, one inherited from `Plugin` — is a compile error rather than a `NoSuchFieldError` at runtime. Give the anonymous class what it needs as a constructor argument or a captured local, or give it a name and declare it as a static nested class. A class that declares its own `methodMissing` or `propertyMissing` can answer anything and is left alone.
 ====
 
-=== Seeing what a block compiled to
+===== Seeing what a block compiled to
 
 The property is read by the transform, which runs inside the process that runs the Groovy compiler — and `GroovyCompile` forks by default, so `./gradlew build -Dgrails.beans.dsl.dumpdir=...` sets it on the Gradle client and daemon, not on the compiler, and nothing is written. Set it where the compiler will see it:
 

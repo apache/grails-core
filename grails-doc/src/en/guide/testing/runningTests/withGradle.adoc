@@ -84,6 +84,51 @@ You can combine multiple patterns as needed:
 
 NOTE: You might need to specify the package name before the class name and append "Spec" to it. For instance, to run the test for the ProductController, use ./gradlew test *.ProductControllerSpec. You can also use the star wildcard if you want to avoid typing the entire package hierarchy.
 
+Gradle fails a test task that has no test for its filter (`No tests found for given includes`), so one filter for the unit tests and the integration tests fails when only one of them has such a test. The task `testApp` of the Grails Gradle plugin, described below, gives one filter to every test phase. For test tasks that are named one by one there is the project property `grails.test.filter.lenient`: with it the Grails Gradle plugin lets a test task that was given a `--tests` filter and has no match pass, and its task `checkTestFilterMatched`, which runs after the test tasks, fails the build when none of the test tasks of the project that were given a filter ran a test. A test task that is up to date or taken from the build cache counts the tests of the run whose results it has; one that is left out of the build (`-x`) or skipped (by an `onlyIf` or `enabled = false`) ran none, whatever it found in an earlier build.
+
+[source,shell]
+----
+./gradlew test --tests '*BookSpec' integrationTest --tests '*BookSpec' -Pgrails.test.filter.lenient=true
+----
+
+Only the test tasks that were given a filter on the command line are looked at. In `./gradlew test --tests '*BookSpec' integrationTest -Pgrails.test.filter.lenient=true` the task `integrationTest` has no filter and runs all of its tests, and they are no match of the filter of `test`: the build fails when `test` has no `BookSpec`. Such a task is in every way as Gradle has it, and so is every test task of a build without the property and without `testApp`: `./gradlew test --tests '*BookSpec'` fails in `test` with `No tests found for given includes` when there is no such test. A test task without a match passes in two cases and in no other: the property is given and the task has a `--tests` of its own, or the task is run by `testApp` with the `--tests` of `testApp`.
+
+=== Running Every Test Phase: the `testApp` Task
+
+The Grails Gradle plugin adds the task `testApp` to an application and to a plugin. It runs every test phase of the project, which are its tasks of the type `Test`: `test`, `integrationTest`, the phases of the `testPhases` extension (see <<testPhases>>), the test suites of Gradle's `jvm-test-suite` plugin and any `Test` task a build plugin or the build script registers. It is the task `grails test-app` runs. Unlike `check` it runs no other verification, such as code style checks.
+
+[source,shell]
+----
+./gradlew testApp
+./gradlew testApp --phase unit --phase functional
+./gradlew testApp --tests '*BookSpec'
+./gradlew testApp --rerun-tests
+./gradlew testApp --phase integration --debug-jvm
+----
+
+[cols="1,3"]
+|===
+|Option |Meaning
+
+|`--phase NAME`
+|Runs this phase and no other; can be given more than once. `unit` is the task `test` and `integration` the task `integrationTest`. Any other task whose name ends in `Test` is the phase of the name without that ending, and a task of another name the phase of its own name, written in lower case with hyphens: `functionalTest` is `functional`, `endToEndTest` is `end-to-end` (`endToEnd` is taken too) and a test suite `smoke` is `smoke`. A name that is no phase of the project fails the build before a test is run, with the phases the project has.
+
+|`--tests PATTERN`
+|The filter of every phase that is run, as the `--tests` of a test task; can be given more than once. A phase that has no test for it passes, and `testApp` fails when no phase ran a test, naming the filter. A phase that is up to date or taken from the build cache counts the tests of the run whose results it has. A phase that is left out of the build (`-x`) or skipped (by an `onlyIf` or `enabled = false`) runs no test, whatever it found in an earlier build: a filter that only such a phase has fails, and so does any filter when no phase runs.
+
+|`--rerun-tests`
+|Runs the tests of every phase that is run again, also where nothing changed and where the build cache has their results.
+
+|`--debug-jvm`
+|Starts the JVM of the tests of every phase that is run suspended, waiting for a debugger on port 5005. The test tasks that wait for a debugger are run one at a time, in every project of the build.
+|===
+
+The unit tests are run before the integration tests, and both before the other phases. The other phases are not ordered among themselves. In a build that asks for `testApp` by its name or its path (`./gradlew testApp`, `./gradlew :app:testApp`, `grails test-app`) the phases are run one after the other in that order (`mustRunAfter`), also where Gradle runs the tasks of a project in parallel, as it does with the configuration cache. In every other build, such as `./gradlew check` or one that asks for `testApp` by an abbreviation, the order is one Gradle keeps where it can (`shouldRunAfter`): two phases of a project can run at the same time where Gradle runs its tasks in parallel.
+
+The order never fails a build. Where the build script asks for another order it is the one that holds, and only the tasks it names are out of the order of the phases: with `tasks.named('test') { dependsOn 'smoke' }`, a `Test` task `smoke` runs before the unit tests, in `./gradlew test` and in `./gradlew testApp`, and the integration tests still run after the unit tests. The same holds for a phase that is to run after a later one (`mustRunAfter`) and for a `Test` task that is finalized by an earlier phase (`finalizedBy`).
+
+Where two tasks would be the same phase, `test` or `integrationTest` is that phase before a task whose name ends in `Test`, and that one before any other; the task that is left without a phase is still run by `testApp` without `--phase`, and by its own name. A project that has a task named `testApp` of its own keeps it, and the Grails Gradle plugin says so when the build is configured.
+
 === Debugging
 
 To debug your tests using a remote debugger, you can add `--debug-jvm` after `./gradlew` in any commands, like so:
@@ -117,6 +162,8 @@ If you have defined additional test phases using the `testPhases` extension (see
 ----
 ./gradlew functionalTest
 ----
+
+`./gradlew testApp` runs all of them, and `./gradlew testApp --phase functional` this one.
 
 === Targeting Tests When Using Phases
 

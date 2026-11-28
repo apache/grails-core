@@ -595,6 +595,7 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         catch (IOException e) {
             throw new GroovyPagesException("I/O parsing Groovy page [" + (res != null ? res.getDescription() : name) + "]: " + e.getMessage(), e);
         }
+        configureParser(parser);
 
         InputStream in = parser.parse();
 
@@ -612,6 +613,16 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         }
 
         return metaInfo;
+    }
+
+    /**
+     * Configures the parser this engine has created for a page, before the page is parsed. Does nothing
+     * unless it is overridden: a subclass can, for one, compile its pages for an environment other than the
+     * current one with {@link GroovyPageParser#setEnvironment(Environment)}.
+     *
+     * @param parser the parser of the page
+     */
+    protected void configureParser(GroovyPageParser parser) {
     }
 
     private String getPathForResource(Resource res) {

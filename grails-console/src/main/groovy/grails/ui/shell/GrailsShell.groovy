@@ -87,11 +87,33 @@ class GrailsShell extends GrailsApp {
      */
     static void main(String[] args) {
         if (args) {
-            def applicationClass = Thread.currentThread().contextClassLoader.loadClass(args[0])
-            new GrailsShell(applicationClass).run(args)
+            try {
+                def applicationClass = Thread.currentThread().contextClassLoader.loadClass(args[0])
+                new GrailsShell(applicationClass).run(args)
+            } catch (Throwable e) {
+                if (isSilentExit(e)) {
+                    throw e
+                }
+                // said and ended here: with Spring Boot's developer tools this method runs in a thread of theirs,
+                // where an exception ends that thread and leaves the JVM to end with 0, as if the shell had run
+                System.err.println("shell: The shell could not be started: ${e}")
+                System.exit(1)
+            }
         }
         else {
             System.err.println('Missing application class name argument')
+            System.exit(1)
         }
+    }
+
+    // How Spring Boot's developer tools end the thread that called main, to call it again in a thread of their
+    // own: no failure, and to be left alone
+    private static boolean isSilentExit(Throwable e) {
+        for (Throwable cause = e; cause != null; cause = cause.cause == cause ? null : cause.cause) {
+            if (cause.getClass().name.endsWith('SilentExitException')) {
+                return true
+            }
+        }
+        false
     }
 }

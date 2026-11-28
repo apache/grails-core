@@ -134,6 +134,38 @@ class CreateAppSpec extends CommandSpec {
         gradleBuildFile.text.contains('implementation "org.apache.grails:grails-micronaut"')
     }
 
+    void "test create-app rest-api-plugin creates a correct Application.groovy and a plugin descriptor"() {
+        given:
+        generateProject(OperatingSystem.MACOS_ARCH64, [], ApplicationType.REST_API_PLUGIN)
+
+        def applicationClassSourceFile = new File(dir, 'grails-app/init/example/grails/Application.groovy')
+
+        expect:
+        applicationClassSourceFile.exists()
+        applicationClassSourceFile.text == '''\
+        package example.grails
+
+        import groovy.transform.CompileStatic
+
+        import grails.boot.GrailsApp
+        import grails.boot.config.GrailsAutoConfiguration
+        import grails.plugins.metadata.PluginSource
+
+        @PluginSource
+        @CompileStatic
+        class Application extends GrailsAutoConfiguration {
+            static void main(String[] args) {
+                GrailsApp.run(Application, args)
+            }
+        }
+        '''.stripIndent(8)
+
+        and:
+        new File(dir, 'src/main/groovy/example/grails/FooGrailsPlugin.groovy').exists()
+        !new File(dir, 'grails-app/views').exists()
+        !new File(dir, 'grails-app/views/index.gsp').exists()
+    }
+
     void "test create-app web-plugin creates a correct Application.groovy"() {
         given:
         generateProject(OperatingSystem.MACOS_ARCH64, [], ApplicationType.WEB_PLUGIN)

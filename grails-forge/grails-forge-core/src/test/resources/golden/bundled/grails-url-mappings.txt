@@ -1,0 +1,122 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: applicationType=web|web-plugin|rest-api|rest-api-plugin
+relies on: gsp when applicationType=web|web-plugin
+relies on: asset-pipeline-grails when applicationType=web
+
+# web
+title: grails-url-mappings
+description: grails-url-mappings
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/controllers/example/grails/UrlMappings.groovy
++ package example.grails
++ 
++ class UrlMappings {
++     static mappings = {
++         "/$namespace/$controller/$action?/$id?(.$format)?" {}
++         "/$controller/$action?/$id?(.$format)?"{
++             constraints {
++                 // apply constraints here
++             }
++         }
++ 
++         "/"(view:"/index")
++         // Browsers request /favicon.ico for pages that declare no icon of their own
++         "/favicon.ico"(redirect: [uri: '/assets/favicon.ico', permanent: true])
++         "500"(view:'/error')
++         "404"(view:'/notFound')
++ 
++     }
++ }
+
+# rest_api
+title: grails-url-mappings
+description: grails-url-mappings
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/controllers/example/grails/UrlMappings.groovy
++ package example.grails
++ 
++ class UrlMappings {
++     static mappings = {
++         delete "/$controller/$id(.$format)?"(action:"delete")
++         get "/$controller(.$format)?"(action:"index")
++         get "/$controller/$id(.$format)?"(action:"show")
++         post "/$controller(.$format)?"(action:"save")
++         put "/$controller/$id(.$format)?"(action:"update")
++         patch "/$controller/$id(.$format)?"(action:"patch")
++         "/"(controller: 'application', action:'index')
++         "500"(view:'/error')
++         "404"(view:'/notFound')
++ 
++     }
++ }
+
+# web_plugin
+title: grails-url-mappings
+description: grails-url-mappings
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/controllers/example/grails/UrlMappings.groovy
++ package example.grails
++ 
++ class UrlMappings {
++     static mappings = {
++         "/$namespace/$controller/$action?/$id?(.$format)?" {}
++         "/$controller/$action?/$id?(.$format)?"{
++             constraints {
++                 // apply constraints here
++             }
++         }
++ 
++         "/"(view:"/index")
++         "500"(view:'/error')
++         "404"(view:'/notFound')
++ 
++     }
++ }
+
+# plugin
+title: grails-url-mappings
+description: grails-url-mappings
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in no application of this kind
+
+# rest_api_plugin
+title: grails-url-mappings
+description: grails-url-mappings
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/controllers/example/grails/UrlMappings.groovy
++ package example.grails
++ 
++ class UrlMappings {
++     static mappings = {
++         // provide plugin url mappings here
++ 
++     }
++ }
+

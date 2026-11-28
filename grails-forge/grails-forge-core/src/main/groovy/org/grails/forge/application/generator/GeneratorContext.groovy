@@ -32,8 +32,11 @@ import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.build.dependencies.DependencyContext
 import org.grails.forge.build.dependencies.LookupFailedException
 import org.grails.forge.build.dependencies.Scope
+import org.grails.forge.build.gradle.BuildFileContributions
+import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.build.gradle.GradleRepository
 import org.grails.forge.feature.Feature
+import org.grails.forge.feature.FeatureContext
 import org.grails.forge.feature.Features
 import org.grails.forge.feature.build.gradle.GradleBuildSrc
 import org.grails.forge.feature.config.ApplicationConfiguration
@@ -70,19 +73,31 @@ class GeneratorContext implements DependencyContext {
     private final Map<String, ApplicationConfiguration> applicationEnvironmentConfiguration = new LinkedHashMap<>()
     private final Map<String, BootstrapConfiguration> bootstrapEnvironmentConfiguration = new LinkedHashMap<>()
     private final BootstrapConfiguration bootstrapConfiguration = new BootstrapConfiguration()
-    private final Set<Configuration> otherConfiguration = new HashSet<>()
+    // in the order they were added: what is written of them is in an order that is said, see applyOnce
+    private final Set<Configuration> otherConfiguration = new LinkedHashSet<>()
 
     private final Map<String, Template> templates = new LinkedHashMap<>()
     private final List<Writable> helpTemplates = new ArrayList<>(8)
     private final ApplicationType command
     private final Features features
     private final Options options
-    private final Set<Dependency> dependencies = new HashSet<>()
-    private final Set<Dependency> buildscriptDependencies = new HashSet<>()
+    // The dependencies and the plugins are kept in the order the features declare them. The build file
+    // sorts the dependencies and puts the plugins by their order; what that leaves undecided stays as it
+    // was declared, and not as a set of hashes would have it, which is another order for another number
+    // of entries and for another run
+    private final Set<Dependency> dependencies = new LinkedHashSet<>()
+    private final Set<Dependency> buildscriptDependencies = new LinkedHashSet<>()
     private final Set<GradleRepository> buildRepositories
     private final Set<GradleRepository> repositories
 
-    private final Set<BuildPlugin> buildPlugins = new HashSet<>()
+    private final Set<BuildPlugin> buildPlugins = new LinkedHashSet<>()
+    private final BuildFileContributions buildContributions = new BuildFileContributions()
+    private boolean featuresApplied
+    private Throwable applyFailure
+    private final List<Runnable> checks = new ArrayList<>()
+    private List<String> requestedFeatures = Collections.emptyList()
+    private final List<String> excludedFeatures
+    private final String repositoryOverride
 
     GeneratorContext(Project project,
                             ApplicationType type,
@@ -90,6 +105,39 @@ class GeneratorContext implements DependencyContext {
                             @Nullable OperatingSystem operatingSystem,
                             Set<Feature> features,
                             CoordinateResolver coordinateResolver) {
+        this(project, type, options, operatingSystem, features, coordinateResolver, Collections.<String>emptyList())
+    }
+
+    /**
+     * @param excludedFeatures the names of the features that were excluded when the features were selected
+     * @since 9.0
+     */
+    GeneratorContext(Project project,
+                            ApplicationType type,
+                            Options options,
+                            @Nullable OperatingSystem operatingSystem,
+                            Set<Feature> features,
+                            CoordinateResolver coordinateResolver,
+                            Collection<String> excludedFeatures) {
+        this(project, type, options, operatingSystem, features, coordinateResolver, excludedFeatures, System.getenv('GRAILS_REPO_URL'))
+    }
+
+    /**
+     * @param excludedFeatures the names of the features that were excluded when the features were selected
+     * @param repositoryOverride the repositories the build is given in place of those of Grails, as
+     * the environment variable {@code GRAILS_REPO_URL} has them, or {@code null} for those of Grails
+     * @since 9.0
+     */
+    GeneratorContext(Project project,
+                            ApplicationType type,
+                            Options options,
+                            @Nullable OperatingSystem operatingSystem,
+                            Set<Feature> features,
+                            CoordinateResolver coordinateResolver,
+                            Collection<String> excludedFeatures,
+                            @Nullable String repositoryOverride) {
+        this.repositoryOverride = repositoryOverride
+        this.excludedFeatures = Collections.unmodifiableList(new ArrayList<String>(new TreeSet<String>(excludedFeatures)))
         this.command = type
         this.project = project
         this.operatingSystem = operatingSystem
@@ -98,8 +146,8 @@ class GeneratorContext implements DependencyContext {
         this.options = options
 
         String grailsVersion = VersionInfo.getGrailsVersion()
-        this.buildRepositories = GradleRepository.getDefaultBuildRepositories(grailsVersion)
-        this.repositories = GradleRepository.getDefaultRepositories(grailsVersion)
+        this.buildRepositories = GradleRepository.getDefaultBuildRepositories(grailsVersion, repositoryOverride)
+        this.repositories = GradleRepository.getDefaultRepositories(grailsVersion, repositoryOverride)
         buildProperties.put('grailsVersion', grailsVersion)
     }
 
@@ -189,7 +237,7 @@ class GeneratorContext implements DependencyContext {
     }
 
     @Nonnull Set<Configuration> getAllConfigurations() {
-        Set<Configuration> allConfigurations = new HashSet<>()
+        Set<Configuration> allConfigurations = new LinkedHashSet<>()
         allConfigurations.add(configuration)
         allConfigurations.add(bootstrapConfiguration)
         allConfigurations.addAll(applicationEnvironmentConfiguration.values())
@@ -235,6 +283,50 @@ class GeneratorContext implements DependencyContext {
     }
 
     /**
+     * @return the options the application was asked for with, as they were given or defaulted: what the
+     * features are applied with. See {@link #getApplicationOptions()} for what the application has
+     * @since 9.0
+     */
+    @Nonnull Options getOptions() {
+        return options
+    }
+
+    /**
+     * The options as the application has them. An option that was not given is a default, which gives
+     * way to the features: an application that was asked for with the feature of Hibernate 7 and no
+     * option has Hibernate 7 and not the default. This is what is recorded with the application and
+     * what a template of a feature pack is told; the features themselves are applied with the options
+     * as they were given or defaulted.
+     *
+     * @return the options, each naming what the application has
+     * @since 9.0
+     */
+    @Nonnull Options getApplicationOptions() {
+        Options applied = options
+        Set<String> names = new HashSet<String>(features)
+        if (!names.contains(options.getGormImpl().getName())) {
+            // an application has one: no option says that there is none
+            GormImpl present = GormImpl.values().find { GormImpl each -> names.contains(each.getName()) }
+            if (present != null) {
+                applied = applied.withGormImpl(present)
+            }
+        }
+        ServletImpl servlet = options.getServletImpl()
+        if (servlet == ServletImpl.NONE || !names.contains(servlet.getName())) {
+            // none where the application has no servlet container, as a plugin has none
+            ServletImpl present = ServletImpl.values().find { ServletImpl each -> each != ServletImpl.NONE && names.contains(each.getName()) }
+            applied = applied.withServletImpl(present ?: ServletImpl.NONE)
+        }
+        Feature reloading = features.reloading()
+        if (reloading == null) {
+            applied = applied.withDevelopmentReloading(DevelopmentReloading.NONE)
+        } else if (!features.getFeatures().any { Feature each -> DevelopmentReloading.ofFeature(each.getName()) == options.getDevelopmentReloading() }) {
+            applied = applied.withDevelopmentReloading(DevelopmentReloading.ofFeature(reloading.getName()))
+        }
+        return applied
+    }
+
+    /**
      * @return The project
      */
     @Nonnull Project getProject() {
@@ -256,6 +348,40 @@ class GeneratorContext implements DependencyContext {
     }
 
     /**
+     * @return the names of the features that were asked for by name, without what they require and
+     * without the defaults
+     * @since 9.0
+     */
+    @Nonnull List<String> getRequestedFeatures() {
+        return requestedFeatures
+    }
+
+    /**
+     * @param requestedFeatures the names of the features that were asked for by name
+     * @since 9.0
+     */
+    void setRequestedFeatures(@Nonnull List<String> requestedFeatures) {
+        this.requestedFeatures = Collections.unmodifiableList(new ArrayList<String>(requestedFeatures))
+    }
+
+    /**
+     * @return the names of the features that were excluded when the features were selected, sorted
+     * @since 9.0
+     */
+    @Nonnull List<String> getExcludedFeatures() {
+        return excludedFeatures
+    }
+
+    /**
+     * @return the repositories the build was given in place of those of Grails, as the environment
+     * variable {@code GRAILS_REPO_URL} has them, or {@code null}
+     * @since 9.0
+     */
+    @Nullable String getRepositoryOverride() {
+        return repositoryOverride
+    }
+
+    /**
      * @return The JDK version
      */
     @Nonnull JdkVersion getJdkVersion() {
@@ -269,13 +395,48 @@ class GeneratorContext implements DependencyContext {
         return operatingSystem
     }
 
+    /**
+     * Applies the features to this context, in {@link FeatureContext#FEATURE_ORDER}. Each feature is applied
+     * once: applying the features of a context a second time does nothing, or fails as the first time did.
+     */
     void applyFeatures() {
+        if (applyFailure != null) {
+            // half of the features are applied: there is no application to generate from this context
+            throw applyFailure
+        }
+        if (featuresApplied) {
+            return
+        }
+        featuresApplied = true
+        try {
+            applyOnce()
+        } catch (RuntimeException | Error e) {
+            applyFailure = e
+            throw e
+        }
+    }
+
+    private void applyOnce() {
         List<Feature> features = new ArrayList<>(this.features.getFeatures())
-        features.sort(Comparator.comparingInt(Feature::getOrder))
+        features.sort(FeatureContext.FEATURE_ORDER)
 
         for (Feature feature: features) {
             feature.apply(this)
         }
+        for (Runnable check : checks) {
+            check.run()
+        }
+    }
+
+    /**
+     * Has a check run once every feature is applied. A feature uses it to see that what it added is
+     * still what it added, after the features applied later than it.
+     *
+     * @param check the check, which throws an {@link IllegalArgumentException} for what it finds
+     * @since 9.0
+     */
+    void afterFeaturesApplied(Runnable check) {
+        checks.add(check)
     }
 
     boolean isFeaturePresent(Class<? extends Feature> feature) {
@@ -326,10 +487,44 @@ class GeneratorContext implements DependencyContext {
         if (dependency.requiresLookup()) {
             Coordinate coordinate = coordinateResolver.resolve(dependency.getArtifactId())
                     .orElseThrow(() -> new LookupFailedException(dependency.getArtifactId()))
-            this.dependencies.add(dependency.resolved(coordinate))
+            addDeclared(this.dependencies, dependency.resolved(coordinate))
         } else {
-            this.dependencies.add(dependency)
+            addDeclared(this.dependencies, dependency)
         }
+    }
+
+    /**
+     * Adds a dependency unless the same one, by group, artifact and scope, is already declared. The one
+     * declared first is kept, but two declarations of different versions or kinds, that exclude
+     * different transitive dependencies, or that select different variants by their capabilities, are an
+     * error, since keeping either would silently drop what the other asked for.
+     */
+    private static void addDeclared(Set<Dependency> declared, Dependency dependency) {
+        if (declared.add(dependency)) {
+            return
+        }
+        Dependency existing = declared.find { Dependency each -> each == dependency }
+        if (existing.getVersion() != dependency.getVersion() || existing.isPom() != dependency.isPom() ||
+                existing.isEnforced() != dependency.isEnforced()) {
+            throw new IllegalArgumentException(
+                    "The dependency ${dependency.getGroupId()}:${dependency.getArtifactId()} is declared twice, " +
+                    "as ${describe(existing)} and as ${describe(dependency)}")
+        }
+        if (new HashSet<>(existing.getExclusions()) != new HashSet<>(dependency.getExclusions())) {
+            throw new IllegalArgumentException(
+                    "The dependency ${dependency.getGroupId()}:${dependency.getArtifactId()} is declared twice " +
+                    "with different exclusions: ${existing.getExclusions()} and ${dependency.getExclusions()}")
+        }
+        if (new HashSet<>(existing.getCapabilities()) != new HashSet<>(dependency.getCapabilities())) {
+            throw new IllegalArgumentException(
+                    "The dependency ${dependency.getGroupId()}:${dependency.getArtifactId()} is declared twice " +
+                    "with different capabilities: ${existing.getCapabilities()} and ${dependency.getCapabilities()}")
+        }
+    }
+
+    private static String describe(Dependency dependency) {
+        String kind = dependency.isPom() ? (dependency.isEnforced() ? 'an enforced platform' : 'a platform') : 'a dependency'
+        return dependency.getVersion() == null ? "${kind} without a version" : "${kind} of version ${dependency.getVersion()}"
     }
 
     @Override
@@ -346,10 +541,10 @@ class GeneratorContext implements DependencyContext {
     private void addBuildscriptDependencyBasedOnFeatures(@Nonnull Dependency dependency) {
         if (getFeature(GradleBuildSrc).isPresent()) {
             // for buildSrc/build.gradle with initial scope
-            this.buildscriptDependencies.add(dependency)
+            addDeclared(this.buildscriptDependencies, dependency)
         } else {
             // for main build.gradle with classpath scope
-            this.buildscriptDependencies.add(dependency.scope(Scope.CLASSPATH))
+            addDeclared(this.buildscriptDependencies, dependency.scope(Scope.CLASSPATH))
         }
     }
 
@@ -377,11 +572,26 @@ class GeneratorContext implements DependencyContext {
         return buildRepositories
     }
 
+    /**
+     * Applies a plugin to the build unless the same one is already applied. The one applied first is
+     * kept, but applying one plugin in two versions, or once in the plugins block and once with
+     * {@code apply plugin}, is an error, since keeping either would silently drop what the other asked for.
+     */
     void addBuildPlugin(BuildPlugin buildPlugin) {
-        if (buildPlugin.requiresLookup()) {
-            this.buildPlugins.add(buildPlugin.resolved(coordinateResolver))
-        } else {
-            this.buildPlugins.add(buildPlugin)
+        BuildPlugin plugin = buildPlugin.requiresLookup() ? buildPlugin.resolved(coordinateResolver) : buildPlugin
+        if (this.buildPlugins.add(plugin) || !(plugin instanceof GradlePlugin)) {
+            return
+        }
+        GradlePlugin applied = (GradlePlugin) this.buildPlugins.find { BuildPlugin each -> each == plugin }
+        String version = ((GradlePlugin) plugin).getVersion()
+        if (applied.getVersion() != version) {
+            throw new IllegalArgumentException("The build plugin ${applied.getId()} is applied twice, " +
+                    "${applied.getVersion() == null ? 'without a version' : 'in version ' + applied.getVersion()} and " +
+                    "${version == null ? 'without a version' : 'in version ' + version}")
+        }
+        if (applied.useApplyPlugin() != ((GradlePlugin) plugin).useApplyPlugin()) {
+            throw new IllegalArgumentException("The build plugin ${applied.getId()} is applied twice, " +
+                    'once in the plugins block and once with apply plugin')
         }
     }
 
@@ -392,5 +602,14 @@ class GeneratorContext implements DependencyContext {
 
     Set<BuildPlugin> getBuildPlugins() {
         return buildPlugins
+    }
+
+    /**
+     * @return what the features add to the build file besides dependencies, plugins and repositories
+     * @since 9.0
+     */
+    @Nonnull
+    BuildFileContributions getBuildContributions() {
+        return buildContributions
     }
 }

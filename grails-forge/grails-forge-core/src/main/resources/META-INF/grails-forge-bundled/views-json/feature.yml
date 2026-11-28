@@ -1,0 +1,60 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+format: 1
+kind: feature
+templateApi: 1
+name: views-json
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+title: JSON Views
+description: JSON views are written in Groovy, end with the file extension gson and reside in the grails-app/views directory. They provide a DSL for producing output in the JSON format.
+category: View Rendering
+guideOfGrails: guide/theWebLayer.html
+oneOf: api-views
+default:
+  allOf:
+    - applicationType: [rest-api, rest-api-plugin]
+    - not: { group: api-views }
+adds:
+  - grails-web
+buildPlugins:
+  - id: org.apache.grails.gradle.grails-gson
+    apply: true
+dependencies:
+  - scope: implementation
+    coordinates: org.apache.grails:grails-views-gson
+  - scope: implementation
+    coordinates: org.apache.grails:grails-data-mongodb-gson-templates
+  - scope: testImplementation
+    coordinates: org.apache.grails:grails-testing-support-views-gson
+files:
+  - from: index.gson.gsp
+    to: grails-app/views/application/index.gson
+    when: { not: { applicationType: rest-api-plugin } }
+  - from: _errors.gson.gsp
+    to: grails-app/views/errors/_errors.gson
+    when: { not: { applicationType: rest-api-plugin } }
+  - from: _object.gson.gsp
+    to: grails-app/views/object/_object.gson
+    when: { not: { applicationType: rest-api-plugin } }
+  - from: error.gson.gsp
+    to: grails-app/views/error.gson
+    when: { not: { applicationType: rest-api-plugin } }
+  - from: notFound.gson.gsp
+    to: grails-app/views/notFound.gson
+    when: { not: { applicationType: rest-api-plugin } }

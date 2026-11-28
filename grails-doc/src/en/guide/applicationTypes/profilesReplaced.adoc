@@ -1,0 +1,69 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Until Grails 8 a project was created from a _profile_: an artifact with a skeleton of the project, the features that could be selected for it and the commands the Grails shell then had in the project. Grails 9 has no profiles, and its `grails` command does not start the Grails shell. There is one command line, `grails`, and it creates projects from application types and features.
+
+[cols="2,3"]
+|===
+|With profiles |In Grails 9
+
+|`create-app myapp --profile rest-api`
+|One command for each type of application: `create-restapi myapp`. No command has a `--profile` option.
+
+|`create-app myapp --profile com.acme:acme-profile:1.0.0`, a profile of your own by its coordinates
+|`create-restapi myapp --preset com.acme:acme-preset:1.0.0`, with the create command of the type of application of the preset: see xref:applicationTypes#presets[Making Applications from a Preset], which also says how a profile is converted to a preset.
+
+|The `web`, `rest-api`, `plugin`, `web-plugin` and `rest-api-plugin` profiles
+|The application types of `create-app`, `create-restapi`, `create-plugin`, `create-web-plugin` and `create-rest-api-plugin`.
+
+|The features of a profile, selected with `--features`
+|The features of the type of application, which `--list-features` lists. `--features` adds to the default features, where it took their place with a profile, and a name that is no feature is refused. `--exclude-features` leaves a default feature out.
+
+|The `maven-publish` feature of the `plugin` profile
+|The `grails-publish` feature of the three types of plugin: `create-plugin myplugin --features grails-publish`, or `feature add grails-publish` in a plugin that is there. It applies the Grails Publish Gradle plugin and writes its `grailsPublish` block, which takes the place of the `publishing` block the profile wrote: see "Publishing a Plugin" in xref:plugins#creatingAndInstallingPlugins[Creating and Installing Plugins].
+
+|The `less-asset-pipeline` feature
+|Retired: no feature takes its place. An application that has the `asset-pipeline-grails` feature, as a web application has by default, adds what the profile feature added by hand: `assets "cloud.wondrify:less-asset-pipeline"` in the `dependencies` block of `build.gradle`, and in its `assets` block `includes = ['application.less']`, `excludes = ['**/*.less']` and `configOptions = [less: [compiler: 'less4j']]`.
+
+|The `security` feature of the `rest-api` profile
+|Retired: no feature takes its place. Declare `implementation "org.apache.grails:grails-spring-security-rest"` in `build.gradle`, whose version the Grails BOM manages, and set `grails.plugin.springsecurity.filterChain.chainMap`, which the profile feature wrote to `grails-app/conf/application.groovy`, as "REST Plugin" in xref:security[Security] describes.
+
+|The `rx-mongodb` feature
+|Retired: the plugin it added has no release for a current Grails. See "RxGORM Runs on RxJava 3" in link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9].
+
+|A profile of your own: `create-profile`, the `profile` profile, a profile that is published to a repository and named by its coordinates
+|A preset, which names the type of application, gives the options their defaults, asks for features and adds dependencies, configuration and files: see xref:applicationTypes#presets[Making Applications from a Preset]. A feature that every application of the organisation can have is a plugin with a feature pack: see xref:applicationTypes#customizingGeneration[Customizing What a New Application Gets]. A preset and a feature pack add to an application of one of the types. Neither has a skeleton that takes the place of the files Grails generates or that makes several projects, and neither extends another; those parts of a profile are converted by hand, as the page on presets describes.
+
+|The commands of a profile (`commands/*.groovy`, `commands/*.yml`)
+|The commands of the `grails` command line, the tools an application or a plugin brings as classes (xref:commandLine#creatingTools[Creating Tools]) and the scripts of a project (xref:commandLine#creatingCustomScripts[Creating Custom Scripts]). A feature pack brings no tools.
+
+|`create-profile`, `create-feature`, `create-template`, `create-creator-command`, `create-generator-command`, `create-gradle-command`
+|Removed. No command creates a feature pack: its descriptor and its templates are written by hand, as xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation] describes.
+
+|`list-profiles`, `profile-info`
+|Removed. `grails help` lists the `create-` commands, and each of them lists its features with `--list-features`.
+
+|The `profile "org.apache.grails.profiles:web"` dependency in `build.gradle`
+|Not written by the `create-` commands. Nothing of the build or of the running application used it. A build that still has the line fails and says to remove it.
+
+|`grails.profile` in `application.yml`
+|Not written and not read: no Spring profile is active because of the type of an application.
+|===
+
+"Commands of Earlier Versions" in xref:commandLine[The Command Line] has every command of the shell and of the profiles that is not a command under its name any more, with what there is in its place. link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] says what an existing application has to change, in the notes "A Generated Application Has No Profile Dependency and No `grails-forge-cli.yml`", "An Application Has No Profile at Run Time: `grails.profile` Is Not Read" and "The `grails` Command Is One Command Line, and the Grails Wrapper Is Replaced".

@@ -91,39 +91,45 @@ class ZipCreateController {
     private void writeZip(ApplicationType type, String name, String build, String reloading, String gorm, String servlet, String javaVersion) {
         GeneratorContext generatorContext
         try {
+            // an unknown build tool is a client error, as it was when the tool was passed on
+            ForgeRequestSupport.parseBuild(build)
             Options options = ForgeRequestSupport.options(reloading, gorm, servlet, javaVersion, OperatingSystem.DEFAULT)
             generatorContext = createProjectService.createProjectGeneratorContext(
                     type,
                     name,
                     ForgeRequestSupport.featureList((List<String>) params.list('features')),
-                    ForgeRequestSupport.parseBuild(build),
-                    options.developmentReloading,
-                    options.gormImpl,
-                    options.servletImpl,
-                    options.javaVersion,
+                    options,
                     request.getHeader('User-Agent')
             )
         } catch (IllegalArgumentException e) {
             badRequest(e.message)
             return
         }
-        String filename = generatorContext.project.name + '.zip'
-        response.status = 201
-        response.contentType = 'application/zip'
-        response.setHeader('Content-Disposition', "attachment; filename=${filename}")
+        // The archive is made before the response is begun: an application that cannot be generated
+        // as it was asked for, which the generator says with an IllegalArgumentException, is the
+        // mistake of whoever asked, and is answered as one and not as a failure of the server
+        ByteArrayOutputStream archive = new ByteArrayOutputStream()
         try {
             createProjectService.projectGenerator.generate(
                     type,
                     generatorContext.project,
-                    new ZipOutputHandler(generatorContext.project.name, response.outputStream),
+                    new ZipOutputHandler(generatorContext.project.name, archive),
                     generatorContext
             )
-            response.outputStream.flush()
+        } catch (IllegalArgumentException e) {
+            badRequest(e.message)
+            return
         } catch (Exception e) {
-            // the response is committed: the failure can be told to the operator, not to the client
             log.error("Error generating application ${generatorContext.project.name}: ${e.message}", e)
             throw e
         }
+        String filename = generatorContext.project.name + '.zip'
+        response.status = 201
+        response.contentType = 'application/zip'
+        response.setHeader('Content-Disposition', "attachment; filename=${filename}")
+        response.setContentLength(archive.size())
+        archive.writeTo(response.outputStream)
+        response.outputStream.flush()
     }
 
     private void badRequest(String message) {

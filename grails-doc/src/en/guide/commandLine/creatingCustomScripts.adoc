@@ -18,12 +18,9 @@ under the License.
 ////
 
 
-You can create your own Command scripts by running the link:{commandLineRef}create-script.html[create-script] command from the root of your project. For example the following command will create a script called `src/main/scripts/hello-world.groovy`:
+WARNING: Script commands are deprecated. The scripts a project has, and the scripts of its plugins, still run, and no command creates a new one: `create-script` of earlier versions is removed. Write a tool of the application in its place with link:{commandLineRef}create-tool.html[create-tool] (see xref:commandLine#creatingTools[Creating Tools]).
 
-[source,groovy]
-----
-grails create-script hello-world
-----
+A script command is a Groovy script in `src/main/scripts` of the project, and is a command of the project by the name of its file: `src/main/scripts/hello-world.groovy` is the command `hello-world`.
 
 NOTE: In general Grails scripts should be used for scripting the Gradle based build system and code generation. Scripts cannot load application classes and in fact should not since Gradle is required to construct the application classpath.
 
@@ -36,55 +33,54 @@ description "Example description", "grails hello-world"
 println "Hello World"
 ----
 
-The `description` method is used to define the output seen by `grails help` and to aid users of the script. The following is a more complete example of providing a description taken from the `generate-all` command:
+The `description` method describes the script for those who read it; `grails help` does not show it, since the build of the project runs a script and the command line does not read one (see "Scripts and the `grails` Command" below). The following is a more complete example of a description, with usage instructions, a flag and an argument:
 
 [source,groovy]
 ----
-description( "Generates a controller that performs CRUD operations and the associated views" ) {
-  usage "grails generate-all <<DOMAIN CLASS>>"
+description( "Imports the orders of a CSV file" ) {
+  usage "grails data-import <<FILE>>"
   flag name:'force', description:"Whether to overwrite existing files"
-  argument name:'Domain Class', description:'The name of the domain class'
+  argument name:'File', description:'The CSV file to import'
 }
 ----
 
-As you can see this description profiles usage instructions, a flag and an argument. This allows the command to be used as follows:
+The script is then used as follows:
 
 [source,groovy]
 ----
-grails generate-all MyClass --force
+grails data-import orders.csv --force
 ----
 
 
 ==== Template Generation
 
 
-Plugins and applications that need to define template generation tasks can do so using scripts. A example of this is the Scaffolding plugin which defines the `generate-all` and `generate-controllers` commands.
+Plugins and applications that need to define template generation tasks can do so using scripts.
 
-Every Grails script implements the link:{api}org/grails/cli/profile/commands/templates/TemplateRenderer.html[TemplateRenderer] interface which makes it trivial to render templates to the users project workspace.
+Every Grails script has the methods of the link:{api}org/apache/grails/core/cli/template/TemplateRenderer.html[TemplateRenderer] interface which makes it trivial to render templates to the users project workspace.
 
-The following is an example of the link:{commandLineRef}create-script.html[create-script] command written in Groovy:
+The following is an example of a script that writes a class from a template, `src/main/templates/artifacts/Report.groovy` of the project:
 
 [source,groovy]
 ----
-description( "Creates a Grails script" ) {
-  usage "grails create-script <<SCRIPT NAME>>"
-  argument name:'Script Name', description:"The name of the script to create"
+description( "Creates a report class" ) {
+  usage "grails create-report <<REPORT NAME>>"
+  argument name:'Report Name', description:"The name of the report to create"
   flag name:'force', description:"Whether to overwrite existing files"
 }
 
-def scriptName = args[0]
-def model = model(scriptName)
+def model = model(args[0])
 def overwrite = flag('force') ? true : false
 
-render  template: template('artifacts/Script.groovy'),
-        destination: file("src/main/scripts/${model.lowerCaseName}.groovy"),
+render  template: template('artifacts/Report.groovy'),
+        destination: file("src/main/groovy/${model.packagePath}/${model.className}Report.groovy"),
         model: model,
         overwrite: overwrite
 ----
 
-If a script is defined in a plugin or profile, the `template(String)` method will search for the template in the application before using the template provided by your plugin or profile. This allows users of your plugin or profile to customize what gets generated.
+If a script is defined in a plugin, the `template(String)` method will search for the template in the application before using the template provided by your plugin. This allows users of your plugin to customize what gets generated.
 
-It is common to provide an easy way to allow users to copy the templates from your plugin or profile. Here is one example on how the angular scaffolding copies templates.
+It is common to provide an easy way to allow users to copy the templates from your plugin. Here is one example on how the angular scaffolding copies templates.
 
 [source,groovy]
 ----
@@ -126,5 +122,72 @@ In addition, an `asMap` method is available to turn all of the properties into a
 ==== Working with files
 
 
-All scripts have access to methods on the link:{api}org/grails/cli/profile/commands/io/FileSystemInteraction.html[FileSystemInteraction] class. It contains helpful methods to copy, delete, and create files.
+All scripts have access to methods on the link:{api}org/apache/grails/core/cli/io/FileSystemInteraction.html[FileSystemInteraction] class. It contains helpful methods to copy, delete, and create files.
 
+
+
+==== Scripts and the `grails` Command
+
+
+The `grails` command has every script `src/main/scripts/<name>.groovy` of a project as a command, by the name of its file:
+
+[source,console]
+----
+$ ls src/main/scripts
+data-import.groovy
+$ grails help
+...
+Tools of the application and its plugins:
+  data-import  (script of the application)
+$ grails data-import orders.csv --dry-run
+| Running the script data-import of src/main/scripts, with the Gradle task runScriptCommand
+Script commands are deprecated: write a tool and run it with runTool
+----
+
+A script is run by the build of the project, and not by the `grails` command. The command starts the Gradle task `runScriptCommand` with the Gradle wrapper of the project, and that task compiles and runs the script in a JVM of the build. A script is code of the project, as its build file is: whoever runs the build of a project runs its scripts, and nothing else does. The command line itself never compiles, evaluates or opens a script:
+
+* To list the scripts it reads the names of the files in `src/main/scripts` and nothing of what they hold. The description of a script is therefore not shown by `help`. `DataImport.groovy` and `data-import.groovy` are both the command `data-import`. A file is a command when it is a plain file, not a link, whose name is made of the letters a to z and digits, in words that capitals or hyphens set apart, and gives a name of at most 64 characters. `help` and `help --json` say how many `.groovy` files are no commands, without naming them. A directory with more than 4096 files has no commands at all, and of more than 256 scripts the first 256 in the order of their names are commands; `help` says so in both cases. A directory that `src`, `src/main` or `src/main/scripts` is a link to is not listed. The build finds the script to run by the same rule: a link is not run as a script of the project, by the `grails` command or by `./gradlew runScriptCommand`, and where two files give one name the one that is listed is the one that is run.
+* A script that has the name of a command of `grails`, or of a tool the build lists (see xref:commandLine[The Command Line], the section on the tools of the application and its plugins), is not a command. `help` says so, and how the script is still run: `grails gradle runScriptCommand --arg=<name>`.
+* Everything after the name is given to the script as it is, each argument as the one argument it is, in a file that only you can read and that is deleted afterwards. The exit code is 0 when the script ran and did not return `false`, and 1 otherwise, with one line that says why: what the script threw, that it returned `false`, or the first mistake and its line when it could not be compiled. The arguments are data: `-Dgrails.env=production` after the name of a script is an argument the script can read (`commandLine.systemProperties`) and does not change the environment the script runs in, which is that of the build, and `--` among them does not end the flags.
+* Below a project that is not your own, where the `grails` command does not use the project (see xref:commandLine[The Command Line]), its scripts are no commands.
+
+The task can be run without the `grails` command. The first `--arg` is the name of the script, each further one an argument of it; `--args-file` names a UTF-8 file with a JSON array of strings, the name first, for a caller that is a program:
+
+[source,console]
+----
+$ ./gradlew runScriptCommand --arg=data-import --arg=orders.csv --arg=--dry-run
+$ ./gradlew runScriptCommand --args-file=build/tmp/arguments.json
+----
+
+The JVM of the script has what the project depends on at run time and the dependencies of the tools (`grailsCli` and `grailsCliStandalone`) on its class path. The classes of the project are not on it and the project is not compiled first, so that a script can generate code for an application that does not compile yet; a project that it depends on (`implementation project(':lib')`) is built, as for anything that uses that class path. A script that is not found in `src/main/scripts` is looked for among the files of `META-INF/commands` on that class path, where the scripts of plugins are, by the same rule for names (`CreateReport.groovy` is `create-report`). A jar is searched whether or not it has an entry for that directory, as long as it has a manifest, which every jar a build makes has; no script is taken from a jar without one, and where such a jar has an entry for the directory and scripts in it, a line on the standard error names the jar and says so. Where more than one plugin has a script of that name, the jars of Grails come before any other jar, and the jars of each group are taken in the order of their file names, so the same class path runs the same script whatever order it lists its jars in. The scripts of plugins are run by the task and are not listed by `help`. What a script says through `console` arrives as whole lines of plain text, since Gradle is no terminal, and progress indicators are not drawn. The stack trace of what a script threw is shown when the build is started with `-Dgrails.full.stacktrace=true`.
+
+A script that the build runs has `description`, `args`, `argsMap`, `flag`, `model`, `render`, `template`, `templates`, the methods for working with files, `console`, `config` and `navigateConfig` (read from `grails-app/conf/application.yml` and `application.groovy`), `ant`, the events (`on`, `before`, `after`, `notify`), and calling another script as a method. A closure reaches what its delegate has, as in any Groovy script: `copy { from ...; into ... }`, the nested elements of an Ant task and builders work, and a method that is not there is a `MissingMethodException` a script can catch. It does not have what belonged to the Grails shell:
+
+[cols="1,2", options="header"]
+|===
+| In a script | With the build
+
+| `gradle.compileGroovy()`
+| A script cannot run a build from inside the build. Run the tasks from the command line (`grails gradle compileGroovy`), or make the work a task of the build that depends on them.
+
+| `testApp()`, `runApp()` and other commands that are no scripts
+| Run them from the command line, one after the other. A method that names another script (`dataImport('orders.csv')` for a script `data-import` of the project or of a plugin) runs that script.
+
+| Classes of `org.grails.cli`, such as the completers named in a `description`
+| They are not on the class path: remove the `import`. A script that imports one is not compiled, and the message says so. A class that is named in full in the `description` closure, without an import, does not stop the script, because the closure is not run; remove such a `completer` line as well, since nothing completes the arguments of a script. The scripts of the plugins of the framework name no completer.
+
+| `profile`, `spring`, `isServerAvailable()`, `waitForStartup()`
+| Not there. A script that uses one of them fails with one line that names it.
+|===
+
+A listener that `before` or `after` registers for the name of a script, which is a listener of the event `<name>Start` or `<name>End` that `on` can name as well, is given the context that script runs with, as in the Grails shell: its `commandLine` has the name and the arguments of that script, and the delegate of the listener is that script. The listeners of `after` are called when the script has ended without throwing, also when it returned `false`.
+
+[source,groovy]
+----
+before('data-import') { context ->
+    console.addStatus "Importing ${context.commandLine.remainingArgs.join(', ')}"
+}
+dataImport('orders.csv')
+----
+
+Script commands are kept for the applications that have them and are deprecated: the scripts in `src/main/scripts`, the Gradle tasks `runScriptCommand` and `runScript`, and `grails run-script FILE` keep working, and each warns once that it is deprecated and names tools as the newer way (`Script commands are deprecated: write a tool and run it with runTool`, and for the task `runScript`, `runScript is deprecated: write a tool and run it with runTool`). What a script did is written as a tool, in `src/cli/groovy` or, for one that only works on the files of the project, in `src/standalone/groovy` (see xref:commandLine#creatingTools[Creating Tools]), which the `grails` command lists with its description.

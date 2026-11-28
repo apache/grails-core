@@ -1,0 +1,666 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.apache.grails.forge.cli.console
+
+import java.nio.file.Path
+import java.util.function.Function
+import java.util.function.Supplier
+import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.PackArtefactCommand
+import org.apache.grails.forge.core.pack.PackArtefact
+import org.grails.forge.cli.ForgeContext
+import org.grails.forge.cli.command.CodeGenCommand
+import org.grails.forge.feature.FeatureSelectionException
+import org.grails.forge.io.FileSystemOutputHandler
+import picocli.CommandLine
+
+/**
+ * The commands a command line has, read from its picocli model: every command that is registered
+ * with the command line is in the catalog, with nothing else to do for it. The catalog finds a
+ * command by its name or by the short form of its name, and describes the commands for a tool.
+ *
+ * <p>A short form is read as {@link ShortForms} says: as the Grails shell read it, so that {@code cA}
+ * and {@code creA} are {@code create-app} and {@code cDC} is {@code create-domain-class}, and, when it
+ * is of lower-case letters only, also as the starts of the words of the name, so that {@code ra} is
+ * {@code run-app} and {@code ccon} is {@code create-controller}. The name of a command, or another
+ * name it has, is that command whatever it is short for; at the top of the command line a name of
+ * {@link FormerCommands} is short for nothing, and is answered with what there is in its place. The
+ * commands of the CLI itself come first: a short form that fits one of them is not one of a command
+ * of the application or of its plugins.</p>
+ *
+ * @since 9.0
+ */
+@CompileStatic
+final class CommandCatalog {
+
+    /** The version of the document {@link #describe} gives. */
+    public static final int FORMAT = 1
+
+    /** The origin of a command that is part of the command line itself. */
+    public static final String BUILT_IN = 'built-in'
+
+    /**
+     * The {@code type} of an option that takes no value, a switch. The member {@code type} of an option
+     * or a parameter says what each of its values is, and for one that is {@code repeatable} what each
+     * value that is given is.
+     */
+    public static final String TYPE_BOOLEAN = 'boolean'
+
+    /** The {@code type} of a value that is text: a name, a path, or one of the {@code choices}. */
+    public static final String TYPE_STRING = 'string'
+
+    /** The {@code type} of a value that is a whole number. */
+    public static final String TYPE_INTEGER = 'integer'
+
+    /** The {@code type} of a value that is a number with a fraction. */
+    public static final String TYPE_NUMBER = 'number'
+
+    /** The {@code type} of an option whose values are keys with values, each given as {@code key=value}, as {@code -D}. */
+    public static final String TYPE_MAP = 'map'
+
+    /** Every {@code type} an option or a parameter has. */
+    public static final List<String> TYPES = [TYPE_BOOLEAN, TYPE_STRING, TYPE_INTEGER, TYPE_NUMBER, TYPE_MAP].asImmutable()
+
+    /**
+     * The members a tool of the application or of a plugin has besides those every command has, in their
+     * order, after {@code deprecated} and before {@code commands}: what the tool declares of its command
+     * line, {@code options} and {@code parameters} described as those of a command of the command line
+     * are; its {@code hints}, the four booleans {@code readOnlyHint}, {@code destructiveHint},
+     * {@code idempotentHint} and {@code openWorldHint}; {@code readsInput}, {@code true} for a tool that
+     * reads what is typed; and {@code incomplete}, which of {@code description}, {@code arguments} and
+     * {@code hints} the tool lacks. Each is there only where the build listed it for the tool and it says
+     * something: a list or an object that is not empty, or {@code true}. A tool that has no {@code options}
+     * and no {@code parameters} declares none, and takes whatever it is given.
+     */
+    public static final List<String> TOOL_MEMBERS = ['options', 'parameters', 'hints', 'readsInput', 'incomplete'].asImmutable()
+
+    private final CommandLine root
+
+    /**
+     * @param root the command line, with the commands it has here
+     */
+    CommandCatalog(CommandLine root) {
+        this.root = root
+    }
+
+    /**
+     * @return the command line the catalog is of
+     */
+    CommandLine getRoot() {
+        return root
+    }
+
+    /**
+     * Finds a command of a command by what was typed for it. The name of a command, or another name
+     * it has, is that command whatever it is short for.
+     *
+     * @param parent the command the command is one of
+     * @param typed what was typed
+     * @return the command, or {@code null} when there is none by that name or short form
+     * @throws CommandLine.ParameterException when it is the short form of several commands
+     */
+    CommandLine find(CommandLine parent, String typed) {
+        CommandLine named = parent.getSubcommands().get(typed)
+        if (named != null) {
+            return named
+        }
+        Known known = new Known(parent)
+        List<CommandLine> candidates = known.shortFor(typed)
+        if (candidates.size() > 1) {
+            throw new CommandLine.ParameterException(parent, ambiguous(known, typed, candidates))
+        }
+        return candidates.isEmpty() ? null : candidates.get(0)
+    }
+
+    /**
+     * The shortest form of lower-case letters that is short for a command and for no other command
+     * of the command it is one of, as {@link ShortForms#shortest} finds it.
+     *
+     * @param command a command of the command line
+     * @return the form, or {@code null} for the command line itself and where there is none
+     */
+    static String shortestForm(CommandLine command) {
+        CommandLine parent = command.getParent()
+        if (parent == null) {
+            return null
+        }
+        Known known = new Known(parent)
+        return ShortForms.shortest(command, { String form -> known.resolve(form) } as Function<String, CommandLine>)
+    }
+
+    // A short form that fits several commands runs none of them, and names them, each with the
+    // shortest form that is short for it alone, which is what is then typed.
+    private static String ambiguous(Known known, String typed, List<CommandLine> candidates) {
+        boolean anyForm = false
+        List<String> named = []
+        for (CommandLine candidate : candidates) {
+            String form = ShortForms.shortest(candidate, { String each -> known.resolve(each) } as Function<String, CommandLine>)
+            anyForm = anyForm || form != null
+            named.add(FeatureSelectionException.shown(candidate.getCommandName()) + (form == null ? '' : " (${form})"))
+        }
+        return "${FeatureSelectionException.shown(typed)} is short for more than one command: ${named.join(', ')}. " +
+                'Type more of the name of the one that is meant' + (anyForm ? ', or the short form in brackets after it' : '')
+    }
+
+    /**
+     * The refusal of what was typed for a command and is none, with the commands that are most like it.
+     *
+     * @param parent the command a command was expected of
+     * @param typed what was typed
+     * @return the mistake in the command line, which is answered with how the command is used
+     */
+    static CommandLine.ParameterException unknown(CommandLine parent, String typed) {
+        return unknown(parent, typed, null)
+    }
+
+    /**
+     * The refusal of what was typed for a command and is none, as {@link #unknown(CommandLine, String)},
+     * where something else was typed after it: an environment in front of a command is answered with
+     * the command line that gives that command the environment, see {@link FormerCommands#line(CommandLine, String, String)}.
+     *
+     * @param parent the command a command was expected of
+     * @param typed what was typed
+     * @param next what was typed after it, or {@code null}
+     * @return the mistake in the command line, which is answered with how the command is used
+     */
+    static CommandLine.ParameterException unknown(CommandLine parent, String typed, String next) {
+        String given = FeatureSelectionException.shown(typed)
+        // what was typed is compared, and nothing else: not what stands for an empty name or for one that cannot be shown as it is
+        List<String> similar = typed == null || typed.isEmpty() || given != typed ? Collections.<String>emptyList() : suggestions(parent, typed)
+        // it may be a tool of the application, where the build of the project has not listed those
+        String listed = parent.getParent() == null ? ProjectTools.whenUnknown(parent, given) : null
+        // below a project that is not used its commands are not there, which is then why there is none of that name
+        String untrusted = parent.getParent() == null ? ConsoleProject.search(FileSystemOutputHandler.getDefaultBaseDirectory().toPath()).untrusted : null
+        return new UsageHelp.Lines(parent, "There is no command ${given}" +
+                (parent.getParent() == null ? '' : " of ${parent.getCommandName()}") +
+                (similar.isEmpty() ? '' : ". Did you mean: ${similar.join(' or ')}?") +
+                (untrusted == null ? '' : "${System.lineSeparator()}The commands of a project are not there: ${untrusted}") +
+                (listed == null ? '' : "${System.lineSeparator()}${listed}") +
+                ofAFeature(parent, typed) +
+                FormerCommands.line(parent, typed, FormerCommands.isEnvironment(typed) ? commandNamed(parent, next) : null))
+    }
+
+    // A name that a feature can give a command, create- and a name of its own, is a command only in the project of an
+    // application that has the feature: the command line reads the commands of features from the record of the project,
+    // so it cannot say which feature has the name, and says where such a command is one. Not for a name the Grails shell
+    // had, which is answered with what there is in its place.
+    private static String ofAFeature(CommandLine parent, String typed) {
+        if (parent.getParent() != null || typed == null || !typed.startsWith(PackArtefact.COMMAND_PREFIX) || FormerCommands.find(typed) != null) {
+            return ''
+        }
+        String name = typed.substring(PackArtefact.COMMAND_PREFIX.length())
+        if (name.length() > PackArtefact.MAX_NAME || !PackArtefact.NAME.matcher(name).matches() || PackArtefact.RESERVED.contains(name)) {
+            return ''
+        }
+        return "${System.lineSeparator()}A feature can give the command line a command of this name. It is a command in the project of an application that " +
+                "has the feature, where ${UsageHelp.toType(parent, 'help')} lists it and ${UsageHelp.toType(parent, 'feature add')} adds the feature"
+    }
+
+    // the command of a command that was typed, by the name it was typed by or, for a short form, by its name; null for none and for several
+    private static String commandNamed(CommandLine parent, String typed) {
+        if (typed == null || parent.getSubcommands().containsKey(typed)) {
+            return typed
+        }
+        try {
+            CommandLine command = new CommandCatalog(parent.getCommandSpec().root().commandLine()).find(parent, typed)
+            return command == null ? null : command.getCommandName()
+        } catch (CommandLine.ParameterException ignored) {
+            return null
+        }
+    }
+
+    /**
+     * Replaces the short form of the name of a command by the name, in a command line that is about
+     * to be read. Only what stands where the name of a command is expected is looked at: the first
+     * argument that is not an option of the command line, and after a command that has commands of
+     * its own the next one. Whatever follows the last command is the command's and is left as it is,
+     * and so is the whole command line when it cannot be told where the name stands.
+     *
+     * @param args the command line
+     * @return the command line with the names of the commands
+     * @throws CommandLine.ParameterException when a short form is that of several commands, and when
+     * what stands where a command is expected is neither a command nor the short form of one
+     */
+    String[] expand(String... args) {
+        String[] expanded = args.clone()
+        CommandLine current = root
+        boolean help = false
+        for (int i = 0; i < expanded.length; i++) {
+            String arg = expanded[i]
+            CommandLine.Model.CommandSpec spec = current.getCommandSpec()
+            // a command without commands takes everything that follows, and so may one that has parameters
+            if (arg == null || spec.subcommands().isEmpty() || !spec.positionalParameters().isEmpty()) {
+                break
+            }
+            // after -- nothing is a command, and what a file of arguments holds is not known here
+            if (arg == '--' || isArgumentFile(arg)) {
+                break
+            }
+            if (arg.startsWith('-')) {
+                if (isSwitches(spec, arg)) {
+                    help = help || (1..<arg.length()).any { int at -> asksForHelp(spec.findOption('-' + arg.charAt(at))) }
+                    continue
+                }
+                int assigned = arg.indexOf('=')
+                CommandLine.Model.OptionSpec option = spec.findOption(assigned < 0 ? arg : arg.substring(0, assigned))
+                if (option == null) {
+                    break
+                }
+                help = help || asksForHelp(option)
+                if (assigned < 0 && option.arity().max() > 0) {
+                    // an option whose value may be left out: the next argument is its value or a command
+                    if (option.arity().min() == 0) {
+                        break
+                    }
+                    i += option.arity().min()
+                }
+                continue
+            }
+            CommandLine named = current.getSubcommands().get(arg)
+            if (named == null) {
+                named = find(current, arg)
+                if (named == null) {
+                    // the help or the version was asked for: that is the answer, whatever else was typed
+                    if (help) {
+                        break
+                    }
+                    throw unknown(current, arg, i + 1 < expanded.length ? expanded[i + 1] : null)
+                }
+                expanded[i] = named.getCommandName()
+            }
+            current = named
+        }
+        return expanded
+    }
+
+    // @file is read as a file of arguments when there is such a file, and is an argument like any other when there is none
+    private boolean isArgumentFile(String arg) {
+        return arg.length() > 1 && arg.startsWith('@') && root.isExpandAtFiles() && new File(arg.substring(1)).exists()
+    }
+
+    private static boolean asksForHelp(CommandLine.Model.OptionSpec option) {
+        return option != null && (option.usageHelp() || option.versionHelp())
+    }
+
+    // several options that take no value written as one, as -xv
+    private static boolean isSwitches(CommandLine.Model.CommandSpec spec, String arg) {
+        if (arg.length() < 3 || arg.charAt(1) == ('-' as char)) {
+            return false
+        }
+        for (int i = 1; i < arg.length(); i++) {
+            CommandLine.Model.OptionSpec option = spec.findOption('-' + arg.charAt(i))
+            if (option == null || option.arity().max() > 0) {
+                return false
+            }
+        }
+        return true
+    }
+
+    /**
+     * Describes the commands for a tool, as the document {@code help --json} writes. The document
+     * is described in the design of the command line; a reader ignores what it does not know.
+     *
+     * @param projectDirectory the directory of the project the commands are those of, or {@code null} outside a project
+     * @param diagnostics what there is to say about the commands of the project, one line each
+     * @param complete whether every command of the project is among the commands: false when the
+     * record of the project could not be used, or the project is not used. A diagnostic alone, as
+     * that the two records of a project do not say the same, leaves the catalog complete
+     * @return the document, as maps, lists, strings, numbers and booleans
+     */
+    Map<String, Object> describe(Path projectDirectory, List<String> diagnostics, boolean complete) {
+        Map<String, Object> document = new LinkedHashMap<>()
+        document.put('format', FORMAT)
+        document.put('complete', complete)
+        document.put('diagnostics', new ArrayList<String>(diagnostics))
+        document.put('projectDirectory', projectDirectory == null ? null : projectDirectory.toString())
+        // what the command line takes in front of a command
+        document.put('options', options(root.getCommandSpec()))
+        document.put('commands', commands(root))
+        return document
+    }
+
+    private List<Map<String, Object>> commands(CommandLine parent) {
+        List<Map<String, Object>> described = []
+        for (CommandLine command : listed(parent)) {
+            CommandLine.Model.CommandSpec spec = command.getCommandSpec()
+            if (spec.userObject() instanceof ToolCommand) {
+                // a tool of the application is described by the build of the project
+                described.add(tool(((ToolCommand) spec.userObject()).describe()))
+                continue
+            }
+            Map<String, Object> each = new LinkedHashMap<>()
+            each.put('name', spec.name())
+            each.put('aliases', spec.aliases().toList())
+            // what a feature says of its command is text, which the help has in the form the command line shows as it is
+            each.put('description', spec.userObject() instanceof PackArtefactCommand ? ((PackArtefactCommand) spec.userObject()).getDescription() :
+                    text(spec.usageMessage().description()))
+            each.put('project', spec.userObject() instanceof ProjectCommand)
+            each.put('origin', spec.userObject() instanceof PackArtefactCommand ? ((PackArtefactCommand) spec.userObject()).getOrigin() : BUILT_IN)
+            // the names of the command that are deprecated: its own name, or another name it has, which still run it after a warning
+            List<String> deprecated = deprecatedNames(spec)
+            if (!deprecated.isEmpty()) {
+                each.put('deprecatedNames', deprecated)
+            }
+            each.put('options', options(spec))
+            List<Map<String, Object>> parameters = []
+            for (CommandLine.Model.PositionalParamSpec parameter : spec.positionalParameters()) {
+                if (parameter.hidden()) {
+                    continue
+                }
+                Map<String, Object> entry = new LinkedHashMap<>()
+                entry.put('label', parameter.paramLabel())
+                entry.put('arity', parameter.arity().toString())
+                entry.put('type', typeOf(parameter))
+                entry.put('description', text(parameter.renderedDescription()))
+                entry.put('repeatable', parameter.isMultiValue())
+                entry.put('split', parameter.splitRegex() ?: null)
+                entry.put('choices', choices(parameter))
+                parameters.add(entry)
+            }
+            each.put('parameters', parameters)
+            each.put('relations', spec.userObject() instanceof OptionRelation.Declared ?
+                    ((OptionRelation.Declared) spec.userObject()).getOptionRelations().collect { OptionRelation relation -> relation.describe() } :
+                    Collections.<Map<String, Object>>emptyList())
+            each.put('commands', commands(command))
+            described.add(each)
+        }
+        return described
+    }
+
+    // A tool as the build of the project describes it, with the members of TOOL_MEMBERS where they say something,
+    // in their order and before its commands, and without them where they say nothing.
+    private static Map<String, Object> tool(Map<String, Object> described) {
+        Map<String, Object> entry = new LinkedHashMap<>()
+        described.each { String member, Object value ->
+            if (member != 'commands' && !TOOL_MEMBERS.contains(member)) {
+                entry.put(member, value)
+            }
+        }
+        for (String member : TOOL_MEMBERS) {
+            Object value = described.get(member)
+            if (saysSomething(value)) {
+                entry.put(member, value)
+            }
+        }
+        entry.put('commands', described.containsKey('commands') ? described.get('commands') : Collections.emptyList())
+        return entry
+    }
+
+    private static boolean saysSomething(Object value) {
+        if (value instanceof Collection) {
+            return !((Collection) value).isEmpty()
+        }
+        if (value instanceof Map) {
+            return !((Map) value).isEmpty()
+        }
+        return value == Boolean.TRUE
+    }
+
+    // What each value of an option or a parameter is: a switch is a boolean, an option of keys with values a map, and
+    // otherwise what its type, or the type of each value of one that can be given more than once, says.
+    private static String typeOf(CommandLine.Model.ArgSpec arg) {
+        if (arg.isOption() && arg.arity().max() == 0) {
+            return TYPE_BOOLEAN
+        }
+        Class<?> type = arg.type()
+        if (type != null && Map.isAssignableFrom(type)) {
+            return TYPE_MAP
+        }
+        if (arg.isMultiValue()) {
+            Class<?>[] each = arg.auxiliaryTypes()
+            type = each != null && each.length > 0 ? each[0] : null
+        }
+        return valueType(type)
+    }
+
+    private static String valueType(Class<?> type) {
+        if (type == null) {
+            return TYPE_STRING
+        }
+        if (type in [Integer, Integer.TYPE, Long, Long.TYPE, Short, Short.TYPE, Byte, Byte.TYPE, BigInteger]) {
+            return TYPE_INTEGER
+        }
+        if (type in [Double, Double.TYPE, Float, Float.TYPE, BigDecimal]) {
+            return TYPE_NUMBER
+        }
+        if (type in [Boolean, Boolean.TYPE]) {
+            return TYPE_BOOLEAN
+        }
+        return TYPE_STRING
+    }
+
+    /**
+     * @param spec a command of the command line
+     * @return the names of the command that are deprecated, which still run it after a warning line: {@code run-script}, whose
+     * place tools take, and {@code run-command}, the name {@code run-tool} had
+     */
+    static List<String> deprecatedNames(CommandLine.Model.CommandSpec spec) {
+        if (spec.userObject() instanceof RunScriptCommand) {
+            return [spec.name()]
+        }
+        return spec.userObject() instanceof RunToolCommand ? [RunToolCommand.DEPRECATED_NAME] : Collections.<String>emptyList()
+    }
+
+    private static final Comparator<CommandLine.Model.OptionSpec> OPTION_ORDER = new ByLongestName()
+
+    // by the longest name of an option without its hyphens, whatever its case, and then as it is written
+    @CompileStatic
+    private static class ByLongestName implements Comparator<CommandLine.Model.OptionSpec> {
+
+        @Override
+        int compare(CommandLine.Model.OptionSpec one, CommandLine.Model.OptionSpec other) {
+            String first = one.longestName().replaceFirst(/^-+/, '')
+            String second = other.longestName().replaceFirst(/^-+/, '')
+            int ignoringCase = String.CASE_INSENSITIVE_ORDER.compare(first, second)
+            return ignoringCase != 0 ? ignoringCase : one.longestName() <=> other.longestName()
+        }
+    }
+
+    private static List<Map<String, Object>> options(CommandLine.Model.CommandSpec spec) {
+        List<Map<String, Object>> options = []
+        // Reflection does not promise field order; use an explicit, locale-independent order.
+        for (CommandLine.Model.OptionSpec option : spec.options().toSorted(OPTION_ORDER)) {
+            if (option.hidden()) {
+                continue
+            }
+            Map<String, Object> entry = new LinkedHashMap<>()
+            entry.put('names', option.names().toList())
+            entry.put('arity', option.arity().toString())
+            entry.put('type', typeOf(option))
+            entry.put('label', option.arity().max() > 0 ? option.paramLabel() : null)
+            entry.put('required', option.required())
+            entry.put('description', description(option))
+            entry.put('repeatable', option.isMultiValue())
+            entry.put('split', option.splitRegex() ?: null)
+            entry.put('choices', choices(option))
+            entry.put('default', defaultOf(option))
+            // an option the application or one of its plugins declares: as it is declared, with who declares it and what it sets
+            Map<String, Object> declared = spec.userObject() instanceof DeclaredOptions.Taking ?
+                    DeclaredOptions.describe((DeclaredOptions.Taking) spec.userObject(), option.longestName()) : null
+            if (declared != null) {
+                entry.putAll(declared)
+            }
+            options.add(entry)
+        }
+        return options
+    }
+
+    // Every value an option or a parameter takes, where those are all it takes: the constants of an
+    // enum, or values that say they are all there are. Values that are only suggestions are none, and
+    // neither are the features, which only the generator knows and a tool asks --list-features for.
+    private static List<String> choices(CommandLine.Model.ArgSpec arg) {
+        Iterable<String> candidates = arg.completionCandidates()
+        if (candidates == null || candidates instanceof ForgeContext.Candidates || !(arg.type().isEnum() || candidates instanceof OptionChoices)) {
+            return null
+        }
+        List<String> choices = []
+        for (String each : candidates) {
+            choices.add(each)
+        }
+        return choices
+    }
+
+    // The value an option that takes one has when it is not given, as the command declares it; null where
+    // it declares none, or where what the command does without the option is not a value, as for a switch.
+    private static String defaultOf(CommandLine.Model.OptionSpec option) {
+        if (option.arity().max() == 0) {
+            return null
+        }
+        if (option.defaultValue() != null) {
+            return option.defaultValue()
+        }
+        Object initial = option.hasInitialValue() ? option.initialValue() : null
+        return initial == null || initial instanceof Collection || initial instanceof Map || initial.getClass().isArray() ? null : String.valueOf(initial)
+    }
+
+    // The values an option can have are part of its description, except those only the generator
+    // knows, the features: the document is written without the generator, and is the same whether
+    // or not something started it before.
+    private static String description(CommandLine.Model.OptionSpec option) {
+        Iterable<String> candidates = option.completionCandidates()
+        if (candidates instanceof ForgeContext.Candidates) {
+            return ((ForgeContext.Candidates) candidates).withoutListing({ text(option.renderedDescription()) } as Supplier<String>)
+        }
+        return text(option.renderedDescription())
+    }
+
+    // the commands the help lists, once each: a command is registered under every name it has
+    private static List<CommandLine> listed(CommandLine parent) {
+        Set<CommandLine> commands = Collections.newSetFromMap(new IdentityHashMap<CommandLine, Boolean>())
+        List<CommandLine> listed = []
+        for (CommandLine command : parent.getSubcommands().values()) {
+            if (!command.getCommandSpec().usageMessage().hidden() && commands.add(command)) {
+                listed.add(command)
+            }
+        }
+        return listed
+    }
+
+    // The commands that are most like what was typed and is no command: the command that took the place of a command of
+    // the Grails shell of that name, then those it nearly is the short form of, then those whose names are most like it, as
+    // picocli finds them; three at most. A deprecated name is never offered: a command is offered by its own name in its
+    // place, and not at all where that name is deprecated too, as run-script is.
+    private static List<String> suggestions(CommandLine parent, String typed) {
+        List<CommandLine> suggested = []
+        List<String> names = []
+        String replacement = parent.getParent() == null ? FormerCommands.find(typed)?.getReplacement() : null
+        CommandLine replacing = replacement == null ? null : parent.getSubcommands().get(replacement)
+        List<CommandLine> near = ShortForms.FORM.matcher(typed).matches() ? ShortForms.near(typed, new Known(parent).all()) : Collections.<CommandLine>emptyList()
+        List<Map.Entry<String, CommandLine>> candidates = []
+        if (replacing != null) {
+            candidates.add(new AbstractMap.SimpleImmutableEntry<String, CommandLine>(replacing.getCommandName(), replacing))
+        }
+        near.each { CommandLine command -> candidates.add(new AbstractMap.SimpleImmutableEntry<String, CommandLine>(command.getCommandName(), command)) }
+        for (String similar : new CommandLine.UnmatchedArgumentException(parent, Collections.singletonList(typed)).getSuggestions()) {
+            candidates.add(new AbstractMap.SimpleImmutableEntry<String, CommandLine>(similar, parent.getSubcommands().get(similar)))
+        }
+        for (Map.Entry<String, CommandLine> candidate : candidates) {
+            String offered = offered(candidate.value, candidate.key)
+            // once for a command, by whichever of its names is most like what was typed
+            if (offered != null && names.size() < ShortForms.MAX_NEAR && !suggested.any { CommandLine each -> each.is(candidate.value) }) {
+                suggested.add(candidate.value)
+                names.add(offered)
+            }
+        }
+        return names
+    }
+
+    // The name a command is offered by where it was found by one of its names: that name, or the name of the command where
+    // that name is deprecated; nothing where the command's own name is deprecated as well.
+    private static String offered(CommandLine command, String name) {
+        if (command == null) {
+            return null
+        }
+        List<String> deprecated = deprecatedNames(command.getCommandSpec())
+        if (deprecated.contains(command.getCommandName())) {
+            return null
+        }
+        return deprecated.contains(name) ? command.getCommandName() : name
+    }
+
+    // whether what was typed is the name of a command the Grails shell had, or of an environment in front of a command, which is answered with
+    // what there is in its place and is short for nothing
+    private static boolean isFormer(CommandLine parent, String typed) {
+        return parent.getParent() == null && (FormerCommands.find(typed) != null || FormerCommands.isEnvironment(typed))
+    }
+
+    /**
+     * The commands of a command that a short form is looked up among: those the help lists, and outside
+     * a project the commands that create the classes of a project, which are not listed there; they are
+     * commands there by their names, and so by their short forms. The commands of the CLI itself come
+     * first, then those the features of the application give it, then those of the build: what a feature, a
+     * project or one of its plugins calls a command does not change what a short form of a command
+     * before it means, or make it stand for two.
+     */
+    @CompileStatic
+    private static final class Known {
+
+        private final CommandLine parent
+        private final List<CommandLine> own = []
+        private final List<CommandLine> ofFeatures = []
+        private final List<CommandLine> ofTheBuild = []
+
+        Known(CommandLine parent) {
+            this.parent = parent
+            List<CommandLine> known = listed(parent)
+            for (CommandLine command : new LinkedHashSet<CommandLine>(parent.getSubcommands().values())) {
+                if (command.getCommandSpec().usageMessage().hidden() && command.getCommandSpec().userObject() instanceof CodeGenCommand) {
+                    known.add(command)
+                }
+            }
+            for (CommandLine command : known) {
+                Object object = command.getCommandSpec().userObject()
+                (object instanceof ToolCommand ? ofTheBuild : object instanceof PackArtefactCommand ? ofFeatures : own).add(command)
+            }
+        }
+
+        List<CommandLine> all() {
+            return own + ofFeatures + ofTheBuild
+        }
+
+        // what a form is short for; nothing for anything that cannot be a short form, and for a name of the Grails shell
+        List<CommandLine> shortFor(String typed) {
+            if (!ShortForms.FORM.matcher(typed).matches() || isFormer(parent, typed)) {
+                return Collections.emptyList()
+            }
+            // what a feature calls a command does not make a short form of the command line stand for two, and neither does
+            // what the build lists for one of a feature
+            List<CommandLine> fits = ShortForms.fitting(typed, own)
+            if (fits.isEmpty()) {
+                fits = ShortForms.fitting(typed, ofFeatures)
+            }
+            return fits.isEmpty() ? ShortForms.fitting(typed, ofTheBuild) : fits
+        }
+
+        // the command what was typed stands for alone, by its name or as a short form; null for none and for several
+        CommandLine resolve(String typed) {
+            CommandLine named = parent.getSubcommands().get(typed)
+            if (named != null) {
+                return named
+            }
+            List<CommandLine> fits = shortFor(typed)
+            return fits.size() == 1 ? fits.get(0) : null
+        }
+    }
+
+    // the lines of a description as plain text: without the markup of the help, which a tool would show as it is
+    private static String text(String[] lines) {
+        return lines.collect { String line -> CommandLine.Help.Ansi.OFF.string(line).trim() }.findAll { String line -> !line.isEmpty() }.join(' ')
+    }
+}

@@ -17,38 +17,36 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails ships with a lot of command line functionality out of the box that you may find useful in your own scripts (See the command line reference in the reference guide for info on all the commands). 
+A script of a project (see xref:commandLine#creatingCustomScripts[Creating Custom Scripts]) is run by the build of the project, through the Gradle task `runScriptCommand`. What it can re-use is other scripts and Ant.
 
-Any script you create can invoke another Grails script simply by invoking a method:
 
-[source,groovy]
-----
-testApp()
-----
+==== Invoking Another Script
 
-The above will invoke the `test-app` command. You can also pass arguments using the method arguments:
+
+A script can invoke another script, of the project or of a plugin, by invoking a method that is named after it:
 
 [source,groovy]
 ----
-testApp('--debug-jvm')
+dataImport('orders.csv')
 ----
 
+The above runs the script `data-import`, as `grails data-import orders.csv` does in the project that has the script. The arguments of the method are the arguments of the script.
 
-==== Invoking Gradle 
+The script that is invoked also has the flags the invoking script was given, as it had in the Grails shell: with `grails nightly --format=json --force`, a script `nightly` that calls `dataImport('orders.csv')` runs `data-import` with `flag('format')` being `json` and `flag('force')` being `true`. A flag among the arguments of the method comes over one of the same name (`dataImport('orders.csv', '--format=xml')`), and so does a `-D` system property, which is read from `commandLine.systemProperties`. The arguments of the invoking script that are no flags are not passed on: `args` of the invoked script are the arguments of the method.
+
+Only a script can be invoked this way. The commands of the `grails` command line that are no scripts, such as `test-app`, `run-app` and `compile`, and the commands an application or a plugin brings as classes, such as `generate-all` of the scaffolding plugin, are not: `testApp()` in a script fails. Before Grails 9 the Grails shell ran scripts itself, and such a method ran any command of the shell. Run those commands from the command line, one after the other.
 
 
-Instead of invoking another Grails CLI command you can invoke Gradle directory using the `gradle` property.
+==== Invoking Gradle
 
-[source,groovy]
-----
-gradle.compileGroovy()
-----
+
+A script cannot run a Gradle task: the `gradle` property that scripts had in the Grails shell, as in `gradle.compileGroovy()`, is not there, because the script already runs inside a build. Run the task before or after the script (`grails gradle compileGroovy`), or make the work a task of the build.
 
 
 ==== Invoking Ant
 
 
-You can also invoke Ant tasks from scripts which can help if you need to writing code generation and automation tasks:
+You can invoke Ant tasks from scripts, which helps with code generation and automation tasks:
 
 [source,groovy]
 ----

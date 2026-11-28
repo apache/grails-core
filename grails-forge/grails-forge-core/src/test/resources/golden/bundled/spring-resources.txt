@@ -1,0 +1,76 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: always
+
+# web
+title: spring-resources
+description: spring-resources
+category: Spring Framework
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/conf/spring/resources.groovy
++ // Place your Spring DSL code here
++ beans = {
++ }
+
+# rest_api
+title: spring-resources
+description: spring-resources
+category: Spring Framework
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/conf/spring/resources.groovy
++ // Place your Spring DSL code here
++ beans = {
++ }
+
+# web_plugin
+title: spring-resources
+description: spring-resources
+category: Spring Framework
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/conf/spring/resources.groovy
++ // Place your Spring DSL code here
++ beans = {
++ }
+
+# plugin
+title: spring-resources
+description: spring-resources
+category: Spring Framework
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/conf/spring/resources.groovy
++ // Place your Spring DSL code here
++ beans = {
++ }
+
+# rest_api_plugin
+title: spring-resources
+description: spring-resources
+category: Spring Framework
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/conf/spring/resources.groovy
++ // Place your Spring DSL code here
++ beans = {
++ }
+

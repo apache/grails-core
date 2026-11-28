@@ -55,7 +55,7 @@ class PublishPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         def initialized = new AtomicBoolean(false)
-        ['java', 'java-library', 'java-platform', 'org.apache.grails.gradle.grails-profile'].each {
+        ['java', 'java-library', 'java-platform'].each {
             project.plugins.withId(it) {
                 if (initialized.compareAndSet(false, true)) {
                     publish(project)
@@ -106,7 +106,13 @@ class PublishPlugin implements Plugin<Project> {
 
             def artifactsTask = configurePublishedArtifacts(project)
 
-            configureChecksums(project, artifactsTask)
+            // A build that only fills the repository the tests resolve from publishes what a build resolves:
+            // see TestRepositoryPublish. Every other build publishes all of it, with the checksums of a release.
+            boolean forTestsOnly = TestRepositoryPublish.isAllThatIsAsked(project)
+            configureChecksums(project, artifactsTask, !forTestsOnly)
+            if (forTestsOnly) {
+                TestRepositoryPublish.publishWhatIsResolved(project)
+            }
         }
     }
 
@@ -141,13 +147,13 @@ class PublishPlugin implements Plugin<Project> {
 
     /**
      * Maps the absolute path of every artifact of the project's Maven publications to the coordinate it is
-     * published under. Publication metadata sidecars ({@code grails-plugin.xml}, {@code profile.yml}) are left out.
+     * published under. The publication metadata sidecar ({@code grails-plugin.xml}) is left out.
      */
     protected static Map<String, String> collectPublishedArtifactCoordinates(PublishingExtension publishing) {
         Map<String, String> coordinates = [:]
         publishing.publications.withType(MavenPublication).each { MavenPublication publication ->
             publication.artifacts.each { MavenArtifact artifact ->
-                if (artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                if (artifact.file.name == 'grails-plugin.xml') {
                     return
                 }
                 String coordinate = "$publication.groupId:$publication.artifactId:$publication.version"
@@ -160,7 +166,7 @@ class PublishPlugin implements Plugin<Project> {
         coordinates
     }
 
-    private static void configureChecksums(Project project, TaskProvider<Task> artifactsTask) {
+    private static void configureChecksums(Project project, TaskProvider<Task> artifactsTask, boolean afterEveryPublish) {
         project.pluginManager.apply(ChecksumPlugin)
 
         def publishing = project.extensions.getByType(PublishingExtension)
@@ -174,15 +180,17 @@ class PublishPlugin implements Plugin<Project> {
             check.inputFiles.from(project.provider { collectChecksumInputFiles(project, publishing) })
         }
 
-        project.tasks.withType(AbstractPublishToMaven).configureEach {
-            it.finalizedBy(checksumTask)
+        if (afterEveryPublish) {
+            project.tasks.withType(AbstractPublishToMaven).configureEach {
+                it.finalizedBy(checksumTask)
+            }
         }
     }
 
     /**
      * Collects the artifact files to checksum across <em>all</em> Maven publications of the project,
-     * including additional publications such as the {@code cli} companion coordinate. Publication
-     * metadata sidecars ({@code grails-plugin.xml}, {@code profile.yml}) are excluded.
+     * including additional publications such as the {@code cli} companion coordinate. The publication
+     * metadata sidecar ({@code grails-plugin.xml}) is excluded.
      *
      * Accumulating across every publication is essential: earlier revisions set the checksum inputs
      * per publication, so only the last-configured publication survived and companion artifacts
@@ -193,7 +201,7 @@ class PublishPlugin implements Plugin<Project> {
         publishing.publications.withType(MavenPublication).each { MavenPublication publication ->
             project.logger.lifecycle('Maven Publication Found for project: {} with name {}', project.name, publication.name)
             publication.artifacts.each { MavenArtifact artifact ->
-                if (artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                if (artifact.file.name == 'grails-plugin.xml') {
                     return
                 }
                 filesToChecksum << artifact.file

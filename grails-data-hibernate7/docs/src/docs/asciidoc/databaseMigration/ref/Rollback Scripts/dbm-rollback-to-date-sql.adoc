@@ -21,40 +21,30 @@ under the License.
 
 ====== Purpose
 
-Writes SQL to roll back the database to the state it was in at the given date/time to STDOUT or a file.
+Writes the SQL to roll back the database to the state it was in at the given date and time, to the standard output or a file.
 
 ====== Description
 
-You can specify just the date, or the date and time. The date format must be `yyyy-MM-dd` and the time format must be `HH:mm:ss`.
+The date is written as `yyyy-MM-dd` and the time as `HH:mm:ss`; without a time the date starts at midnight. After the date, a second argument that is not written as a time is the file, so `2026-01-31 rollback.sql` is the date and the file, and `2026-01-31 12:00:00 rollback.sql` the date, the time and the file. It changes nothing in the database, also not the tables `DATABASECHANGELOG` and `DATABASECHANGELOGLOCK` Liquibase keeps, and writes no file but a new one inside the project, so `grails mcp --read-only` offers it to an AI agent.
 
 Usage:
-[source,java]
+[source,console]
 ----
-grails <<environment>> dbm-rollback-to-date-sql <<date>> <<time>> <<filename>> --contexts=<<contexts>> --defaultSchema=<<defaultSchema>> --dataSource=<<dataSource>>
+grails dbm-rollback-to-date-sql [--contexts=CONTEXTS] [--dataSource=DATASOURCE] [--defaultSchema=SCHEMA] DATE [TIME] [FILE]
 ----
 
 Required arguments:
 
-* `date` - The rollback date
+* `DATE` - The date to roll back to.
 
 Optional arguments:
 
-* `time` - The rollback time
-* `filename` - The path to the output file to write to. If not specified output is written to the console
-* `contexts` - A comma-delimited list of http://www.liquibase.org/manual/contexts[context] names. If specified, only changesets tagged with one of the context names will be included
-* `defaultSchema` - The default schema name to use
-* `dataSource` - if provided will run the script for the specified dataSource.  Not needed for the default dataSource.
+* `TIME` - The time of the day.
+* `FILE` - The file to write the SQL to, relative to the directory of the project. It has to be inside the project and not there yet: the tool replaces no file, and when the file is outside the project or there already it stops before it opens the database. Directories of its path that are not there are made. Without it, the SQL is written to the standard output.
+* `--contexts` - The contexts of the change sets to take, separated by commas: only the change sets of one of them are taken. Without it, the contexts `grails.plugin.databasemigration.contexts` configures, or every change set.
+* `--dataSource` - The data source to work with, by its name under `dataSources` in `application.[yml|groovy]`, as `--dataSource=reports`. Without it, the default data source.
+* `--defaultSchema` - The schema of the database to work in where the change log names none.
 
-NOTE: Note that the `contexts`, `defaultSchema`, `dataSource` parameter name and value must be quoted if executed in Windows, e.g.
-[source,groovy]
-----
-grails dbm-rollback-to-date-sql "--contexts=<<contexts>>" "--defaultSchema=<<defaultSchema>>" "--dataSource=<<dataSource>>"
-----
+The tool runs in the application, which the build of the project starts around it, for the `development` environment. For another environment, name it in front of the name of the tool with `run-tool`, as `grails run-tool -Dgrails.env=production dbm-rollback-to-date-sql`, or give it to the build, as `./gradlew -Dgrails.env=production runTool --arg=dbm-rollback-to-date-sql` or `./gradlew -Dgrails.env=production dbmRollbackToDateSql`; after the name of the tool, `-Dgrails.env` is an argument of the tool and selects no environment.
 
-NOTE: For the `dataSource` parameter, if the data source is configured as `reports` underneath the `dataSources` key in `application.[yml|groovy]`,
-the value should be `reports`.
-
-[source,groovy]
-----
---dataSource=reports
-----
+The value of an option follows `=` or is the next argument: `--dataSource=reports` and `--dataSource reports` are the same. `grails help dbm-rollback-to-date-sql` lists the options and parameters the tool takes. An option it does not take, an argument more than it takes and a required argument that is missing are refused before the application is started, with exit code 2 and one line, as `| Error dbm-rollback-to-date-sql: --datasource is not one of its options. grails help dbm-rollback-to-date-sql shows its options`.

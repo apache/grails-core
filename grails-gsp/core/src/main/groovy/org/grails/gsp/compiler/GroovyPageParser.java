@@ -284,6 +284,18 @@ public class GroovyPageParser implements Tokens {
         this.enableGrailsLayoutProcessing = enableGrailsLayoutProcessing;
     }
 
+    /**
+     * Sets the environment the page is compiled for, in place of the current environment, which the
+     * parser takes when it is created. In development and test an expression of a page that is compiled
+     * at runtime is wrapped so that, when it fails, the error names the expression and its line; in
+     * every other environment, and in a precompiled page, the expression is compiled as it is written.
+     *
+     * @param environment the environment the page is compiled for
+     */
+    public void setEnvironment(Environment environment) {
+        this.environment = environment;
+    }
+
     class TagMeta {
         String name;
         String namespace;

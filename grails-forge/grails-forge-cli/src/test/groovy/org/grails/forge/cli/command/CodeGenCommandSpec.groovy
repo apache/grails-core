@@ -39,7 +39,10 @@ class CodeGenCommandSpec extends Specification {
 
         expect:
         commandTypes.containsAll([CreateControllerCommand, CreateServiceCommand, CreateDomainClassCommand,
-                                  CreateTagLibCommand, CreateInterceptorCommand, CreateJobCommand, AddPropertyCommand])
+                                  CreateTagLibCommand, CreateInterceptorCommand, CreateJobCommand, AddPropertyCommand,
+                                  CreateUnitTestCommand, CreateIntegrationTestCommand, CreateFunctionalTestCommand,
+                                  CreateRestfulControllerCommand, CreateDomainResourceCommand, CreateToolCommand,
+                                  InstallTemplatesCommand])
 
         when:
         commandTypes.each { commandType ->

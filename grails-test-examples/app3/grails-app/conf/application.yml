@@ -15,7 +15,6 @@
 
 ---
 grails:
-    profile: web
     codegen:
         defaultPackage: app3
 info:

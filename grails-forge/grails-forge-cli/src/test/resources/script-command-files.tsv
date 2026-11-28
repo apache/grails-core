@@ -1,0 +1,32 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+# What is in src/main/scripts of a project, a tab, the name of a command, a tab, and the name of the file that
+# is the script of that command, or - when the project has no such script.
+# What is there, set apart by spaces: f:NAME is a file, l:NAME is a link to a script outside the project,
+# d:NAME is a directory, and L:PATH says that this directory on the way is a link to one outside the project,
+# which has planted.groovy.
+# The Forge CLI lists the name exactly when the build runs a file for it: this file is the same in
+# grails-forge/grails-forge-cli/src/test/resources and grails-core/src/test-cli/resources, and a specification
+# on each side holds its code to it and the two files to each other.
+f:data-import.groovy	data-import	data-import.groovy
+f:DataImport.groovy	data-import	DataImport.groovy
+f:DataImport.groovy f:data-import.groovy	data-import	DataImport.groovy
+f:dataImport.groovy f:data-import.groovy	data-import	data-import.groovy
+f:data-import.groovy f:other.groovy	other	other.groovy
+f:other.groovy	data-import	-
+l:DataImport.groovy f:data-import.groovy	data-import	data-import.groovy
+f:DataImport.groovy l:data-import.groovy	data-import	DataImport.groovy
+l:linked.groovy	linked	-
+l:DataImport.groovy l:data-import.groovy	data-import	-
+d:folder.groovy	folder	-
+d:DataImport.groovy f:data-import.groovy	data-import	data-import.groovy
+f:_Events.groovy	events	-
+L:src	planted	-
+L:src/main	planted	-
+L:src/main/scripts	planted	-

@@ -30,6 +30,9 @@ import org.grails.forge.template.Writable
 @CompileStatic
 class FileSystemOutputHandler implements OutputHandler {
 
+    /** The most files {@link #kept(Map)} names */
+    public static final int MAX_KEPT_NAMED = 20
+
     File applicationDirectory
     private final ConsoleOutput console
     private final Instant lastModified
@@ -135,6 +138,34 @@ class FileSystemOutputHandler implements OutputHandler {
         }
 
         return targetFile
+    }
+
+    /**
+     * Says which of the files that were kept are not what would have been generated in their place,
+     * the first {@link #MAX_KEPT_NAMED} of them by name: to the record of the project those are files
+     * that were changed since it was generated.
+     */
+    @Override
+    void kept(Map<String, Template> files) {
+        List<String> different = []
+        files.each { String path, Template generated ->
+            File file = new File(applicationDirectory, path)
+            ByteArrayOutputStream content = new ByteArrayOutputStream()
+            generated.write(content)
+            if (!file.isFile() || file.length() != content.size() || !Arrays.equals(Files.readAllBytes(file.toPath()), content.toByteArray()) ||
+                    (generated.isExecutable() && !file.canExecute())) {
+                different << path
+            }
+        }
+        if (different.isEmpty()) {
+            return
+        }
+        different.sort()
+        List<String> named = different.take(MAX_KEPT_NAMED).collect { String path -> path.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |') }
+        String more = different.size() > named.size() ? " and ${different.size() - named.size()} more" : ''
+        console.warning("${different.size()} ${different.size() == 1 ? 'file' : 'files'} that the directory already had ${different.size() == 1 ? 'was' : 'were'} kept " +
+                "and ${different.size() == 1 ? 'is' : 'are'} not as generated: ${named.join(', ')}${more}")
+        console.warning('The record of the project in .grails has them as they would have been generated, so they count as changed since then')
     }
 
     @Override

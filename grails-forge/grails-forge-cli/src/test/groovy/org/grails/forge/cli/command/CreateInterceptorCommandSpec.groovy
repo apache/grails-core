@@ -59,7 +59,7 @@ class CreateInterceptorCommandSpec extends CommandSpec implements CommandFixture
 
 class TestController {
 
-    def index() {
+    def renderAttribute() {
         render request.getAttribute('foo')
     }
 

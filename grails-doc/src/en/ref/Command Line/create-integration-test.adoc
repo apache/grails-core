@@ -25,29 +25,31 @@ The `create-integration-test` command creates an integration test for the given 
 
 === Examples
 
-[source,groovy]
+[source,console]
 ----
-grails create-integration-test
-grails create-integration-test book
+grails create-integration-test Book
 grails create-integration-test org.bookstore.Book
 ----
 
 === Description
 
-Creates an integration test for the given base name. The argument is optional, but if you don't include it the command will ask you for the name of the controller.
+Usage:
+
+[source,console]
+----
+grails create-integration-test [-f] <<name>>
+----
+
+Creates an integration test, `src/integration-test/groovy/<package>/<Name>Spec.groovy`, from the template `testing/Integration.groovy`. It is a command of web applications, REST API applications, web plugins and REST API plugins.
 
 An integration test differs from a unit test in that the Grails environment is loaded for each test execution. Refer to the section on link:{guidePath}testing.html[Unit Testing] of the user guide for information on unit vs. integration testing.
 
-The name of the test can include a Java package, such as `org.bookstore` in the final example above, but if one is not provided a default is used. So the second example will create the file `src/integration-test/groovy/<appname>/BookSpec.groovy` whereas the last one will create `src/integration-test/groovy/org/bookstore/BookSpec.groovy` directory. Note that the first letter of the test name is always upper-cased when determining the class name.
+The name is needed: the command does not ask for one. It can include a package, such as `org.bookstore` in the last example above; without one, the class goes into the default package of the project. The first letter of the name is made upper case.
 
-If you want the command to default to a different package for tests, provide a value for `grails.codegen.defaultPackage` in the link:{guidePath}conf.html[runtime configuration].
+Options:
 
-Note that this command is just for convenience and you can also create integration tests in your favourite text editor or IDE if you choose.
+* `-f`, `--force` - Replace a file that is there already. Without it the command writes nothing when one of its files exists, says which, and ends with exit code 1.
 
-Usage:
-[source,groovy]
-----
-grails create-integration-test <<name>>
-----
+A name that ends with `Spec` already is taken without it.
 
-
+See "Creating Classes with the `grails` Command" in link:{guidePath}commandLine.html[The Command Line] for the names the command takes, what it does when a file is there already, and how a project replaces the template.

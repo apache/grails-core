@@ -22,6 +22,7 @@ package org.grails.forge.feature.security
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Category
+import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
@@ -115,7 +116,7 @@ class GrailsSpringSecuritySpec extends ApplicationContextSpec implements Command
 
     void 'the feature shares the Spring Security category and advertises the plugin'() {
         given:
-        def feature = beanContext.getBean(GrailsSpringSecurity)
+        def feature = beanContext.getBean(FeatureRegistry).all().find { it.name == 'grails-spring-security' }
 
         expect:
         feature.name == 'grails-spring-security'
@@ -146,6 +147,6 @@ class GrailsSpringSecuritySpec extends ApplicationContextSpec implements Command
         e.message == 'The requested feature does not exist: grails-spring-security'
 
         where:
-        applicationType << [ApplicationType.PLUGIN, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.PLUGIN, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
     }
 }

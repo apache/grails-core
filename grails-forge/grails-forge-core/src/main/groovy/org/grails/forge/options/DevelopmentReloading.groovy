@@ -20,24 +20,47 @@ package org.grails.forge.options
 
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
+import jakarta.annotation.Nullable
 
 @CompileStatic
 enum DevelopmentReloading {
 
-    DEVTOOLS('Spring Boot DevTools'),
-    JREBEL('JRebel'),
-    NONE('None')
+    DEVTOOLS('Spring Boot DevTools', 'spring-boot-devtools'),
+    JREBEL('JRebel', 'jrebel'),
+    NONE('None', null)
 
     public static final DevelopmentReloading DEFAULT_OPTION = DEVTOOLS
     private final String label
 
-    DevelopmentReloading(String label) {
+    private final String featureName
+
+    DevelopmentReloading(String label, String featureName) {
         this.label = label
+        this.featureName = featureName
+    }
+
+    /**
+     * @return the name of the feature that reloads this way, or {@code null} for no reloading
+     * @since 9.0
+     */
+    @Nullable
+    String getFeatureName() {
+        return featureName
+    }
+
+    /**
+     * @param featureName the name of a feature
+     * @return the way of reloading that feature is, or {@code null} when it is no feature that reloads
+     * @since 9.0
+     */
+    @Nullable
+    static DevelopmentReloading ofFeature(String featureName) {
+        return values().find { DevelopmentReloading each -> each.featureName != null && each.featureName == featureName }
     }
 
     @Override
     String toString() {
-        return this.name().toLowerCase()
+        return this.name().toLowerCase(Locale.ROOT)
     }
 
     @Nonnull

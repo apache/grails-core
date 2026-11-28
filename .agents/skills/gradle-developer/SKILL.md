@@ -46,7 +46,7 @@ Related skills (do not substitute this one):
 2. **Prefer existing convention plugins** over inline configuration. If `CompilePlugin` already sets encoding, release, jars, and reproducibility, do not re-declare those in the module script.
 3. **Gradle docs are secondary.** Official Gradle 9 docs are useful for APIs and deprecations, but this monorepo intentionally diverges (no Spring DM plugin, heavy `projectDir` remapping, presence-based `-P` flags, custom BOM validator). When docs and this repo disagree, **follow this repo** unless you are deliberately fixing a known issue with a tracked reason.
 4. **Do not use** `io.spring.dependency-management` / Spring Dependency Management plugin in core modules or applications. The intentional regression fixture at `grails-test-examples/spring-dependency-management` is the only exception. Grails 8 otherwise uses native `platform()` / `enforcedPlatform()` plus `org.apache.grails.gradle.bom-property-overrides` (see PR #15467).
-5. **Scope Gradle invocations** to the touched subproject (`:module:test`, not root `test`) unless the change is cross-cutting.
+5. **Scope Gradle invocations** to the touched subproject (`:module:test`, not root `test`) unless the change is cross-cutting. Keep build caching and up-to-date checks enabled for normal local verification. A commit or merge does not by itself justify `clean`, `--rerun-tasks`, `--no-build-cache`, or `DO_NOT_CACHE_TESTS=1`; reserve those for a specific debugging need, a reproducibility experiment or an explicit fresh-run request. Reuse completed checks for unchanged inputs and do not repeat every source branch's suites just to integrate it.
 
 ### Change workflow
 
@@ -64,35 +64,50 @@ This git repo is **several independent Gradle builds**, not one flat multiprojec
 
 | Build | Path | Role | How to run |
 |-------|------|------|------------|
-| **Root framework** | repo root | 60+ published modules, BOMs, test-examples, profiles, docs | `./gradlew …` from root |
+| **Root framework** | repo root | 60+ published modules, BOMs, test-examples, docs | `./gradlew …` from root |
 | **build-logic** | `build-logic/` | Shared **convention plugins** via `includeBuild` | `cd build-logic && ./gradlew …` (or root pluginManagement includeBuild) |
 | **grails-gradle** | `grails-gradle/` | **Published** Grails Gradle plugins for apps | `cd grails-gradle && ./gradlew …` |
-| **grails-forge** | `grails-forge/` | App generator: a Grails plugin and two Grails applications built against the framework by coordinates (`includeBuild('..')` substitution) | `cd grails-forge && ./gradlew …` |
+| **grails-forge** | `grails-forge/` | App generator and the `grails` command line: a Grails plugin and two Grails applications (`grails-forge-web`, and `grails-forge-cli`, which is the command line, with its launcher `grails-cli`) built against the framework by coordinates (`includeBuild('..')` substitution) | `cd grails-forge && ./gradlew …` |
 | **end-to-end** | `end-to-end/` | Tests against **published** artifacts in `build/local-maven` | Full 3-step flow below (see `end-to-end/README.md`) |
 | **gradle-bootstrap** | `gradle-bootstrap/` | Regenerates shared wrappers from `.sdkmanrc` | `gradle -p gradle-bootstrap` (see wrapper section) |
 
 **end-to-end is not a composite consumer of the root build.** It resolves real published coordinates from **`<repo>/build/local-maven`** (the TestCaseMavenRepo), **not** `~/.m2` and **not** via `publishAllToMavenLocal`. Do not add `includeBuild('..')` substitution - that defeats validating consumer metadata, CLI companions, and POM/BOM shape.
 
-Full local run (three steps, in order):
+Full local run (two steps, in order):
 
 ```bash
 # 1) Publish grails-gradle + root into build/local-maven (both required)
 (cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)
 ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository
 
-# 2) Build the standalone Grails 7 fixture jar (JDK 17 / Gradle 8.x via its .sdkmanrc)
-cd end-to-end/legacy-g7-command-plugin
-sdk env
-./gradlew jar
-cd ../..
-
-# 3) Run the suite on the root JDK 21 environment
+# 2) Run the suite on the root JDK 21 environment
 sdk env   # from repository root (.sdkmanrc)
 cd end-to-end
 ./gradlew check
 ```
 
-Leave `legacy-g7-command-plugin`'s wrapper on its pinned Grails 7 Gradle version when bumping the main line.
+### Forge specs without building the framework (`-PprebuiltTestRepository`)
+
+`grails-forge` includes the framework build, so a run of its specs brings the framework up to date first, and the specs that build generated applications (`forgeTestsNeedLocalMaven = true`: `grails-forge-cli`, `test-core`) depend on `publishAllPublicationsToTestCaseMavenRepoRepository` of both included builds. When only Forge changes, publish once and tell the Forge build so:
+
+```bash
+# once, and again whenever the framework changes
+./gradlew publishAllPublicationsToTestCaseMavenRepoRepository
+(cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)
+
+# as often as needed
+cd grails-forge
+./gradlew :grails-forge-cli:test --tests '*SomeSpec' -PprebuiltTestRepository
+```
+
+- With the property `grails-forge/settings.gradle` includes neither the framework nor `grails-gradle`: Forge's modules and published Gradle plugins resolve from the repository (`exclusiveContent`, as `end-to-end` does), the specs get it as `GRAILS_REPO_URL`, and no framework or published-plugin task runs. Only `build-logic` stays included. `compilePackPages` compiles Forge's bundled templates against the published runtime jars.
+- Value: nothing or `true` = `<checkout>/build/local-maven`; a path = that repository (relative to the directory Gradle is started in; CI passes a downloaded artifact this way); `false` = off. `ORG_GRADLE_PROJECT_prebuiltTestRepository` works too.
+- The publish task of each root project ends by writing a record into the repository (`TestRepositoryMarkerPlugin`, id `org.apache.grails.buildsrc.test-repository-marker`): `build/local-maven/grails-test-repository/grails-core.properties` and `grails-gradle.properties` (format, version, Java target, time, `callSites`, slim/complete, SBOM, and a fingerprint of the framework sources from `FrameworkSources`), plus copies of what Forge takes from the framework's build directories (`TestRepositoryMarker.FRAMEWORK_OUTPUTS`: the BOM POMs and the installed Grails wrapper). Every individual Maven publication invalidates its build's old record first, including a partial or failed publication. Add to the output list, not to `grails-forge-core/build.gradle`, when Forge needs another output of the framework build.
+- `PrebuiltTestRepository` checks the repository before anything is configured (a `ValueSource`, so it is checked again on every configuration-cache hit) and **fails** when it is missing, of another version, without a record, of the other call-site kind (`-PgrailsIndy=false` must match on both sides), or published from other framework sources. Changes under `FrameworkSources.NOT_FRAMEWORK` (`grails-forge`, `end-to-end`, `grails-test-examples`, `grails-doc`, `.github`, ...) and top-level Markdown files never count; everything else does, per top-level entry. `-PallowStaleTestRepository=true` downgrades only the last check to a warning.
+- Do not make the staleness check a warning by default, and do not add framework directories to `NOT_FRAMEWORK` to quiet it: specs that pass against old jars are the failure it exists to prevent.
+- Fingerprints hash sorted relative paths and Git blob identifiers, overlaying working-tree changes on HEAD and using Git's clean filters for line-ending normalization. Staging or committing identical content preserves the fingerprint, as do relocation, shallow detached checkouts and checkout executable modes. Commit and publication time are diagnostics only.
+- When tests run, CI shares one baseline Java 21 repository per indy/classic variant with Linux Java 21/25 and Windows Forge jobs. When the policy skips tests, producer steps do no work and Forge keeps its ordinary composite, avoiding a full-framework publish for a build that needs only a subset. Coverage publishes the framework already compiled by `coverage-core` and hands it to `coverage-forge`; the latter measures only its own source sets, so no instrumented framework jars are needed. Artifacts stay within each workflow run and expire after one day. A new suite that compiles Micronaut applications needs the Java 25-only framework modules as well.
+- Without the property nothing changes: the framework is included and the specs publish it.
 
 Root `settings.gradle` wires:
 
@@ -136,7 +151,7 @@ Presence-based flags (property **present**, value optional) match `skipFunctiona
 
 ## Gradle Version Sync (Hard Rule)
 
-Current line: **Gradle 9.9.2** (`distributionUrl` + `gradleToolingApiVersion=9.9.2`). Upstream may already ship a newer 9.9.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
+Current line: **Gradle 9.9.2** (`distributionUrl` + `gradleToolingApiVersion=9.9.2` + its `gradleDistributionSha256Sum`). Upstream may already ship a newer 9.9.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
 
 **Two Groovy stacks:** Gradle itself embeds **Groovy 4** for build logic. Application/runtime code on 8.0.x is **Groovy 5**. That is why `dependencies.gradle` keeps separate maps:
 
@@ -147,6 +162,8 @@ Never unify those casually.
 
 ### Preferred bump workflow
 
+In short, a bump is the wrappers (the root one through bootstrap), and `gradleToolingApiVersion` with the `gradleDistributionSha256Sum` beside it in the root `gradle.properties`:
+
 1. Set the new Gradle version in **`.sdkmanrc`** (`gradle=…`).
 2. Run the bootstrap project with a system `gradle` **of the new version** to regenerate shared wrappers from `.sdkmanrc`. The `wrapper` task copies the jar from the Gradle that runs it, so an older `gradle` writes its own jar next to the new `distributionUrl`:
 
@@ -155,21 +172,18 @@ Never unify those casually.
    gradle -p gradle-bootstrap
    ```
 
-   Bootstrap overwrites the shared `gradle-wrapper.properties` files, which drops the "keep synced" comments at the top of some of them; restore those. Bootstrap generates the wrapper under `gradle-bootstrap/`, **copies** it to **grails-forge**, **grails-gradle**, and **end-to-end**, then **moves** the generated wrapper into the **repository root**. It also runs `legacyG7Wrapper` so **`end-to-end/legacy-g7-command-plugin` stays on its pinned Grails 7 Gradle version** (currently 8.x - do **not** force it to 9). Root is therefore bootstrap-covered; do not re-list it as a manual step.
+   Bootstrap overwrites the shared `gradle-wrapper.properties` files, which drops the "keep synced" comments at the top of some of them; restore those. Bootstrap generates the wrapper under `gradle-bootstrap/`, **copies** it to **grails-forge**, **grails-gradle**, and **end-to-end**, then **moves** the generated wrapper into the **repository root**. Root is therefore bootstrap-covered; do not re-list it as a manual step.
 
 3. Manually refresh the locations bootstrap does **not** cover. For each tree, keep the **full** wrapper set in sync (`gradle-wrapper.properties`, `gradle-wrapper.jar`, `gradlew`, `gradlew.bat`) - not properties alone:
 
    - `build-logic/` - run its wrapper task or copy the complete set from root after bootstrap
-   - `grails-profiles/base/skeleton/` and `grails-profiles/profile/skeleton/`
-   - `grails-shell-cli/src/test/resources/gradle-sample/` (and `bin/test` copy if present)
-   - Forge **generated-app** wrapper assets (all of these - properties alone is not enough):
-     - `grails-forge/grails-forge-core/grails-app/views/forge/.../gradleWrapperProperties.gsp` (properties page)
+   - `gradle.properties` → `gradleToolingApiVersion` and, beside it, `gradleDistributionSha256Sum`. The version must match the new Gradle version: the `grails` command line runs the builds of projects with that Tooling API. The checksum is the SHA-256 Gradle publishes for `gradle-<version>-bin.zip` (https://gradle.org/release-checksums/, or `https://services.gradle.org/distributions/gradle-<version>-bin.zip.sha256`). `WriteGrailsVersionInfoTask` writes the two into `grails-versions.properties` (`gradle.version`, `gradle.sha256`; one without the other, or a checksum that is not 64 lowercase hexadecimal digits, fails the build), and the wrapper of a generated application (`gradleWrapperProperties.gsp`) names both as `distributionUrl` and `distributionSha256Sum`, so a wrong checksum makes every generated application's wrapper refuse its download. Verify it from `grails-forge`: `./gradlew :grails-forge-core:test --tests '*GradleWrapperPropertiesSpec' -PverifyGradleChecksums` downloads the published checksum of the version and compares. `gradleMinimumVersion` beside them is the earliest Gradle Grails builds with; raise it only when the Grails Gradle plugins need a later Gradle.
+   - Forge **generated-app** wrapper scripts and jar (the properties come from `gradle.properties`, above):
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew.bat`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/wrapper/gradle-wrapper.jar`
-   - `gradle.properties` → `gradleToolingApiVersion` (must match the new Gradle version)
 
-4. Verify every **main-line** tree matches on properties **and** scripts/jars. The only intentional holdout is `end-to-end/legacy-g7-command-plugin` (Gradle 8.x).
+4. Verify every tree matches on properties **and** scripts/jars.
 
 Also keep `gradlew.bat` LF line endings on this line (PR #15709). Comment at top of root `gradle-wrapper.properties` remains a human checklist.
 
@@ -393,8 +407,8 @@ Plugin IDs (implementation under `build-logic/plugins/…/buildsrc/`):
 | `org.apache.grails.buildsrc.compile` | Java 21 `--release`, UTF-8, fork memory, parameters, sources/javadoc jars, reproducible archives, Groovy config script, isolated build, per-project `base.dir` |
 | `org.apache.grails.buildsrc.dependency-validator` | `validateDependencyVersions` |
 | `org.apache.grails.buildsrc.bom-property-validator` | `validateBomProperties` (BOM projects only) |
-| `org.apache.grails.buildsrc.publish` | Publishing conventions (grails-publish integration) |
-| `org.apache.grails.buildsrc.sbom` | CycloneDX / SBOM reproducibility |
+| `org.apache.grails.buildsrc.publish` | Publishing conventions (grails-publish integration). When the command line asks for nothing but `publish...ToTestCaseMavenRepoRepository` tasks, or the build is an included build none of whose other tasks the command line names (the Forge specs), the publications are slimmed to what a consuming build resolves: no sources or javadoc jars (so no Groovydoc) and no release checksums after the publish (so no `testClasses`). Any other invocation publishes everything; `-PcompleteTestRepository=true` forces that (`TestRepositoryPublish`). The jars stay the jars of a release, SBOM included, unless `-PtestRepositoryWithoutSbom=true` (or `ORG_GRADLE_PROJECT_testRepositoryWithoutSbom=true`) opts in to jars without `META-INF/sbom.json` and its manifest attributes, which takes the CycloneDX tasks out of the chain (156 tasks, 124-161 s of the 1090-1471 s summed task time of the Forge specs' publish chain from a clean tree, about a tenth; little wall time on a many-core machine, where they run beside the compilation). It is off by default because it changes what is inside the jars the specs test against, it works only with the slim publish (any other invocation ignores it and says so), and a publish task for another repository fails in a slimmed build. Do not set it in a lane that publishes or verifies a release |
+| `org.apache.grails.buildsrc.sbom` | CycloneDX / SBOM reproducibility; packs each module's SBOM into its jar (`META-INF/sbom.json`), except in a slim test-repository publish that opted out with `-PtestRepositoryWithoutSbom=true` |
 | `org.apache.grails.buildsrc.vulnerability-scan` | `vulnerabilityScan`: looks up the resolved `runtimeClasspath` and `compileClasspath` in OSV and, when `SONATYPE_GUIDE_USERNAME`/`SONATYPE_GUIDE_TOKEN` are set, Sonatype Guide (read at execution, never stored in the configuration cache); answers cached for an hour in the Gradle user home (`vulnerabilityScan.cacheTtl`) since Sonatype lookups cost credits; exclusions need a reason |
 | `org.apache.grails.buildsrc.vulnerability-scan-report` | Root only: `vulnerabilityScanReport` collects every project's scan into `build/reports/vulnerability-scan/summary.md` |
 | `org.apache.grails.buildsrc.groovydoc` | Groovydoc |
@@ -438,8 +452,6 @@ Use the **fully qualified** plugin IDs in `plugins { id '…' }` blocks. Most ar
 | `org.apache.grails.gradle.grails-gsp` |
 | `org.apache.grails.gradle.grails-gson` |
 | `org.apache.grails.gradle.grails-markup` |
-| `org.apache.grails.gradle.grails-profile` |
-| `org.apache.grails.gradle.grails-publish-profile` |
 | `org.apache.grails.gradle.grails-cli` |
 | `org.apache.grails.gradle.grails-plugin-cli` |
 | `org.apache.grails.gradle.grails-cli-library` |
@@ -499,7 +511,7 @@ Parallelism: `configuredTestParallel` from `-PmaxTestParallel` or CI default **3
 
 Env:
 
-- `DO_NOT_CACHE_TESTS=1` - force test re-run without full `--rerun-tasks`
+- `DO_NOT_CACHE_TESTS=1` - deliberately bypass both test-result caching and up-to-date checks; use only when fresh execution is needed for a specific test investigation, not as a default pre-commit environment variable
 - `debug.tests` system prop - attach debugger args
 - `SUPPRESS_DEPRECATION_WARNINGS=true` - strip some `-Xlint` noise
 
@@ -607,6 +619,9 @@ For importing an entire external plugin repository, use **`mono-repo-integration
 ./gradlew publishAllToMavenLocal   # grails-gradle → root → forge
 
 # Publish to build/local-maven for end-to-end (and forge TestCaseMavenRepo consumers)
+# Asked for alone, this publishes jars, POMs and module metadata only (no sources/javadoc jars, no checksums);
+# add -PcompleteTestRepository=true for the complete publications.
+# Opt in to jars without their SBOM (faster, but no longer the released jars) with -PtestRepositoryWithoutSbom=true
 (cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)
 ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository
 
@@ -656,7 +671,6 @@ Develocity: `https://develocity.apache.org` - build scans publish when authentic
 | Add `repositories {}` in a subproject | Root/settings repo management (`FAIL_ON_PROJECT_REPOS`) |
 | `includeBuild` the root into `end-to-end` | Publish to `build/local-maven` via `publishAllPublicationsToTestCaseMavenRepoRepository` |
 | Use `publishAllToMavenLocal` to feed end-to-end | That fills `~/.m2`; end-to-end reads `<repo>/build/local-maven` |
-| Bump `legacy-g7-command-plugin` wrapper to Gradle 9 | Leave it on the Grails 7-pinned Gradle 8.x |
 | Mix Gradle-embedded Groovy 4 pins into app Groovy 5 BOM | Keep `gradleBom*` vs `bom*` maps separate |
 
 ---
@@ -761,6 +775,6 @@ Strong 8.0.x Gradle PRs are small, sibling-consistent, and evidence-backed:
 - [ ] No overlapping task outputs; classpath normalization considered for packed generated files
 - [ ] Apache headers on new files
 - [ ] User-facing behavior documented if it affects app builds (`grails-doc`)
-- [ ] For commit-ready work, use `violation-fixer` to run the AGENTS.md gate: `./gradlew clean aggregateViolations :grails-test-report:check --continue`. This is not required merely to read this skill.
+- [ ] For commit-ready work, follow AGENTS.md's scoped, cache-enabled Local Verification guidance and review the relevant results. `:grails-test-report:check` schedules repository-wide tests; it is not a report-only check or a routine commit gate. Loading this skill does not itself require running Gradle.
 
 If you only remember three things: **copy siblings**, **BOM owns versions**, **never resolve configurations while configuring tasks**.

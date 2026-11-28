@@ -64,7 +64,6 @@ ext {
             'jline'                   : "org.jline:jline:${gradleBomDependencyVersions['jline.version']}",
             'jna'                     : "net.java.dev.jna:jna:${gradleBomDependencyVersions['jna.version']}",
             'objenesis'               : "org.objenesis:objenesis:${gradleBomDependencyVersions['objenesis.version']}",
-            'spring-boot-cli'         : "org.springframework.boot:spring-boot-cli:${gradleBomDependencyVersions['spring-boot.version']}",
             'spring-boot-gradle'      : "org.springframework.boot:spring-boot-gradle-plugin:${gradleBomDependencyVersions['spring-boot.version']}",
             'spring-boot-loader-tools': "org.springframework.boot:spring-boot-loader-tools:${gradleBomDependencyVersions['spring-boot.version']}",
     ]
@@ -99,6 +98,11 @@ ext {
             // CVE-2026-110729, which affects only jackson-core 3.2.0 to 3.2.3.
             'jackson-bom.version'           : '3.2.4',
             'jquery.version'                : '4.0.0',
+            // Not managed by spring-boot-dependencies or spring-ai-bom. Spring AI's spring-ai-mcp depends on
+            // the MCP Java SDK directly; grails-bom manages that version, so an application using Spring AI's
+            // MCP support and the grails command line share one SDK. validateMcpSdkVersion (grails-base-bom)
+            // fails when it is not the version spring-ai-mcp at spring-ai-bom.version depends on.
+            'mcp-bom.version'               : '2.2.0',
             'nimbus-jose-jwt.version'       : '10.10',
             // Includes the follow-up logout redirect and direct-client CSRF fixes on the 6.5.x line.
             'pac4j.version'                 : '6.5.9',
@@ -126,9 +130,8 @@ ext {
             'swagger.version'               : '2.2.55',
             'starter-sitemesh.version'      : '3.3.0',
             'spring-webmvc-sitemesh.version': '3.3.0',
-            // Spring Boot 4 no longer manages spring-retry; pin it here so the
-            // grails-shell-cli SpringRetryCompilerAutoConfiguration's unversioned
-            // reference resolves and consumer apps using @Retryable get a known version.
+            // Spring Boot 4 no longer manages spring-retry; pin it here so consumer apps
+            // using @Retryable get a known version.
             'spring-retry.version'          : '2.0.13',
             // Undertow is no longer managed by spring-boot-dependencies: Spring Boot 4
             // removed its Undertow support before GA. Servlet 6.1 support ships as
@@ -144,6 +147,7 @@ ext {
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
             'jackson-bom'       : "tools.jackson:jackson-bom:${bomDependencyVersions['jackson-bom.version']}",
+            'mcp-bom'           : "io.modelcontextprotocol.sdk:mcp-bom:${bomDependencyVersions['mcp-bom.version']}",
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
             'spring-ai-bom'     : "org.springframework.ai:spring-ai-bom:${bomDependencyVersions['spring-ai-bom.version']}",
     ]

@@ -28,11 +28,12 @@ import spock.lang.TempDir
 class GrailsGroovyExtensionTransformerSpec extends Specification {
 
     private static final String DESCRIPTOR = 'META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule'
+    private static final String LEGACY_DESCRIPTOR = 'META-INF/services/org.codehaus.groovy.runtime.ExtensionModule'
 
     @TempDir
     File projectDir
 
-    void "shadowJar merges #count extension descriptors reproducibly with the configuration cache"() {
+    void "shadowJar merges #count extension descriptors reproducibly with the configuration cache (legacy: #firstLegacy, #secondLegacy)"() {
         given:
         new File(projectDir, 'settings.gradle').text = "rootProject.name = 'extensions'"
         new File(projectDir, 'build.gradle').text = '''
@@ -55,10 +56,10 @@ class GrailsGroovyExtensionTransformerSpec extends Specification {
         unrelated.parentFile.mkdirs()
         unrelated.text = 'value=unchanged\n'
         if (count > 0) {
-            descriptor('first', 'first-module', '2.0', 'example.FirstExtensions', 'example.FirstStaticExtensions')
+            descriptor('first', 'first-module', '2.0', 'example.FirstExtensions', 'example.FirstStaticExtensions', firstLegacy)
         }
         if (count > 1) {
-            descriptor('second', 'second-module', '3.0', 'example.SecondExtensions', 'example.SecondStaticExtensions')
+            descriptor('second', 'second-module', '3.0', 'example.SecondExtensions', 'example.SecondStaticExtensions', secondLegacy)
         }
 
         when:
@@ -75,6 +76,7 @@ class GrailsGroovyExtensionTransformerSpec extends Specification {
         and:
         new ZipFile(jar).withCloseable { ZipFile zip ->
             assert zip.getInputStream(zip.getEntry('unrelated.properties')).text == 'value=unchanged\n'
+            assert zip.getEntry(LEGACY_DESCRIPTOR) == null
             def entry = zip.getEntry(DESCRIPTOR)
             if (count == 0) {
                 assert entry == null
@@ -82,6 +84,7 @@ class GrailsGroovyExtensionTransformerSpec extends Specification {
                 assert zip.entries().findAll { it.name == DESCRIPTOR }.size() == 1
                 String text = zip.getInputStream(entry).getText('ISO-8859-1')
                 assert !text.readLines().any { it.startsWith('#') }
+                assert !text.contains('\r')
                 Properties properties = new Properties()
                 properties.load(new StringReader(text))
                 assert properties == [
@@ -95,11 +98,18 @@ class GrailsGroovyExtensionTransformerSpec extends Specification {
         }
 
         where:
-        count << [0, 1, 2]
+        count | firstLegacy | secondLegacy
+        0     | false       | false
+        1     | false       | false
+        1     | true        | false
+        2     | false       | false
+        2     | true        | false
+        2     | false       | true
+        2     | true        | true
     }
 
-    private void descriptor(String directory, String name, String version, String extensions, String staticExtensions) {
-        File file = new File(projectDir, "${directory}/${DESCRIPTOR}")
+    private void descriptor(String directory, String name, String version, String extensions, String staticExtensions, boolean legacy) {
+        File file = new File(projectDir, "${directory}/${legacy ? LEGACY_DESCRIPTOR : DESCRIPTOR}")
         file.parentFile.mkdirs()
         file.text = """moduleName=${name}
 moduleVersion=${version}
@@ -117,7 +127,7 @@ ignored=value
         }
         GradleRunner.create()
                 .withProjectDir(projectDir)
-                .withArguments('clean', 'shadowJar', '--configuration-cache', '--stacktrace')
+                .withArguments('clean', 'shadowJar', '--configuration-cache', '--stacktrace', '--max-workers=2', '--no-build-cache', '-Dorg.gradle.jvmargs=-Xmx768m')
                 .withEnvironment(environment)
                 .withPluginClasspath()
                 .build()
