@@ -116,7 +116,7 @@ class ApplicationSpec extends Specification {
         Process process = ForkedCli.builder(projectDir, [], '--help').redirectErrorStream(true).redirectOutput(output).start()
 
         then:
-        process.waitFor(90, TimeUnit.SECONDS)
+        process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         assert process.exitValue() == 0: output.text
         output.text.contains('Usage:')
 

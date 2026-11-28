@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.Requires
 
 /**
@@ -121,7 +122,7 @@ class ProjectStateIgnoredSpec extends CommandSpec {
     private boolean ignored(File project, String path) {
         return gitProcess(project, 'check-ignore', '-q', '--no-index', path).with { Process process ->
             process.inputStream.getText('UTF-8')
-            assert process.waitFor(60, TimeUnit.SECONDS)
+            assert process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
             process.exitValue() == 0
         }
     }
@@ -129,7 +130,7 @@ class ProjectStateIgnoredSpec extends CommandSpec {
     private String git(File project, String... arguments) {
         Process process = gitProcess(project, arguments)
         String text = process.inputStream.getText('UTF-8')
-        assert process.waitFor(60, TimeUnit.SECONDS) && process.exitValue() == 0: "git ${arguments.join(' ')}: ${text}"
+        assert process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) && process.exitValue() == 0: "git ${arguments.join(' ')}: ${text}"
         return text
     }
 

@@ -40,6 +40,7 @@ import io.modelcontextprotocol.modern.client.McpSyncClient
 import io.modelcontextprotocol.modern.client.McpSyncSubscriptionListener
 import io.modelcontextprotocol.modern.client.SubscriptionEvent
 import io.modelcontextprotocol.modern.client.transport.StdioMcpClientTransport
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
@@ -69,8 +70,11 @@ class McpGeneratedApplicationSpec extends Specification {
     /** What the result of {@code create-tool} ends with over MCP. */
     static final String LISTED_AFTER_COMPILE = 'It is listed once the project is compiled: call compile or refresh_tools.'
 
-    /** How long a call may take at most: the first build downloads Gradle and the dependencies of the application. */
-    static final Duration LONGEST_CALL = Duration.ofMinutes(25)
+    /**
+     * How long a call may take at most: the first build downloads Gradle and the dependencies of the application. A
+     * bound of whole builds, which the factor of every bound of the specs raises as well (SpecWaits).
+     */
+    static final Duration LONGEST_CALL = SpecWaits.scaled(Duration.ofMinutes(25))
 
     @Shared
     File root
@@ -152,7 +156,7 @@ class McpGeneratedApplicationSpec extends Specification {
         if (server != null) {
             List<ProcessHandle> below = server.descendants().toList()
             server.destroy()
-            if (!server.waitFor(30, TimeUnit.SECONDS)) {
+            if (!server.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)) {
                 server.destroyForcibly()
             }
             below.each { ProcessHandle each -> each.destroyForcibly() }
@@ -184,7 +188,7 @@ class McpGeneratedApplicationSpec extends Specification {
         discovered.instructions().contains(project.path)
         names.containsAll(['compile', 'test-app', 'run-app', 'stop-app', 'create-tool', 'run-tool', 'project_show', 'refresh_tools'])
         !names.contains('data-import')
-        events.poll(60, TimeUnit.SECONDS) instanceof SubscriptionEvent.Subscribed
+        events.poll(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) instanceof SubscriptionEvent.Subscribed
     }
 
     void "create-tool writes a tool, which is offered once the project is compiled"() {
@@ -228,7 +232,7 @@ class McpGeneratedApplicationSpec extends Specification {
         stderr.text.contains('| Diagnostic gradle runner: requested auto, GRAILS_GRADLE_RUNNER not set; effective tooling-api: a build of grails mcp')
 
         and: 'the client was told that the tools changed'
-        SubscriptionEvent changed = events.poll(60, TimeUnit.SECONDS)
+        SubscriptionEvent changed = events.poll(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         changed instanceof SubscriptionEvent.ToolsListChanged
 
         when:
@@ -327,8 +331,8 @@ class McpGeneratedApplicationSpec extends Specification {
                     given:
                     new File(System.getProperty('user.dir'), 'slow-test.pid').text = ProcessHandle.current().pid() as String
 
-                    when:
-                    Thread.sleep(600_000)
+                    when: 'a latch nothing opens: it runs until the test JVM is ended'
+                    new java.util.concurrent.CountDownLatch(1).await()
 
                     then:
                     true
@@ -353,7 +357,7 @@ class McpGeneratedApplicationSpec extends Specification {
         long testJvm = testPid.text.trim() as long
         assert alive(testJvm)
         caller.interrupt()
-        caller.join(60_000)
+        SpecWaits.join(caller, 'the end of the cancelled call')
 
         then: 'the call was cancelled, after the client was told that it ran and how many lines it wrote'
         ended[0] instanceof CancellationException
@@ -361,7 +365,7 @@ class McpGeneratedApplicationSpec extends Specification {
         told.any { it.contains(' lines; the last: ') }
 
         and: 'the build stopped: the JVM that ran the test ended'
-        eventually(Duration.ofSeconds(90)) { !alive(testJvm) }
+        eventually(SpecWaits.BOUND) { !alive(testJvm) }
         println("[mcp-app] the JVM of the tests ended ${seconds(started)} s after test-app was called")
 
         cleanup:
@@ -387,7 +391,7 @@ class McpGeneratedApplicationSpec extends Specification {
 
         then:
         assert !stopped.isError(): texts(stopped).join('\n')
-        eventually(Duration.ofSeconds(90)) { !answers(port) }
+        eventually(SpecWaits.BOUND) { !answers(port) }
     }
 
     void "the end of its input ends grails mcp with exit code 0, and it wrote nothing but the protocol"() {
@@ -395,7 +399,7 @@ class McpGeneratedApplicationSpec extends Specification {
         listening?.close()
         listening = null
         server.outputStream.close()
-        boolean ended = server.waitFor(60, TimeUnit.SECONDS)
+        boolean ended = server.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
 
         then:
         ended
@@ -420,7 +424,7 @@ class McpGeneratedApplicationSpec extends Specification {
         environment(builder)
         Process process = builder.start()
         String output = process.inputStream.getText(StandardCharsets.UTF_8.name())
-        assert process.waitFor(5, TimeUnit.MINUTES)
+        assert process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         return [exit: process.exitValue(), output: output]
     }
 
@@ -499,13 +503,16 @@ class McpGeneratedApplicationSpec extends Specification {
         return TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startedNanos)
     }
 
+    // within is a bound of whole builds, which the factor of every bound raises as well, or the bound of every wait itself
     private static void eventually(Duration within, Closure<Boolean> condition) {
-        long deadline = System.nanoTime() + within.toNanos()
+        Duration bound = within.is(SpecWaits.BOUND) ? within : SpecWaits.scaled(within)
+        long deadline = System.nanoTime() + bound.toNanos()
         while (!condition.call()) {
             if (System.nanoTime() > deadline) {
-                throw new AssertionError("It did not happen in ${within.seconds} s")
+                throw new AssertionError("It did not happen in ${bound.seconds} s")
             }
-            Thread.sleep(200)
+            // a look at a file or a port, until what is waited for has happened
+            Thread.sleep(SpecWaits.LOOK_MILLIS)
         }
     }
 

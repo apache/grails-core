@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli
 
 import java.util.concurrent.CopyOnWriteArrayList
+import org.grails.forge.cli.SpecWaits
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -43,7 +44,7 @@ class StartupPreloadSpec extends Specification {
 
         when:
         List<Thread> threads = StartupPreload.start(loader, 4, '--version')
-        threads*.join(30_000)
+        threads*.join(SpecWaits.BOUND.toMillis())
 
         then:
         threads*.name == ['grails-preload-classes', 'grails-preload-formatting']
@@ -69,7 +70,7 @@ class StartupPreloadSpec extends Specification {
         Recording loader = new Recording((StartupPreload.CLASSES): "${MARKED}\n", (StartupPreload.GENERATOR_CLASSES): "${OF_GENERATOR}\n")
 
         when:
-        StartupPreload.start(loader, 2, arguments as String[])*.join(30_000)
+        StartupPreload.start(loader, 2, arguments as String[])*.join(SpecWaits.BOUND.toMillis())
 
         then:
         loader.asked.contains(MARKED)
@@ -111,7 +112,7 @@ class StartupPreloadSpec extends Specification {
         Recording loader = new Recording((StartupPreload.CLASSES): ([MARKED] + ofTheServer).join('\n') + '\n')
 
         when:
-        StartupPreload.start(loader, 2, 'mcp')*.join(30_000)
+        StartupPreload.start(loader, 2, 'mcp')*.join(SpecWaits.BOUND.toMillis())
 
         then:
         loader.asked.contains(MARKED)
@@ -141,7 +142,7 @@ class StartupPreloadSpec extends Specification {
     void "a list that is missing, or cannot be read, or a class loader that fails, is no failure of the command"() {
         when: 'no list at all'
         Recording none = new Recording([:])
-        StartupPreload.start(none, 2, '--version')*.join(30_000)
+        StartupPreload.start(none, 2, '--version')*.join(SpecWaits.BOUND.toMillis())
 
         then:
         noExceptionThrown()
@@ -150,7 +151,7 @@ class StartupPreloadSpec extends Specification {
         when: 'a list that fails while it is read, and a class loader that throws for every class'
         Recording failing = new Recording((StartupPreload.CLASSES): "${MARKED}\n")
         failing.fails = true
-        StartupPreload.start(failing, 2, '--version')*.join(30_000)
+        StartupPreload.start(failing, 2, '--version')*.join(SpecWaits.BOUND.toMillis())
         StartupPreload.start(failing, '--version')
 
         then:
@@ -170,7 +171,7 @@ class StartupPreloadSpec extends Specification {
         Recording loader = new Recording(null)
 
         when:
-        StartupPreload.start(loader, 2, 'create-app', 'demo')*.join(120_000)
+        StartupPreload.start(loader, 2, 'create-app', 'demo')*.join(SpecWaits.BOUND.toMillis())
 
         then: 'both lists were read, and classes of the command line and of the generator were asked for'
         loader.resources == [StartupPreload.CLASSES, StartupPreload.GENERATOR_CLASSES]
@@ -185,13 +186,13 @@ class StartupPreloadSpec extends Specification {
 
         when:
         List<Thread> threads = StartupPreload.start(loader, 2, '--version')
-        threads*.join(30_000)
+        threads*.join(SpecWaits.BOUND.toMillis())
 
         then:
         StartupPreload.status() == 'started: the classes every command loads, done'
 
         when:
-        StartupPreload.start(loader, 2, 'create-app', 'demo')*.join(30_000)
+        StartupPreload.start(loader, 2, 'create-app', 'demo')*.join(SpecWaits.BOUND.toMillis())
 
         then:
         StartupPreload.status() == 'started: the classes every command loads and those of the project generator, done'

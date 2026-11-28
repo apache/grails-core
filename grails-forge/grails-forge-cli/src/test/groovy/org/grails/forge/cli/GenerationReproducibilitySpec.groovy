@@ -94,7 +94,7 @@ class GenerationReproducibilitySpec extends Specification {
                 assert ended && process.exitValue() == 0: "The probe ${name} did not run to its end:\n${log.getText('UTF-8')}"
             } finally {
                 if (process.alive) {
-                    process.destroyForcibly().waitFor(10, TimeUnit.SECONDS)
+                    process.destroyForcibly().waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
                 }
             }
         }

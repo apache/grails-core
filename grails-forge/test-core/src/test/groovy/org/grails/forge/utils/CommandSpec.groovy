@@ -39,7 +39,6 @@ import org.grails.forge.util.NameUtils
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
-import spock.util.concurrent.PollingConditions
 
 import java.nio.file.Files
 
@@ -134,16 +133,6 @@ abstract class CommandSpec extends Specification {
                 new FileSystemOutputHandler(dir, ConsoleOutput.NOOP),
                 ConsoleOutput.NOOP
         )
-    }
-
-    PollingConditions getDefaultPollingConditions() {
-        new PollingConditions(timeout: 120, initialDelay: 3, delay: 1, factor: 1)
-    }
-
-    void testOutputContains(String output, String value) {
-        defaultPollingConditions.eventually {
-            assert output.toString().contains(value)
-        }
     }
 
     ThrowingSupplier<OutputHandler, IOException> getOutputHandler(ConsoleOutput consoleOutput) {

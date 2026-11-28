@@ -21,12 +21,15 @@ package org.apache.grails.forge.cli.pack
 import java.net.http.HttpTimeoutException
 import java.security.MessageDigest
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.net.ssl.SSLHandshakeException
 import org.apache.grails.forge.cli.pack.PackArtifacts.Reply
 import org.apache.grails.forge.cli.pack.PackArtifacts.Transport
 import org.apache.grails.forge.core.pack.Pack
+import org.grails.forge.cli.SpecWaits
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -56,6 +59,12 @@ class PackArtifactsSpec extends Specification {
         return answer == null ? new Reply(404, null, null) : answer.call()
     } as Transport
     PackArtifacts artifacts = new PackArtifacts(transport)
+    // what an answer that does not come waits for, which only the end of the feature opens
+    CountDownLatch never = new CountDownLatch(1)
+
+    void cleanup() {
+        never.countDown()
+    }
 
     void "the jar is taken over https with its checksum, and nothing else of the plugin is asked for"() {
         given:
@@ -329,7 +338,7 @@ class PackArtifactsSpec extends Specification {
         answers[JAR] = { new Reply(200, null, new Asserting()) }
 
         when: 'the error comes well within the time an answer has'
-        new PackArtifacts(transport, Duration.ofSeconds(30), Duration.ofSeconds(60))
+        new PackArtifacts(transport, SpecWaits.BOUND, SpecWaits.BOUND)
                 .resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
 
         then: 'it is what ends the file'
@@ -337,13 +346,14 @@ class PackArtifactsSpec extends Specification {
         e.message == NOT_TAKEN + 'https://repository.invalid/maven/: cannot be asked (AssertionError)' + HINT
 
         when: 'the same, where an answer has a moment, so that a watch that was not ended comes while the thread goes on'
-        new PackArtifacts(transport, Duration.ofMillis(300), Duration.ofSeconds(60))
+        new PackArtifacts(transport, Duration.ofMillis(300), SpecWaits.BOUND)
                 .resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
 
         then: 'the error ended the file, or on a busy machine the watch did'
         thrown(PackArtifactException)
 
         when: 'the thread goes on for longer than an answer has'
+        // time is what is held here: a watch that was left would come within the moment an answer has, and does not
         Thread.sleep(1500)
 
         then:
@@ -376,10 +386,10 @@ class PackArtifactsSpec extends Specification {
         String directory = 'https://repository.invalid/maven/com/acme/acme-audit-grails/2.3.0-SNAPSHOT/'
         answers[directory + 'maven-metadata.xml'] = answer
         // a moment for the answer that stops coming, which the time ends; the others are read well within theirs
-        Duration answerTime = reason == ': timeout' ? Duration.ofMillis(300) : Duration.ofSeconds(30)
+        Duration answerTime = reason == ': timeout' ? Duration.ofMillis(300) : SpecWaits.BOUND
 
         when:
-        new PackArtifacts(transport, answerTime, Duration.ofSeconds(60))
+        new PackArtifacts(transport, answerTime, SpecWaits.BOUND)
                 .resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0-SNAPSHOT'), REPOSITORY, null)
 
         then:
@@ -426,16 +436,17 @@ class PackArtifactsSpec extends Specification {
         held.write(new byte[10])
         held.flush()
         answers[JAR] = { new Reply(200, null, body) }
-        PackArtifacts impatient = new PackArtifacts(transport, Duration.ofMillis(500), Duration.ofSeconds(60))
+        // the time the whole file has is the bound of every wait, which the time an answer has comes long before
+        PackArtifacts impatient = new PackArtifacts(transport, Duration.ofMillis(500), SpecWaits.BOUND)
 
         when:
-        long started = System.currentTimeMillis()
+        long started = System.nanoTime()
         impatient.resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
 
         then:
         PackArtifactException e = thrown()
         e.message == NOT_TAKEN + 'https://repository.invalid/maven/: timeout' + HINT
-        System.currentTimeMillis() - started < 30000
+        Duration.ofNanos(System.nanoTime() - started) < SpecWaits.BOUND
 
         and: 'the interrupt that ended the read is not left for what the command does next'
         !Thread.currentThread().isInterrupted()
@@ -446,33 +457,37 @@ class PackArtifactsSpec extends Specification {
 
     void "a request that gets no answer is not waited for"() {
         given:
-        answers[JAR] = { Thread.sleep(120000); new Reply(200, null, new ByteArrayInputStream(jar())) }
-        PackArtifacts impatient = new PackArtifacts(transport, Duration.ofMillis(500), Duration.ofSeconds(60))
+        given: 'an answer that comes only after the bound of every wait, which is also the time the whole file has'
+        answers[JAR] = {
+            never.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
+            new Reply(200, null, new ByteArrayInputStream(jar()))
+        }
+        PackArtifacts impatient = new PackArtifacts(transport, Duration.ofMillis(500), SpecWaits.BOUND)
 
         when:
-        long started = System.currentTimeMillis()
+        long started = System.nanoTime()
         impatient.resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
 
-        then:
+        then: 'the time an answer has ended it, long before the answer and the time of the whole file'
         PackArtifactException e = thrown()
         e.message == NOT_TAKEN + 'https://repository.invalid/maven/: timeout' + HINT
-        System.currentTimeMillis() - started < 30000
+        Duration.ofNanos(System.nanoTime() - started) < SpecWaits.BOUND
         !Thread.currentThread().isInterrupted()
     }
 
     void "a file that keeps coming and takes too long is ended"() {
         given: 'a repository that gives a byte now and then, without end'
         answers[JAR] = { new Reply(200, null, new Dripping()) }
-        PackArtifacts impatient = new PackArtifacts(transport, Duration.ofSeconds(30), Duration.ofMillis(800))
+        PackArtifacts impatient = new PackArtifacts(transport, SpecWaits.BOUND, Duration.ofMillis(800))
 
         when:
-        long started = System.currentTimeMillis()
+        long started = System.nanoTime()
         impatient.resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
 
-        then:
+        then: 'the time the whole file has ended it, long before the time an answer has'
         PackArtifactException e = thrown()
         e.message == NOT_TAKEN + 'https://repository.invalid/maven/: timeout' + HINT
-        System.currentTimeMillis() - started < 30000
+        Duration.ofNanos(System.nanoTime() - started) < SpecWaits.BOUND
     }
 
     void "without a repository given it is those of GRAILS_REPO_URL and then Maven Central, and with one only what is given"() {
@@ -653,6 +668,7 @@ class PackArtifactsSpec extends Specification {
         }
     }
 
+    // a byte now and then, without end: time is what it stands for, a transfer that is slow
     static class Dripping extends InputStream {
 
         @Override

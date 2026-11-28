@@ -27,6 +27,8 @@ import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import org.apache.grails.forge.cli.pack.PackArtifacts
@@ -43,6 +45,7 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForkedCli
 import org.grails.forge.cli.GrailsPicocliFactory
+import org.grails.forge.cli.SpecWaits
 import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
@@ -72,12 +75,15 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     String environment = null
     List<URI> asked = []
     Map<String, Closure<Reply>> answers = [:]
-    Duration within = Duration.ofSeconds(30)
+    // the time a catalog is read in, where a feature gives it no other
+    Duration within = SpecWaits.BOUND
     boolean answered = true
     boolean pluginIndex = false
     String chosenFor = null
     // what GRAILS_PLUGIN_INDEX names: nothing, whatever the build gives the specifications
     String indexVariable = null
+    // what an answer that does not come waits for, which only the end of the feature opens
+    CountDownLatch never = new CountDownLatch(1)
 
     void setup() {
         originalOut = System.out
@@ -91,6 +97,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     }
 
     void cleanup() {
+        never.countDown()
         System.setOut(originalOut)
         System.setErr(originalErr)
         repository.deleteDir()
@@ -944,8 +951,9 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         setting = null
         pluginIndex = true
         within = Duration.ofSeconds(2)
+        // an answer that comes only after the bound of every wait of the feature
         answers[PackCatalogs.PLUGIN_INDEX] = {
-            Thread.sleep(120000)
+            never.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
             new Reply(404, null, null)
         }
 
@@ -953,9 +961,9 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         long started = System.nanoTime()
         int exit = run('shop', '--features', 'hibernate-validtor')
 
-        then:
+        then: 'the command did not wait for the answer'
         exit == 2
-        Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(60)
+        Duration.ofNanos(System.nanoTime() - started) < SpecWaits.BOUND
         err.toString().readLines()[0] == 'The requested feature does not exist: hibernate-validtor'
         err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.PLUGIN_INDEX} could not be read: timeout, so hibernate-validtor was not looked for there"
         PackCatalogs.DEFAULT_WITHIN <= Duration.ofSeconds(10)
@@ -1338,7 +1346,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
             Process process = new ProcessBuilder(new File(System.getProperty('java.home'), 'bin/java').path, '-Xmx128m', '-cp', classPath,
                     PackCatalogProbe.name, document.toURI().toString()).redirectErrorStream(true).start()
             String said = process.inputStream.getText('UTF-8')
-            assert process.waitFor(120, java.util.concurrent.TimeUnit.SECONDS)
+            assert process.waitFor(SpecWaits.BOUND.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
             "${process.exitValue()} ${said.trim()}".toString()
         }
 
@@ -1798,7 +1806,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
             builder.environment().remove('GRAILS_PLUGIN_INDEX')
             Process program = builder.start()
             String text = program.inputStream.getText('UTF-8')
-            assert program.waitFor(300, java.util.concurrent.TimeUnit.SECONDS)
+            assert program.waitFor(SpecWaits.BOUND.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
             "${program.exitValue()} ${text}".toString()
         }
 

@@ -35,6 +35,7 @@ import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import org.apache.grails.forge.core.pack.Pack
+import org.grails.forge.cli.SpecWaits
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -63,7 +64,7 @@ class HttpsPackArtifactsSpec extends Specification {
                            '-validity', '2', '-storetype', 'PKCS12', '-keystore', store.path,
                            '-storepass', 'changeit', '-keypass', 'changeit'].execute()
         keytool.consumeProcessOutput()
-        assert keytool.waitFor(60, TimeUnit.SECONDS) && keytool.exitValue() == 0
+        assert keytool.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) && keytool.exitValue() == 0
         KeyStore keys = KeyStore.getInstance('PKCS12')
         store.withInputStream { InputStream input -> keys.load(input, PASSWORD) }
         KeyManagerFactory keyManagers = KeyManagerFactory.getInstance(KeyManagerFactory.defaultAlgorithm)
@@ -114,7 +115,7 @@ class HttpsPackArtifactsSpec extends Specification {
         handlers[PATH + '.sha256'] = { HttpExchange exchange -> send(exchange, 200, digest(jar).bytes) }
 
         when:
-        Pack pack = artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
+        Pack pack = artifacts(SpecWaits.BOUND, SpecWaits.BOUND).resolve(coordinates(), [repository()], null)
 
         then:
         pack.artifact.sha256 == digest(jar)
@@ -157,46 +158,46 @@ class HttpsPackArtifactsSpec extends Specification {
             exchange.sendResponseHeaders(200, 0)
             exchange.responseBody.write(new byte[10])
             exchange.responseBody.flush()
-            released.await(120, TimeUnit.SECONDS)
+            released.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
 
         when:
         long started = System.currentTimeMillis()
-        artifacts(Duration.ofSeconds(1), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
+        artifacts(Duration.ofSeconds(1), SpecWaits.BOUND).resolve(coordinates(), [repository()], null)
 
         then:
         PackArtifactException e = thrown()
         e.message.contains("${repository()}: timeout")
-        System.currentTimeMillis() - started < 30000
+        System.currentTimeMillis() - started < SpecWaits.BOUND.toMillis()
     }
 
     void "a request that is never answered is ended at the time an answer has"() {
         given:
-        handlers[PATH] = { HttpExchange exchange -> released.await(120, TimeUnit.SECONDS) }
+        handlers[PATH] = { HttpExchange exchange -> released.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) }
 
         when:
         long started = System.currentTimeMillis()
-        artifacts(Duration.ofSeconds(1), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
+        artifacts(Duration.ofSeconds(1), SpecWaits.BOUND).resolve(coordinates(), [repository()], null)
 
         then:
         PackArtifactException e = thrown()
         e.message.contains("${repository()}: timeout")
-        System.currentTimeMillis() - started < 30000
+        System.currentTimeMillis() - started < SpecWaits.BOUND.toMillis()
     }
 
     void "a request that is never answered is ended by the client itself when its time is the shorter"() {
         given:
-        handlers[PATH] = { HttpExchange exchange -> released.await(120, TimeUnit.SECONDS) }
+        handlers[PATH] = { HttpExchange exchange -> released.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) }
 
         when:
         long started = System.currentTimeMillis()
-        new PackArtifacts(PackArtifacts.https(context, Duration.ofSeconds(1)), Duration.ofSeconds(120), Duration.ofSeconds(120))
+        new PackArtifacts(PackArtifacts.https(context, Duration.ofSeconds(1)), SpecWaits.BOUND, SpecWaits.BOUND)
                 .resolve(coordinates(), [repository()], null)
 
         then:
         PackArtifactException e = thrown()
         e.message.contains("${repository()}: timeout")
-        System.currentTimeMillis() - started < 30000
+        System.currentTimeMillis() - started < SpecWaits.BOUND.toMillis()
     }
 
     void "a redirect to this computer written as one number is not followed"() {
@@ -213,7 +214,7 @@ class HttpsPackArtifactsSpec extends Specification {
         }
 
         when:
-        artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
+        artifacts(SpecWaits.BOUND, SpecWaits.BOUND).resolve(coordinates(), [repository()], null)
 
         then:
         PackArtifactException e = thrown()
@@ -227,11 +228,11 @@ class HttpsPackArtifactsSpec extends Specification {
         handlers[PATH] = { HttpExchange exchange -> send(exchange, 200, jar) }
         handlers[PATH + '.sha256'] = { HttpExchange exchange ->
             exchange.sendResponseHeaders(200, 0)
-            released.await(120, TimeUnit.SECONDS)
+            released.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
 
-        when: 'the time an answer has is one in which the jar is answered on a busy machine too'
-        artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
+        when: 'the time an answer has is one in which the jar is answered on a busy machine too, and which the checksum is given in full'
+        artifacts(Duration.ofSeconds(30), SpecWaits.BOUND).resolve(coordinates(), [repository()], null)
 
         then:
         PackArtifactException e = thrown()
@@ -245,18 +246,19 @@ class HttpsPackArtifactsSpec extends Specification {
             while (released.count > 0) {
                 exchange.responseBody.write(1)
                 exchange.responseBody.flush()
+                // a byte now and then: time is what it stands for, a transfer that is slow
                 Thread.sleep(100)
             }
         }
 
-        when:
-        long started = System.currentTimeMillis()
-        artifacts(Duration.ofSeconds(30), Duration.ofSeconds(2)).resolve(coordinates(), [repository()], null)
+        when: 'the time of an answer is the bound of every wait, and that of the file two seconds'
+        long started = System.nanoTime()
+        artifacts(SpecWaits.BOUND, Duration.ofSeconds(2)).resolve(coordinates(), [repository()], null)
 
-        then:
+        then: 'the time of the file ended it'
         PackArtifactException e = thrown()
         e.message.contains("${repository()}: timeout")
-        System.currentTimeMillis() - started < 30000
+        Duration.ofNanos(System.nanoTime() - started) < SpecWaits.BOUND
     }
 
     void "a redirect to an address the client would refuse with an exception of its own is a refusal like another"() {
@@ -267,7 +269,7 @@ class HttpsPackArtifactsSpec extends Specification {
         }
 
         when:
-        artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
+        artifacts(SpecWaits.BOUND, SpecWaits.BOUND).resolve(coordinates(), [repository()], null)
 
         then:
         PackArtifactException e = thrown()
@@ -285,7 +287,7 @@ class HttpsPackArtifactsSpec extends Specification {
         }
 
         when:
-        artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
+        artifacts(SpecWaits.BOUND, SpecWaits.BOUND).resolve(coordinates(), [repository()], null)
 
         then:
         PackArtifactException e = thrown()
@@ -300,14 +302,14 @@ class HttpsPackArtifactsSpec extends Specification {
         handlers[PATH + '.sha1'] = { HttpExchange exchange -> exchange.sendResponseHeaders(401, -1) }
 
         expect:
-        artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null).artifact.checkedAgainst == null
+        artifacts(SpecWaits.BOUND, SpecWaits.BOUND).resolve(coordinates(), [repository()], null).artifact.checkedAgainst == null
     }
 
     @Unroll
     void "a catalog that is given a few seconds is ended after them by the client as the command has it, when #what"() {
-        given: 'the times of a jar, which are far longer'
+        given: 'the times of a jar, which are far longer: the bound of every wait'
         handlers['/catalog.json'] = handler
-        PackArtifacts artifacts = new PackArtifacts(PackArtifacts.https(context, PackArtifacts.ANSWER_TIMEOUT), PackArtifacts.ANSWER_TIMEOUT, PackArtifacts.FILE_TIMEOUT)
+        PackArtifacts artifacts = new PackArtifacts(PackArtifacts.https(context, SpecWaits.BOUND), SpecWaits.BOUND, SpecWaits.BOUND)
 
         when:
         long started = System.nanoTime()
@@ -316,23 +318,25 @@ class HttpsPackArtifactsSpec extends Specification {
         then:
         PackArtifactException e = thrown()
         e.message == 'timeout'
-        Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(30)
+        Duration.ofNanos(System.nanoTime() - started) < SpecWaits.BOUND
+        // a lower bound, which a slow computer only exceeds
         Duration.ofNanos(System.nanoTime() - started) >= Duration.ofSeconds(2)
 
         where:
         what                                 | handler
-        'the request is never answered'      | { HttpExchange exchange -> released.await(120, TimeUnit.SECONDS) }
+        'the request is never answered'      | { HttpExchange exchange -> released.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) }
         'the answer begins and then stops'   | { HttpExchange exchange ->
             exchange.sendResponseHeaders(200, 1000)
             exchange.responseBody.write('{"format": 1'.bytes)
             exchange.responseBody.flush()
-            released.await(120, TimeUnit.SECONDS)
+            released.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
         'the answer keeps coming slowly'     | { HttpExchange exchange ->
             exchange.sendResponseHeaders(200, 0)
             for (int sent = 0; sent < 600 && released.count > 0; sent++) {
                 exchange.responseBody.write(' '.bytes)
                 exchange.responseBody.flush()
+                // a byte now and then: time is what it stands for, a transfer that is slow
                 Thread.sleep(200)
             }
         }
@@ -343,8 +347,8 @@ class HttpsPackArtifactsSpec extends Specification {
         handlers['/catalog.json'] = { HttpExchange exchange -> send(exchange, 200, '{"format": 1, "plugins": []}'.bytes) }
 
         expect:
-        new String(artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).file(URI.create("https://localhost:${server.address.port}/catalog.json"),
-                1024, 'the catalog', Duration.ofSeconds(30)), 'UTF-8') == '{"format": 1, "plugins": []}'
+        new String(artifacts(SpecWaits.BOUND, SpecWaits.BOUND).file(URI.create("https://localhost:${server.address.port}/catalog.json"),
+                1024, 'the catalog', SpecWaits.BOUND), 'UTF-8') == '{"format": 1, "plugins": []}'
     }
 
     private PackArtifacts artifacts(Duration answer, Duration file) {

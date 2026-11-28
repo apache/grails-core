@@ -943,7 +943,7 @@ class LauncherSpec extends Specification {
         when:
         Process program = ForkedCli.builder(dir, ["-Xlog:class+load=info:file=${classes.path}".toString()], *args)
                 .redirectOutput(written).redirectErrorStream(true).redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null'))).start()
-        boolean ended = program.waitFor(300, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String loaded = classes.text
 
         then:

@@ -34,6 +34,7 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.grails.forge.cli.ForgeContext
+import org.grails.forge.cli.SpecWaits
 import org.springframework.context.ApplicationContext
 import picocli.CommandLine
 import spock.lang.Shared
@@ -72,7 +73,7 @@ class HttpsPluginCommandsSpec extends Specification {
                            '-validity', '2', '-storetype', 'PKCS12', '-keystore', store.path,
                            '-storepass', 'changeit', '-keypass', 'changeit'].execute()
         keytool.consumeProcessOutput()
-        assert keytool.waitFor(60, TimeUnit.SECONDS) && keytool.exitValue() == 0
+        assert keytool.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) && keytool.exitValue() == 0
         KeyStore keys = KeyStore.getInstance('PKCS12')
         store.withInputStream { InputStream input -> keys.load(input, PASSWORD) }
         KeyManagerFactory keyManagers = KeyManagerFactory.getInstance(KeyManagerFactory.defaultAlgorithm)
@@ -100,7 +101,7 @@ class HttpsPluginCommandsSpec extends Specification {
         handlers[INDEX_PATH] = { HttpExchange exchange -> send(exchange, 200, INDEX.bytes) }
 
         when:
-        int exit = list(Duration.ofSeconds(30), '--plugin-index', index(), 'audit')
+        int exit = list(SpecWaits.BOUND, '--plugin-index', index(), 'audit')
 
         then:
         exit == 0
@@ -120,7 +121,7 @@ class HttpsPluginCommandsSpec extends Specification {
             exchange.sendResponseHeaders(200, 0)
             exchange.responseBody.write('[{"coords":'.bytes)
             exchange.responseBody.flush()
-            released.await(120, TimeUnit.SECONDS)
+            released.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
 
         when:
@@ -129,7 +130,7 @@ class HttpsPluginCommandsSpec extends Specification {
 
         then: 'the plugins of this release of Grails are the answer, with what was not read'
         exit == 0
-        System.currentTimeMillis() - started < 30000
+        System.currentTimeMillis() - started < SpecWaits.BOUND.toMillis()
         err.toString().readLines() == ["| Warning The plugin index ${index()} was not read (timeout), so the plugins of the community are not known to this command: " +
                                                'only the plugins of this release of Grails are']
         out.toString().contains(' org.apache.grails:grails-cache ')
@@ -137,7 +138,7 @@ class HttpsPluginCommandsSpec extends Specification {
 
     void "a plugin index that is never answered is not waited for"() {
         given:
-        handlers[INDEX_PATH] = { HttpExchange exchange -> released.await(120, TimeUnit.SECONDS) }
+        handlers[INDEX_PATH] = { HttpExchange exchange -> released.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) }
 
         when:
         long started = System.currentTimeMillis()
@@ -145,7 +146,7 @@ class HttpsPluginCommandsSpec extends Specification {
 
         then:
         exit == 0
-        System.currentTimeMillis() - started < 30000
+        System.currentTimeMillis() - started < SpecWaits.BOUND.toMillis()
         err.toString().contains('was not read (timeout)')
         out.toString().contains(' org.apache.grails:grails-cache ')
     }
@@ -165,7 +166,7 @@ class HttpsPluginCommandsSpec extends Specification {
         }
 
         when:
-        int exit = list(Duration.ofSeconds(60), '--plugin-index', index())
+        int exit = list(SpecWaits.BOUND, '--plugin-index', index())
 
         then:
         exit == 0
@@ -181,7 +182,7 @@ class HttpsPluginCommandsSpec extends Specification {
         String address = "https://127.0.0.1:${port}${INDEX_PATH}"
 
         when:
-        int exit = list(Duration.ofSeconds(30), '--plugin-index', address)
+        int exit = list(SpecWaits.BOUND, '--plugin-index', address)
 
         then:
         exit == 0
@@ -203,7 +204,7 @@ class HttpsPluginCommandsSpec extends Specification {
         }
 
         when:
-        int exit = list(Duration.ofSeconds(30), '--plugin-index', index())
+        int exit = list(SpecWaits.BOUND, '--plugin-index', index())
 
         then:
         exit == 0
@@ -250,7 +251,7 @@ class HttpsPluginCommandsSpec extends Specification {
 
             @Override
             protected PackArtifacts createPackArtifacts() {
-                return new PackArtifacts(PackArtifacts.https(trusted, Duration.ofSeconds(30)))
+                return new PackArtifacts(PackArtifacts.https(trusted, SpecWaits.BOUND))
             }
 
             @Override
@@ -315,7 +316,7 @@ class HttpsPluginCommandsSpec extends Specification {
 
             @Override
             protected PackArtifacts createPackArtifacts() {
-                return new PackArtifacts(PackArtifacts.https(trusted, Duration.ofSeconds(30)))
+                return new PackArtifacts(PackArtifacts.https(trusted, SpecWaits.BOUND))
             }
 
             @Override

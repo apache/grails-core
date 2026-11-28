@@ -35,6 +35,7 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForkedCli
 import org.grails.forge.cli.GrailsPicocliFactory
+import org.grails.forge.cli.SpecWaits
 import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
@@ -393,7 +394,7 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
         String said = shell.inputStream.getText('UTF-8')
 
         then: 'each of them works, and the application gets the feature'
-        shell.waitFor(600, TimeUnit.SECONDS)
+        shell.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         assert shell.exitValue() == 0: said
         new File(start, 'shop/build.gradle').text.contains('quartz')
         new File(start, 'shop/.grails/project.yml').text.contains('- name: grails-quartz')

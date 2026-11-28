@@ -26,6 +26,7 @@ import groovy.json.JsonSlurper
 import org.apache.grails.forge.core.state.ProjectState
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.SpecWaits
 import org.grails.forge.util.VersionInfo
 import spock.lang.Requires
 
@@ -437,14 +438,14 @@ class ProjectStateLifecycleSpec extends CommandSpec {
     private String git(String... arguments) {
         Process process = gitProcess(arguments)
         String text = process.inputStream.getText('UTF-8')
-        assert process.waitFor(60, TimeUnit.SECONDS) && process.exitValue() == 0: "git ${arguments.join(' ')}: ${text}"
+        assert process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) && process.exitValue() == 0: "git ${arguments.join(' ')}: ${text}"
         return text
     }
 
     private int gitExit(String... arguments) {
         Process process = gitProcess(arguments)
         process.inputStream.getText('UTF-8')
-        assert process.waitFor(60, TimeUnit.SECONDS)
+        assert process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         return process.exitValue()
     }
 
@@ -463,7 +464,7 @@ class ProjectStateLifecycleSpec extends CommandSpec {
         try {
             Process process = new ProcessBuilder('git', '--version').redirectErrorStream(true).start()
             process.inputStream.getText('UTF-8')
-            return process.waitFor(30, TimeUnit.SECONDS) && process.exitValue() == 0
+            return process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) && process.exitValue() == 0
         } catch (IOException ignored) {
             return false
         }

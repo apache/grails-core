@@ -39,6 +39,7 @@ import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeContext
 import org.grails.forge.cli.ForkedCli
 import org.grails.forge.cli.GrailsPicocliFactory
+import org.grails.forge.cli.SpecWaits
 import org.grails.forge.util.VersionInfo
 import picocli.CommandLine
 import spock.lang.IgnoreIf
@@ -309,7 +310,7 @@ class PluginDiscoveryContractSpec extends CommandSpec implements CommandFixture 
             builder.environment().put('GRAILS_PLUGIN_INDEX', index.toURI().toString())
             Process program = builder.start()
             String text = program.inputStream.getText('UTF-8')
-            assert program.waitFor(300, TimeUnit.SECONDS)
+            assert program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
             [name, "${program.exitValue()} ${text}".toString()]
         }
 
