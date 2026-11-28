@@ -18,6 +18,7 @@
  */
 package org.apache.grails.buildsrc
 
+import java.security.MessageDigest
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 
@@ -223,22 +224,7 @@ class SbomPluginSpec extends Specification {
 
     void "the sbom is written again when a project dependency moves to another version"() {
         given: 'a library that depends on version 1.0 of another project of the build'
-        new File(projectDir, 'settings.gradle').text = '''\
-            rootProject.name = 'build'
-            include 'library', 'dependency'
-        '''.stripIndent()
-        new File(projectDir, 'gradle.properties').text = 'projectVersion=1.0.0'
-        new File(projectDir, 'library').mkdirs()
-        new File(projectDir, 'library/build.gradle').text = '''
-            plugins {
-                id 'java-library'
-                id 'org.apache.grails.buildsrc.sbom'
-            }
-
-            dependencies {
-                implementation project(':dependency')
-            }
-        '''
+        writeLibraryDependingOnProject()
         writeDependencyProject('1.0')
         build(':library:cyclonedxDirectBom')
 
@@ -263,6 +249,37 @@ class SbomPluginSpec extends Specification {
 
         then: 'the build cache does not hand back the sbom of 2.0'
         sbomVersions('library/build/library-1.0.0-sbom.json', 'dependency') == ['1.0']
+    }
+
+    void "the sbom is written again when the bytes of an external dependency change under the same version"() {
+        given: 'a library that depends on version 1.0 of a module in a local repository'
+        publishExternalModule('1.0')
+        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'library'"
+        new File(projectDir, 'gradle.properties').text = 'projectVersion=1.0.0'
+        writeLibraryDependingOnExternal('1.0')
+        build('cyclonedxDirectBom')
+
+        when: 'the jar of 1.0 gets other bytes, as the jar of a snapshot does'
+        final jar = new File(projectDir, 'repo/org/example/external/1.0/external-1.0.jar')
+        writeJar(jar, 'other bytes')
+        final changed = build('cyclonedxDirectBom')
+
+        then: 'the task runs again and the sbom records the hash of the new bytes'
+        changed.task(':cyclonedxDirectBom').outcome != TaskOutcome.UP_TO_DATE
+        sbomSha256('build/library-1.0.0-sbom.json', 'external') == MessageDigest.getInstance('SHA-256').digest(jar.bytes).encodeHex().toString()
+    }
+
+    void "a project dependency is described without its jar being built"() {
+        given: 'a library that depends on another project of the build'
+        writeLibraryDependingOnProject()
+        writeDependencyProject('1.0')
+
+        when: 'the sbom of the library is built'
+        final result = build(':library:cyclonedxDirectBom')
+
+        then: 'the sbom lists the project, and the jar of the project is not built'
+        sbomVersions('library/build/library-1.0.0-sbom.json', 'dependency') == ['1.0']
+        result.task(':dependency:jar') == null
     }
 
     private BuildResult buildSbomFromClean() {
@@ -292,9 +309,13 @@ class SbomPluginSpec extends Specification {
                 <version>$version</version>
             </project>
         """.stripIndent()
-        new JarOutputStream(new FileOutputStream(new File(moduleDir, "external-${version}.jar"))).withCloseable { JarOutputStream jar ->
+        writeJar(new File(moduleDir, "external-${version}.jar"), version)
+    }
+
+    private static void writeJar(File file, String content) {
+        new JarOutputStream(new FileOutputStream(file)).withCloseable { JarOutputStream jar ->
             jar.putNextEntry(new JarEntry('version.txt'))
-            jar.write(version.bytes)
+            jar.write(content.bytes)
         }
     }
 
@@ -317,6 +338,25 @@ class SbomPluginSpec extends Specification {
         """
     }
 
+    private void writeLibraryDependingOnProject() {
+        new File(projectDir, 'settings.gradle').text = '''\
+            rootProject.name = 'build'
+            include 'library', 'dependency'
+        '''.stripIndent()
+        new File(projectDir, 'gradle.properties').text = 'projectVersion=1.0.0'
+        new File(projectDir, 'library').mkdirs()
+        new File(projectDir, 'library/build.gradle').text = '''
+            plugins {
+                id 'java-library'
+                id 'org.apache.grails.buildsrc.sbom'
+            }
+
+            dependencies {
+                implementation project(':dependency')
+            }
+        '''
+    }
+
     private void writeDependencyProject(String version) {
         new File(projectDir, 'dependency').mkdirs()
         new File(projectDir, 'dependency/build.gradle').text = """
@@ -333,5 +373,11 @@ class SbomPluginSpec extends Specification {
         final sbom = new JsonSlurper().parse(new File(projectDir, sbomPath)) as Map
         final components = (sbom.components ?: []) as List<Map>
         components.findAll { it.name == componentName }*.version as List<String>
+    }
+
+    private String sbomSha256(String sbomPath, String componentName) {
+        final sbom = new JsonSlurper().parse(new File(projectDir, sbomPath)) as Map
+        final component = (sbom.components as List<Map>).find { it.name == componentName }
+        (component.hashes as List<Map>).find { it.alg == 'SHA-256' }.content as String
     }
 }
