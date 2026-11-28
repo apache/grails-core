@@ -190,11 +190,15 @@ class ConsoleKeepingTool implements ApplicationTool {
         runWith(null, arguments)
     }
 
-    // the JVM the runTool task starts, with more classes in front of the class path when they are given
+    // The JVM the runTool task starts, with more classes in front of the class path when they are given. It has a
+    // home of its own: the console of Grails, which a tool can make, keeps its history there, and neither reads nor
+    // writes the one of whoever runs the specification.
     private Map runWith(File classes, String... arguments) {
+        File home = new File(dir, 'home')
+        home.mkdirs()
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', (classes == null ? '' : classes.path + File.pathSeparator) + System.getProperty('java.class.path'),
-                                '-Dgrails.env=development', "-Dbase.dir=${dir.path}".toString(),
+                                '-Dgrails.env=development', "-Dbase.dir=${dir.path}".toString(), "-Duser.home=${home.path}".toString(),
                                 GrailsApplicationContextCommandRunner.name]
         command.addAll(1, StartedJvmCoverage.jvmArguments())
         command.addAll(arguments.toList())

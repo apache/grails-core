@@ -18,6 +18,9 @@
  */
 package org.apache.grails.core.cli
 
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
 import java.util.concurrent.TimeUnit
 
 import groovy.json.JsonOutput
@@ -41,6 +44,11 @@ class StandaloneToolRunnerSpec extends Specification {
 
     @TempDir
     File dir
+
+    // the home of the JVMs this specification starts
+    private File getHome() {
+        new File(dir, 'home')
+    }
 
     def "a standalone command is given its arguments, its flags and the directory of the project, and the JVM ends with 0"() {
         when:
@@ -210,6 +218,7 @@ class StandaloneToolRunnerSpec extends Specification {
         Map refused = runWithTools([RunnerSpecConsoleTool], [], 'runner-spec-console', '--nope', 'ran')
         Map thrown = runWithTools([RunnerSpecConsoleTool], [], 'runner-spec-console', 'fail')
         Map unknown = runWithTools([RunnerSpecConsoleTool], [], 'runner-spec-no-such-command')
+        File history = new File(home, GrailsConsole.HISTORYFILE)
 
         then: 'what the tool prints to System.err goes to the output: the console is there'
         ran.exit == 0
@@ -229,6 +238,11 @@ class StandaloneToolRunnerSpec extends Specification {
         unknown.exit == 1
         unknown.err.readLines()[0] == 'Command not found for name: runner-spec-no-such-command'
         !unknown.out.contains('Command not found')
+
+        and: 'the console keeps its history in the home of the JVM, in a file that only its owner can read, since what is typed can be a secret'
+        history.isFile()
+        !FileSystems.default.supportedFileAttributeViews().contains('posix') ||
+                PosixFilePermissions.toString(Files.getPosixFilePermissions(history.toPath())) == 'rw-------'
     }
 
     private Map run(String... arguments) {
@@ -240,14 +254,17 @@ class StandaloneToolRunnerSpec extends Specification {
                       RunnerSpecOldCommand, RunnerSpecEnvironmentCommand, RunnerSpecDeclaringTool, RunnerSpecBrokenTool], jvmArguments, arguments)
     }
 
-    // the tools of the class path are these, which are all made when the registry is
+    // The tools of the class path are these, which are all made when the registry is. The JVM has a home of its
+    // own: the console of Grails, which a tool can make, keeps its history there, and neither reads nor writes
+    // the one of whoever runs the specification, whose state would then decide what the JVM writes.
     private Map runWithTools(List<Class> tools, List<String> jvmArguments, String... arguments) {
         File registrations = new File(dir, 'registrations')
         new File(registrations, 'META-INF').mkdirs()
         new File(registrations, 'META-INF/grails-cli.factories').text = "${GrailsTool.name}=" + tools*.name.join(',') + '\n'
+        home.mkdirs()
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', registrations.path + File.pathSeparator + System.getProperty('java.class.path'),
-                                "-Dbase.dir=${dir.path}".toString()]
+                                "-Dbase.dir=${dir.path}".toString(), "-Duser.home=${home.path}".toString()]
         command.addAll(jvmArguments)
         command.add(StandaloneToolRunner.name)
         command.addAll(arguments.toList())
