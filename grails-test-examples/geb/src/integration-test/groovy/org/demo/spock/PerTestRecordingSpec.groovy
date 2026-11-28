@@ -42,9 +42,6 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         when: 'visiting the home page'
         to(HomePage)
 
-        and: 'pausing so the recording captures more than its first frames'
-        Thread.sleep(500)
-
         then: 'the page loads correctly'
         title == 'Welcome to Grails'
     }
@@ -52,9 +49,6 @@ class PerTestRecordingSpec extends ContainerGebSpec {
     void '(setup) running a second test to create another recording'() {
         when: 'visiting another page than the previous test'
         to(UploadPage)
-
-        and: 'pausing so we can see the page change in the video'
-        Thread.sleep(500)
 
         then: 'the page loads correctly'
         title == 'Upload Test'
@@ -94,13 +88,12 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         def firstRecording = recordingFiles.find { it.name.contains('setup_running_a_test_to_create_a_recording') }
         def secondRecording = recordingFiles.find { it.name.contains('setup_running_a_second_test_to_create_another') }
 
-        then: 'each recording captured meaningful content, not just a near-blank connection handshake'
-        // A VNC recording container that was only just restarted (see
-        // WebDriverContainerHolder#restartVncRecordingContainer) is guaranteed to have
-        // connected, but not to have captured more than a frame or two by the time a fast
-        // iteration finishes. Two such near-blank captures can encode to identical bytes,
-        // which would fail the difference check below without saying why. Both setup
-        // iterations pause for this reason.
+        then: 'each recording shows the screen, not just the black frames of a recorder that has not received it yet'
+        // WebDriverContainerHolder#restartVncRecordingContainer waits until the restarted VNC
+        // recorder has written the screen to the recording, so even a test as short as the ones
+        // above is recorded. Without that wait, a short test can be recorded as black frames
+        // only. Two such recordings can encode to identical bytes, which would fail the
+        // difference check below without saying why.
         firstRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
         secondRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
 
@@ -112,8 +105,8 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         Files.mismatch(firstRecording.toPath(), secondRecording.toPath()) != -1
     }
 
-    // Genuine recordings of the tests above are tens of kilobytes or more, so this floor
-    // leaves an order of magnitude of headroom.
+    // A recording of black frames only is 2-3 kilobytes. A recording that shows the screen
+    // of the browser container is tens of kilobytes, as its first full frame alone is.
     private static final long MIN_MEANINGFUL_RECORDING_BYTES = 5_000L
 
     private static final DateTimeFormatter RECORDING_DIR_FORMAT = DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss')

@@ -151,8 +151,8 @@ class HqlListQueryBuilderSpec extends Specification {
 
         then:
         hql.startsWith("from Person e")
-        hql.contains(" join fetch e.books")
-        hql.contains(" join fetch e.profile")
+        hql.contains(" left join fetch e.books")
+        hql.contains(" left join fetch e.profile")
     }
 
     void "test buildListHql with default sort from mapping"() {
