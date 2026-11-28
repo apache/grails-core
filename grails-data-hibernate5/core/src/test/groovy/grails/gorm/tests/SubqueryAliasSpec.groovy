@@ -23,6 +23,7 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
+import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -56,5 +57,30 @@ class SubqueryAliasSpec extends Specification {
 
         then:
         t != null
+    }
+
+    @Rollback
+    @Issue('https://github.com/apache/grails-core/issues/17177')
+    void "a subquery that uses the enclosing alias is one side of an or or an and"() {
+        given:
+        Club united = new Club(name: "Manchester United").save(failOnError: true)
+        Club arsenal = new Club(name: "Arsenal").save(failOnError: true)
+        new Team(name: "United First Team", club: united).save(failOnError: true)
+        new Team(name: "United Reserves", club: united).save(failOnError: true)
+        new Team(name: "Arsenal First Team", club: arsenal).save(flush: true, failOnError: true)
+
+        when:
+        List<String> either = Team.where {
+            def t = Team
+            name == "United Reserves" || exists(Club.where { id == t.club && name == "Arsenal" }.property('name'))
+        }.list()*.name.sort()
+        List<String> both = Team.where {
+            def t = Team
+            name != "United Reserves" && exists(Club.where { id == t.club && name == "Manchester United" }.property('name'))
+        }.list()*.name.sort()
+
+        then: 'it compiles, and each side of the or keeps its rows'
+        either == ['Arsenal First Team', 'United Reserves']
+        both == ['United First Team']
     }
 }

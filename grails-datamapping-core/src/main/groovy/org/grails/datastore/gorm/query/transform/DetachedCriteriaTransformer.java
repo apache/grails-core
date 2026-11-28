@@ -34,10 +34,13 @@ import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.ConstructorNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.GenericsType;
+import org.codehaus.groovy.ast.InnerClassNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.PropertyNode;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.VariableScope;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
@@ -166,34 +169,128 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
     protected Set<Expression> aliasExpressions = new HashSet<>();
     protected ClassNode currentClassNode;
 
+    /** The class being visited: what {@code this} is, however many where queries on other classes enclose it. */
+    private ClassNode ownerClassNode;
+
     public DetachedCriteriaTransformer(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
     }
 
+    /** Whether a where closure of the method being visited was rewritten, so its variable scopes are computed again. */
+    private boolean closureTransformed;
+
     @Override
     public void visitClass(ClassNode node) {
+        ClassNode enclosingClassNode = this.currentClassNode;
+        ClassNode enclosingOwnerClassNode = this.ownerClassNode;
         try {
             this.currentClassNode = node;
+            this.ownerClassNode = node;
             super.visitClass(node);
         } catch (Exception e) {
             logTransformationError(node, e);
         } finally {
-            currentClassNode = null;
+            currentClassNode = enclosingClassNode;
+            ownerClassNode = enclosingOwnerClassNode;
             detachedCriteriaVariables.clear();
         }
     }
 
     @Override
     public void visitMethod(MethodNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
         try {
             super.visitMethod(node);
+            if (closureTransformed && currentClassNode != null) {
+                // the where closures of the method were rewritten after the variable scopes were computed: a closure
+                // that no longer uses a variable still listed it, and one the transform creates had no scope of its own,
+                // so the class generator looked for a variable that the closure around it did not capture
+                recomputeVariableScopes(node);
+            }
         } finally {
+            closureTransformed = transformedBefore;
+            detachedCriteriaVariables.clear();
+        }
+    }
+
+    /**
+     * Computes the variable scopes of a method or constructor of the class being visited again. An anonymous class has
+     * no scope of its own, as the method that holds it gives it the variables around it, so the scopes of its outer
+     * class are computed again, which reach it.
+     */
+    private void recomputeVariableScopes(MethodNode node) {
+        if (currentClassNode instanceof InnerClassNode && ((InnerClassNode) currentClassNode).isAnonymous()) {
+            AstUtils.processVariableScopes(sourceUnit, ((InnerClassNode) currentClassNode).getOuterClass(), null);
+        } else {
+            AstUtils.processVariableScopes(sourceUnit, currentClassNode, node);
+        }
+    }
+
+    @Override
+    public void visitConstructor(ConstructorNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
+        try {
+            super.visitConstructor(node);
+            if (closureTransformed && currentClassNode != null) {
+                // a constructor is visited apart from the methods, and its scopes are computed again as those of a method are
+                recomputeVariableScopes(node);
+            }
+        } finally {
+            closureTransformed = transformedBefore;
+            detachedCriteriaVariables.clear();
+        }
+    }
+
+    @Override
+    protected void visitObjectInitializerStatements(ClassNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
+        try {
+            super.visitObjectInitializerStatements(node);
+            if (closureTransformed) {
+                // the initializer blocks of a class become part of its constructors; an anonymous class is scoped with its outer class
+                AstUtils.processVariableScopes(sourceUnit,
+                        node instanceof InnerClassNode && ((InnerClassNode) node).isAnonymous() ? ((InnerClassNode) node).getOuterClass() : node, null);
+            }
+        } finally {
+            closureTransformed = transformedBefore;
             detachedCriteriaVariables.clear();
         }
     }
 
     @Override
     public void visitField(FieldNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
+        try {
+            visitFieldNode(node);
+            if (closureTransformed) {
+                // as for a method: the initializer of a field is scoped with its class
+                AstUtils.processVariableScopes(sourceUnit, node.getOwner(), null);
+            }
+        } finally {
+            closureTransformed = transformedBefore;
+        }
+    }
+
+    @Override
+    public void visitProperty(PropertyNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
+        try {
+            // the initializer of a property, such as a static where query declared without a modifier, is visited here
+            super.visitProperty(node);
+            if (closureTransformed) {
+                AstUtils.processVariableScopes(sourceUnit, node.getDeclaringClass(), null);
+            }
+        } finally {
+            closureTransformed = transformedBefore;
+        }
+    }
+
+    private void visitFieldNode(FieldNode node) {
         ClassNode classNode = node.getOwner();
         if (node.isStatic() && AstUtils.isDomainClass(classNode)) {
             Expression initialExpression = node.getInitialExpression();
@@ -210,7 +307,13 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                         Expression expression = argsExpressions.get(totalExpressions - 1);
                         if (expression instanceof ClosureExpression) {
                             ClosureExpression closureExpression = (ClosureExpression) expression;
-                            transformClosureExpression(classNode, closureExpression);
+                            // the query is on the class it names, which is not the class that holds the field when it names another
+                            ClassNode queriedClassNode = target instanceof ClassExpression ? target.getType() : classNode;
+                            if (!AstUtils.isDomainClass(queriedClassNode)) {
+                                super.visitField(node);
+                                return;
+                            }
+                            transformClosureExpression(queriedClassNode, closureExpression);
                             if (target instanceof VariableExpression) {
                                 VariableExpression ve = (VariableExpression) target;
                                 ClassNode type = ve.getType();
@@ -221,12 +324,12 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                             }
 
                             String buildMethod = mce.getMethodAsString().equals("whereLazy") ? "buildLazy" : "build";
-                            ClassNode detachedCriteriaClassNode = getParameterizedDetachedCriteriaClassNode(classNode);
+                            ClassNode detachedCriteriaClassNode = getParameterizedDetachedCriteriaClassNode(queriedClassNode);
 
-                            MethodCallExpression newInitialExpression = new MethodCallExpression(new ConstructorCallExpression(detachedCriteriaClassNode, new ArgumentListExpression(new ClassExpression(classNode))), buildMethod, new ArgumentListExpression(closureExpression));
+                            MethodCallExpression newInitialExpression = new MethodCallExpression(new ConstructorCallExpression(detachedCriteriaClassNode, new ArgumentListExpression(new ClassExpression(queriedClassNode))), buildMethod, new ArgumentListExpression(closureExpression));
                             node.setInitialValueExpression(newInitialExpression);
                             node.setType(detachedCriteriaClassNode);
-                            staticDetachedCriteriaVariables.put(node.getName(), classNode);
+                            staticDetachedCriteriaVariables.put(node.getName(), queriedClassNode);
                         }
                     }
                 }
@@ -428,6 +531,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         Expression objectExpression = call.getObjectExpression();
         Expression method = call.getMethod();
         Expression arguments = call.getArguments();
+        // a where call names the class it queries; the class being visited is current again once it is done
+        ClassNode visitedClassNode = this.currentClassNode;
         try {
             if (isCandidateMethodCallForTransform(objectExpression, method, arguments)) {
                 ClassExpression ce = getTargetClassExpresssion(objectExpression);
@@ -445,10 +550,11 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                     this.currentClassNode = varType;
                     visitMethodCall(varType, arguments);
                 } else if (var.isThisExpression() &&
-                           currentClassNode != null &&
+                           ownerClassNode != null &&
                            isCandidateWhereMethod(method.getText(), arguments)) {
-                    if (AstUtils.isDomainClass(currentClassNode)) {
-                        visitMethodCall(this.currentClassNode, arguments);
+                    if (AstUtils.isDomainClass(ownerClassNode)) {
+                        this.currentClassNode = ownerClassNode;
+                        visitMethodCall(ownerClassNode, arguments);
                         call.setMethod(WHERE_LAZY);
                     }
                 }
@@ -498,7 +604,11 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         } catch (Exception e) {
             logTransformationError(call, e);
         }
-        super.visitMethodCallExpression(call);
+        try {
+            super.visitMethodCallExpression(call);
+        } finally {
+            this.currentClassNode = visitedClassNode;
+        }
     }
 
     private ClassExpression getTargetClassExpresssion(Expression objectExpression) {
@@ -515,8 +625,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         } else if (objectExpression instanceof VariableExpression) {
             VariableExpression ve = (VariableExpression) objectExpression;
             if (ve.isThisExpression() &&
-                AstUtils.isDomainClass(this.currentClassNode)) {
-                return new ClassExpression(this.currentClassNode);
+                AstUtils.isDomainClass(this.ownerClassNode)) {
+                return new ClassExpression(this.ownerClassNode);
             }
         }
         return null;
@@ -627,6 +737,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             if (!newCode.getStatements().isEmpty()) {
                 closureExpression.putNodeMetaData(TRANSFORMED_MARKER, Boolean.TRUE);
                 closureExpression.setCode(newCode);
+                closureTransformed = true;
             }
         } finally {
             this.currentClassNode = previousClassNode;
