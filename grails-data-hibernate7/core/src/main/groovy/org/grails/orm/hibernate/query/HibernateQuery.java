@@ -51,10 +51,12 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 import grails.gorm.DetachedCriteria;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Projections;
@@ -480,7 +482,8 @@ public class HibernateQuery extends Query {
     @Override
     public Query select(String property) {
         detachedCriteria.select(property);
-        if (!isAssociationPath(property)) {
+        // inside an association block, select still projects the property as before
+        if (detachedCriteria instanceof DetachedAssociationCriteria<?> || !isAssociationPath(property)) {
             // Ensure property is added to projections for Hibernate 7
             projections.property(property);
         }
@@ -491,12 +494,14 @@ public class HibernateQuery extends Query {
 
     /**
      * Whether a path from the queried entity names an association, also through other associations, as
-     * {@code team.club} does.
+     * {@code team.club} does. A path through an embedded component does not name one, and neither does a path that
+     * ends with a dot, as {@code team.} does.
      */
     private boolean isAssociationPath(String path) {
         PersistentEntity current = entity;
-        for (String token : path.split("\\.")) {
-            if (current == null || !(current.getPropertyByName(token) instanceof Association<?> association)) {
+        for (String token : path.split("\\.", -1)) {
+            if (current == null || !(current.getPropertyByName(token) instanceof Association<?> association) ||
+                    association instanceof Embedded) {
                 return false;
             }
             current = association.getAssociatedEntity();

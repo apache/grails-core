@@ -1832,15 +1832,54 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         'lazy in the fetch argument of a dynamic finder' | { Player.findAllByNameLike('%Player', [fetch: ['team.club': 'lazy']]) }
     }
 
-    void 'list rejects a fetch mode for #path, as without an association before it on the path'() {
+    void '#api with #path is not a fetch mode, and the query selects it as on 8.0.x'() {
+        given: 'a book with an author, and one whose component has none'
+        final king = new AssociationSortAuthor(name: 'King').save(failOnError: true)
+        new AssociationSortBook(title: 'It', details: new AssociationSortBookDetails(isbn: '1', author: king)).save(failOnError: true)
+        new AssociationSortBook(title: 'Anonymous', details: new AssociationSortBookDetails(isbn: '3')).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect: 'an embedded component is not an association, and a path that ends with a dot does not name one'
+        query.call() == expected
+
+        where:
+        api                                              | path              | query                                                                                                      || expected
+        'select of a criteria query'                     | 'details'         | { AssociationSortBook.createCriteria().list { select('details') }*.isbn.sort() }                           || ['1', '3']
+        'select of a where query'                        | 'details'         | { AssociationSortBook.where { title ==~ '%' }.select('details').list()*.isbn.sort() }                      || ['1', '3']
+        'select in the fetch argument of a where query'  | 'details'         | { AssociationSortBook.where { title ==~ '%' }.list(fetch: [details: 'select'])*.isbn.sort() }              || ['1', '3']
+        'lazy in the fetch argument of a dynamic finder' | 'details'         | { AssociationSortBook.findAllByTitleLike('%', [fetch: [details: 'lazy']])*.isbn.sort() }                   || ['1', '3']
+        'select of a criteria query'                     | 'details.author'  | { AssociationSortBook.createCriteria().list { select('details.author') }*.name }                           || ['King']
+        'select of a where query'                        | 'details.author'  | { AssociationSortBook.where { title ==~ '%' }.select('details.author').list()*.name }                      || ['King']
+        'select of a criteria query'                     | 'team.'           | { Player.createCriteria().list { select('team.') }*.name.sort() }                                          || TEAMS_WITH_PLAYERS
+        'select of a where query'                        | 'team.'           | { Player.where { name ==~ '%Player' }.select('team.').list()*.name.sort() }                                || TEAMS_WITH_PLAYERS
+    }
+
+    void 'select inside an association block is not a fetch mode, and the query selects as on 8.0.x: #description'() {
+        expect: 'the fetch mode is for a path of the queried class; inside a block, select projects the property as it did'
+        query.call() == expected
+
+        where:
+        description                                    | query                                                                                                      || expected
+        'a property of the queried class'              | { Team.createCriteria().list { players { select('club') } }*.name.sort() }                                 || ['Arsenal', 'Chelsea', 'Manchester United']
+        'a property of the queried class with a match' | { Team.createCriteria().list { players { eq('name', 'Arsenal Player'); select('club') } }*.name }          || ['Arsenal']
+        'a property of the class of a nested block'    | { Player.createCriteria().list { team { players { select('team') } } }*.name.sort() }                      || TEAMS_WITH_PLAYERS
+    }
+
+    void 'list rejects the fetch mode #mode for #path, as without an association before it on the path'() {
         when:
-        Player.list(fetch: [(path): 'join'])
+        Player.list(fetch: [(path): mode])
 
         then:
         thrown(IllegalArgumentException)
 
         where:
-        path << ['team.bogus', 'team.name', 'bogus']
+        path          | mode
+        'team.bogus'  | 'join'
+        'team.name'   | 'join'
+        'bogus'       | 'join'
+        'team.'       | 'join'
+        'team.club.'  | 'join'
+        'team.club.'  | 'eager'
     }
 
     void 'a join type requested for a property that is not an association is ignored'() {

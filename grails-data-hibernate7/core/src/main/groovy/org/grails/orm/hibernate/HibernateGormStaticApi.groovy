@@ -732,7 +732,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             boolean associations = true
             boolean sortedBag = false
             PersistentEntity current = persistentEntity
-            for (String token : path.split('\\.')) {
+            // a path that ends with a dot has an empty last name, which the HQL of list rejects as well
+            for (String token : path.split('\\.', -1)) {
                 PersistentProperty property = current?.getPropertyByName(token)
                 if (!(property instanceof Association) || property instanceof Embedded) {
                     // the HQL of list rejects a path that does not consist of associations, as it did before
