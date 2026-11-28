@@ -38,6 +38,7 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileVisitDetails
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
@@ -122,10 +123,38 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
      */
     public static final int GENERATOR_PROTOCOL = 1
 
-    /** Compiled application classes, searched for scaffolded controllers. */
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    /**
+     * Compiled application classes, searched for scaffolded controllers. Fingerprinted by their ABI:
+     * no code of a controller is read, so a change to a method body or a private member leaves the
+     * pages as they were. What is read of the controllers is an input of its own,
+     * {@link #getProjectControllers()}, since a namespace can be declared by a private field.
+     */
+    @CompileClasspath
     abstract ConfigurableFileCollection getClassesDirs()
+
+    /**
+     * What is read of the project's own scaffolded controllers, a line each: the path of its class, the
+     * domain class it scaffolds, and whether it has a namespace. An input of its own beside
+     * {@link #getClassesDirs()} because a namespace can be declared by a private static field with no
+     * accessor, which the ABI leaves out, and a controller that gains one has its namespace's pages
+     * expanded all the same.
+     *
+     * <p>Read each time the task is fingerprinted, so a class that cannot be read is logged at info
+     * here, and warned of only when the task runs.</p>
+     *
+     * @since 9.0
+     */
+    @Input
+    List<String> getProjectControllers() {
+        URL[] classpath = (classesDirs.files + runtimeClasspath.files).collect { it.toURI().toURL() } as URL[]
+        (List<String>) new URLClassLoader(classpath, (ClassLoader) null).withCloseable { URLClassLoader resources ->
+            readProjectControllers(resources, [:], LogLevel.INFO).collectMany { String path, List<Controller> read ->
+                read.collect { Controller controller ->
+                    "${path} ${controller.domain}${controller.namespaced ? ' namespaced' : ''}".toString()
+                }
+            }
+        }
+    }
 
     /**
      * The application's own templates, as trees rooted at the template directory: normally
@@ -437,18 +466,7 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
         URL[] pageTypes = (classesDirs.files + pageClasspath.files).collect { it.toURI().toURL() } as URL[]
         boolean checksPageTypes = !pageClasspath.empty
         new URLClassLoader(classpath, (ClassLoader) null).withCloseable { URLClassLoader resources ->
-            for (File dir : classesDirs.files) {
-                if (dir.isDirectory()) {
-                    dir.eachFileRecurse { File f ->
-                        if (f.name.endsWith('Controller.class')) {
-                            Controller controller = readController(f.bytes, f.path, resources, ancestors)
-                            if (controller != null) {
-                                controllers.add(controller)
-                            }
-                        }
-                    }
-                }
-            }
+            readProjectControllers(resources, ancestors, LogLevel.WARN).values().each { List<Controller> read -> controllers.addAll(read) }
             // with the platform's modules as the parent, as the page compiler has them, so a domain
             // type from java.sql resolves as java.lang's do
             new URLClassLoader(pageTypes, ClassLoader.platformClassLoader).withCloseable { URLClassLoader pageLoader ->
@@ -490,6 +508,32 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
     }
 
     /**
+     * The project's own scaffolded controllers, by the path of each class under its classes directory.
+     * A class at the same path in more than one directory is read from each, in the order of the
+     * directories, as each is a controller whose pages are expanded.
+     *
+     * @param failureLevel what a class that cannot be read is logged at
+     */
+    private Map<String, List<Controller>> readProjectControllers(ClassLoader resources, Map<String, Boolean> ancestors,
+                                                                 LogLevel failureLevel) {
+        Map<String, List<Controller>> controllers = new TreeMap<>()
+        for (File dir : classesDirs.files) {
+            if (dir.isDirectory()) {
+                dir.eachFileRecurse { File f ->
+                    if (f.name.endsWith('Controller.class')) {
+                        Controller controller = readController(f.bytes, f.path, resources, ancestors, failureLevel)
+                        if (controller != null) {
+                            String path = dir.toPath().relativize(f.toPath()).toString().replace(File.separatorChar, '/' as char)
+                            controllers.computeIfAbsent(path) { [] }.add(controller)
+                        }
+                    }
+                }
+            }
+        }
+        controllers
+    }
+
+    /**
      * Reads a plugin's controller as {@link #readController} does, but leaves it out when the domain
      * class it scaffolds is not on the classpath the pages are compiled against, since a page naming
      * that type could not be compiled.
@@ -510,7 +554,7 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
      */
     private Controller readPluginController(byte[] bytes, String origin, ClassLoader resources, ClassLoader compilable,
                                             Map<String, Boolean> ancestors) {
-        Controller controller = readController(bytes, origin, resources, ancestors)
+        Controller controller = readController(bytes, origin, resources, ancestors, LogLevel.WARN)
         if (controller != null && compilable != null && compilable.getResource("${controller.domain.replace('.', '/')}.class") == null) {
             logger.info('No page is expanded for {}: the domain class it scaffolds, {}, is not on the classpath the pages ' +
                     'are compiled against, as happens to a plugin this project has only at runtime', origin, controller.domain)
@@ -524,18 +568,19 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
      * out with a warning rather than failing the build: its views are then expanded when rendered,
      * as they were before any was compiled, which works on the JVM and not in a native image.
      */
-    private Controller readController(byte[] bytes, String origin, ClassLoader resources, Map<String, Boolean> ancestors) {
+    private Controller readController(byte[] bytes, String origin, ClassLoader resources, Map<String, Boolean> ancestors,
+                                      LogLevel failureLevel) {
         ClassReader reader
         try {
             reader = new ClassReader(bytes)
         }
         catch (IllegalArgumentException | IndexOutOfBoundsException e) {
-            logger.warn('Could not read {}, so if it is a scaffolded controller no page is compiled for it and its views are ' +
+            logger.log(failureLevel, 'Could not read {}, so if it is a scaffolded controller no page is compiled for it and its views are ' +
                     'expanded when rendered, which a native image cannot do: {}', origin, e.message)
             return null
         }
         String domain = readScaffoldDomain(reader)
-        domain == null ? null : new Controller(domain, hasNamespace(reader, resources, ancestors))
+        domain == null ? null : new Controller(domain, hasNamespace(reader, resources, ancestors, failureLevel))
     }
 
     /**
@@ -554,7 +599,7 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
      * read here; such a controller only has namespace-specific templates expanded for it that it
      * will not use.</p>
      */
-    private boolean hasNamespace(ClassReader reader, ClassLoader resources, Map<String, Boolean> ancestors) {
+    private boolean hasNamespace(ClassReader reader, ClassLoader resources, Map<String, Boolean> ancestors, LogLevel failureLevel) {
         boolean declared = false
         reader.accept(new ClassVisitor(Opcodes.ASM9) {
             @Override
@@ -582,7 +627,7 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
         for (String supertype : supertypes) {
             Boolean inherited = ancestors.get(supertype)
             if (inherited == null) {
-                inherited = ancestorHasNamespace(supertype, resources, ancestors)
+                inherited = ancestorHasNamespace(supertype, resources, ancestors, failureLevel)
                 ancestors.put(supertype, inherited)
             }
             if (inherited) {
@@ -596,18 +641,27 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
      * Supertypes can come from dependencies, whose class files may be newer than the bundled ASM
      * reads, or whose bytecode may be damaged or unreadable. One that cannot be read is taken to
      * declare no namespace, with a warning, rather than failing the build.
+     *
+     * <p>Read through a connection of its own rather than {@code getResourceAsStream}, which hands
+     * out a stream of the jar file the JVM caches for every reader of the jar, and has the class
+     * loader close that jar file when the loader is closed: the build's other readers of the jar,
+     * such as this task of another project running beside it, then fail with {@code zip file
+     * closed}.</p>
      */
-    private boolean ancestorHasNamespace(String internalName, ClassLoader resources, Map<String, Boolean> ancestors) {
+    private boolean ancestorHasNamespace(String internalName, ClassLoader resources, Map<String, Boolean> ancestors,
+                                         LogLevel failureLevel) {
         try {
-            InputStream parent = resources.getResourceAsStream("${internalName}.class")
+            URL parent = resources.getResource("${internalName}.class")
             if (parent == null) {
                 return false
             }
-            ClassReader reader = parent.withCloseable { InputStream input -> new ClassReader(input) }
-            return hasNamespace(reader, resources, ancestors)
+            URLConnection connection = parent.openConnection()
+            connection.useCaches = false
+            ClassReader reader = connection.inputStream.withCloseable { InputStream input -> new ClassReader(input) }
+            return hasNamespace(reader, resources, ancestors, failureLevel)
         }
         catch (IllegalArgumentException | IOException | IndexOutOfBoundsException e) {
-            logger.warn('Could not read {} to look for a namespace its subclasses inherit, so none is assumed and no ' +
+            logger.log(failureLevel, 'Could not read {} to look for a namespace its subclasses inherit, so none is assumed and no ' +
                     'namespace-specific page is compiled for them: {}', internalName.replace('/', '.'), e.message)
             return false
         }

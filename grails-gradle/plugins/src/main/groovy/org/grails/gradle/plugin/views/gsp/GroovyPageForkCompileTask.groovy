@@ -31,11 +31,14 @@ import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.FileTree
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.CompileClasspath
 import org.gradle.api.tasks.IgnoreEmptyDirectories
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
@@ -67,9 +70,16 @@ import org.grails.gradle.plugin.views.ViewCompileOptions
  *
  * <p>Cacheable. What a page compiles to depends on the Groovy that compiles it, the Java it is
  * compiled for and the classes it is compiled against, and each of them is part of the key. The
- * compiler runs from {@link #getClasspath()}, which {@code AbstractCompile} declares a classpath
- * input, fingerprinted by content, so a build that resolves another Groovy is not handed this one's
- * pages; {@link #getJavaLauncher()} and the target compatibility say which Java. The Grails
+ * compiler runs from {@link #getClasspath()}, which is fingerprinted in parts: the libraries, the
+ * Groovy and the compiler among them, by content, as {@link #getLibraryClasspath()}, so a build that
+ * resolves another Groovy is not handed this one's pages; the project's own classes by their ABI, as
+ * {@link #getProjectClasses()}, since a page sees no more of them than a class compiled against
+ * them does, with the files among them other than classes by content, as
+ * {@link #getProjectResources()}; and the project's AST transformations by content, with the resources that register them,
+ * as {@link #getAstTransformationClasses()}, since they run while the pages are compiled, as are all of
+ * the project's classes when an {@code application.groovy} runs with them, as
+ * {@link #getConfigurationClasses()}.
+ * {@link #getJavaLauncher()} and the target compatibility say which Java. The Grails
  * environment whose configuration the pages are compiled with, {@link #getGrailsEnvironment()}, is
  * part of the key too. The pages are fingerprinted by their path under the source, so a checkout in
  * another directory reuses what this one compiled.</p>
@@ -93,6 +103,76 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     final ConfigurableFileCollection grailsConfigurationPaths
+
+    /**
+     * The project's own compiled classes, as they are on {@link #getClasspath()}: normally the class
+     * directories of the main source set. Fingerprinted by their ABI, as Gradle compares the classpath
+     * of a Java compilation: a page compiles against the classes it names, their members and their
+     * signatures, and not what their method bodies do, so a change to a method body or a private member
+     * leaves the pages as they were, where a page is otherwise compiled again for every change to any
+     * class of the project. AST transformations among them run their code while the pages are compiled,
+     * and are an input by content as well, as {@link #getAstTransformationClasses()}, and so is all of
+     * them when an {@code application.groovy} configures the pages, as
+     * {@link #getConfigurationClasses()}.
+     *
+     * @since 9.0
+     */
+    @CompileClasspath
+    final ConfigurableFileCollection projectClasses
+
+    /**
+     * The files of {@link #getProjectClasses()} other than classes, by content: the ABI they are
+     * otherwise compared by leaves them out. The page compiler loads from them what registers an AST
+     * transformation or an extension module, which a build or a plugin's {@code ast} source set can
+     * copy into the classes directory; what Grails writes there,
+     * such as {@code META-INF/grails.factories}, changes only with the classes it lists.
+     *
+     * @since 9.0
+     */
+    @InputFiles
+    @IgnoreEmptyDirectories
+    @PathSensitive(PathSensitivity.RELATIVE)
+    FileTree getProjectResources() {
+        projectClasses.asFileTree.matching { PatternFilterable files -> files.exclude('**/*.class') }
+    }
+
+    /**
+     * The project's AST transformations, which run while the pages are compiled, so what their method
+     * bodies do is part of what a page compiles to: normally the whole output of the {@code ast} source
+     * set, which a plugin's build copies into the main classes directory, among
+     * {@link #getProjectClasses()}. Its resources as well as its classes, since they register the
+     * transformations and the extension modules the pages are compiled with, and the ABI of
+     * {@link #getProjectClasses()} leaves out everything but classes. Fingerprinted by content.
+     *
+     * @since 9.0
+     */
+    @Classpath
+    final ConfigurableFileCollection astTransformationClasses
+
+    /**
+     * {@link #getProjectClasses()} by content when a Groovy configuration is among
+     * {@link #getGrailsConfigurationPaths()}, and nothing otherwise. The compiler runs an
+     * {@code application.groovy} with the project's classes, and takes the codecs and the other
+     * settings of the pages from what it computes, so with one a method body of the project can
+     * decide what a page compiles to. A project configured by {@code application.yml} alone has its
+     * pages compiled again only for what they can see.
+     *
+     * @since 9.0
+     */
+    @Classpath
+    FileCollection getConfigurationClasses() {
+        boolean groovyConfiguration = grailsConfigurationPaths.files.any { File file -> file.name.endsWith('.groovy') && file.isFile() }
+        groovyConfiguration ? projectClasses : projectClasses.minus(projectClasses)
+    }
+
+    /**
+     * {@link #getClasspath()} without {@link #getProjectClasses()}: the libraries the pages are
+     * compiled against, and the Groovy and the compiler that compile them. Fingerprinted by content.
+     *
+     * @since 9.0
+     */
+    @Classpath
+    final ConfigurableFileCollection libraryClasspath
 
     /**
      * The directory of the pages, which the compiler names them under. Internal rather than an input
@@ -210,6 +290,9 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         optionalPages = objectFactory.fileCollection()
         generatedViews = objectFactory.fileCollection()
         grailsConfigurationPaths = objectFactory.fileCollection()
+        projectClasses = objectFactory.fileCollection()
+        astTransformationClasses = objectFactory.fileCollection()
+        libraryClasspath = objectFactory.fileCollection()
         grailsConfigurationPaths.from(
                 project.layout.projectDirectory.file('grails-app/conf/application.yml'),
                 project.layout.projectDirectory.file('grails-app/conf/application.groovy')
@@ -236,6 +319,29 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     @Inject
     protected FileSystemOperations getFileSystemOperations() {
         throw new UnsupportedOperationException()
+    }
+
+    /**
+     * The classpath the compiler runs from. Not an input as such: it is fingerprinted as
+     * {@link #getLibraryClasspath()}, by content, and {@link #getProjectClasses()}, by ABI, with
+     * {@link #getProjectResources()} by content. Overridden
+     * only to say so, in place of the classpath input {@code AbstractCompile} declares it as.
+     */
+    @Override
+    @Internal
+    @SuppressWarnings('UnnecessaryOverridingMethod')
+    FileCollection getClasspath() {
+        super.getClasspath()
+    }
+
+    /**
+     * Sets the classpath the compiler runs from, and {@link #getLibraryClasspath()} to all of it but
+     * {@link #getProjectClasses()}, both read when the pages are compiled.
+     */
+    @Override
+    void setClasspath(FileCollection configuration) {
+        super.setClasspath(configuration)
+        libraryClasspath.setFrom(configuration.minus(projectClasses))
     }
 
     @Override

@@ -23,6 +23,8 @@ import java.util.jar.JarOutputStream
 
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.CompileClasspath
+import org.gradle.api.tasks.Internal
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
@@ -95,9 +97,16 @@ class GroovyPageBuildCacheFunctionalSpec extends GradleSpecification {
     }
 
     def "the classpath the compiler runs from is part of the key"() {
-        expect: 'as AbstractCompile declares it, and fingerprinted by content'
+        expect: 'its libraries, the Groovy and the compiler among them, and the AST transformations by content'
         GroovyPageForkCompileTask.isAnnotationPresent(CacheableTask)
-        GroovyPageForkCompileTask.getMethod('getClasspath').isAnnotationPresent(Classpath)
+        GroovyPageForkCompileTask.getDeclaredField('libraryClasspath').isAnnotationPresent(Classpath)
+        GroovyPageForkCompileTask.getDeclaredField('astTransformationClasses').isAnnotationPresent(Classpath)
+
+        and: "the project's own classes by their ABI"
+        GroovyPageForkCompileTask.getDeclaredField('projectClasses').isAnnotationPresent(CompileClasspath)
+
+        and: 'the whole of it is fingerprinted as those parts, not again by content'
+        GroovyPageForkCompileTask.getMethod('getClasspath').isAnnotationPresent(Internal)
     }
 
     private File projectWithPages() {
