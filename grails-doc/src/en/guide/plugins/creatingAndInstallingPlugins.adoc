@@ -176,8 +176,8 @@ A plugin that depends on a plugin another plugin evicts still loads: the evictin
 ==== Checking the Plugins When the Application Is Built
 
 The Grails Gradle plugin adds `verifyGrailsPlugins` to `check`, in the build of every application and plugin. It runs the
-same discovery the application runs when it starts, with the project's runtime and compile class paths, in a JVM of the
-project's Java toolchain, so the build fails on what would stop the application from starting: a plugin built for an
+same discovery the application runs when it starts, in a JVM of the project's Java toolchain, with the project's classes
+and everything it declares, `compileOnly` dependencies included, with what they need at run time, so the build fails on what would stop the application from starting: a plugin built for an
 earlier Grails, a descriptor that cannot be read, an unmet `dependsOn` and a plugin order that is circular. A plugin's
 build is checked with the dependencies it declares, so a `dependsOn` that none of them provides fails it, not the
 application that uses it later.

@@ -22,7 +22,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-/** Stands in for the class of Grails that checks the plugins: fails when the class path has fail.txt. */
+/**
+ * Stands in for the class of Grails that checks the plugins: fails when the class path has fail.txt, and reports
+ * whether it has marker.txt.
+ */
 public class PluginVerification {
 
     public static void main(String[] args) throws Exception {
@@ -31,7 +34,8 @@ public class PluginVerification {
             Files.writeString(Path.of(args[1]), "Grails plug-in [needy] cannot be loaded in " + environments);
         }
         else {
-            Files.writeString(Path.of(args[0]), String.join(",", environments) + "\n");
+            String found = PluginVerification.class.getResource("/marker.txt") != null ? "marker\n" : "";
+            Files.writeString(Path.of(args[0]), String.join(",", environments) + "\n" + found);
         }
     }
 }

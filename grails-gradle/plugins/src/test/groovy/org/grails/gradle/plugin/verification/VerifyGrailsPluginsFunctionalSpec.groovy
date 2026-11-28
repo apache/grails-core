@@ -100,6 +100,29 @@ class VerifyGrailsPluginsFunctionalSpec extends GradleSpecification {
         !result.output.contains('implicit dependency')
     }
 
+    def "a compileOnly dependency is checked with what it needs at run time, as an application provides it"() {
+        given: 'a library the project compiles against, whose run time dependency holds a resource'
+        def runner = setupTestResourceProject('plugin-verification')
+        new File(runner.projectDir, 'settings.gradle') << "include 'library', 'library-runtime'\n"
+        new File(runner.projectDir, 'library').mkdirs()
+        new File(runner.projectDir, 'library/build.gradle').text = """
+            plugins { id 'java-library' }
+            dependencies { runtimeOnly project(':library-runtime') }
+        """
+        new File(runner.projectDir, 'library-runtime/src/main/resources').mkdirs()
+        new File(runner.projectDir, 'library-runtime/build.gradle').text = "plugins { id 'java-library' }\n"
+        new File(runner.projectDir, 'library-runtime/src/main/resources/marker.txt').text = 'marker'
+        new File(runner.projectDir, 'build.gradle') << """
+            dependencies { compileOnly project(':library') }
+        """
+
+        when:
+        executeTask(':verifyGrailsPlugins')
+
+        then:
+        new File(runner.projectDir, 'build/grails/plugin-order.txt').text == 'development,test,production\nmarker\n'
+    }
+
     def "every Grails application and plugin build verifies its plugins"() {
         given:
         setupTestResourceProject(project)

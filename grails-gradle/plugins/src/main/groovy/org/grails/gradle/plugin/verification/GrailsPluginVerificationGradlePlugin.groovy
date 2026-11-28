@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.attributes.Attribute
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet
@@ -43,28 +45,50 @@ class GrailsPluginVerificationGradlePlugin implements Plugin<Project> {
 
     public static final String TASK_NAME = 'verifyGrailsPlugins'
 
+    public static final String CLASSPATH_CONFIGURATION_NAME = 'grailsPluginVerificationClasspath'
+
     @Override
     void apply(Project project) {
         project.pluginManager.withPlugin('java') {
             SourceSet main = project.extensions.getByType(JavaPluginExtension).sourceSets
                     .getByName(SourceSet.MAIN_SOURCE_SET_NAME)
+            Configuration classpath = verificationClasspath(project)
             TaskProvider<VerifyGrailsPluginsTask> verify = project.tasks.register(TASK_NAME,
                     VerifyGrailsPluginsTask) { VerifyGrailsPluginsTask task ->
                 task.group = LifecycleBasePlugin.VERIFICATION_GROUP
                 task.description = 'Checks that the Grails plugins of the project would let its application start.'
                 // The project's own classes and resources first, as its application has them, each with the task
                 // that writes it. Not the whole source set output: a view compiler registers its own directory
-                // into it without naming itself as the producer. Then the runtime class path, and the compile
-                // class path, whose compileOnly dependencies a plugin's application provides, as Grails itself.
+                // into it without naming itself as the producer. Then everything the project declares, with what
+                // that needs at run time.
                 task.classpath = project.files(main.output.classesDirs,
-                        project.tasks.named(main.processResourcesTaskName),
-                        project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME),
-                        project.configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME))
+                        project.tasks.named(main.processResourcesTaskName), classpath)
                 task.environments.convention(['development', 'test', 'production'])
                 task.report.convention(project.layout.buildDirectory.file('grails/plugin-order.txt'))
                 task.failure.convention(project.layout.buildDirectory.file('tmp/verifyGrailsPlugins/failure.txt'))
             }
             project.tasks.named(LifecycleBasePlugin.CHECK_TASK_NAME).configure { it.dependsOn(verify) }
+        }
+    }
+
+    /**
+     * The run time class path of everything the project declares, its {@code compileOnly} dependencies included:
+     * an application that uses a plugin provides what the plugin compiles against, and with it what that needs at
+     * run time. The compile class path would carry such a dependency without its own run time dependencies.
+     */
+    private static Configuration verificationClasspath(Project project) {
+        Configuration runtime = project.configurations.getByName(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME)
+        project.configurations.create(CLASSPATH_CONFIGURATION_NAME) { Configuration configuration ->
+            configuration.description = 'The class path verifyGrailsPlugins checks the plugins of.'
+            configuration.canBeConsumed = false
+            configuration.canBeResolved = true
+            configuration.visible = false
+            configuration.extendsFrom(project.configurations.getByName(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME),
+                    project.configurations.getByName(JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME),
+                    project.configurations.getByName(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME))
+            runtime.attributes.keySet().each { Attribute attribute ->
+                configuration.attributes.attribute((Attribute<Object>) attribute, runtime.attributes.getAttribute(attribute))
+            }
         }
     }
 }
