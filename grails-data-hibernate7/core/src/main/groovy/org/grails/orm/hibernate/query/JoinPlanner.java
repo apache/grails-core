@@ -71,7 +71,7 @@ final class JoinPlanner {
             if (hibernateQuery != null) {
                 hibernateQuery.getAliases().forEach(alias -> declareAlias(alias, ""));
             }
-            scan(criteria.getCriteria(), "", criteria.getJoinTypes());
+            scan(criteria.getCriteria(), "", requestedJoinTypes(criteria));
         }
         // createAlias configures the join type of its path as well, so a join type that is the type of the last
         // alias of the path is that alias again, and any other one was configured after the aliases
@@ -83,8 +83,23 @@ final class JoinPlanner {
         return plan;
     }
 
+    /**
+     * The join types that criteria request for their associations. A fetch mode that was requested for an
+     * association after a join type replaces the join type for what the query fetches, but the join that criteria
+     * on the association make keeps it.
+     */
+    private static Map<String, JoinType> requestedJoinTypes(DetachedCriteria<?> owner) {
+        Map<String, JoinType> superseded = owner.getSupersededJoinTypes();
+        if (superseded.isEmpty()) {
+            return owner.getJoinTypes();
+        }
+        Map<String, JoinType> joinTypes = new HashMap<>(superseded);
+        joinTypes.putAll(owner.getJoinTypes());
+        return joinTypes;
+    }
+
     private static void configure(JoinPlan plan, String scope, DetachedCriteria<?> owner) {
-        owner.getJoinTypes().forEach((path, joinType) -> {
+        requestedJoinTypes(owner).forEach((path, joinType) -> {
             if (!path.contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
                 plan.configure(join(scope, path), joinType);
             }
@@ -143,7 +158,7 @@ final class JoinPlanner {
         if (block.getAlias() != null) {
             aliasPaths.put(block.getAlias(), path);
         }
-        scan(block.getCriteria(), path, block.getJoinTypes());
+        scan(block.getCriteria(), path, requestedJoinTypes(block));
     }
 
     /**

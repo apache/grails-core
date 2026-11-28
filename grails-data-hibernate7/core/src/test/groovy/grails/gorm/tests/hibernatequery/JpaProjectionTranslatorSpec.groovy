@@ -70,20 +70,19 @@ class JpaProjectionTranslatorSpec extends HibernateGormDatastoreSpec {
         context.hasAlias("cnt")
     }
 
-    def "translate CountProjection"() {
+    void 'a property count omits null values while the row count includes their instances'() {
         given:
-        JpaCriteriaQuery cq = criteriaBuilder.createQuery(Long)
-        Root root = cq.from(JpaProjectionTranslatorSpecPerson)
-        JpaQueryContext context = new JpaQueryContext()
-        context.setRoot(root)
-        JpaProjectionTranslator translator = new JpaProjectionTranslator(criteriaBuilder, context)
+        new JpaProjectionTranslatorSpecPerson(firstName: 'Named', age: 30).save(failOnError: true)
+        new JpaProjectionTranslatorSpecPerson(age: 40).save(failOnError: true, flush: true)
 
         when:
-        Expression result = translator.translate(new org.grails.orm.hibernate.query.Hibernate7CountProjection("firstName"))
+        final results = JpaProjectionTranslatorSpecPerson.createCriteria().list {
+            projections { count('firstName') }
+        }
 
         then:
-        result != null
-        result.getJavaType() == Long
+        results == [1L]
+        JpaProjectionTranslatorSpecPerson.count() == 2
     }
 
     def "translate CountDistinctProjection"() {

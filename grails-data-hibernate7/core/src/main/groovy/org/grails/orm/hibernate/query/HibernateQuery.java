@@ -18,9 +18,12 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,6 +38,7 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 
 import org.hibernate.FlushMode;
+import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.QueryFlushMode;
@@ -47,10 +51,12 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 import grails.gorm.DetachedCriteria;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Projections;
@@ -77,6 +83,9 @@ public class HibernateQuery extends Query {
     private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
     private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
     private final Set<String> fetchJoinPaths = new LinkedHashSet<>();
+    private boolean rowForEachElement;
+    // the orders that clearOrders removed: a count keeps their joins, which decide the rows that a list pages through
+    private final List<Order> clearedOrders = new ArrayList<>();
     protected String alias;
     protected int aliasCount;
     protected Deque<GrailsHibernatePersistentEntity> entityStack = new LinkedList<>();
@@ -431,9 +440,19 @@ public class HibernateQuery extends Query {
 
     @Override
     public Query clearOrders() {
+        clearedOrders.addAll(detachedCriteria.getOrders());
         detachedCriteria.getOrders().clear();
         super.clearOrders();
         return this;
+    }
+
+    /**
+     * The orders that {@link #clearOrders()} removed. A count of the query keeps their joins without ordering, as
+     * with Hibernate 5, where the alias that an order joins stays when the order is cleared: the joins of a sort
+     * decide which rows a list pages through, so the total of a page counts the rows that the list returns.
+     */
+    List<Order> getClearedOrders() {
+        return clearedOrders;
     }
 
     @Override
@@ -463,9 +482,31 @@ public class HibernateQuery extends Query {
     @Override
     public Query select(String property) {
         detachedCriteria.select(property);
-        // Ensure property is added to projections for Hibernate 7
-        projections.property(property);
+        // inside an association block, select still projects the property as before
+        if (detachedCriteria instanceof DetachedAssociationCriteria<?> || !isAssociationPath(property)) {
+            // Ensure property is added to projections for Hibernate 7
+            projections.property(property);
+        }
+        // for an association, also one at the end of a path through other associations, it is a fetch mode: the
+        // association is loaded when it is read, and the query still returns its entities
         return this;
+    }
+
+    /**
+     * Whether a path from the queried entity names an association, also through other associations, as
+     * {@code team.club} does. A path through an embedded component does not name one, and neither does a path that
+     * ends with a dot, as {@code team.} does.
+     */
+    private boolean isAssociationPath(String path) {
+        PersistentEntity current = entity;
+        for (String token : path.split("\\.", -1)) {
+            if (current == null || !(current.getPropertyByName(token) instanceof Association<?> association) ||
+                    association instanceof Embedded) {
+                return false;
+            }
+            current = association.getAssociatedEntity();
+        }
+        return true;
     }
 
     @Override
@@ -479,9 +520,36 @@ public class HibernateQuery extends Query {
         return list(getCurrentSession());
     }
 
+    /**
+     * Sets whether a list sorted by a property of a collection has an instance once for each element of the
+     * collection, as a criteria query has, and not once, as a where query, a detached criteria and a dynamic
+     * finder have. {@code max} and {@code offset} page through the rows of the elements in both.
+     *
+     * @param rowForEachElement whether an instance is listed once for each element
+     */
+    public void setRowForEachElement(boolean rowForEachElement) {
+        this.rowForEachElement = rowForEachElement;
+    }
+
     public List list(Session session) {
         var creator = createJpaCriteriaQueryCreator();
-        return getHibernateQueryExecutor().list(session, creator.createQuery(), creator.getParameterValues());
+        List results = getHibernateQueryExecutor().list(session, creator.createQuery(), creator.getParameterValues());
+        initializeDeferredCollections(results, creator.getDeferredCollectionFetches());
+        if (!creator.isDistinctInMemory() && (rowForEachElement || !creator.isSortedByCollection())) {
+            return results;
+        }
+        // the query could not select distinct entities for the order it has, so an entity that a join of a
+        // collection repeats is listed where it comes first, as a distinct list was with Hibernate 5. A where
+        // query, a detached criteria and a dynamic finder sorted by a collection list an instance once from
+        // the rows that they read as well, as they do with Hibernate 5
+        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        List distinct = new ArrayList<>(results.size());
+        for (Object result : results) {
+            if (seen.add(result)) {
+                distinct.add(result);
+            }
+        }
+        return distinct;
     }
 
     private HibernateQueryExecutor getHibernateQueryExecutor() {
@@ -523,7 +591,32 @@ public class HibernateQuery extends Query {
 
     public Object singleResult(Session session) {
         var creator = createJpaCriteriaQueryCreator();
-        return getHibernateQueryExecutor().singleResult(session, creator.createQuery(), creator.getParameterValues());
+        Object result = getHibernateQueryExecutor().singleResult(session, creator.createQuery(), creator.getParameterValues());
+        initializeDeferredCollections(Collections.singletonList(result), creator.getDeferredCollectionFetches());
+        return result;
+    }
+
+    private void initializeDeferredCollections(Collection<?> results, Set<String> paths) {
+        for (String path : paths) {
+            String[] tokens = path.split("\\.");
+            for (Object result : results) {
+                initializeCollectionPath(entity, result, tokens, 0);
+            }
+        }
+    }
+
+    private static void initializeCollectionPath(PersistentEntity entity, Object owner, String[] path, int index) {
+        if (owner == null || index == path.length) {
+            return;
+        }
+        Object value = entity.getReflector().getProperty(Hibernate.unproxy(owner), path[index]);
+        Hibernate.initialize(value);
+        PersistentEntity associated = ((Association<?>) entity.getPropertyByName(path[index])).getAssociatedEntity();
+        Collection<?> values = value instanceof Map<?, ?> map ? map.values() :
+                value instanceof Collection<?> collection ? collection : Collections.singletonList(value);
+        for (Object next : values) {
+            initializeCollectionPath(associated, next, path, index + 1);
+        }
     }
 
     @Override
@@ -543,7 +636,7 @@ public class HibernateQuery extends Query {
 
             ConversionService cs = getSession().getMappingContext().getConversionService();
             var creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs, this);
-            creator.populateSubquery(innerSubquery);
+            creator.populateCountSubquery(innerSubquery);
 
             countQuery.from(innerSubquery);
             countQuery.select(cb.count(cb.literal(1)));
@@ -878,6 +971,8 @@ public class HibernateQuery extends Query {
                     }
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
                     hibernateQuery.aliases.addAll(this.aliases);
+                    hibernateQuery.rowForEachElement = this.rowForEachElement;
+                    hibernateQuery.clearedOrders.addAll(this.clearedOrders);
 
                     return hibernateQuery;
                 });

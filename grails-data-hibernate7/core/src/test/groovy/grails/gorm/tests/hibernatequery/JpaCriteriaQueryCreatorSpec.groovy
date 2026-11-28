@@ -22,6 +22,7 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder
 import spock.lang.Shared
 
 import grails.gorm.DetachedCriteria
+import jakarta.persistence.criteria.JoinType
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.tests.UserTypeComparisonGrade
 import grails.gorm.tests.UserTypeComparisonGradeType
@@ -58,6 +59,38 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
             projections { property('o.firstName') }
             order('o.firstName', 'asc')
         } == ['Alice', 'Bob']
+
+        and: 'counting the rows retains the unmatched owner, but counting a pet property omits its null'
+        JpaCriteriaQueryCreatorSpecPet.createCriteria().count {
+            createAlias('owner', 'o', 2)
+        } == 2
+        JpaCriteriaQueryCreatorSpecPet.createCriteria().list {
+            createAlias('owner', 'o', 2)
+            projections { count('name') }
+        } == [1L]
+    }
+
+    void 'a nested collection fetch retains the explicit parent join with parent first #parentFirst'() {
+        given:
+        final owner = new JpaCriteriaQueryCreatorSpecPerson(firstName: 'Alice', lastName: 'Owner', nicknames: ['A', 'B'] as Set)
+                .save(failOnError: true)
+        new JpaCriteriaQueryCreatorSpecPet(name: 'Owned', owner: owner).save(failOnError: true)
+        new JpaCriteriaQueryCreatorSpecPet(name: 'Stray').save(validate: false, flush: true)
+        manager.session.clear()
+        final fetches = parentFirst ? [owner: JoinType.INNER, 'owner.nicknames': JoinType.LEFT] :
+                ['owner.nicknames': JoinType.LEFT, owner: JoinType.INNER]
+
+        when:
+        final results = JpaCriteriaQueryCreatorSpecPet.list(fetch: fetches, max: 10)
+
+        then:
+        results*.name == ['Owned']
+        results.totalCount == 1
+        org.hibernate.Hibernate.isInitialized(results[0].owner.nicknames)
+        results[0].owner.nicknames == ['A', 'B'] as Set
+
+        where:
+        parentFirst << [false, true]
     }
 
     def "test createQuery"() {

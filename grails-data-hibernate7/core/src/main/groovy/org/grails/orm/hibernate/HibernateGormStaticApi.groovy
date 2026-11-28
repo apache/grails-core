@@ -43,6 +43,7 @@ import jakarta.persistence.TransactionRequiredException
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.Root
 
 import org.hibernate.Session
@@ -58,15 +59,24 @@ import org.springframework.transaction.PlatformTransactionManager
 
 import grails.orm.HibernateCriteriaBuilder
 import grails.gorm.DetachedCriteria
+import grails.gorm.PagedResultList
 import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
+import org.grails.orm.hibernate.cfg.HibernateMappingContext
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.SortConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
 import org.grails.orm.hibernate.query.HibernatePagedResultList
@@ -430,13 +440,48 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
+        if (requestsJoinType(args) || requestsSort(args)) {
+            return whereCriteria(queryMap).find(buildFindWhereArgs(args))
+        }
         executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
     }
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
         if (!queryMap) return null
+        if (requestsJoinType(args) || requestsSort(args)) {
+            // a plain list, as the HQL query returns: with max, the criteria would return a paged list
+            return new ArrayList<D>(whereCriteria(queryMap).list(buildQuerySettings(args)))
+        }
         executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
+    }
+
+    /**
+     * Whether the {@code fetch} argument requests a join type for an association, and not only a fetch mode. A
+     * join type also decides which instances a query returns and counts, so such a query is run as a criteria
+     * query, which applies it.
+     */
+    private static boolean requestsJoinType(Map args) {
+        Object fetch = args?.get(DynamicFinder.ARGUMENT_FETCH)
+        fetch instanceof Map && ((Map) fetch).values().any { Object value -> value instanceof JoinType }
+    }
+
+    /**
+     * Whether the arguments sort the query. The HQL of {@code findWhere} and {@code findAllWhere} has no order, so
+     * a sorted query is run as a criteria query, which sorts it and joins the associations of the sort as the
+     * {@code grails.gorm.leftJoinAssociationSort} setting says, as GORM for Hibernate 5 does.
+     */
+    private static boolean requestsSort(Map args) {
+        args?.get(DynamicFinder.ARGUMENT_SORT) != null
+    }
+
+    private DetachedCriteria<D> whereCriteria(Map queryMap) {
+        DetachedCriteria<D> criteria = new DetachedCriteria<D>(persistentClass).withConnection(getQualifier())
+        queryMap?.each { Object key, Object value ->
+            String propertyName = validateWherePropertyName(key.toString())
+            criteria = value == null ? criteria.isNull(propertyName) : criteria.eq(propertyName, value)
+        }
+        criteria
     }
 
     private GormQuery prepareWhereHqlQuery(Map queryMap, Map<String, Object> querySettings) {
@@ -616,6 +661,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> list(Map params = Collections.emptyMap()) {
+        if (requestsJoinType(params) || requiresCriteriaFetch(params)) {
+            return listAsCriteria(params)
+        }
         firePreQueryEvent()
         HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) persistentEntity, params)
         String hql = builder.buildListHql()
@@ -632,6 +680,74 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         List<D> result = (List<D>) hqlQuery.list()
         firePostQueryEvent(result)
         result
+    }
+
+    /**
+     * Runs a static list as a criteria query, with the arguments as the HQL of {@code list} reads them: the default
+     * sort of the mapping applies, with its own directions, when the arguments name no sort, and {@code max: 0}
+     * lists no instance, where a criteria query takes it as no limit. The total of such an empty page counts what
+     * the query would list.
+     */
+    private List<D> listAsCriteria(Map params) {
+        Map arguments = new LinkedHashMap(params)
+        if (arguments.get(HibernateQueryArgument.SORT.value()) == null) {
+            Mapping mapping = ((HibernateMappingContext) persistentEntity.mappingContext).mappingCacheHolder.getMapping(persistentClass)
+            // a single sort property of the mapping is a map of one entry as well
+            Map namesAndDirections = ((SortConfig) mapping?.getSort())?.namesAndDirections
+            if (namesAndDirections) {
+                arguments.put(HibernateQueryArgument.SORT.value(), new LinkedHashMap(namesAndDirections))
+            }
+        }
+        DetachedCriteria<D> criteria = new DetachedCriteria<D>(persistentClass).withConnection(getQualifier())
+        Object max = arguments.get(HibernateQueryArgument.MAX.value())
+        if (max != null && conversionService.convert(max, Integer) == 0) {
+            arguments.remove(HibernateQueryArgument.MAX.value())
+            arguments.remove(HibernateQueryArgument.OFFSET.value())
+            Map counted = arguments
+            return new PagedResultList<D>(null) {
+                @Override
+                int getTotalCount() {
+                    if (this.@totalCount == Integer.MIN_VALUE) {
+                        this.@totalCount = criteria.count(counted).intValue()
+                    }
+                    this.@totalCount
+                }
+            }
+        }
+        criteria.list(arguments)
+    }
+
+    private boolean requiresCriteriaFetch(Map params) {
+        Object fetch = params.get(HibernateQueryArgument.FETCH.value())
+        if (!(fetch instanceof Map)) {
+            return false
+        }
+        for (Object item : ((Map) fetch).entrySet()) {
+            Map.Entry entry = (Map.Entry) item
+            String mode = entry.value?.toString()
+            if (!('join'.equalsIgnoreCase(mode) || 'eager'.equalsIgnoreCase(mode))) {
+                continue
+            }
+            String path = entry.key.toString()
+            boolean associations = true
+            boolean sortedBag = false
+            PersistentEntity current = persistentEntity
+            // a path that ends with a dot has an empty last name, which the HQL of list rejects as well
+            for (String token : path.split('\\.', -1)) {
+                PersistentProperty property = current?.getPropertyByName(token)
+                if (!(property instanceof Association) || property instanceof Embedded) {
+                    // the HQL of list rejects a path that does not consist of associations, as it did before
+                    associations = false
+                    break
+                }
+                sortedBag |= property instanceof ToMany && property.type == Collection && params.containsKey(HibernateQueryArgument.SORT.value())
+                current = ((Association) property).associatedEntity
+            }
+            if (associations && (path.contains('.') || sortedBag)) {
+                return true
+            }
+        }
+        false
     }
 
     @Override

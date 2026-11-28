@@ -23,9 +23,11 @@ import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
+import jakarta.persistence.metamodel.Attribute;
 
 /**
  * Orchestrator for JPA query translation state (Aliases, Joins, Expressions).
@@ -40,6 +42,7 @@ public class JpaQueryContext implements Cloneable {
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
     private final ExpressionResolver resolver;
+    private boolean leftJoinSort;
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
     private JpaQueryContext parent;
@@ -102,6 +105,10 @@ public class JpaQueryContext implements Cloneable {
                 new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
         this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
+        if (parent != null) {
+            this.resolver.setLeftJoinSort(parent.leftJoinSort);
+            this.leftJoinSort = parent.leftJoinSort;
+        }
         if (aliases != null) {
             for (HibernateAlias alias : aliases) {
                 aliasRegistry.define(alias.alias(), alias);
@@ -110,6 +117,16 @@ public class JpaQueryContext implements Cloneable {
         if (root != null) {
             this.joinTracker.addJoin("root", root);
         }
+    }
+
+    /**
+     * Sets whether an association that is joined only for a sort is joined with a left join, as the
+     * {@code grails.gorm.leftJoinAssociationSort} setting requests. The contexts of the blocks and the
+     * subqueries that are created from this one take it over.
+     */
+    void setLeftJoinSort(boolean leftJoinSort) {
+        this.leftJoinSort = leftJoinSort;
+        this.resolver.setLeftJoinSort(leftJoinSort);
     }
 
     protected JoinTracker getJoinTracker() {
@@ -218,6 +235,46 @@ public class JpaQueryContext implements Cloneable {
             }
         }
         return resolver.resolve(path);
+    }
+
+    /**
+     * Returns the expression that an order of this query sorts by. Unlike
+     * {@link #getFullyQualifiedExpression(String)}, each association on the path is joined explicitly, as the
+     * {@code grails.gorm.leftJoinAssociationSort} setting says: see {@link ExpressionResolver}.
+     *
+     * @param path the property path of the order
+     * @param endsWithForeignKey whether the last two attributes of the path are an association and its
+     *     identifier, with the foreign key on the side of the path, which is read without a join
+     * @param joinCollections whether a collection that only the sort uses is joined, as a count needs it
+     * @return the expression to sort by
+     */
+    Expression<?> getSortExpression(String path, boolean endsWithForeignKey, boolean joinCollections) {
+        if (parent != null && path != null && path.startsWith("{alias}")) {
+            return getFullyQualifiedExpression(path);
+        }
+        return resolver.resolveSort(path, endsWithForeignKey, joinCollections);
+    }
+
+    /**
+     * Whether an expression is read from the table of the root of this query: a property of the root, of one of
+     * its embedded components, or one of its foreign keys. Anything that is read through a join is not.
+     *
+     * @param expression the expression
+     * @return whether the expression is a column of the root
+     */
+    boolean isColumnOfRoot(Expression<?> expression) {
+        if (!(expression instanceof Path<?> path)) {
+            return false;
+        }
+        Path<?> parent = path.getParentPath();
+        while (parent != null && parent != getRoot()) {
+            // the path of a collection is joined when it is read, although it is no join of the query
+            if (parent instanceof Join<?, ?> || parent.getModel() instanceof Attribute<?, ?> attribute && attribute.isCollection()) {
+                return false;
+            }
+            parent = parent.getParentPath();
+        }
+        return parent != null;
     }
 
     public Path<?> getFullyQualifiedPath(String path) {

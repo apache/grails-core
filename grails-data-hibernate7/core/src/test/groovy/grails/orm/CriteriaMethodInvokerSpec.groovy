@@ -170,10 +170,15 @@ class CriteriaMethodInvokerSpec extends Specification {
             }
         }
         1 * builder.getClassForAssociationType(_) >> InvokerTransaction
-        1 * query.join("transactions", _)
+        1 * builder.setTargetClass(InvokerTransaction)
+        1 * builder.setTargetClass(InvokerAccount)
+        1 * query.join("transactions")
         1 * mappingContext.getPersistentEntity(InvokerAccount.name) >> persistentEntity
         1 * persistentEntity.getPropertyByName("transactions") >> association
-        1 * query.getDetachedCriteria() >> Mock(DetachedCriteria)
+        1 * query.getDetachedCriteria() >> Mock(DetachedCriteria) {
+            getJoinTypes() >> [:]
+            getSupersededJoinTypes() >> [:]
+        }
         1 * query.setDetachedCriteria(_ as DetachedAssociationCriteria)
         1 * query.setDetachedCriteria(_ as DetachedCriteria)
         1 * query.add(_ as DetachedAssociationCriteria)
@@ -192,6 +197,71 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * builder.and(closure)
         1 * builder.or(closure)
         1 * builder.not(closure)
+    }
+
+    void "the closure of a junction is evaluated by the builder"() {
+        given:
+        def seen = []
+        def callable = { seen << delegate << resolveStrategy }
+
+        when: 'the criteria that open the junction evaluate the closure they are given themselves'
+        Closure junction = invoker.evaluatedByBuilder(callable)
+        junction.delegate = new DetachedCriteria(Object)
+        junction.resolveStrategy = Closure.DELEGATE_FIRST
+        junction.call()
+
+        then: 'which hands the closure of the junction to the builder, as any other closure of the criteria'
+        seen.size() == 2
+        seen[0].is(builder)
+        seen[1] == Closure.DELEGATE_FIRST
+    }
+
+    void "the orders of an association block move to the enclosing criteria when the block ends"() {
+        given:
+        DetachedAssociationCriteria block = null
+        def closure = { block.order('amount') }
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
+        def association = Mock(org.grails.datastore.mapping.model.types.Association) {
+            getName() >> 'transactions'
+        }
+        Query.Order moved = null
+
+        when:
+        invoker.invokeMethod("transactions", [closure] as Object[])
+
+        then:
+        _ * builder.getTargetClass() >> InvokerAccount
+        1 * builder.getSessionFactory() >> Mock(SessionFactory) {
+            getMetamodel() >> Mock(jakarta.persistence.metamodel.Metamodel) {
+                entity(InvokerAccount) >> Mock(jakarta.persistence.metamodel.EntityType) {
+                    getAttribute("transactions") >> Mock(jakarta.persistence.metamodel.Attribute) {
+                        isAssociation() >> true
+                    }
+                }
+            }
+        }
+        1 * builder.getClassForAssociationType(_) >> InvokerTransaction
+        1 * mappingContext.getPersistentEntity(InvokerAccount.name) >> persistentEntity
+        1 * persistentEntity.getPropertyByName("transactions") >> association
+        1 * query.getDetachedCriteria() >> Mock(DetachedCriteria) {
+            getJoinTypes() >> [:]
+            getSupersededJoinTypes() >> [:]
+        }
+        1 * query.setDetachedCriteria(_ as DetachedAssociationCriteria) >> { DetachedAssociationCriteria criteria ->
+            block = criteria
+        }
+
+        then: 'the order is an order of the enclosing criteria by the path through the association, before the block is added'
+        1 * query.order(_) >> { Query.Order order ->
+            moved = order
+            query
+        }
+
+        then:
+        1 * query.add(_ as DetachedAssociationCriteria)
+        moved.property == 'transactions.amount'
+        moved.direction == Query.Order.Direction.ASC
+        block.orders.empty
     }
 
     void "test invokeMethod throws MissingMethodException"() {
@@ -644,7 +714,10 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * query.join("parent", jakarta.persistence.criteria.JoinType.LEFT)
         1 * mappingContext.getPersistentEntity(CBEmployee.name) >> persistentEntity
         1 * persistentEntity.getPropertyByName("parent") >> association
-        1 * query.getDetachedCriteria() >> Mock(DetachedCriteria)
+        1 * query.getDetachedCriteria() >> Mock(DetachedCriteria) {
+            getJoinTypes() >> [:]
+            getSupersededJoinTypes() >> [:]
+        }
         1 * query.add(_ as org.grails.datastore.mapping.query.Query.Criterion)
     }
 }

@@ -20,6 +20,8 @@ import java.util.List;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.JoinType;
 
 import org.hibernate.metamodel.model.domain.ReturnableType;
 import org.hibernate.query.criteria.JpaExpression;
@@ -143,6 +145,10 @@ public class JpaProjectionTranslator {
                     pathExpr = context.getFullyQualifiedExpression("root." + propertyName);
                 }
                 requireResolved(pathExpr, requestedPath);
+            } else if (context.getRoot() instanceof From<?, ?> from && hasRightJoin(from)) {
+                // a right join also has a row for each associated instance that no instance of the root refers
+                // to, and a count of the root would leave those rows out
+                pathExpr = criteriaBuilder.literal(1);
             } else {
                 pathExpr = context.getRoot();
             }
@@ -184,6 +190,10 @@ public class JpaProjectionTranslator {
             context.registerAlias(alias, jpaExpression);
         }
         return jpaExpression;
+    }
+
+    private static boolean hasRightJoin(From<?, ?> from) {
+        return from.getJoins().stream().anyMatch(join -> join.getJoinType() == JoinType.RIGHT || hasRightJoin(join));
     }
 
     private void requireResolved(Expression<?> expression, String path) {

@@ -25,6 +25,7 @@ import java.util.Map;
 import groovy.lang.Closure;
 import groovy.lang.MetaMethod;
 
+import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
@@ -112,6 +113,10 @@ public class CriteriaMethodInvoker {
                 }
             }
             invokeClosureNode(args[1]);
+            if (args[0] instanceof Map<?, ?> map) {
+                // the fetch argument is read last, so it replaces what the criteria request for the same association
+                applyFetchArgument(hibernateQuery, map.get(HibernateQueryArgument.FETCH.value()));
+            }
         } else {
             invokeClosureNode(args[0]);
         }
@@ -159,6 +164,28 @@ public class CriteriaMethodInvoker {
         return result;
     }
 
+    /**
+     * Applies the {@code fetch} argument of {@code list}: a join type joins and fetches the association with that
+     * join type, and a fetch mode fetches it with a left join or leaves it to be loaded when it is read.
+     */
+    private static void applyFetchArgument(HibernateQuery hibernateQuery, Object fetch) {
+        if (!(fetch instanceof Map<?, ?> fetchMap)) {
+            return;
+        }
+        fetchMap.forEach((association, value) -> {
+            String path = String.valueOf(association);
+            if (value instanceof JoinType joinType) {
+                hibernateQuery.join(path, joinType);
+            }
+            else if ((value instanceof FetchType fetchType ? fetchType : DynamicFinder.getFetchMode(value)) == FetchType.EAGER) {
+                hibernateQuery.join(path);
+            }
+            else {
+                hibernateQuery.getDetachedCriteria().select(path);
+            }
+        });
+    }
+
     protected Object tryMetaMethod(String name, Object... args) {
         MetaMethod metaMethod = builder.getMetaClass().getMetaMethod(name, args);
         if (metaMethod != null) {
@@ -180,13 +207,13 @@ public class CriteriaMethodInvoker {
         if (method != null) {
             switch (method) {
                 case AND:
-                    hibernateQuery.and(callable);
+                    hibernateQuery.and(evaluatedByBuilder(callable));
                     return name;
                 case OR:
-                    hibernateQuery.or(callable);
+                    hibernateQuery.or(evaluatedByBuilder(callable));
                     return name;
                 case NOT:
-                    hibernateQuery.not(callable);
+                    hibernateQuery.not(evaluatedByBuilder(callable));
                     return name;
                 case PROJECTIONS:
                     if (args.length == 1 && (args[0] instanceof Closure)) {
@@ -217,17 +244,20 @@ public class CriteriaMethodInvoker {
                 Class<?> associationClass = builder.getClassForAssociationType(attribute);
                 builder.setTargetClass(associationClass);
                 try {
+                    DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
                     if (!embedded) {
-                        JoinType joinType;
                         if (hasMoreThanOneArg) {
-                            joinType = builder.convertFromInt((Integer) args[0]);
-                        } else if (associationClass.equals(oldTargetClass)) {
-                            joinType = JoinType.LEFT; // default to left join if joining on the same table
-                        } else {
-                            joinType = builder.convertFromInt(0);
+                            hibernateQuery.join(name, builder.convertFromInt((Integer) args[0]));
+                        } else if (!oldDetachedCriteria.getJoinTypes().containsKey(name) &&
+                                !oldDetachedCriteria.getSupersededJoinTypes().containsKey(name)) {
+                            if (associationClass.equals(oldTargetClass)) {
+                                hibernateQuery.join(name, JoinType.LEFT); // default to left join on the same table
+                            } else {
+                                // The block declares its default inner join in the plan. Do not record that
+                                // default as a caller-requested type that could override a root path request.
+                                hibernateQuery.join(name);
+                            }
                         }
-
-                        hibernateQuery.join(name, joinType);
                     }
 
                     GrailsHibernatePersistentEntity parentEntity = (GrailsHibernatePersistentEntity)
@@ -236,12 +266,15 @@ public class CriteriaMethodInvoker {
                     if (property instanceof Association<?> association) {
                         DetachedAssociationCriteria<?> associationCriteria =
                                 new DetachedAssociationCriteria<>(associationClass, association);
-                        DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
                         hibernateQuery.setDetachedCriteria(associationCriteria);
                         try {
                             invokeClosureNode(callable);
                         } finally {
                             hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
+                        }
+                        if (!embedded) {
+                            // the orders of the block sort the query, in the place they were declared in
+                            moveOrdersOutOf(associationCriteria, hibernateQuery);
                         }
                         hibernateQuery.add((Query.Criterion) associationCriteria);
                     } else {
@@ -257,6 +290,42 @@ public class CriteriaMethodInvoker {
             }
         }
         return UNHANDLED;
+    }
+
+    /**
+     * Moves the orders of an association block to the criteria that enclose the block. Only the orders of the root
+     * criteria reach the query, so an order that stayed in its block had no effect. The order sorts by the property
+     * through the association, as with Hibernate 5, and reuses the join of the block.
+     */
+    private static void moveOrdersOutOf(DetachedAssociationCriteria<?> block, HibernateQuery hibernateQuery) {
+        String associationPath = block.getAssociationPath();
+        for (Query.Order order : block.getOrders()) {
+            Query.Order enclosing = new Query.Order(associationPath + '.' + order.getProperty(), order.getDirection());
+            if (order.isIgnoreCase()) {
+                enclosing.ignoreCase();
+            }
+            hibernateQuery.order(enclosing);
+        }
+        block.getOrders().clear();
+    }
+
+    /**
+     * Returns a closure that has the builder evaluate the closure of {@code and}, {@code or} or {@code not}, as it
+     * evaluates every other closure of a criteria query. The criteria that open the junction would evaluate it
+     * themselves, so an association block inside the junction would not be a block of the builder: a join type
+     * given to it would be ignored, and its orders would stay in the block.
+     */
+    Closure<?> evaluatedByBuilder(Closure<?> callable) {
+        return new Closure<Object>(builder) {
+
+            private static final long serialVersionUID = 1L;
+
+            @SuppressWarnings("unused") // called reflectively by the Groovy runtime as the closure body
+            public Object doCall() {
+                invokeClosureNode(callable);
+                return null;
+            }
+        };
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

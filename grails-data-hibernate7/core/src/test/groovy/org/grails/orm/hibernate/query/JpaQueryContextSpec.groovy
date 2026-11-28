@@ -21,6 +21,10 @@ import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.ParameterExpression
 import jakarta.persistence.criteria.Path
+import jakarta.persistence.metamodel.Attribute
+import jakarta.persistence.metamodel.SingularAttribute
+import org.hibernate.query.sqm.tree.domain.SqmPath
+import org.hibernate.query.sqm.tree.from.SqmFrom
 import spock.lang.Specification
 
 /**
@@ -277,6 +281,73 @@ class JpaQueryContextSpec extends Specification {
         then:
         1 * root.get('height') >> heightPath
         resolved == heightPath
+    }
+
+    def "test a path of the root or of one of its components is a column of the root"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def componentAttribute = Mock(SingularAttribute)
+        componentAttribute.getPersistentAttributeType() >> Attribute.PersistentAttributeType.EMBEDDED
+        def componentPath = Mock(Path)
+        componentPath.getModel() >> componentAttribute
+        componentPath.getParentPath() >> root
+        def associationPath = Mock(Path)
+        associationPath.getParentPath() >> root
+        def name = Mock(Path)
+        name.getParentPath() >> root
+        def foreignKey = Mock(Path)
+        foreignKey.getParentPath() >> associationPath
+        def componentProperty = Mock(Path)
+        componentProperty.getParentPath() >> componentPath
+
+        expect:
+        context.isColumnOfRoot(name)
+        context.isColumnOfRoot(foreignKey)
+        context.isColumnOfRoot(componentProperty)
+    }
+
+    def "test a path through the join of an association is not a column of the root"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def associationAttribute = Mock(Attribute)
+        associationAttribute.getPersistentAttributeType() >> Attribute.PersistentAttributeType.MANY_TO_ONE
+        def associationJoin = Mock(Join)
+        associationJoin.getAttribute() >> associationAttribute
+        associationJoin.getParent() >> root
+        def joined = Mock(Path)
+        joined.getParentPath() >> associationJoin
+        def detached = Mock(Path)
+
+        expect:
+        !context.isColumnOfRoot(joined)
+        !context.isColumnOfRoot(detached)
+        !context.isColumnOfRoot(Mock(Expression))
+    }
+
+    def "test a sort path that ends with a foreign key is not joined for it"() {
+        given:
+        def root = Mock(From)
+        def context = new JpaQueryContext(root)
+        def attribute = Mock(SingularAttribute)
+        attribute.getPersistentAttributeType() >> Attribute.PersistentAttributeType.MANY_TO_ONE
+        attribute.isAssociation() >> true
+        def clubPath = Mock(SqmPath)
+        clubPath.getModel() >> attribute
+        def idPath = Mock(SqmPath)
+        def sqmRoot = Mock(SqmFrom)
+        def sqmContext = new JpaQueryContext(sqmRoot)
+
+        when:
+        def result = sqmContext.getSortExpression('club.id', true, false)
+
+        then:
+        _ * sqmRoot.get('club') >> clubPath
+        _ * sqmRoot.getSqmJoins() >> []
+        _ * clubPath.get('id') >> idPath
+        0 * sqmRoot.join(_, _)
+        result == idPath
     }
 
     def "test parameter values cannot be changed through the returned map"() {
