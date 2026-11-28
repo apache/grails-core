@@ -105,7 +105,6 @@ class PagedResultListSpec extends HibernateGormDatastoreSpec {
         results instanceof PagedResultList
         results.size() == Math.max(0, Math.min(2, 3 - offset))
         results.totalCount == 3
-        results.totalCount == 3
         results*.title == ['Carrie', 'The Shining', 'The Stand'].drop(offset).take(2)
 
         where:
