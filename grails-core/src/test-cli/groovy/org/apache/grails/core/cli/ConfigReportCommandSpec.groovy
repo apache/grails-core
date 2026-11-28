@@ -387,7 +387,7 @@ class ConfigReportCommandSpec extends Specification {
     def "loadPropertyMetadata includes the properties of Grails plugins outside the Grails namespaces"() {
         given: "a Grails plugin and a library that both publish metadata outside the Grails namespaces"
         File plugin = classpathRoot('plugin', [
-                'META-INF/grails-plugin.xml': '<plugin name="acme"/>',
+                'META-INF/grails/plugins.imports': 'acme\n',
                 'META-INF/spring-configuration-metadata.json': '''{
                     "groups": [{"name": "acme", "description": "Acme"}],
                     "properties": [{"name": "acme.enabled", "type": "java.lang.Boolean", "description": "Whether Acme is enabled.", "defaultValue": true}]
@@ -421,9 +421,9 @@ class ConfigReportCommandSpec extends Specification {
     }
 
     def "loadPropertyMetadata includes the resources of a plugin on the classpath as Gradle output directories"() {
-        given: "a plugin whose descriptor is in the compiled classes and its metadata in the processed resources"
+        given: "a plugin whose descriptor the compiler wrote beside its classes and its metadata in the processed resources"
         File pluginClasses = classpathRoot('plugin/build/classes/groovy/main', [
-                'META-INF/grails-plugin.xml': '<plugin name="acme"/>'
+                'META-INF/grails/plugins.imports': 'acme\n'
         ])
         File pluginResources = classpathRoot('plugin/build/resources/main', [
                 'META-INF/spring-configuration-metadata.json': '''{
@@ -457,10 +457,46 @@ class ConfigReportCommandSpec extends Specification {
         classLoader?.close()
     }
 
+    def "loadPropertyMetadata maps a Java plugin's classes to its resources and ignores a legacy grails-plugin.xml"() {
+        given: "a Java plugin whose descriptor javac wrote into classes/java/main and its metadata in resources/main"
+        File libraryJavaClasses = classpathRoot('libplugin/build/classes/java/main', [
+                'META-INF/grails/plugins.imports': 'libmod\n'
+        ])
+        File libraryResources = classpathRoot('libplugin/build/resources/main', [
+                'META-INF/spring-configuration-metadata.json': '''{
+                    "groups": [{"name": "libmod", "description": "LibMod"}],
+                    "properties": [{"name": "libmod.enabled", "type": "java.lang.Boolean", "description": "Whether LibMod is enabled."}]
+                }'''
+        ])
+
+        and: "a jar with only a META-INF/grails-plugin.xml, which no longer makes it a plugin"
+        File legacyPlugin = classpathRoot('legacy-plugin', [
+                'META-INF/grails-plugin.xml': '<plugin name="legacy" version="1.0.0"/>',
+                'META-INF/spring-configuration-metadata.json': '''{
+                    "groups": [{"name": "legacy", "description": "Legacy"}],
+                    "properties": [{"name": "legacy.flag", "type": "java.lang.Boolean", "description": "Legacy flag."}]
+                }'''
+        ])
+
+        URL[] urls = [libraryJavaClasses, libraryResources, legacyPlugin].collect { it.toURI().toURL() } as URL[]
+        URLClassLoader classLoader = new URLClassLoader(urls, (ClassLoader) null)
+
+        when:
+        ConfigReportCommand.MetadataResult metadataResult = command.loadPropertyMetadata(classLoader)
+        List<String> names = metadataResult.properties*.name
+
+        then:
+        names.contains('libmod.enabled')
+        !names.contains('legacy.flag')
+
+        cleanup:
+        classLoader?.close()
+    }
+
     def "writeReport documents plugin properties in their own section"() {
         given: "the metadata of a plugin outside the Grails namespaces"
         File plugin = classpathRoot('plugin', [
-                'META-INF/grails-plugin.xml': '<plugin name="acme"/>',
+                'META-INF/grails/plugins.imports': 'acme\n',
                 'META-INF/spring-configuration-metadata.json': '''{
                     "groups": [{"name": "acme", "description": "Acme"}],
                     "properties": [{"name": "acme.enabled", "type": "java.lang.Boolean", "description": "Whether Acme is enabled.", "defaultValue": true}]

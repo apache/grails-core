@@ -75,6 +75,7 @@ class GroovyPageCompiler {
     String viewPrefix = '/'
     String packagePrefix = 'default'
     String encoding = 'UTF-8'
+    String viewsManifestPath = 'gsp/views.properties'
     String expressionCodec = OutputEncodingSettings.getDefaultValue(OutputEncodingSettings.EXPRESSION_CODEC_NAME)
     String[] configs = []
     /**
@@ -186,7 +187,7 @@ class GroovyPageCompiler {
                 // GroovyPageForkCompileTask and GroovyPageCompilerTask both do - each passes its full srcDir and
                 // lets the up-to-date check above decide what to recompile. The merge existed for a caller that
                 // passed only the changed files; one that did would now write a registry naming those alone.
-                File viewregistryFile = new File(targetDir, 'gsp/views.properties')
+                File viewregistryFile = new File(targetDir, viewsManifestPath ?: 'gsp/views.properties')
                 Properties previous = new Properties()
                 if (viewregistryFile.isFile()) {
                     viewregistryFile.withInputStream { InputStream viewsIn -> previous.load(viewsIn) }

@@ -18,79 +18,49 @@ under the License.
 --}%
 <%@ page trimLogicLines="true" expressionCodec="none" %>
 <%@ page import="org.grails.forge.application.Project" %>
-<%@ page import="org.grails.forge.application.ApplicationType" %>
-<%@ page import="org.grails.forge.util.VersionInfo" %>
 <%@ model="Project project" %>
-<%@ model="ApplicationType applicationType" %>
-<% Closure grailsVersion = { -> %>
-${VersionInfo.getGrailsVersion()} <% } %>package ${project.getPackageName()}
+package ${project.getPackageName()}
 
-import grails.plugins.*
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
 
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+/**
+ * The ${project.getNaturalName()} plugin. Its name, ordering and the rest of its metadata are declared by
+ * the annotation; its version is the project version. The published POM carries the description, license
+ * and developers, from the grailsPublish block in build.gradle.
+ */
+@GrailsPluginDescriptor(
+        // Plugins this one comes after, or needs: after = ['controllers'], dependsOn = ['core']
+        // Artefact classes left out of the plugin's descriptor: pluginExcludes = ['com/example/demo/**']
+)
 class ${project.getClassName()}GrailsPlugin extends Plugin {
 
-    // the version or versions of Grails the plugin is designed for
-       def grailsVersion = "${grailsVersion()} > *"
-       // resources that are excluded from plugin packaging
-       def pluginExcludes = [
-           "grails-app/views/error.gsp"
-       ]
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            // TODO Register runtime Spring beans (optional)
+        } as BeanRegistrar
+    }
 
-       // TODO Fill in these fields
-       def title = "${project.getNaturalName()}" // Headline display name of the plugin
-       def author = "Your name"
-       def authorEmail = ""
-       def description = '''\
-   Brief summary/description of the plugin.
-   '''
-       <% if (applicationType == ApplicationType.WEB_PLUGIN) { %>
-       def profiles = ['web']
-       <% } %>
-   // URL to the plugin's documentation
-       def documentation = "https://grails-plugins.github.io/${project.getClassName()}/"
+    void doWithApplicationContext() {
+        // TODO Implement post initialization spring config, such as registering dynamic methods (optional)
+    }
 
-       // Extra (optional) plugin metadata
+    void onChange(Map<String, Object> event) {
+        // TODO Implement code that is executed when any artefact that this plugin is
+        // watching is modified and reloaded. The event contains: event.source,
+        // event.application, event.manager, event.ctx, and event.plugin.
+    }
 
-       // License: one of 'APACHE', 'GPL2', 'GPL3'
-   //    def license = "APACHE"
+    void onConfigChange(Map<String, Object> event) {
+        // TODO Implement code that is executed when the project configuration changes.
+        // The event is the same as for 'onChange'.
+    }
 
-       // Details of company behind the plugin (if there is one)
-   //    def organization = [ name: "My Company", url: "https://www.my-company.com/" ]
-
-       // Any additional developers beyond the author specified above.
-   //    def developers = [ [ name: "Joe Bloggs", email: "joe@bloggs.net" ]]
-
-       // Location of the plugin's issue tracker.
-   //    def issueManagement = [ system: "GitHub", url: "https://github.com/apache/${project.getClassName()}/issues" ]
-
-       // Online location of the plugin's browseable source code.
-   //    def scm = [ url: "https://github.com/apache/${project.getClassName()}" ]
-
-       Closure doWithSpring() { {->
-               // TODO Implement runtime spring config (optional)
-           }
-       }
-
-       void doWithDynamicMethods() {
-           // TODO Implement registering dynamic methods to classes (optional)
-       }
-
-       void doWithApplicationContext() {
-           // TODO Implement post initialization spring config (optional)
-       }
-
-       void onChange(Map<String, Object> event) {
-           // TODO Implement code that is executed when any artefact that this plugin is
-           // watching is modified and reloaded. The event contains: event.source,
-           // event.application, event.manager, event.ctx, and event.plugin.
-       }
-
-       void onConfigChange(Map<String, Object> event) {
-           // TODO Implement code that is executed when the project configuration changes.
-           // The event is the same as for 'onChange'.
-       }
-
-       void onShutdown(Map<String, Object> event) {
-           // TODO Implement code that is executed when the application shuts down (optional)
-       }
+    void onShutdown(Map<String, Object> event) {
+        // TODO Implement code that is executed when the application shuts down (optional)
+    }
 }

@@ -21,16 +21,7 @@ package exploded
 
 import grails.plugins.*
 
-class ExplodedGrailsPlugin extends Plugin {
+import grails.plugins.metadata.GrailsPluginDescriptor
 
-    def title = "Exploded Plugin"
-    def author = "Your name"
-    def authorEmail = ""
-    def description = '''\
-Brief summary/description of the plugin.
-'''
-    def profiles = ['web']
-
-    def loadAfter = ['springSecurityCore']
-
-}
+@GrailsPluginDescriptor(after = ['springSecurityCore'])
+class ExplodedGrailsPlugin extends Plugin {}

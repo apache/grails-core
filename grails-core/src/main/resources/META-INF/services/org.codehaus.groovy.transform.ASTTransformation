@@ -1,2 +1,3 @@
 org.grails.compiler.injection.GlobalGrailsClassInjectorTransformation
 org.grails.compiler.injection.GlobalImportTransformation
+org.grails.compiler.injection.PluginDescriptorTransformation

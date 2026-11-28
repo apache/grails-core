@@ -21,6 +21,7 @@ package org.grails.gradle.plugin.views.gsp
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 
 import javax.inject.Inject
 
@@ -116,6 +117,30 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     final Property<String> serverpath
 
     /**
+     * Relative path within {@link #destinationDirectory} where the precompiled view manifest is written.
+     * Unset for applications (which default to {@code gsp/views.properties}); when unset on a plugin
+     * project, derived at execution time from {@link #pluginImportsFiles} as
+     * {@code META-INF/grails/plugins/<name>/views.properties}.
+     *
+     * @since 9.0
+     */
+    @Input
+    @Optional
+    final Property<String> viewsManifestPath
+
+    /**
+     * The {@code META-INF/grails/plugins.imports} file(s) the compiler wrote beside the main classes.
+     * Read at execution time when {@link #viewsManifestPath} is not explicitly set so that the manifest
+     * namespace matches the compiled plugin's logical name even on clean builds with the configuration cache.
+     *
+     * @since 9.0
+     */
+    @InputFiles
+    @Optional
+    @PathSensitive(PathSensitivity.NAME_ONLY)
+    final ConfigurableFileCollection pluginImportsFiles
+
+    /**
      * Whether the pages this task compiles are compiled statically.
      *
      * <p>Stated to the forked compiler as the {@code grails.views.gsp.compileStatic} system property,
@@ -202,6 +227,8 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         srcDir = objectFactory.directoryProperty()
         compileOptions = objectFactory.newInstance(ViewCompileOptions)
         serverpath = objectFactory.property(String)
+        viewsManifestPath = objectFactory.property(String)
+        pluginImportsFiles = objectFactory.fileCollection()
         grailsEnvironment = objectFactory.property(String).convention(ViewCompileEnvironment.defaultFor(project.providers, compileOptions))
         // the input is what the compiler gets: a change to it once the input is read would be compiled but not keyed
         grailsEnvironment.finalizeValueOnRead()
@@ -286,6 +313,8 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     protected void compile() {
         String environment = statedEnvironment
+        List<String> resolvedViewsManifestPaths = resolveViewsManifestPaths()
+        String primaryViewsManifestPath = resolvedViewsManifestPaths.isEmpty() ? null : resolvedViewsManifestPaths.first()
         logger.info('Compiling the pages for the {} environment', environment)
         ViewCompileDestination.empty(fileSystemOperations, destinationDirectory.get().asFile, buildDirectory.get().asFile, classpath.files, path)
         ExecResult result = execOperations.javaexec(
@@ -319,6 +348,9 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                                 javaExecSpec.systemProperty(BuildSettings.COMPILE_STATIC_GSP_STRICT, 'true')
                             }
                         }
+                        if (primaryViewsManifestPath != null) {
+                            javaExecSpec.systemProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH, primaryViewsManifestPath)
+                        }
 
                         String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(',')
 
@@ -344,7 +376,42 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                 }
         )
         result.assertNormalExitValue()
+        replicateViewsManifests(resolvedViewsManifestPaths)
+    }
 
+    private void replicateViewsManifests(List<String> manifestPaths) {
+        if (manifestPaths.size() <= 1) {
+            return
+        }
+        File destDir = destinationDirectory.get().asFile
+        File primaryManifest = new File(destDir, manifestPaths.first())
+        if (!primaryManifest.isFile()) {
+            return
+        }
+        for (int i = 1; i < manifestPaths.size(); i++) {
+            File target = new File(destDir, manifestPaths.get(i))
+            target.parentFile.mkdirs()
+            Files.copy(primaryManifest.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
+    private List<String> resolveViewsManifestPaths() {
+        if (viewsManifestPath.present) {
+            return [viewsManifestPath.get()]
+        }
+        Set<String> paths = new LinkedHashSet<>()
+        for (File importsFile : pluginImportsFiles.files) {
+            if (importsFile.isFile()) {
+                for (String rawLine : importsFile.readLines('UTF-8')) {
+                    int hash = rawLine.indexOf('#')
+                    String pluginName = (hash >= 0 ? rawLine.substring(0, hash) : rawLine).trim()
+                    if (!pluginName.isEmpty()) {
+                        paths.add("META-INF/grails/plugins/${pluginName}/views.properties".toString())
+                    }
+                }
+            }
+        }
+        new ArrayList<>(paths)
     }
 
     void prepareArguments(List<String> arguments) {

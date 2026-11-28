@@ -22,39 +22,29 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 
-import grails.plugins.metadata.GrailsPlugin
-
 @CompileStatic
 class GrailsVersionUtils {
 
     private static final Pattern DIGITS_PATTERN = ~/\d+/
 
     /**
-     * Get the name of the a plugin for a particular class.
-     */
-    @CompileStatic
-    static String getPluginName(Class clazz) {
-        GrailsPlugin ann = clazz?.getAnnotation(GrailsPlugin)
-        return ann?.name()
-    }
-
-    /**
-     * Get the version of the a plugin for a particular class.
-     */
-    @CompileStatic
-    static String getPluginVersion(Class clazz) {
-        GrailsPlugin ann = clazz?.getAnnotation(GrailsPlugin)
-        return ann?.version()
-    }
-
-    /**
      * Check if the required version is a valid for the given plugin version.
      *
-     * @param pluginVersion The plugin version
+     * <p>A required version of {@code *}, which a dependency declared by name alone requires, accepts every
+     * version. A plugin without a version, one compiled outside a build that sets it, cannot be checked against
+     * any other range, so it meets only {@code *}.</p>
+     *
+     * @param pluginVersion The plugin version, or {@code null} when it is unknown
      * @param requiredVersion The required version
      * @return true if it is valid
      */
     static boolean isValidVersion(String pluginVersion, String requiredVersion) {
+        if (requiredVersion?.trim() == '*') {
+            return true
+        }
+        if (pluginVersion == null) {
+            return false
+        }
         def vc = new VersionComparator()
         pluginVersion = trimTag(pluginVersion)
 

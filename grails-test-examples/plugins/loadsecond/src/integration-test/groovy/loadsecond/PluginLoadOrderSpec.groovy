@@ -21,14 +21,16 @@ package loadsecond
 
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPluginManager
+import grails.util.GrailsUtil
+import org.apache.grails.core.plugins.PluginDiscovery
 import grails.testing.mixin.integration.Integration
 import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.Specification
 
 /**
  * Integration tests for plugin loading order.
- * Tests that plugins are loaded in correct order based on
- * loadAfter and loadBefore declarations.
+ * Tests that plugins are put in one order by their after and before
+ * declarations.
  */
 @Integration(applicationClass = Application)
 class PluginLoadOrderSpec extends Specification {
@@ -38,6 +40,9 @@ class PluginLoadOrderSpec extends Specification {
 
     @Autowired
     GrailsPluginManager pluginManager
+
+    @Autowired
+    PluginDiscovery pluginDiscovery
 
     // ========== Plugin Manager Tests ==========
 
@@ -68,17 +73,21 @@ class PluginLoadOrderSpec extends Specification {
 
         then: "metadata is correct"
         plugin != null
-        plugin.instance instanceof LoadsecondGrailsPlugin
+        plugin.pluginInstance instanceof LoadsecondGrailsPlugin
     }
 
-    def "loadAfter is declared correctly"() {
-        when: "getting plugin instance"
+    def "after is declared correctly"() {
+        when: "getting plugin"
         def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
 
-        then: "loadAfter contains loadfirst"
-        instance != null
-        instance.loadAfter?.contains('loadfirst')
+        then: "after contains loadfirst"
+        plugin != null
+        plugin.afterNames.toList() == ['loadfirst']
+    }
+
+    def "the plugin manager and discovery share one plugin order"() {
+        expect:
+        pluginDiscovery.pluginsInTopologicalOrder*.name == pluginManager.allPlugins*.name
     }
 
     // ========== All Plugins Tests ==========
@@ -111,35 +120,12 @@ class PluginLoadOrderSpec extends Specification {
         plugin.version != null
     }
 
-    def "plugin grails version constraint is set"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
+    def "plugin grails version constraint defaults to the Grails version it was compiled with"() {
+        when: "getting the definition the compiler published for the plugin"
+        def definition = pluginDiscovery.findPlugin('loadsecond').definition
 
-        then: "grails version constraint exists"
-        instance != null
-        instance.grailsVersion != null
-    }
-
-    def "plugin profiles are configured"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
-
-        then: "profiles are set"
-        instance != null
-        instance.profiles?.contains('web')
-    }
-
-    // ========== Plugin State Tests ==========
-
-    def "plugin is enabled"() {
-        when: "getting plugin"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-
-        then: "plugin is enabled"
-        plugin != null
-        plugin.enabled
+        then: "the grails version constraint is the compiling Grails version or later"
+        definition.grailsVersionRange == "${GrailsUtil.grailsVersion} > *"
     }
 
     // ========== Plugin Configuration Tests ==========
@@ -149,23 +135,18 @@ class PluginLoadOrderSpec extends Specification {
         def config = grailsApplication.config
         def prop2 = config.getProperty('grails11951.prop2', String)
 
-        then: "plugin config is accessible"
-        // LoadSecond defines prop2, which should override LoadFirst's prop2
-        // if both plugins are loaded in correct order
-        prop2 != null
+        then: "the plugin's configuration is loaded (app1 checks that it wins over loadfirst's, which comes earlier)"
+        prop2 == 'Prop Two Defined By LoadSecond Plugin'
     }
 
     // ========== Plugin Exclusions Tests ==========
 
-    def "plugin excludes are configured"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
+    def "plugin excludes are published in its descriptor"() {
+        when: "getting the definition the compiler published for the plugin"
+        def definition = pluginDiscovery.findPlugin('loadsecond').definition
 
         then: "exclusions are defined"
-        instance != null
-        instance.pluginExcludes != null
-        instance.pluginExcludes.contains('grails-app/views/error.gsp')
+        definition.pluginExcludes == ['loadsecond/demo/**']
     }
 
     // ========== Plugin API Tests ==========
@@ -183,40 +164,5 @@ class PluginLoadOrderSpec extends Specification {
     def "getGrailsPlugin returns null for non-existent plugin"() {
         expect: "null is returned"
         pluginManager.getGrailsPlugin('nonExistentPlugin') == null
-    }
-
-    // ========== Plugin Title and Description Tests ==========
-
-    def "plugin title is set"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
-
-        then: "title is available"
-        instance != null
-        instance.title == 'Loadsecond'
-    }
-
-    def "plugin description is set"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
-
-        then: "description is available"
-        instance != null
-        instance.description != null
-        instance.description.contains('loadfirst')
-    }
-
-    // ========== Plugin Documentation Tests ==========
-
-    def "plugin documentation URL is set"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
-
-        then: "documentation URL is available"
-        instance != null
-        instance.documentation != null
     }
 }

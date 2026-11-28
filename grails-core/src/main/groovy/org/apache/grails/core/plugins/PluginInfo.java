@@ -18,186 +18,174 @@
  */
 package org.apache.grails.core.plugins;
 
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.io.Resource;
 
+import grails.plugins.Plugin;
+import grails.plugins.exceptions.PluginException;
+import grails.plugins.metadata.PluginDefinition;
+import grails.util.Environment;
+
 /**
- * Represents a discovered Grails plugin together with the metadata and resources needed during bootstrap.
+ * A discovered Grails plugin: its {@link PluginDefinition}, its {@link Plugin} class, and the resources it was
+ * found with. Discovery filters and orders plugins by these records, without creating them.
  *
- * <p>A {@code PluginInfo} combines the parsed {@link PluginDescriptor}, the extracted {@link PluginMetadata}, an
- * optional plugin configuration resource, and whether the plugin originated from dynamic plugin configuration rather
- * than classpath descriptor discovery.</p>
+ * <p>A plugin found on the class path has the {@code META-INF/grails/plugins/<name>/plugin.properties} it was
+ * read from as its descriptor resource; a plugin class registered directly has none, and its definition comes
+ * from its {@link grails.plugins.metadata.GrailsPluginDescriptor}.</p>
+ *
+ * @since 9.0
  */
 public final class PluginInfo {
 
-    private final PluginMetadata metadata;
-    private final PluginDescriptor pluginDescriptor;
-    private final Resource configResource;
-    private final boolean dynamic;
+    private final PluginDefinition definition;
+    private final Class<? extends Plugin> pluginClass;
+    private final @Nullable Resource descriptorResource;
+    private final @Nullable Resource configResource;
+    private final Map<String, Set<Object>> environments;
 
     /**
-     * Creates a new {@code PluginInfo}.
-     *
-     * @param pluginDescriptor the descriptor resource and declared classes that produced this plugin
-     * @param metadata the plugin metadata extracted for this plugin
-     * @param configResource the plugin's configuration resource ({@code plugin.yml} or
-     *        {@code plugin.groovy}), or {@code null} if no config file exists
-     * @param dynamic {@code true} if this plugin came from dynamically supplied classes or resources
+     * @param definition the plugin's definition
+     * @param pluginClass the class the definition names
+     * @param descriptorResource the {@code plugin.properties} the definition was read from, or {@code null} for a
+     *        plugin class registered directly
+     * @param configResource the plugin's {@code plugin.yml} or {@code plugin.groovy}, or {@code null}
+     * @throws PluginException if the class is not the {@code grails.plugins.Plugin} the definition names
      */
-    PluginInfo(PluginDescriptor pluginDescriptor, PluginMetadata metadata, Resource configResource, boolean dynamic) {
-        this.metadata = metadata;
-        this.pluginDescriptor = pluginDescriptor;
+    public PluginInfo(PluginDefinition definition, Class<?> pluginClass, @Nullable Resource descriptorResource,
+            @Nullable Resource configResource) {
+        Objects.requireNonNull(definition, "definition");
+        Objects.requireNonNull(pluginClass, "pluginClass");
+        if (!pluginClass.getName().equals(definition.getPluginClass()) || !Plugin.class.isAssignableFrom(pluginClass)) {
+            throw new PluginException("Grails plugin [" + definition.getPluginName() + "] names plugin class [" +
+                    definition.getPluginClass() + "], but [" + pluginClass.getName() + "] is not that grails.plugins.Plugin");
+        }
+        this.definition = definition;
+        this.pluginClass = pluginClass.asSubclass(Plugin.class);
+        this.descriptorResource = descriptorResource;
         this.configResource = configResource;
-        this.dynamic = dynamic;
+        this.environments = PluginUtils.buildEnvironmentsMap(definition.getEnvironmentsIncludes(), definition.getEnvironmentsExcludes());
+    }
+
+    /** @return the plugin's definition */
+    public PluginDefinition getDefinition() {
+        return definition;
+    }
+
+    /** @return the plugin's {@link Plugin} subclass */
+    public Class<? extends Plugin> getPluginClass() {
+        return pluginClass;
     }
 
     /**
-     * Returns the logical plugin name (for example {@code core} or {@code myPlugin}).
-     *
-     * @return the plugin name
+     * @return the {@code plugin.properties} the definition was read from, or {@code null} for a plugin class
+     *         registered directly
      */
-    public String getName() {
-        return metadata.getName();
+    public @Nullable Resource getDescriptorResource() {
+        return descriptorResource;
     }
 
-    /**
-     * Returns the declared plugin version.
-     *
-     * @return the plugin version
-     */
-    public String getPluginVersion() {
-        return metadata.getPluginVersion();
-    }
-
-    /**
-     * Returns the plugin implementation class.
-     *
-     * @return the plugin class
-     */
-    public Class<?> getPluginClass() {
-        return metadata.getPluginClass();
-    }
-
-    /**
-     * Returns the plugin configuration resource associated with this plugin.
-     *
-     * @return the plugin configuration resource, or {@code null} if the plugin has no external config resource
-     */
-    public Resource getConfigResource() {
+    /** @return the plugin's {@code plugin.yml} or {@code plugin.groovy}, or {@code null} if it has none */
+    public @Nullable Resource getConfigResource() {
         return configResource;
     }
 
-    /**
-     * Returns the extracted plugin metadata.
-     *
-     * @return the plugin metadata backing this plugin info
-     */
-    public PluginMetadata getMetadata() {
-        return metadata;
+    /** @return the logical plugin name, for example {@code core} or {@code springSecurityCore} */
+    public String getName() {
+        return definition.getPluginName();
     }
 
-    /**
-     * Returns the plugin names that this plugin prefers to load after.
-     *
-     * @return the declared load-after plugin names
-     */
-    public String[] getLoadAfterNames() {
-        return metadata.getLoadAfterNames();
+    /** @return the plugin version, or {@code null} for a plugin compiled outside a build that sets one */
+    public @Nullable String getPluginVersion() {
+        return definition.getPluginVersion();
     }
 
-    /**
-     * Returns the plugin names that this plugin prefers to load before.
-     *
-     * @return the declared load-before plugin names
-     */
-    public String[] getLoadBeforeNames() {
-        return metadata.getLoadBeforeNames();
+    /** @return the Grails versions the plugin supports, or {@code null} for every version */
+    public @Nullable String getGrailsVersionRange() {
+        return definition.getGrailsVersionRange();
     }
 
-    /**
-     * Returns the plugin names that this plugin depends on.
-     *
-     * @return the declared dependency plugin names
-     */
+    /** @return the names of the plugins this plugin comes after, when they are present */
+    public String[] getAfterNames() {
+        return definition.getAfter().toArray(String[]::new);
+    }
+
+    /** @return the names of the plugins this plugin comes before, when they are present */
+    public String[] getBeforeNames() {
+        return definition.getBefore().toArray(String[]::new);
+    }
+
+    /** @return the names of the plugins this plugin requires */
     public String[] getDependsOnNames() {
-        return metadata.getDependsOnNames();
+        return definition.getDependsOn().keySet().toArray(String[]::new);
     }
 
-    /**
-     * Returns the plugin names observed by this plugin.
-     *
-     * @return the declared observed plugin names
-     */
-    public String[] getObservedPluginNames() {
-        return metadata.getObservedPluginNames();
-    }
-
-    /**
-     * Returns whether this plugin was discovered from a dynamic plugin configuration.
-     *
-     * @return {@code true} if this plugin came from configured classes or Groovy resources instead of classpath
-     * descriptor discovery
-     */
-    public boolean isDynamic() {
-        return dynamic;
-    }
-
-    /**
-     * Returns the Grails version declared by this plugin.
-     *
-     * @return the declared Grails version
-     */
-    public String getGrailsVersionRange() {
-        return getMetadata().getGrailsVersionRange();
-    }
-
-    /**
-     * Returns the plugin names evicted by this plugin.
-     *
-     * @return the declared evicted plugin names
-     */
+    /** @return the names of the plugins this plugin evicts */
     public String[] getEvictions() {
-        return metadata.getEvictions();
+        return definition.getEvict().toArray(String[]::new);
+    }
+
+    /** @return the names of the plugins whose changes this plugin observes, {@code *} for every plugin */
+    public String[] getObservedPluginNames() {
+        return definition.getObserve().toArray(String[]::new);
     }
 
     /**
-     * Returns the descriptor that produced this plugin info.
-     *
-     * @return the plugin descriptor associated with this plugin
+     * @param name the name of a plugin this plugin requires
+     * @return the version range it requires, {@code *} for any version
+     * @throws PluginException if this plugin does not require the named plugin
      */
-    public PluginDescriptor getPluginDescriptor() {
-        return pluginDescriptor;
+    public String getDependentVersion(String name) {
+        String dependentVersion = definition.getDependsOn().get(name);
+        if (dependentVersion == null) {
+            throw new PluginException("Plugin [" + getName() + "] referenced dependency [" + name + "] with no version!");
+        }
+        return dependentVersion;
+    }
+
+    /** @return the environments the plugin is limited to or excluded from, by {@code includes} and {@code excludes} */
+    public Map<String, Set<Object>> getEnvironments() {
+        return environments;
     }
 
     /**
-     * Determines whether this plugin declares compatibility with the supplied Grails version.
-     *
-     * @param grailsVersion the Grails version to test against
-     * @return {@code true} if the plugin is compatible with the supplied Grails version
+     * @param environment an environment
+     * @return whether the plugin runs in that environment
      */
-    public boolean isGrailsVersionCompatible(String grailsVersion) {
+    public boolean supportsEnvironment(Environment environment) {
+        return PluginUtils.supportsValueInIncludeExcludeMap(environments, environment.getName());
+    }
+
+    /**
+     * Reports, as a warning, when the plugin does not declare support for a Grails version; the caller decides what
+     * to do with an incompatible plugin.
+     *
+     * @param grailsVersion the application's Grails version
+     * @return whether the plugin supports it
+     */
+    public boolean isGrailsVersionCompatible(@Nullable String grailsVersion) {
         return PluginUtils.isPluginVersionCompatible(getPluginVersion(), getGrailsVersionRange(), grailsVersion, getName());
     }
 
-    /**
-     * Compares this plugin info with another plugin info using the underlying metadata equality semantics.
-     *
-     * @param o the other object to compare
-     * @return {@code true} if both plugin infos are considered equal by their metadata
-     */
+    /** Plugins are identified by name: discovery keeps one plugin of each name. */
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof PluginInfo other)) return false;
-        return metadata.equals(other.metadata);
+    public boolean equals(Object other) {
+        return this == other || other instanceof PluginInfo that && getName().equals(that.getName());
     }
 
     @Override
     public int hashCode() {
-        return metadata.hashCode();
+        return getName().hashCode();
     }
 
     @Override
     public String toString() {
-        return "GrailsPluginInfo[" + metadata.getName() + "]";
+        return "PluginInfo[name=" + getName() + ", class=" + pluginClass.getName() +
+                (descriptorResource != null ? ", descriptor=" + descriptorResource : "") + "]";
     }
 }

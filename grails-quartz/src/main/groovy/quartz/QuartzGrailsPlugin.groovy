@@ -16,13 +16,12 @@
 package quartz
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.plugins.quartz.CustomTriggerFactoryBean
 import grails.plugins.quartz.GrailsJobClass
-import grails.plugins.quartz.GrailsJobFactory
 import grails.plugins.quartz.JobArtefactHandler
 import grails.plugins.quartz.JobDetailFactoryBean
-import grails.plugins.quartz.cleanup.JdbcCleanup
-import grails.plugins.quartz.listeners.ExceptionPrinterJobListener
+import grails.plugins.quartz.QuartzBeanDefinitionsPostProcessor
 import grails.plugins.quartz.listeners.SessionBinderJobListener
 import grails.util.Metadata
 import groovy.util.logging.Slf4j
@@ -34,29 +33,18 @@ import org.quartz.Trigger
 import org.quartz.TriggerKey
 import org.quartz.impl.matchers.GroupMatcher
 import org.quartz.impl.matchers.KeyMatcher
-import org.springframework.beans.factory.config.MethodInvokingFactoryBean
+import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
-import org.springframework.scheduling.quartz.SchedulerFactoryBean
+import org.springframework.core.env.Environment
 
 @Slf4j
+@GrailsPluginDescriptor(
+        after = ['hibernate', 'services'],
+        watchedResources = ['file:./grails-app/jobs/**/*Job.groovy'])
 class QuartzGrailsPlugin extends Plugin {
-
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
-    def watchedResources = 'file:./grails-app/jobs/**/*Job.groovy'
-    def title = 'Quartz Plugin'
-    def author = 'Apache Grails Team'
-    def description = 'Adds Quartz job scheduling features'
-    def profiles = ['web']
-    // 'hibernate' is the GORM for Hibernate plugin. Quartz must be configured after it so that the
-    // dataSource, transactionManager and session beans it contributes already exist -- the scheduler
-    // refs them when the JDBC job store is enabled, and SessionBinderJobListener autowires by name.
-    List loadAfter = ['hibernate', 'services']
-    def documentation = 'https://grails.apache.org/documentation.html'
-    def license = 'APACHE'
-    def issueManagement = [ system: 'Github Issues', url: 'https://github.com/apache/grails-core/issues' ]
-
-    // Online location of the plugin's browsable source code.
-    def scm = [url: 'https://github.com/apache/grails-core']
 
     /**
      * Whether the plugin is active. When disabled no scheduler, job beans or listeners are registered
@@ -154,72 +142,20 @@ class QuartzGrailsPlugin extends Plugin {
         config.getProperty('quartz.scheduler.instanceName', String)
     }
 
-    Closure doWithSpring() {
-        { ->
-            if (!isPluginEnabled()) {
-                return
-            }
-
-            boolean hasHibernate = hasHibernate(manager)
-
-            if (isJdbcStore() && hasHibernate && isPurgeQuartzTablesOnStartup()) {
-                String dataSourceName = getJdbcStoreDataSource()
-                purgeTablesBean(JdbcCleanup) { bean ->
-                    dataSource = ref(dataSourceName)
-                    bean.autowire = 'byName'
-                }
-            }
-
-            // Configure job beans
-            grailsApplication.jobClasses.each { GrailsJobClass jobClass ->
-                configureJobBeans.delegate = delegate
-                configureJobBeans(jobClass, hasHibernate)
-            }
-
-            // Configure the session listener if there is the Hibernate is configured
-            if (hasHibernate) {
-                log.debug('Registering hibernate SessionBinderJobListener')
-
-                // register SessionBinderJobListener to bind Hibernate Session to each Job's thread
-                "${SessionBinderJobListener.NAME}"(SessionBinderJobListener) { bean ->
-                    bean.autowire = 'byName'
-                }
-            }
-
-            // register global ExceptionPrinterJobListener which will log exceptions occured
-            // during job's execution
-            "${ExceptionPrinterJobListener.NAME}"(ExceptionPrinterJobListener)
-
-            // Configure the job factory to create job instances on executions.
-            quartzJobFactory(GrailsJobFactory)
-
-            // Configure Scheduler
-            configureScheduler.delegate = delegate
-            configureScheduler()
-        }
-    }
-
     /**
-     * Configure job beans.
+     * Registers the beans of the plugin through {@link QuartzBeanDefinitionsPostProcessor}: the job beans
+     * are prototypes created by a factory method and autowired by name, which the
+     * {@link org.springframework.beans.factory.BeanRegistry} API cannot express.
      */
-    def configureJobBeans = { GrailsJobClass jobClass, boolean hasHibernate = true ->
-        def fullName = jobClass.fullName
-
-        try {
-            "${fullName}Class"(MethodInvokingFactoryBean) {
-                targetObject = ref('grailsApplication', false)
-                targetMethod = 'getArtefact'
-                arguments = [JobArtefactHandler.TYPE, jobClass.fullName]
+    @Override
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, Environment environment ->
+            registry.registerBean('quartzBeanDefinitionsPostProcessor', QuartzBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier {
+                    new QuartzBeanDefinitionsPostProcessor(this)
+                }
             }
-
-            "${fullName}"(ref("${fullName}Class")) { bean ->
-                bean.factoryMethod = 'newInstance'
-                bean.autowire = 'byName'
-                bean.scope = 'prototype'
-            }
-        } catch (Exception e) {
-            log.error("Error declaring ${fullName}Detail bean in context", e)
-        }
+        } as BeanRegistrar
     }
 
     /**
@@ -238,57 +174,16 @@ class QuartzGrailsPlugin extends Plugin {
         quartzProperties
     }
 
-    def configureScheduler = { ->
-        // Everything the bean definition closure below needs is resolved here: within that closure
-        // property and method names are resolved against the bean builder, not against this plugin.
-        Properties properties = loadQuartzProperties()
-        String instanceName = getSchedulerInstanceName()
-        boolean jdbcStore = isJdbcStore()
-        String dataSourceName = getJdbcStoreDataSource()
-        boolean waitForJobs = isWaitForJobsToCompleteOnShutdown()
-        boolean exposeInRepository = isExposeSchedulerInRepository()
-
-        quartzScheduler(SchedulerFactoryBean) { bean ->
-            quartzProperties = properties
-
-            // The bean name is used by the factory bean as the scheduler name so you must explicitly set it if
-            // you want a name different from the bean name.
-            if (instanceName) {
-                schedulerName = instanceName
-            }
-
-            // Delay scheduler startup to the after-bootstrap stage: onStartup() honours quartz.autoStartup,
-            // whereas this bean's own startup is not grails aware.
-            autoStartup = false
-
-            // Store
-            if (jdbcStore) {
-                dataSource = ref(dataSourceName)
-                transactionManager = ref('transactionManager')
-            }
-
-            waitForJobsToCompleteOnShutdown = waitForJobs
-            exposeSchedulerInRepository = exposeInRepository
-
-            jobFactory = quartzJobFactory
-
-            // Global listeners on each job.
-            globalJobListeners = [ref(ExceptionPrinterJobListener.NAME)]
-        }
-    }
-
     void onChange(Map<String, Object> event) {
         if (!isPluginEnabled()) {
             return
         }
 
         if (event.source) {
-            boolean hasHibernate = hasHibernate(manager)
-            def jobClass = grailsApplication.addArtefact(JobArtefactHandler.TYPE, event.source)
-            beans {
-                configureJobBeans.delegate = delegate
-                configureJobBeans(jobClass, hasHibernate)
-            }
+            def jobClass = (GrailsJobClass) grailsApplication.addArtefact(JobArtefactHandler.TYPE, event.source)
+            QuartzBeanDefinitionsPostProcessor.registerJobBeans((BeanDefinitionRegistry) applicationContext, jobClass)
+            new MapBasedSmartPropertyOverrideConfigurer(grailsApplication: grailsApplication)
+                    .postProcessBeanFactory(applicationContext.beanFactory)
         }
         refreshJobs(true)
     }
@@ -376,11 +271,16 @@ class QuartzGrailsPlugin extends Plugin {
         startTime == null || trigger.getFireTimeAfter(new Date(startTime.time - 1000L)) != null
     }
 
+    /**
+     * Whether a Hibernate plugin is loaded, which binds a Hibernate session to the thread of each job.
+     * @return {@code true} when the {@code hibernate} plugin (of Hibernate 5 or 7) is loaded
+     */
+    boolean isHibernatePresent() {
+        hasHibernate(manager)
+    }
+
     private boolean hasHibernate(manager) {
-        manager?.hasGrailsPlugin('hibernate') ||
-                manager?.hasGrailsPlugin('hibernate3') ||
-                manager?.hasGrailsPlugin('hibernate4') ||
-                manager?.hasGrailsPlugin('hibernate5')
+        manager?.hasGrailsPlugin('hibernate')
     }
 
     void refreshJobs(boolean ignoreErrors = false) {

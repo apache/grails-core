@@ -34,8 +34,6 @@ import org.apache.grails.core.plugins.PluginInfo
 import org.apache.grails.core.plugins.PluginUtils
 import org.grails.config.NavigableMap
 import org.grails.config.NavigableMapPropertySource
-import org.grails.plugins.i18n.fixtures.AlphaPluginGrailsPlugin
-import org.grails.plugins.i18n.fixtures.BetaPluginGrailsPlugin
 
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -76,14 +74,19 @@ locales=fr
         }
     }
 
-    private static PluginInfo pluginInfo(Class<?> pluginClass) {
-        PluginUtils.createPluginInfo(pluginClass, null, true)
+    /**
+     * A plugin whose Grails name is the hyphenated form of {@code prefix}, compiled at run time so that no
+     * other test discovers it from the class path.
+     */
+    private static PluginInfo pluginInfo(String prefix) {
+        Class<?> pluginClass = new GroovyClassLoader(I18nEnvironmentPostProcessorSpec.classLoader).parseClass(
+                "@grails.plugins.metadata.GrailsPluginDescriptor class ${prefix}GrailsPlugin extends grails.plugins.Plugin { }")
+        PluginUtils.createPluginInfo(pluginClass)
     }
 
-    private I18nEnvironmentPostProcessor processor(List<PluginInfo> topological, List<PluginInfo> load) {
+    private I18nEnvironmentPostProcessor processor(List<PluginInfo> ordered) {
         PluginDiscovery discovery = Stub(PluginDiscovery) {
-            getPluginsInTopologicalOrder() >> topological
-            getPluginsInLoadOrder() >> load
+            getPluginsInTopologicalOrder() >> ordered
         }
         bootstrapContext.register(PluginDiscovery, { context -> discovery })
         new I18nEnvironmentPostProcessor(bootstrapContext)
@@ -179,19 +182,22 @@ locales=fr
                 'config/i18n/custom,config/i18n/other'
     }
 
-    void 'plugin base names follow reverse topological order, not load order'() {
-        given: 'topological and load order deliberately disagree'
-        List<PluginInfo> topological = [pluginInfo(AlphaPluginGrailsPlugin), pluginInfo(BetaPluginGrailsPlugin)]
-        List<PluginInfo> load = topological.reverse()
+    void 'plugin base names follow reverse plugin order, so the later plugin wins: #order'() {
+        given:
+        List<PluginInfo> ordered = order.collect { pluginInfo(it) }
         MockEnvironment environment = new MockEnvironment()
         ClassLoader classLoader = classLoaderWithPluginDescriptors(['alpha-plugin', 'beta-plugin'])
 
         when:
-        processor(topological, load).postProcessEnvironment(environment, applicationUsing(classLoader))
+        processor(ordered).postProcessEnvironment(environment, applicationUsing(classLoader))
 
-        then: 'reading the load-order list instead would have produced alpha-plugin,beta-plugin'
-        environment.getProperty(I18nEnvironmentPostProcessor.BASENAME_PROPERTY) ==
-                'messages,beta-plugin,alpha-plugin'
+        then: 'the application comes first, then the plugins from the last one back'
+        environment.getProperty(I18nEnvironmentPostProcessor.BASENAME_PROPERTY) == expected
+
+        where:
+        order                          || expected
+        ['AlphaPlugin', 'BetaPlugin']  || 'messages,beta-plugin,alpha-plugin'
+        ['BetaPlugin', 'AlphaPlugin']  || 'messages,alpha-plugin,beta-plugin'
     }
 
     void 'include-plugin-bundles=false leaves plugin base names out entirely'() {

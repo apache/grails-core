@@ -29,6 +29,7 @@ import groovy.lang.MetaClass;
 import groovy.lang.MetaProperty;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
@@ -36,9 +37,11 @@ import org.springframework.util.StringUtils;
 
 import grails.core.GrailsApplication;
 import grails.core.GrailsClass;
-import grails.plugins.GrailsVersionUtils;
+import grails.plugins.GrailsPlugin;
+import grails.plugins.GrailsPluginManager;
 import grails.util.GrailsMetaClassUtils;
 import grails.util.GrailsNameUtils;
+import grails.util.Holders;
 import grails.web.Action;
 import org.grails.core.exceptions.NewInstanceCreationException;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
@@ -91,9 +94,27 @@ public abstract class AbstractGrailsClass implements GrailsClass {
         isAbstract = Modifier.isAbstract(clazz.getModifiers());
     }
 
+    /**
+     * The name of the plugin whose descriptor lists this class among its artefacts, or {@code null} for a class
+     * no plugin provides, such as one of the application's own.
+     */
     @Override
     public String getPluginName() {
-        return GrailsVersionUtils.getPluginName(this.clazz);
+        GrailsPluginManager pluginManager = pluginManager();
+        GrailsPlugin plugin = pluginManager != null ? pluginManager.getPluginForClass(this.clazz) : null;
+        return plugin != null ? plugin.getName() : null;
+    }
+
+    /**
+     * The plugin manager of the application this class belongs to, from its context, or else the one
+     * {@link Holders} holds, as outside an application.
+     */
+    private GrailsPluginManager pluginManager() {
+        ApplicationContext context = grailsApplication != null ? grailsApplication.getMainContext() : null;
+        if (context != null && context.containsBean(GrailsPluginManager.BEAN_NAME)) {
+            return context.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager.class);
+        }
+        return Holders.getPluginManager();
     }
 
     public void setGrailsApplication(GrailsApplication grailsApplication) {

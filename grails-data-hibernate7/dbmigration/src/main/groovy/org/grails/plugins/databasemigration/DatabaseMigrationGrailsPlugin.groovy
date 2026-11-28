@@ -29,27 +29,16 @@ import org.springframework.context.ApplicationContext
 import org.springframework.core.env.Environment
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.plugins.databasemigration.liquibase.GrailsLiquibase
 import org.grails.plugins.databasemigration.liquibase.GrailsLiquibaseFactory
 import org.grails.plugins.databasemigration.liquibase.GroovyChangeLogParser
 
+@GrailsPluginDescriptor(
+        pluginExcludes = ['**/testapp/**'])
 class DatabaseMigrationGrailsPlugin extends Plugin {
 
     static final String CONFIG_MAIN_PREFIX = 'grails.plugin.databasemigration'
-
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-    def pluginExcludes = [
-            '**/testapp/**',
-            'grails-app/views/error.gsp'
-    ]
-
-    def title = 'Grails Database Migration Plugin' // Headline display name of the plugin
-    def author = 'Kazuki YAMAMOTO'
-    def authorEmail = ''
-    def description = 'Grails Database Migration Plugin'
-    def documentation = 'https://grails.apache.org/docs/latest/grails-data/hibernate5/manual/index.html#databaseMigration'
-    def license = 'APACHE'
-    def scm = [url: 'https://github.com/apache/grails-core']
 
     @Override
     BeanRegistrar beanRegistrar() {

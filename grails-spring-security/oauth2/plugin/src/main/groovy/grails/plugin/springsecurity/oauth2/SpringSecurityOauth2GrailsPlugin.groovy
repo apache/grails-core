@@ -21,29 +21,34 @@ package grails.plugin.springsecurity.oauth2
 
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.factory.BeanRegistrar
+
 import grails.plugin.springsecurity.ReflectionUtils
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 @Slf4j
+@GrailsPluginDescriptor(after = ['spring-security-core'])
 class SpringSecurityOauth2GrailsPlugin extends Plugin {
 
-    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = '7.0.0 > *'
-    List loadAfter = ['spring-security-core']
-
-    // TODO Fill in these fields
-    def title = 'Spring Security Oauth2' // Headline display name of the plugin
-    def author = 'Apache Grails Team'
-    def authorEmail = ''
-    def description = '''\
-This plugin provides the capability to authenticate via oauth. Depends on grails-spring-security.
-'''
-    def profiles = ['web']
-    def license = 'APACHE'
-
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
     @Override
-    Closure doWithSpring() {
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityOauth2BeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security OAuth2 plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
             ReflectionUtils.application = grailsApplication
             if (grailsApplication.warDeployed) {

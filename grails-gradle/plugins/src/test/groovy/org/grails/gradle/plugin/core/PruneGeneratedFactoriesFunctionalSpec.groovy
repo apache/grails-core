@@ -59,6 +59,28 @@ class PruneGeneratedFactoriesFunctionalSpec extends GradleSpecification {
         registered(projectDir) == ['example.Handler': ['elsewhere.JarHandler', 'example.KeepHandler']]
     }
 
+    void 'renaming a handler produces the same factories index as a clean compilation'() {
+        given:
+        File projectDir = setupTestResourceProject('factories-prune').projectDir
+        executeTask('compileGroovy')
+
+        when:
+        File oldHandler = new File(projectDir, 'src/main/groovy/example/GoneHandler.groovy')
+        new File(oldHandler.parentFile, 'RenamedHandler.groovy').text = oldHandler.text.replace('GoneHandler', 'RenamedHandler')
+        assert oldHandler.delete()
+        executeTask('compileGroovy')
+        def incremental = registered(projectDir)
+
+        then:
+        incremental == ['example.Handler': ['elsewhere.JarHandler', 'example.KeepHandler', 'example.RenamedHandler']]
+
+        when:
+        executeTask('clean', ['compileGroovy'])
+
+        then:
+        registered(projectDir) == incremental
+    }
+
     void 'the generated factories file is removed when its last entry is'() {
         given: 'a project whose one registration is GoneHandler, with Plain the only other source'
         File projectDir = setupTestResourceProject('factories-prune').projectDir

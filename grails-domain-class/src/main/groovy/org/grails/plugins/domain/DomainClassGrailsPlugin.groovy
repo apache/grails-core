@@ -27,7 +27,7 @@ import org.springframework.context.MessageSource
 
 import grails.core.GrailsApplication
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.plugins.domain.support.DefaultConstraintEvaluatorFactoryBean
@@ -41,19 +41,16 @@ import org.grails.plugins.domain.support.ValidatorRegistryFactoryBean
  * @since 0.4
  */
 @CompileStatic
-// TODO: datasource plugin is supposed to always load after this (currently will because this is a configuration)
-// Ordered by name, not by class literal: I18nGrailsPlugin's @GrailsBeans-generated
-// I18nAutoConfiguration doesn't exist as a compilable class for this class to reference.
-@AutoConfiguration(afterName = ['org.grails.plugins.i18n.I18nAutoConfiguration'])
+// The generated DomainClassAutoConfiguration comes after I18nAutoConfiguration, because this plugin
+// depends on i18n: the compiler orders the generated auto-configurations as the plugins are ordered.
+@AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@GrailsPluginDescriptor(
+        after = ['controllers', 'dataSource'],
+        dependsOn = ['i18n:${plugin.version}'],
+        watchedResources = ['file:./grails-app/domain/**/*.groovy',
+                                'file:./plugins/*/grails-app/domain/**/*.groovy'])
 class DomainClassGrailsPlugin extends Plugin {
-
-    def watchedResources = ['file:./grails-app/domain/**/*.groovy',
-                            'file:./plugins/*/grails-app/domain/**/*.groovy']
-
-    def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [i18n: version]
-    def loadAfter = ['controllers', 'dataSource']
 
     def beans = {
         bean('grailsDomainClassMappingContext', DefaultMappingContextFactoryBean).lazy() { GrailsApplication grailsApplication, List<MessageSource> messageSources, List<ConstraintFactory> factories ->

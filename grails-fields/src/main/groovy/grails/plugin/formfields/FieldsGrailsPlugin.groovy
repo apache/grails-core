@@ -26,6 +26,7 @@ import org.springframework.core.env.Environment
 
 import grails.core.support.proxy.ProxyHandler
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.scaffolding.model.DomainModelServiceImpl
@@ -33,13 +34,10 @@ import org.grails.scaffolding.model.property.DomainPropertyFactory
 import org.grails.scaffolding.model.property.DomainPropertyFactoryImpl
 
 @CompileStatic
+@GrailsPluginDescriptor(after = ['domainClass'])
 class FieldsGrailsPlugin extends Plugin {
 
     static final String CONSTRAINTS_EVALULATOR_BEAN_NAME = 'validateableConstraintsEvaluator'
-
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-
-    def loadAfter = ['domainClass']
 
     @Override
     BeanRegistrar beanRegistrar() {

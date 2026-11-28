@@ -208,7 +208,8 @@ Example: ./grailsw s2-quickstart --uiOnly
         }
         List<Map<String, String>> beans = []
         beans.add([import: "import ${userModel.packageName}.${userModel.simpleName}PasswordEncoderListener".toString(),
-                   definition: "${userModel.propertyName}PasswordEncoderListener(${userModel.simpleName}PasswordEncoderListener)".toString()])
+                   definition: "${userModel.propertyName}PasswordEncoderListener(${userModel.simpleName}PasswordEncoderListener)".toString(),
+                   registration: "registry.registerBean('${userModel.propertyName}PasswordEncoderListener', ${userModel.simpleName}PasswordEncoderListener)".toString()])
 
         if (new File('grails-app/conf/spring/resources.groovy').exists()) {
             addBeans(beans, 'grails-app/conf/spring/resources.groovy')
@@ -386,21 +387,35 @@ Example: ./grailsw s2-quickstart --uiOnly
         }
     }
 
+    /**
+     * Registers the beans from the plugin's {@code beanRegistrar()}: inside the registrar closure the plugin
+     * templates generate, or in a {@code beanRegistrar()} added to a plugin that has none.
+     */
     private void addBeansToPlugin(List<Map<String, String>> beans, File pluginClassFile) {
-        List<String> lines = []
-        if (pluginClassFile.exists()) {
-            pluginClassFile.eachLine { line, nb ->
-                lines << line
-                if (line.trim().startsWith('package ')) {
-                    beans.forEach(bean -> lines.add(bean.import))
-                }
-                if (line.contains('doWithSpring()')) {
-                    beans.each { Map bean ->
-                        lines << '        ' + bean.definition
-                    }
-                }
-            }
-        } 
+        if (!pluginClassFile.exists()) {
+            return
+        }
+        List<String> lines = pluginClassFile.readLines('UTF-8')
+        List<String> imports = beans*.import
+        int registrar = lines.findIndexOf { String line -> line.contains('BeanRegistry registry') && line.contains('->') }
+        if (registrar >= 0) {
+            String header = lines[registrar]
+            String indent = header.substring(0, header.length() - header.stripLeading().length()) + '    '
+            lines.addAll(registrar + 1, beans.collect { Map<String, String> bean -> indent + bean.registration })
+        }
+        else {
+            imports += ['import org.springframework.beans.factory.BeanRegistrar',
+                        'import org.springframework.beans.factory.BeanRegistry',
+                        'import org.springframework.core.env.Environment']
+            int end = lines.findLastIndexOf { String line -> line.trim() == '}' }
+            List<String> method = ['', '    BeanRegistrar beanRegistrar() {',
+                                   '        return { BeanRegistry registry, Environment environment ->']
+            method += beans.collect { Map<String, String> bean -> '            ' + bean.registration }
+            method += ['        } as BeanRegistrar', '    }']
+            lines.addAll(end, method)
+        }
+        int packageLine = lines.findIndexOf { String line -> line.trim().startsWith('package ') }
+        lines.addAll(packageLine + 1, [''] + imports.findAll { !lines.contains(it) })
 
         pluginClassFile.withWriter('UTF-8') { writer ->
             lines.each { String line ->

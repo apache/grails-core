@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginInfo;
 
 /**
  * A {@link PluginFilter} implementation that retains explicitly named plugins and any plugins they
@@ -56,24 +56,28 @@ public class IncludingPluginFilter extends BasePluginFilter {
      * @return a new list containing only the included plugins
      */
     @Override
-    protected List<PluginMetadata> getPluginList(List<PluginMetadata> original, List<PluginMetadata> pluginList) {
+    protected List<PluginInfo> getPluginList(List<PluginInfo> original, List<PluginInfo> pluginList) {
         return new ArrayList<>(pluginList);
     }
 
     /**
      * Adds the direct dependencies declared by the supplied plugin, so they are included as well.
      *
-     * <p>Each dependency is registered through {@link #registerDependency(List, PluginMetadata)} so that
-     * recursive traversal and deduplication are handled consistently by the base class.</p>
+     * <p>Each dependency is registered through {@link #registerDependency(List, PluginInfo)} so that
+     * recursive traversal and deduplication are handled consistently by the base class. A dependency that is not
+     * among the plugins found is skipped, and discovery reports it as missing.</p>
      *
      * @param additionalList the list collecting plugins that should also be included
      * @param plugin the plugin whose dependencies should be included
      */
     @Override
-    protected void addPluginDependencies(List<PluginMetadata> additionalList, PluginMetadata plugin) {
+    protected void addPluginDependencies(List<PluginInfo> additionalList, PluginInfo plugin) {
         var dependencyNames = plugin.getDependsOnNames();
         for (var name : dependencyNames) {
-            registerDependency(additionalList, getNamedPlugin(name));
+            var dependency = getNamedPlugin(name);
+            if (dependency != null) {
+                registerDependency(additionalList, dependency);
+            }
         }
     }
 }

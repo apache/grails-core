@@ -56,7 +56,7 @@ class ConfigReportCommand implements ApplicationCommand {
 
     static final String METADATA_RESOURCE = 'META-INF/spring-configuration-metadata.json'
 
-    static final String PLUGIN_DESCRIPTOR_RESOURCE = 'META-INF/grails-plugin.xml'
+    static final String PLUGIN_DESCRIPTOR_RESOURCE = 'META-INF/grails/plugins.imports'
 
     static final Pattern GRADLE_CLASSES_DIRECTORY = Pattern.compile('^(file:.*/)classes/[^/]+/([^/]+)/$')
 

@@ -24,36 +24,24 @@ import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
 import org.springframework.core.env.Environment
 
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+@GrailsPluginDescriptor(after = ['springSecurityCore'])
 class LoadafterGrailsPlugin extends Plugin {
 
-    def title = "Load After" // Headline display name of the plugin
-    def author = "Your name"
-    def authorEmail = ""
-    def description = '''\
-Brief summary/description of the plugin.
-'''
-    def profiles = ['web']
-
-    def loadAfter = ['springSecurityCore']
-
-    // Exercises the retimed plugin lifecycle end-to-end (see app3 PluginBeansBeforeAutoConfigurationSpec):
-    // doWithSpring beans register ahead of auto-configuration through real plugin discovery, so the
-    // app's @ConditionalOnMissingBean default for this name must defer.
-    @Override
-    Closure doWithSpring() {
-        { ->
-            earlyPluginProbe(String, 'from-plugin-doWithSpring')
-        }
-    }
-
-    // Exercises the new beanRegistrar() API end-to-end using the concise closure-coercion form.
-    // Registrar beans also register ahead of auto-configuration, so the app's @ConditionalOnMissingBean
-    // default for this name must defer — PluginBeansBeforeAutoConfigurationSpec asserts the plugin's value wins.
+    // Exercises the beanRegistrar() API end-to-end using the concise closure-coercion form. Registrar
+    // beans register ahead of auto-configuration, so the app's @ConditionalOnMissingBean default for
+    // registrarProbe must defer, and so must its default for earlyPluginProbe, which the post-processor
+    // the registrar registers contributes as a plain bean definition before the configuration classes
+    // are read. PluginBeansBeforeAutoConfigurationSpec asserts the plugin's values win.
     @Override
     BeanRegistrar beanRegistrar() {
         { BeanRegistry registry, Environment environment ->
             registry.registerBean('registrarProbe', String) { spec ->
                 spec.supplier { context -> 'from-plugin-beanRegistrar' }
+            }
+            registry.registerBean('earlyPluginProbePostProcessor', EarlyPluginProbePostProcessor) { spec ->
+                spec.infrastructure()
             }
         } as BeanRegistrar
     }

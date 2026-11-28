@@ -146,11 +146,6 @@ class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationCont
     Closure doWithSpring() { null }
 
     @Override
-    void doWithDynamicMethods() {
-        // no-op
-    }
-
-    @Override
     void doWithApplicationContext() {
         // no-op
     }

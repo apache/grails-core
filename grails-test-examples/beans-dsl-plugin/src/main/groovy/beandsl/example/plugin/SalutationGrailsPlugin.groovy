@@ -22,6 +22,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration
 
 import grails.compiler.beans.GrailsBeans
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * Demonstrates a qualified {@code autoConfigurationName}. The generated sibling lands in
@@ -37,9 +38,8 @@ import grails.plugins.Plugin
  */
 @GrailsBeans(autoConfigurationName = 'beandsl.example.plugin.web.SalutationAutoConfiguration')
 @AutoConfiguration
+@GrailsPluginDescriptor
 class SalutationGrailsPlugin extends Plugin {
-
-    String version = '1.0'
 
     def beans = {
         bean('salutation', Salutation) {

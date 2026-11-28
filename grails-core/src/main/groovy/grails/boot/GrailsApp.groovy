@@ -51,7 +51,7 @@ import org.grails.compiler.injection.GrailsAwareInjectionOperation
 import org.grails.core.util.BeanCreationProfilingPostProcessor
 import org.grails.io.watch.DirectoryWatcher
 import org.grails.io.watch.FileExtensionFileChangeListener
-import org.grails.plugins.BinaryGrailsPlugin
+import org.grails.plugins.DefaultGrailsPlugin
 import org.grails.plugins.support.WatchPattern
 
 /**
@@ -285,9 +285,9 @@ class GrailsApp extends SpringApplication {
             String baseDirPath = baseDir.canonicalPath
             List<File> watchBaseDirectories = [baseDir]
             for (GrailsPlugin plugin in pluginManager.allPlugins) {
-                if (plugin instanceof BinaryGrailsPlugin) {
-                    BinaryGrailsPlugin binaryGrailsPlugin = (BinaryGrailsPlugin) plugin
-                    def pluginDirectory = binaryGrailsPlugin.projectDirectory
+                if (plugin instanceof DefaultGrailsPlugin) {
+                    DefaultGrailsPlugin pluginWithClasses = (DefaultGrailsPlugin) plugin
+                    def pluginDirectory = pluginWithClasses.projectDirectory
                     if (pluginDirectory != null) {
                         watchBaseDirectories << pluginDirectory
                     }

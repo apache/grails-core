@@ -127,13 +127,13 @@
         {
             "name": "grails.plugin.includes",
             "type": "java.util.List<java.lang.String>",
-            "description": "List of plugin names to include in the plugin manager (all others excluded).",
+            "description": "List of plugin names to include in the plugin manager, together with the plugins they depend on (all others excluded).",
             "defaultValue": []
         },
         {
             "name": "grails.plugin.excludes",
             "type": "java.util.List<java.lang.String>",
-            "description": "List of plugin names to exclude from the plugin manager.",
+            "description": "List of plugin names to exclude from the plugin manager. A plugin that depends on an excluded plugin must be excluded too, or the application does not start.",
             "defaultValue": []
         },
         {

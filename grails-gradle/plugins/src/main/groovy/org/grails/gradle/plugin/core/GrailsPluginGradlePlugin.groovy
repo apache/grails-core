@@ -27,6 +27,8 @@ import groovy.transform.CompileStatic
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.Directory
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
@@ -36,10 +38,13 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.util.PatternFilterable
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
+import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
+import org.apache.grails.gradle.publish.GrailsPublishExtension
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 import org.grails.gradle.plugin.commands.GrailsCliArtifactGradlePlugin
@@ -76,26 +81,13 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     }
 
     /**
-     * The Grails plugin name, derived from the {@code *GrailsPlugin.groovy} descriptor exactly as
-     * {@link GrailsNameUtils#getPluginName} does at runtime, so
-     * {@code SpringSecurityCoreGrailsPlugin} yields {@code spring-security-core}.
-     *
-     * <p>Recording the runtime name rather than the Gradle project name is what lets the i18n
-     * descriptor be matched against the plugins the application actually discovers, and it is the
-     * namespace a plugin's message bundle base names must sit within.</p>
-     *
-     * <p>Resolved lazily: the descriptor is a source file, so the search must not happen while the
-     * project is still being configured.</p>
+     * The name recorded for a project that declares no plugin. A plugin's own name is declared in code, by
+     * {@code @GrailsPluginDescriptor}, and the i18n descriptor reads it from the {@code plugins.imports} the
+     * compiler wrote (see {@link #configurePluginCompilation}).
      */
     @Override
     protected Provider<String> grailsArtifactName(Project project) {
-        project.provider {
-            SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-            File descriptor = mainSourceSet?.allSource?.matching { PatternFilterable pattern ->
-                pattern.include('**/*GrailsPlugin.groovy')
-            }?.files?.sort { File file -> file.name }?.find()
-            descriptor ? GrailsNameUtils.getPluginName(descriptor.name) : project.name
-        }
+        project.provider { GrailsNameUtils.getScriptName(project.name) }
     }
 
     @Override
@@ -108,26 +100,88 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         configureAstSources(project)
         configureAssembleTask(project)
         configurePluginResources(project)
+        configurePluginCompilation(project)
+        configurePluginPublishing(project)
         configureJarTask(project)
         configureSourcesJarTask(project)
     }
 
+    /**
+     * Publishes no {@code grails-plugin.xml} sidecar. A Grails 9 plugin is described by the
+     * {@code META-INF/grails/plugins.imports} and {@code META-INF/grails/plugins/<name>/plugin.properties}
+     * inside its jar.
+     *
+     * @since 9.0
+     */
+    protected void configurePluginPublishing(Project project) {
+        project.pluginManager.withPlugin('org.apache.grails.gradle.grails-publish') {
+            project.extensions.configure(GrailsPublishExtension) { GrailsPublishExtension publishExtension ->
+                publishExtension.pluginDescriptor.unsetConvention()
+            }
+        }
+    }
+
+    /**
+     * Gives the compiler of the main source set the plugin version and {@code grails-app/conf}, which it
+     * writes into the descriptors of the plugins it compiles (see {@link GrailsPluginDescriptorProvider}).
+     * javac gets the version as the {@code grails.plugin.version} processor option when the project runs
+     * the Grails annotation processor.
+     *
+     * @since 9.0
+     */
+    protected void configurePluginCompilation(Project project) {
+        SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+        if (mainSourceSet == null) {
+            return
+        }
+        Provider<String> version = project.provider {
+            Object value = project.version
+            value != null && value.toString() != 'unspecified' ? value.toString() : null
+        }
+        Directory configDir = project.layout.projectDirectory.dir('grails-app/conf')
+        project.tasks.named(mainSourceSet.getCompileTaskName('groovy'), GroovyCompile).configure { GroovyCompile compile ->
+            GrailsPluginDescriptorProvider provider = project.objects.newInstance(GrailsPluginDescriptorProvider)
+            provider.pluginVersion.set(version)
+            provider.configDirectory.set(configDir.asFile)
+            provider.configFiles.from(configDir.file('plugin.yml'), configDir.file('plugin.groovy'))
+            compile.groovyOptions.forkOptions.jvmArgumentProviders.add(provider)
+        }
+        project.tasks.named(mainSourceSet.compileJavaTaskName, JavaCompile).configure { JavaCompile compile ->
+            compile.options.compilerArgumentProviders.add(new JavacPluginVersionProvider(version, compile.options))
+        }
+        FileCollection imports = pluginImportsFiles(project)
+        project.tasks.withType(GenerateI18nDescriptorTask).configureEach { GenerateI18nDescriptorTask task ->
+            task.pluginImports.from(imports)
+        }
+    }
+
+    /**
+     * The {@code META-INF/grails/plugins.imports} of the main source set: the one the compiler wrote beside the
+     * classes, or one checked in among the resources, as a project compiled without the Grails compiler has.
+     * The resources are read at their source, so a task that {@code processResources} packages may depend on
+     * this without a cycle.
+     *
+     * @since 9.0
+     */
+    static FileCollection pluginImportsFiles(Project project) {
+        SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+        (mainSourceSet.output.classesDirs + mainSourceSet.resources.sourceDirectories).asFileTree.matching { PatternFilterable pattern ->
+            pattern.include(PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
+        }
+    }
+
+    /**
+     * Marks the classes of a plugin project for the compiler, so an {@code Application} class it holds, which only
+     * runs the plugin in development, is given no servlet initializer.
+     */
     @Override
     protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
-        def versionProvider = project.provider { project.version.toString() }
-        compile.inputs.property('version', versionProvider)
-
-        def projectNameProvider = project.provider { project.name }
-        compile.inputs.property('name', projectNameProvider)
-
         Closure<String> parent = super.getGroovyCompilerScript(compile, project)
         return { ->
             """${parent?.call() ?: ''}
 
             withConfig(configuration) {
                 inline(phase: 'CONVERSION') { source, context, classNode ->
-                    classNode.putNodeMetaData('projectVersion', '${versionProvider.get()}')
-                    classNode.putNodeMetaData('projectName', '${projectNameProvider.get()}')
                     classNode.putNodeMetaData('isPlugin', 'true')
                 }
             }
@@ -281,7 +335,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                     'logback.groovy',
                     'logback.xml',
                     'logback-spring.xml',
-                    // Plugins must not ship spring/resources.groovy (use doWithSpring instead),
+                    // Plugins must not ship spring/resources.groovy (use beanRegistrar() or a beans block instead),
                     // but it must remain in build/resources/main/ so it is on the integration
                     // test classpath for plugin modules that test their own resources.groovy.
                     'spring/resources.groovy'
@@ -348,8 +402,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         project.tasks.named('processResources', ProcessResources).configure { ProcessResources task ->
             // grails-app/views is a resource directory, but a plugin's views are compiled rather
             // than packaged. Templates carrying the same GSPs are staged above, out of reach of
-            // this pattern.
-            task.exclude('**/*.gsp')
+            // this pattern. The compiler copies the plugin configuration files beside the plugin's
+            // descriptor, under META-INF/grails/plugins/<name>/, so they never collide at the root.
+            task.exclude('**/*.gsp', 'plugin.yml', 'plugin.groovy')
         }
 
         routeCommandResources(project, copyCommands)

@@ -21,14 +21,15 @@ under the License.
 ==== The Basics
 
 
-Grails plugins let you register dynamic methods with any Grails-managed or other class at runtime. This work is done in a `doWithDynamicMethods` method.
+Grails plugins let you register dynamic methods with any Grails-managed or other class at runtime. This work is done in the `doWithApplicationContext` method, which runs once the `ApplicationContext` has been refreshed, for each plugin in load order.
 
 NOTE: Note that Grails 3.x and above features newer features such as traits that are usable from code compiled with `CompileStatic`. It is recommended that dynamic behavior is only added for cases that are not possible with traits.
 
 [source,groovy]
 ----
-class ExamplePlugin extends Plugin {
-    void doWithDynamicMethods() {
+@GrailsPluginDescriptor
+class ExampleGrailsPlugin extends Plugin {
+    void doWithApplicationContext() {
         for (controllerClass in grailsApplication.controllerClasses) {
              controllerClass.metaClass.myNewMethod = {-> println "hello world" }
         }
@@ -42,10 +43,11 @@ For example we can add a new method `swapCase` to `java.lang.String`:
 
 [source,groovy]
 ----
-class ExamplePlugin extends Plugin  {
+@GrailsPluginDescriptor
+class ExampleGrailsPlugin extends Plugin  {
 
     @Override
-    void doWithDynamicMethods() {
+    void doWithApplicationContext() {
         String.metaClass.swapCase = {->
              def sb = new StringBuilder()
              delegate.each {
@@ -61,19 +63,22 @@ class ExamplePlugin extends Plugin  {
 }
 ----
 
+A plugin whose own `doWithApplicationContext` calls methods another plugin adds declares that plugin in `after` or `dependsOn`, so the other plugin's hook runs first.
+
 
 ==== Interacting with the ApplicationContext
 
 
-The `doWithDynamicMethods` closure gets passed the Spring `ApplicationContext` instance. This is useful as it lets you interact with objects within it. For example if you were implementing a method to interact with Hibernate you could use the `SessionFactory` instance in combination with a `HibernateTemplate`:
+The plugin's `applicationContext` property is the refreshed Spring `ApplicationContext`. This is useful as it lets you interact with objects within it. For example if you were implementing a method to interact with Hibernate you could use the `SessionFactory` instance in combination with a `HibernateTemplate`:
 
 [source,groovy]
 ----
 import org.springframework.orm.hibernate3.HibernateTemplate
 
-class ExampleHibernatePlugin extends Plugin{
+@GrailsPluginDescriptor
+class ExampleHibernateGrailsPlugin extends Plugin {
 
-   void doWithDynamicMethods() {
+   void doWithApplicationContext() {
 
        for (domainClass in grailsApplication.domainClasses) {
 
@@ -91,9 +96,10 @@ Also because of the autowiring and dependency injection capability of the Spring
 
 [source,groovy]
 ----
-class MyConstructorPlugin {
+@GrailsPluginDescriptor
+class MyConstructorGrailsPlugin extends Plugin {
 
-    void doWithDynamicMethods()
+    void doWithApplicationContext() {
          for (domainClass in grailsApplication.domainClasses) {
               domainClass.metaClass.constructor = {->
                   return applicationContext.getBean(domainClass.name)

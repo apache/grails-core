@@ -36,7 +36,9 @@ Spring developers are often keen to understand how the Grails `ApplicationContex
 
 * GrailsAutoConfiguration registers GrailsApplicationPostProcessor bean. This bean configures the link:{api}grails/core/GrailsApplication.html[GrailsApplication] instance and the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager].
 
-* GrailsApplicationPostProcessor also implements `BeanDefinitionRegistryPostProcessor`, during `postProcessBeanDefinitionRegistry` it  executes `grails-app/conf/spring/resources.groovy` from the current application and then invokes the `doWithSpring` method for each plugin to ensure all the bean definitions are registered with application context.
+* Before Spring Boot reads the configuration classes and the auto-configurations, the plugins' `beanRegistrar()` hooks are applied in plugin load order, and the registry post-processors they register run, so the plugins' beans are in the registry when a `@ConditionalOnMissingBean` is evaluated.
+
+* GrailsApplicationPostProcessor also implements `BeanDefinitionRegistryPostProcessor`, during `postProcessBeanDefinitionRegistry` it executes `grails-app/conf/spring/resources.groovy` from the current application and the `doWithSpring` method of the `Application` class, whose beans replace a plugin bean of the same name.
 
 ==== Configured Spring Beans
 

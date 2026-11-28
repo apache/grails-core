@@ -120,7 +120,7 @@ class CoreGrailsPluginAotSpec extends Specification {
     }
 
     void "a datastore's own proxy handler is not replaced"() {
-        given: 'what a GORM implementation declares from doWithSpring, which runs earlier'
+        given: 'a proxy handler already registered, as one the application chose'
             SpringProperties.setProperty(AotDetector.AOT_ENABLED, 'false')
             context.registerBeanDefinition('proxyHandler', new RootBeanDefinition(String))
 

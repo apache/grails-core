@@ -32,9 +32,9 @@ import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.rest.Resource
 import grails.rest.render.errors.ValidationProblemDetailFactory
-import grails.util.GrailsUtil
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.plugins.web.rest.render.DefaultRendererRegistry
@@ -45,13 +45,12 @@ import org.grails.plugins.web.rest.render.SpringMessageConverters
  * @author Graeme Rocher
  */
 @CompileStatic
+@GrailsPluginDescriptor(
+        before = ['controllers'],
+        observe = ['domainClass'])
 class RestResponderGrailsPlugin extends Plugin {
 
     private static final Log LOG = LogFactory.getLog(RestResponderGrailsPlugin)
-
-    def version = GrailsUtil.getGrailsVersion()
-    def loadBefore = ['controllers']
-    def observe = ['domainClass']
 
     GrailsApplication grailsApplication
 

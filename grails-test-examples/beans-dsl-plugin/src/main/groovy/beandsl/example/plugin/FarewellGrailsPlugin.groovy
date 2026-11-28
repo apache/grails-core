@@ -22,6 +22,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration
 
 import grails.compiler.beans.GrailsBeans
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * Demonstrates {@code @GrailsBeans} applied directly to a {@code *GrailsPlugin.groovy}-style
@@ -34,9 +35,8 @@ import grails.plugins.Plugin
  */
 @GrailsBeans
 @AutoConfiguration
+@GrailsPluginDescriptor
 class FarewellGrailsPlugin extends Plugin {
-
-    String version = '1.0'
 
     def beans = {
         bean('farewell', Farewell) {

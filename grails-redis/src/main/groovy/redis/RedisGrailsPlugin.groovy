@@ -24,28 +24,11 @@ import org.springframework.beans.factory.BeanRegistry
 import org.springframework.core.env.Environment
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.plugins.redis.RedisBeanDefinitionsPostProcessor
 
+@GrailsPluginDescriptor
 class RedisGrailsPlugin extends Plugin {
-
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-    def pluginExcludes = [
-            'codenarc.properties',
-            'grails-app/conf/**',
-            'grails-app/views/**',
-            'grails-app/domain/**',
-            'grails-app/services/test/**'
-    ]
-
-    def title = 'Redis Plugin' // Headline display name of the plugin
-    def author = 'Apache Grails Team'
-    def authorEmail = ''
-
-    def description = '''The Redis plugin provides integration with a Redis datastore. Redis is a lightning fast 'data structure server'.  The plugin enables a number of memoization techniques to cache results from complex operations in Redis.'''
-    def issueManagement = [system: 'github', url: 'https://github.com/grails-plugins/grails-redis/issues']
-    def scm = [ url: 'https://github.com/apache/grails-core']
-    def documentation = 'https://grails.apache.org/documentation.html'
-    def license = 'APACHE'
 
     @Override
     BeanRegistrar beanRegistrar() {

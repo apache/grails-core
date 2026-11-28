@@ -196,7 +196,7 @@ class GenerateScaffoldedViewsTaskSpec extends Specification {
         }
     }
 
-    private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails-plugin.xml'
+    private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails/plugins.imports'
 
     private GenerateScaffoldedViewsTask task(Object overrides = []) {
         Project project = ProjectBuilder.builder().withProjectDir(projectDir).build()
@@ -572,6 +572,40 @@ class GenerateScaffoldedViewsTaskSpec extends Specification {
 
         then:
             handed(task)['com.plugin.Widget/show'] == ['show ${className}']
+    }
+
+    void 'a scaffolded controller in a plugin class directory, whose descriptor the compiler wrote beside it, is found'() {
+        given: 'a Gradle project dependency on a plugin, its classes and descriptor in one directory'
+            File pluginClassesDir = new File(projectDir, 'exploded-plugin-classes')
+            new File(pluginClassesDir, PLUGIN_DESCRIPTOR).with { parentFile.mkdirs(); text = 'widget\n' }
+            writeClass(pluginClassesDir, 'com/plugin/WidgetController', scaffolded('com/plugin/WidgetController', 'com/plugin/Widget'))
+            writeClass(pluginClassesDir, 'com/plugin/Widget', plain('com/plugin/Widget', 'java/lang/Object') { })
+            def task = task()
+            task.runtimeClasspath.from(pluginClassesDir)
+            task.pageClasspath.from(pluginClassesDir)
+
+        when:
+            task.generate()
+
+        then:
+            handed(task)['com.plugin.Widget/show'] == ['show ${className}']
+    }
+
+    void 'a jar carrying only a Grails 8 META-INF/grails-plugin.xml is not a plugin, so its controllers are not expanded'() {
+        given:
+            File legacyPlugin = new File(projectDir, 'legacy-plugin.jar')
+            writeJar(legacyPlugin, ['META-INF/grails-plugin.xml': '<plugin name="legacy" version="1.0.0"/>'.bytes,
+                                    'com/legacy/LegacyController.class': scaffolded('com/legacy/LegacyController', 'com/legacy/Legacy'),
+                                    'com/legacy/Legacy.class': plain('com/legacy/Legacy', 'java/lang/Object') { }])
+            def task = task()
+            task.runtimeClasspath.from(legacyPlugin)
+            task.pageClasspath.from(legacyPlugin)
+
+        when:
+            task.generate()
+
+        then:
+            !handed(task).containsKey('com.legacy.Legacy/show')
     }
 
     void 'a plugin the pages cannot be compiled against has none expanded for its controllers, and the others still do'() {

@@ -36,6 +36,23 @@ class AutoConfigurationImportsCompileInput {
             return
         }
         task.extensions.extraProperties.set(INPUT_REGISTERED, true)
+        task.doLast { GroovyCompile compile ->
+            File classes = compile.destinationDirectory.get().asFile
+            File imports = new File(classes, PATH.substring('src/main/resources/'.length()))
+            if (imports.isFile()) {
+                List<String> lines = imports.readLines('UTF-8')
+                List<String> kept = lines.findAll { String name ->
+                    new File(classes, name.replace('.', '/') + '.class').isFile()
+                }
+                if (kept != lines) {
+                    if (kept) {
+                        imports.setText(kept.join('\n') + '\n', 'UTF-8')
+                    } else {
+                        java.nio.file.Files.delete(imports.toPath())
+                    }
+                }
+            }
+        }
         task.inputs.files(project.layout.projectDirectory.file(PATH))
                 .withPropertyName('grailsAutoConfigurationImports')
                 .withPathSensitivity(PathSensitivity.RELATIVE)

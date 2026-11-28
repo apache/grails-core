@@ -195,7 +195,6 @@ public class GroovyPageParser implements Tokens {
 
     private final String pageName;
     public static final String[] DEFAULT_IMPORTS = {
-        "grails.plugins.metadata.GrailsPlugin",
         "org.grails.gsp.compiler.transform.LineNumber",
         "org.grails.gsp.GroovyPage",
         "org.grails.web.taglib.*",
@@ -227,7 +226,6 @@ public class GroovyPageParser implements Tokens {
      */
     private static final String TRIM_LOGIC_LINES_DIRECTIVE = "trimLogicLines";
 
-    private String pluginAnnotation;
     public static final String GROOVY_SOURCE_CHAR_ENCODING = "UTF-8";
     private Map<String, String> jspTags = new HashMap<>();
     private String sourceChecksum;
@@ -894,9 +892,6 @@ public class GroovyPageParser implements Tokens {
 
         if (finalPass) {
             out.println();
-            if (pluginAnnotation != null) {
-                out.println(pluginAnnotation);
-            }
             if (isCompileStaticMode()) {
                 out.println("@groovy.transform.CompileStatic(extensions = ['" + GroovyPageTypeCheckingExtension.class.getName() + "'])");
                 if (allowedTaglibNamespaces != null && !allowedTaglibNamespaces.isEmpty()) {

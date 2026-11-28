@@ -20,6 +20,7 @@ package org.grails.gsp.io;
 
 import java.io.File;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -51,7 +52,7 @@ import grails.util.Environment;
 import org.grails.gsp.GroovyPage;
 import org.grails.gsp.GroovyPageBinding;
 import org.grails.io.support.GrailsResourceUtils;
-import org.grails.plugins.BinaryGrailsPlugin;
+import org.grails.plugins.DefaultGrailsPlugin;
 import org.grails.taglib.TemplateVariableBinding;
 
 /**
@@ -120,9 +121,8 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
 
         if (pluginManager != null) {
             GrailsPlugin grailsPlugin = pluginManager.getGrailsPlugin(pluginName);
-            if (grailsPlugin instanceof BinaryGrailsPlugin) {
-                BinaryGrailsPlugin binaryGrailsPlugin = (BinaryGrailsPlugin) grailsPlugin;
-                File projectDirectory = binaryGrailsPlugin.getProjectDirectory();
+            if (grailsPlugin instanceof DefaultGrailsPlugin pluginWithClasses) {
+                File projectDirectory = pluginWithClasses.getProjectDirectory();
                 if (projectDirectory != null) {
                     File f = new File(projectDirectory, GrailsResourceUtils.VIEWS_DIR_PATH + uri);
                     if (f.exists()) {
@@ -130,7 +130,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
                     }
                 }
                 else {
-                    scriptSource = resolveViewInBinaryPlugin(binaryGrailsPlugin, uri);
+                    scriptSource = resolveViewInBinaryPlugin(pluginWithClasses, uri);
                 }
             }
         }
@@ -185,10 +185,10 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
 
         if (scriptSource == null) {
             GrailsPlugin pagePlugin = binding instanceof GroovyPageBinding ? ((GroovyPageBinding) binding).getPagePlugin() : null;
-            if (pagePlugin instanceof BinaryGrailsPlugin) {
-                BinaryGrailsPlugin binaryPlugin = (BinaryGrailsPlugin) pagePlugin;
-                scriptSource = resolveViewInBinaryPlugin(binaryPlugin, uri);
-            } else if (pagePlugin != null) {
+            if (pagePlugin instanceof DefaultGrailsPlugin defaultPlugin) {
+                scriptSource = resolveViewInBinaryPlugin(defaultPlugin, uri);
+            }
+            if (scriptSource == null && pagePlugin != null) {
                 scriptSource = findResourceScriptSource(resolvePluginViewPath(uri, pagePlugin));
             }
         }
@@ -200,7 +200,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
         return scriptSource;
     }
 
-    protected GroovyPageScriptSource resolveViewInBinaryPlugin(BinaryGrailsPlugin binaryPlugin, String uri) {
+    protected GroovyPageScriptSource resolveViewInBinaryPlugin(DefaultGrailsPlugin binaryPlugin, String uri) {
         GroovyPageScriptSource scriptSource = null;
         uri = removeViewLocationPrefixes(uri);
         uri = GrailsResourceUtils.appendPiecesForUri(PATH_TO_WEB_INF_VIEWS, uri);
@@ -230,15 +230,11 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
             return null;
         }
 
-        List<GrailsPlugin> allPlugins = Arrays.asList(pluginManager.getAllPlugins());
-        Collections.reverse(allPlugins);
-
-        for (GrailsPlugin plugin : allPlugins) {
-            if (!(plugin instanceof BinaryGrailsPlugin)) {
+        for (GrailsPlugin plugin : pluginsLatestFirst()) {
+            if (!(plugin instanceof DefaultGrailsPlugin binaryPlugin)) {
                 continue;
             }
 
-            BinaryGrailsPlugin binaryPlugin = (BinaryGrailsPlugin) plugin;
             if (LOG.isDebugEnabled()) {
                 LOG.debug(String.format("Searching plugin [%s] for GSP view [%s]", plugin.getName(), uri));
             }
@@ -260,7 +256,14 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
         return null;
     }
 
-    private GroovyPageScriptSource resolveViewInPluginProjectDirectory(BinaryGrailsPlugin binaryPlugin, String uri) {
+    /** The plugins from the last one back: where two plugins have the same view, the later one wins. */
+    private List<GrailsPlugin> pluginsLatestFirst() {
+        List<GrailsPlugin> plugins = new ArrayList<>(Arrays.asList(pluginManager.getAllPlugins()));
+        Collections.reverse(plugins);
+        return plugins;
+    }
+
+    private GroovyPageScriptSource resolveViewInPluginProjectDirectory(DefaultGrailsPlugin binaryPlugin, String uri) {
         File projectDirectory = binaryPlugin.getProjectDirectory();
         File f = new File(projectDirectory, "grails-app/views" + uri);
         if (f.exists()) {
@@ -274,11 +277,8 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
             return null;
         }
 
-        for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
-            if (plugin instanceof BinaryGrailsPlugin) {
-                continue;
-            }
-
+        // the later plugin's view wins, as findBinaryScriptSource lets it for a precompiled view
+        for (GrailsPlugin plugin : pluginsLatestFirst()) {
             GroovyPageScriptSource scriptSource = findResourceScriptSource(resolvePluginViewPath(uri, plugin));
             if (scriptSource != null) {
                 return scriptSource;
@@ -293,11 +293,7 @@ public class DefaultGroovyPageLocator implements GroovyPageLocator, ResourceLoad
             return null;
         }
 
-        for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
-            if (plugin instanceof BinaryGrailsPlugin) {
-                continue;
-            }
-
+        for (GrailsPlugin plugin : pluginsLatestFirst()) {
             Resource resource = findResource(resolvePluginViewPath(uri, plugin));
             if (resource != null) {
                 return resource;

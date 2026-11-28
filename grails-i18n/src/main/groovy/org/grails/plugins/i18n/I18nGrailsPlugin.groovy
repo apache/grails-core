@@ -44,8 +44,8 @@ import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.BuildSettings
-import grails.util.GrailsUtil
 import org.grails.web.i18n.ParamsAwareLocaleChangeInterceptor
 
 /**
@@ -58,11 +58,10 @@ import org.grails.web.i18n.ParamsAwareLocaleChangeInterceptor
 @CompileStatic
 @AutoConfiguration(before = WebMvcAutoConfiguration)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@GrailsPluginDescriptor(watchedResources = ['file:./grails-app/i18n/**/*.properties'])
 class I18nGrailsPlugin extends Plugin {
 
     String baseDir = 'grails-app/i18n'
-    String version = GrailsUtil.getGrailsVersion()
-    String watchedResources = "file:./${baseDir}/**/*.properties".toString()
 
     /**
      * Publishes the discovered available locales to the servlet context so that views and the

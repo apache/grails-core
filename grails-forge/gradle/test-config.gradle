@@ -42,7 +42,10 @@ tasks.withType(Test).configureEach { Test testTask ->
                     gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
                     gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
             )
-            testTask.environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('../build/local-maven')))
+            // TEMPORARY, revert before merge: the generated applications also resolve the Grails 9 build of
+            // asset-pipeline (wondrify/asset-pipeline#503) from the fork it is served from, as this build does
+            testTask.environment('GRAILS_REPO_URL',
+                    "${uri(rootProject.layout.projectDirectory.dir('../build/local-maven'))};https://raw.githubusercontent.com/codeconsole/asset-pipeline/a3ba6dad29382ef18fb82cf50d16905252a2c33e")
             if (classicFramework) {
                 // Groovy 6 loads a classic-compiled class only with groovy-callsite. The specs pass this
                 // init script to every generated build (GeneratedBuild in the CLI module's test fixtures

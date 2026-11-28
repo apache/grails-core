@@ -25,7 +25,7 @@ import grails.plugins.GrailsPluginManager
 import grails.plugins.PluginManagerAware
 import grails.views.ViewConfiguration
 import org.grails.io.support.GrailsResourceUtils
-import org.grails.plugins.BinaryGrailsPlugin
+import org.grails.plugins.DefaultGrailsPlugin
 
 /**
  * A template resolver capable of looking through the installed Grails plugins and finding a template within the scope of the plugin
@@ -72,9 +72,9 @@ class PluginAwareTemplateResolver extends GenericGroovyTemplateResolver implemen
         URL applicationTemplate = super.resolveTemplate(path)
         if (applicationTemplate == null && pluginManager != null) {
             for (plugin in pluginManager.allPlugins) {
-                if (plugin instanceof BinaryGrailsPlugin) {
-                    BinaryGrailsPlugin binaryGrailsPlugin = (BinaryGrailsPlugin) plugin
-                    File projectDirectory = binaryGrailsPlugin.getProjectDirectory()
+                if (plugin instanceof DefaultGrailsPlugin) {
+                    DefaultGrailsPlugin pluginWithClasses = (DefaultGrailsPlugin) plugin
+                    File projectDirectory = pluginWithClasses.getProjectDirectory()
                     if (projectDirectory != null) {
                         File f = new File(projectDirectory, GrailsResourceUtils.VIEWS_DIR_PATH + path.replaceFirst('/', ''))
                         if (f.exists()) {

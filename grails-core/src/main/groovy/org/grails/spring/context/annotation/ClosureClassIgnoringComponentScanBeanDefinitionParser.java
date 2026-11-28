@@ -18,24 +18,14 @@
  */
 package org.grails.spring.context.annotation;
 
-import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.w3c.dom.Element;
 
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.HierarchicalBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.xml.ParserContext;
-import org.springframework.beans.factory.xml.XmlReaderContext;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.context.annotation.ComponentScanBeanDefinitionParser;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.AntPathMatcher;
 
-import grails.plugins.GrailsPluginManager;
 import grails.util.GrailsStringUtils;
 
 /**
@@ -47,32 +37,6 @@ import grails.util.GrailsStringUtils;
  * @since 1.2
  */
 public class ClosureClassIgnoringComponentScanBeanDefinitionParser extends ComponentScanBeanDefinitionParser {
-
-    private static final Log LOG = LogFactory.getLog(ClosureClassIgnoringComponentScanBeanDefinitionParser.class);
-
-    @Override
-    protected ClassPathBeanDefinitionScanner createScanner(XmlReaderContext readerContext, boolean useDefaultFilters) {
-        final ClassPathBeanDefinitionScanner scanner = super.createScanner(readerContext, useDefaultFilters);
-        BeanDefinitionRegistry beanDefinitionRegistry = readerContext.getRegistry();
-
-        GrailsPluginManager pluginManager = null;
-
-        if (beanDefinitionRegistry instanceof HierarchicalBeanFactory) {
-            HierarchicalBeanFactory beanFactory = (HierarchicalBeanFactory) beanDefinitionRegistry;
-            BeanFactory parent = beanFactory.getParentBeanFactory();
-            if (parent != null && parent.containsBean(GrailsPluginManager.BEAN_NAME)) {
-                pluginManager = parent.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager.class);
-            }
-        }
-
-        if (pluginManager != null) {
-            List<TypeFilter> typeFilters = pluginManager.getTypeFilters();
-            for (TypeFilter typeFilter : typeFilters) {
-                scanner.addIncludeFilter(typeFilter);
-            }
-        }
-        return scanner;
-    }
 
     @Override
     protected ClassPathBeanDefinitionScanner configureScanner(ParserContext parserContext, Element element) {

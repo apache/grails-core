@@ -1,3 +1,9 @@
 plugins {
     id 'org.apache.grails.gradle.grails-plugin'
 }
+
+// Compiled without the Grails compiler, so the plugins.imports it would write is checked in
+grails {
+    bom = null
+    cliAutoProvision = false
+}

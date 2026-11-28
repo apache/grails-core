@@ -203,6 +203,14 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
     public static final String RESOLVED_TARGET_DIRECTORY_METADATA =
             GrailsBeansASTTransformation.class.getName() + ".resolvedTargetDirectory";
 
+    /**
+     * Class-node metadata on a plugin class naming the auto-configuration its {@code beans} block compiled
+     * onto (its sibling). grails-core orders the sibling against the siblings of the plugins the descriptor
+     * names; this module knows nothing of plugin descriptors beyond the annotation's name.
+     */
+    public static final String AUTO_CONFIGURATION_SIBLING_METADATA =
+            GrailsBeansASTTransformation.class.getName() + ".autoConfigurationSibling";
+
     private static final String BEANS_PROPERTY = "beans";
     private static final String BEAN_CALL = "bean";
     private static final String FIELD_CALL = "field";
@@ -537,7 +545,14 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         return configuration;
     }
 
+    private static final String PLUGIN_DESCRIPTOR_ANNOTATION_NAME = "grails.plugins.metadata.GrailsPluginDescriptor";
+
     private boolean extendsGrailsPlugin(ClassNode classNode) {
+        for (AnnotationNode annotation : classNode.getAnnotations()) {
+            if (PLUGIN_DESCRIPTOR_ANNOTATION_NAME.equals(annotation.getClassNode().getName())) {
+                return true;
+            }
+        }
         for (ClassNode current = classNode.getSuperClass(); current != null; current = current.getSuperClass()) {
             if (PLUGIN_SUPERCLASS_NAME.equals(current.getName())) {
                 return true;
@@ -593,8 +608,27 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         // The name is settled here and nowhere else, so this is where it is registered.
         AutoConfigurationImportsWriter.register(
                 siblingName, targetDirectory(pluginClass, source), source, compilationUnit);
+        recordSibling(pluginClass, grailsBeansAnnotation, sibling);
 
         return sibling;
+    }
+
+    /**
+     * Records the sibling on the plugin class: as node metadata, which grails-core orders it by, and as
+     * the qualified {@code autoConfigurationName} of the plugin's {@code @GrailsBeans}, which the
+     * annotation's class retention keeps in the plugin's class file for the plugin descriptor to publish
+     * (a beans block compiled without the annotation is given one).
+     */
+    private static void recordSibling(ClassNode pluginClass, AnnotationNode grailsBeansAnnotation, ClassNode sibling) {
+        pluginClass.putNodeMetaData(AUTO_CONFIGURATION_SIBLING_METADATA, sibling);
+        AnnotationNode recorded = grailsBeansAnnotation;
+        if (!pluginClass.getAnnotations().contains(grailsBeansAnnotation)) {
+            // the global transform compiles a descriptor's beans block with an annotation of its own
+            recorded = new AnnotationNode(ClassHelper.make(GrailsBeans.class));
+            recorded.setSourcePosition(pluginClass);
+            pluginClass.addAnnotation(recorded);
+        }
+        recorded.setMember(AUTO_CONFIGURATION_NAME_MEMBER, new ConstantExpression(sibling.getName()));
     }
 
     /**

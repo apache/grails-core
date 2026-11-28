@@ -87,6 +87,10 @@ class GroovyPageForkedCompiler {
         if (encoding) {
             compiler.encoding = encoding
         }
+        String viewsManifestPath = System.getProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH)
+        if (viewsManifestPath) {
+            compiler.viewsManifestPath = viewsManifestPath
+        }
         compiler.generatedViewsDirs = generatedViewDirectories()
         String optionalPages = System.getProperty(BuildSettings.OPTIONAL_GSP_PAGES)
         if (optionalPages) {

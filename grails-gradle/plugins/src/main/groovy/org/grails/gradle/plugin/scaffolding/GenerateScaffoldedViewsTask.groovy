@@ -106,7 +106,7 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
     private static final String TEMPLATE_PATH = 'META-INF/templates/scaffolding/'
 
     /** What marks an artifact as a Grails plugin, whose controllers are artefacts of the application. */
-    private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails-plugin.xml'
+    private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails/plugins.imports'
 
     /** What marks a classpath entry as one providing the servlet API. */
     private static final String SERVLET_API = 'jakarta/servlet/ServletRequest.class'
@@ -455,6 +455,7 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
                 // none where a task registered by hand leaves pageClasspath empty, as one written
                 // before it existed does: every plugin controller is then expanded, as it was
                 ClassLoader compilable = checksPageTypes ? pageLoader : null
+                Set<String> seenPluginControllers = [] as Set
                 for (File entry : runtimeClasspath.files) {
                     if (entry.isFile()) {
                         openArchive(entry)?.withCloseable { JarFile jar ->
@@ -463,6 +464,10 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
                             }
                             for (JarEntry e : jar.entries()) {
                                 if (!e.directory && e.name.endsWith('Controller.class')) {
+                                    String fqcn = e.name.substring(0, e.name.length() - 6).replace('/' as char, '.' as char)
+                                    if (!seenPluginControllers.add(fqcn)) {
+                                        continue
+                                    }
                                     byte[] bytes = jar.getInputStream(e).withCloseable { InputStream input -> input.bytes }
                                     Controller controller = readPluginController(bytes, "${entry.name}!/${e.name}", resources,
                                             compilable, ancestors)
@@ -476,6 +481,12 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
                     else if (entry.isDirectory() && new File(entry, PLUGIN_DESCRIPTOR).isFile()) {
                         entry.eachFileRecurse { File f ->
                             if (f.name.endsWith('Controller.class')) {
+                                String rel = entry.toPath().relativize(f.toPath()).toString()
+                                        .replace(File.separatorChar, '/' as char)
+                                String fqcn = rel.substring(0, rel.length() - 6).replace('/' as char, '.' as char)
+                                if (!seenPluginControllers.add(fqcn)) {
+                                    return
+                                }
                                 Controller controller = readPluginController(f.bytes, f.path, resources, compilable, ancestors)
                                 if (controller != null) {
                                     controllers.add(controller)

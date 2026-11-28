@@ -28,38 +28,16 @@ import org.springframework.core.env.Environment
 import grails.plugin.json.view.api.jsonapi.DefaultJsonApiIdRenderer
 import grails.plugin.json.view.mvc.JsonViewResolver
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.views.mvc.GenericGroovyTemplateViewResolver
 import grails.views.mvc.SmartViewResolver
 import grails.views.resolve.PluginAwareTemplateResolver
 
 @CompileStatic
+@GrailsPluginDescriptor
 class JsonViewGrailsPlugin extends Plugin {
 
-    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-
-    def title = 'JSON Views' // Headline display name of the plugin
-    def author = 'Apache Grails Team'
-    def authorEmail = ''
-    def description = 'A plugin that allows rendering of JSON views'
-    def profiles = ['web']
-
-    // URL to the plugin's documentation
-    def documentation = 'https://grails.apache.org/docs/snapshot/guide/theWebLayer.html#gson'
-
     // Extra (optional) plugin metadata
-
-    // License: one of 'APACHE', 'GPL2', 'GPL3'
-    def license = 'APACHE'
-
-    // Details of company behind the plugin (if there is one)
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-
-    // Location of the plugin's issue tracker.
-    def issueManagement = [ system: 'Github', url: 'https://github.com/apache/grails-core/issues' ]
-
-    // Online location of the plugin's browseable source code.
-    def scm = [ url: 'https://github.com/apache/grails-core' ]
 
     @Override
     BeanRegistrar beanRegistrar() {

@@ -21,26 +21,10 @@ package issue11005
 
 import grails.plugins.*
 
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+@GrailsPluginDescriptor
 class Issue11005GrailsPlugin extends Plugin {
-
-    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
-    // resources that are excluded from plugin packaging
-    def pluginExcludes = [
-        "grails-app/views/error.gsp"
-    ]
-
-    // TODO Fill in these fields
-    def title = "Issue11005" // Headline display name of the plugin
-    def author = "Your name"
-    def authorEmail = ""
-    def description = '''\
-Brief summary/description of the plugin.
-'''
-    def profiles = ['web']
-
-    // URL to the plugin's documentation
-    def documentation = "https://grails.apache.org/plugins.html"
 
     // Extra (optional) plugin metadata
 
@@ -59,17 +43,8 @@ Brief summary/description of the plugin.
     // Online location of the plugin's browseable source code.
 //    def scm = [ url: "http://svn.codehaus.org/grails-plugins/" ]
 
-    Closure doWithSpring() { {->
-            // TODO Implement runtime spring config (optional)
-        }
-    }
-
-    void doWithDynamicMethods() {
-        // TODO Implement registering dynamic methods to classes (optional)
-    }
-
     void doWithApplicationContext() {
-        // TODO Implement post initialization spring config (optional)
+        // TODO Implement post initialization spring config, such as registering dynamic methods (optional)
     }
 
     void onChange(Map<String, Object> event) {

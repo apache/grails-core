@@ -34,9 +34,8 @@ import org.grails.plugins.web.GroovyPagesPostProcessor
 
 /**
  * Registers the {@code jspViewResolver} bean definition as a
- * {@link ScaffoldingViewResolver} unless a definition already exists, replacing
- * the registration the plugin previously performed through the
- * {@code doWithSpring()} bean DSL. Registering a definition (with the same
+ * {@link ScaffoldingViewResolver} unless a definition already exists, such as one
+ * a plugin overriding the scaffolding templates registers. Registering a definition (with the same
  * {@code abstractViewResolver} parent the GSP plugin's default uses) rather
  * than building the resolver directly keeps the view-resolver configuration in
  * one place and preserves the established post-processor pipeline.
@@ -61,10 +60,7 @@ class ScaffoldingViewResolverDefinitionPostProcessor implements BeanDefinitionRe
     void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         if (registry.containsBeanDefinition(JSP_VIEW_RESOLVER_BEAN_NAME)) {
             // Any existing definition wins, whether the application's or another
-            // plugin's. Note this is stricter than the old doWithSpring()
-            // registration, which overwrote definitions from earlier-loading
-            // plugins: scaffolding now stands down for those too, matching how
-            // GroovyPagesPostProcessor contributes its default.
+            // plugin's, matching how GroovyPagesPostProcessor contributes its default.
             return
         }
         GenericBeanDefinition definition = new GenericBeanDefinition()

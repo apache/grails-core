@@ -18,109 +18,133 @@
  */
 package org.grails.plugins;
 
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import grails.plugins.GrailsPlugin;
-import org.grails.plugins.DefaultGrailsPlugin;
-import org.grails.spring.DefaultRuntimeSpringConfiguration;
-import org.grails.spring.RuntimeSpringConfiguration;
-import org.grails.commons.test.AbstractGrailsMockTests;
-import grails.plugins.exceptions.PluginException;
-import org.springframework.context.ApplicationContext;
-
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import groovy.lang.GroovyClassLoader;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import org.springframework.beans.factory.BeanRegistrar;
+import org.springframework.beans.factory.support.BeanRegistryAdapter;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
+
+import grails.plugins.GrailsPlugin;
+import grails.plugins.exceptions.PluginException;
+import org.apache.grails.core.plugins.PluginUtils;
+import org.grails.commons.test.AbstractGrailsMockTests;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Test for the DefaultGrailsPlugin class
+ * Test for the DefaultGrailsPlugin class. The plugin classes are compiled at run time, so that no other test
+ * discovers them from the class path.
  *
  * @author Graeme Rocher
  */
 public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
 
+    @TempDir
+    Path temp;
+
     private Class<?> versioned;
     private Class<?> versioned2;
-    private Class<?> versioned3;
-    private Class<?> notVersion;
-    private Class<?> notPluginClass;
-    private Class<?> disabled;
+    private Class<?> unversioned;
     private Class<?> observed;
     private Class<?> camelCased;
 
     @Override
     protected void onSetUp() {
-        versioned = gcl.parseClass("class MyGrailsPlugin {\n" +
-                        "def version = 1.1;" +
-                        "def watchedResources = [\"file:./grails-app/taglib/**/*TagLib.groovy\", \"./grails-app/controller/**/*.groovy\", \"file:/absolutePath/**/*.gsp\" ]\n" +
-                        "def doWithSpring = {" +
-                        "classEditor(org.springframework.beans.propertyeditors.ClassEditor,application.classLoader)" +
-                        "}\n" +
-                        "def doWithApplicationContext = { ctx ->" +
-                        "assert ctx != null" +
-                        "}\n" +
-                        "def onChange = { event ->" +
-                        "assert event != null" +
-                        "}" +
-                        "}");
-        versioned2 = gcl.parseClass("class MyTwoGrailsPlugin extends grails.plugins.Plugin {\n" +
-                "def version = 1.1;" +
-                "Closure doWithSpring() { {->" +
-                "classEditor(org.springframework.beans.propertyeditors.ClassEditor,application.classLoader)" +
-                "}}\n" +
-                "}");
-        versioned3 = gcl.parseClass("class MyThreeGrailsPlugin extends grails.plugins.Plugin {\n" +
-                "def version = 1.1;" +
-                "Object invokeMethod(String name, Object args) {" +
-                "true" +
+        GroovyClassLoader versionedLoader = versionedLoader("MyGrailsPlugin", "my", "1.1",
+                "CamelCasedGrailsPlugin", "camelCased", "2.1");
+        versioned = versionedLoader.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(watchedResources = " +
+                "['file:./grails-app/taglib/**/*TagLib.groovy', './grails-app/controller/**/*.groovy', 'file:/absolutePath/**/*.gsp'])\n" +
+                "class MyGrailsPlugin extends grails.plugins.Plugin {\n" +
+                "org.springframework.beans.factory.BeanRegistrar beanRegistrar() { " +
+                "{ registry, environment -> registry.registerBean('classEditor', org.springframework.beans.propertyeditors.ClassEditor) " +
+                "{ it.supplier { new org.springframework.beans.propertyeditors.ClassEditor(grailsApplication.classLoader) } } } " +
+                "as org.springframework.beans.factory.BeanRegistrar }\n" +
+                "void doWithApplicationContext() {" +
+                "assert applicationContext != null" +
                 "}\n" +
-                "Closure doWithSpring() { {->" +
-                "classEditor(org.springframework.beans.propertyeditors.ClassEditor,application.classLoader)" +
-                "}}\n" +
+                "void onChange(Map<String, Object> event) {" +
+                "assert event != null" +
+                "}\n" +
                 "}");
-        notVersion = gcl.parseClass("class AnotherGrailsPlugin {\n" +
-                        "}");
-        notPluginClass = gcl.parseClass("class SomeOtherPlugin {\n" +
-                                        "def version = 1.4;" +
-                                        "}");
+        camelCased = versionedLoader.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
+                "class CamelCasedGrailsPlugin extends grails.plugins.Plugin {}");
+        versioned2 = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
+                "class MyTwoGrailsPlugin extends grails.plugins.Plugin {\n" +
+                "org.springframework.beans.factory.BeanRegistrar beanRegistrar() { " +
+                "{ registry, environment -> registry.registerBean('classEditor', org.springframework.beans.propertyeditors.ClassEditor) " +
+                "{ it.supplier { new org.springframework.beans.propertyeditors.ClassEditor(grailsApplication.classLoader) } } } " +
+                "as org.springframework.beans.factory.BeanRegistrar }\n" +
+                "}");
+        unversioned = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
+                "class AnotherGrailsPlugin extends grails.plugins.Plugin {\n" +
+                "}");
+        observed = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(observe = ['another'])\n" +
+                "class ObservingGrailsPlugin extends grails.plugins.Plugin {}");
+    }
 
-        disabled = gcl.parseClass("class DisabledGrailsPlugin {" +
-                                  "def version = 1.1; " +
-                                  "def status = 'disabled'; }");
-
-        observed = gcl.parseClass("class ObservingGrailsPlugin {" +
-                                  "def observe = ['another'];" +
-                                  "def version = 1.1; " +
-                                  "def status = 'disabled'; }");
-
-        camelCased = gcl.parseClass("class CamelCasedGrailsPlugin {" +
-                                    "def version = 2.1; " +
-                                    "def status = 'disabled'; }");
+    /**
+     * A class loader whose class path holds a descriptor recording the version of each given plugin, as a
+     * plugin jar does, so that a plugin class it compiles takes its version from it.
+     *
+     * @param classNameNameVersion triples of plugin class name, plugin name and version
+     */
+    private GroovyClassLoader versionedLoader(String... classNameNameVersion) {
+        StringBuilder imports = new StringBuilder();
+        try {
+            for (int i = 0; i < classNameNameVersion.length; i += 3) {
+                String className = classNameNameVersion[i];
+                String name = classNameNameVersion[i + 1];
+                imports.append(name).append('\n');
+                Path descriptor = temp.resolve(PluginUtils.getPluginDescriptorPath(name));
+                Files.createDirectories(descriptor.getParent());
+                Files.writeString(descriptor, "format.version=1\nname=" + name + "\nclass=" + className +
+                        "\nversion=" + classNameNameVersion[i + 2] + "\n");
+            }
+            Path importsFile = temp.resolve(PluginUtils.PLUGINS_IMPORTS_PATH);
+            Files.createDirectories(importsFile.getParent());
+            Files.writeString(importsFile, imports);
+            URLClassLoader parent = new URLClassLoader(new URL[]{temp.toUri().toURL()}, getClass().getClassLoader());
+            return new GroovyClassLoader(parent);
+        }
+        catch (MalformedURLException e) {
+            throw new IllegalStateException(e);
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @Test
     public void testDefaultGrailsPlugin() {
-        @SuppressWarnings("unused")
-        GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
+        GrailsPlugin unversionedPlugin = new DefaultGrailsPlugin(unversioned, ga);
+        assertEquals("another", unversionedPlugin.getName());
+        assertNull(unversionedPlugin.getVersion(), "A plugin registered without a descriptor has no version");
 
-        try {
-            @SuppressWarnings("unused")
-            GrailsPlugin notVersionPlugin = new DefaultGrailsPlugin(notVersion, ga);
-            fail("Should have thrown IllegalArgumentException for unversioned plugin");
-        }
-        catch (PluginException e) {
-            // expected
-        }
+        Class<?> notAPluginClass = gcl.parseClass("class SomeOtherPlugin {}");
+        assertThrows(PluginException.class, () -> new DefaultGrailsPlugin(notAPluginClass, ga));
 
-        try {
-            @SuppressWarnings("unused")
-            GrailsPlugin notPlugin = new DefaultGrailsPlugin(notPluginClass, ga);
-            fail("Should have thrown an exception for invalid plugin");
-        }
-        catch (IllegalArgumentException e) {
-            // expected
-        }
+        Class<?> notAnnotated = gcl.parseClass("class NotAnnotatedGrailsPlugin extends grails.plugins.Plugin {}");
+        assertThrows(PluginException.class, () -> new DefaultGrailsPlugin(notAnnotated, ga));
+
+        Class<?> notAPluginSubclass = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
+                "class NotASubclassGrailsPlugin {}");
+        assertThrows(PluginException.class, () -> new DefaultGrailsPlugin(notAPluginSubclass, ga));
     }
 
     @Test
@@ -133,22 +157,10 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
     }
 
     @Test
-    public void testDisabledPlugin() {
-        GrailsPlugin disabledPlugin = new DefaultGrailsPlugin(disabled, ga);
-        GrailsPlugin enabledPlugin = new DefaultGrailsPlugin(versioned, ga);
-
-        assertFalse(disabledPlugin.isEnabled());
-        assertTrue(enabledPlugin.isEnabled());
-    }
-
-    @Test
     public void testDoWithApplicationContext() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
 
-        RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
-        versionPlugin.doWithRuntimeConfiguration(springConfig);
-
-        ApplicationContext ctx = springConfig.getApplicationContext();
+        ApplicationContext ctx = contextWithBeansOf(versionPlugin);
 
         assertTrue(ctx.containsBean("classEditor"));
 
@@ -156,44 +168,38 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
     }
 
     @Test
-    public void testDoWithRuntimeConfiguration() {
+    public void testBeanRegistrar() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
 
-        RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
-        versionPlugin.doWithRuntimeConfiguration(springConfig);
-
-        ApplicationContext ctx = springConfig.getApplicationContext();
+        ApplicationContext ctx = contextWithBeansOf(versionPlugin);
 
         assertTrue(ctx.containsBean("classEditor"));
 
         // Version 2
         GrailsPlugin versionPlugin2 = new DefaultGrailsPlugin(versioned2, ga);
 
-        RuntimeSpringConfiguration springConfig2 = new DefaultRuntimeSpringConfiguration();
-        versionPlugin2.doWithRuntimeConfiguration(springConfig2);
-
-        ApplicationContext ctx2 = springConfig2.getApplicationContext();
+        ApplicationContext ctx2 = contextWithBeansOf(versionPlugin2);
 
         assertTrue(ctx2.containsBean("classEditor"));
     }
 
-    /**
-     * A closure resolves a call to its owner first, and the bean builder of {@code doWithSpring} does not change that
-     * (its delegate-first strategy has been commented out since the builder was restored for GRAILS-5779). A plugin
-     * that overrides {@code invokeMethod} therefore answers the {@code classEditor(...)} call of its own closure, and
-     * the bean is never defined. This test did not run between the move of the suites to the JUnit Platform and its
-     * conversion to JUnit 5, and expected the bean to be defined.
-     */
     @Test
-    public void testDoWithRuntimeConfigurationOfAPluginThatOverridesInvokeMethod() {
-        GrailsPlugin versionPlugin3 = new DefaultGrailsPlugin(versioned3, ga);
+    public void testAPluginWithoutBeansHasNoRegistrar() {
+        GrailsPlugin unversionedPlugin = new DefaultGrailsPlugin(unversioned, ga);
 
-        RuntimeSpringConfiguration springConfig3 = new DefaultRuntimeSpringConfiguration();
-        versionPlugin3.doWithRuntimeConfiguration(springConfig3);
+        assertNull(unversionedPlugin.getBeanRegistrar());
+    }
 
-        ApplicationContext ctx3 = springConfig3.getApplicationContext();
-
-        assertFalse(ctx3.containsBean("classEditor"));
+    /**
+     * A refreshed context holding the beans the plugin's registrar registers, applied as the runtime applies it.
+     */
+    private static ApplicationContext contextWithBeansOf(GrailsPlugin plugin) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        BeanRegistrar registrar = plugin.getBeanRegistrar();
+        new BeanRegistryAdapter(context, context.getBeanFactory(), context.getEnvironment(), registrar.getClass())
+                .register(registrar);
+        context.refresh();
+        return context;
     }
 
     @Test

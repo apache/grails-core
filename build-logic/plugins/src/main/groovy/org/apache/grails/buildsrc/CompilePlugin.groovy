@@ -75,7 +75,39 @@ class CompilePlugin implements Plugin<Project> {
         configureJars(project)
         configureCompiler(project)
         configureCallSiteModule(project)
+        configurePluginDescriptorGeneration(project)
         configureReproducible(project)
+    }
+
+    /**
+     * Gives the Groovy compiler of each framework module's main source set the module version and its
+     * {@code grails-app/conf}, which the compiler writes into the descriptors of the plugins the module
+     * declares (see {@link PluginDescriptorArgumentProvider}). A module that applies the Grails plugin
+     * Gradle plugin is given them by that plugin instead.
+     */
+    private static void configurePluginDescriptorGeneration(Project project) {
+        if (project.gradle.rootProject.name in GRADLE_SIDE_BUILDS) {
+            return
+        }
+        def main = project.extensions.getByType(JavaPluginExtension).sourceSets.findByName(SourceSet.MAIN_SOURCE_SET_NAME)
+        if (main == null) {
+            return
+        }
+        def configDir = project.layout.projectDirectory.dir('grails-app/conf')
+        project.tasks.withType(GroovyCompile).configureEach { GroovyCompile compile ->
+            if (compile.name != main.getCompileTaskName('groovy') ||
+                    project.plugins.hasPlugin('org.apache.grails.gradle.grails-plugin')) {
+                return
+            }
+            def provider = project.objects.newInstance(PluginDescriptorArgumentProvider)
+            provider.pluginVersion.set(project.provider {
+                Object version = project.version
+                version != null && version.toString() != 'unspecified' ? version.toString() : null
+            })
+            provider.configDirectory.set(configDir.asFile)
+            provider.configFiles.from(configDir.file('plugin.yml'), configDir.file('plugin.groovy'))
+            compile.groovyOptions.forkOptions.jvmArgumentProviders.add(provider)
+        }
     }
 
     /**

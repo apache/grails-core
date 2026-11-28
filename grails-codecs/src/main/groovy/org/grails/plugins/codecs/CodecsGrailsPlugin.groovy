@@ -19,7 +19,7 @@
 package org.grails.plugins.codecs
 
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.encoder.impl.HTML4Codec
 import org.grails.encoder.impl.HTMLJSCodec
 import org.grails.encoder.impl.JavaScriptCodec
@@ -31,17 +31,15 @@ import org.grails.encoder.impl.RawCodec
  * @author Jeff Brown
  * @since 0.4
  */
-class CodecsGrailsPlugin extends Plugin {
-
-    def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [core: version]
-    def watchedResources = 'file:./grails-app/utils/**/*Codec.groovy'
-    def providedArtefacts = [
-            HTMLCodec,
-            HTML4Codec,
-            JavaScriptCodec,
-            HTMLJSCodec,
-            URLCodec,
-            RawCodec
-    ]
-}
+@GrailsPluginDescriptor(
+        dependsOn = ['core:${plugin.version}'],
+        watchedResources = ['file:./grails-app/utils/**/*Codec.groovy'],
+        providedArtefacts = [
+                HTMLCodec,
+                HTML4Codec,
+                JavaScriptCodec,
+                HTMLJSCodec,
+                URLCodec,
+                RawCodec
+        ])
+class CodecsGrailsPlugin extends Plugin {}

@@ -39,9 +39,13 @@ ext {
     sbomProjectType = org.cyclonedx.model.Component.Type.LIBRARY.name()
 }
 
+sourceSets.main.groovy.srcDir(layout.projectDirectory.dir('../plugin-descriptor/src/main/groovy'))
+
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
+    // The descriptor writer also executes on consuming Groovy compilers' compile classpaths.
+    api 'org.ow2.asm:asm'
     implementation project(':grails-gradle-common') // XmlParserFeature
 
     // compile grails-gradle-model with the Groovy version provided by Gradle

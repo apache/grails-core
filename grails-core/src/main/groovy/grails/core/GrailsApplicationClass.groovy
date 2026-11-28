@@ -19,11 +19,25 @@
 package grails.core
 
 /**
- * Marker interface for the GrailsApplicationClass
+ * The application class: the lifecycle hooks it shares with plugins ({@link GrailsApplicationLifeCycle}),
+ * and {@link #doWithSpring()}, which only an application has.
  *
  * @author Graeme Rocher
  * @since 3.0.10
  */
 trait GrailsApplicationClass implements GrailsApplicationLifeCycle {
 
+    /**
+     * Beans of the application in the bean builder DSL, registered after the plugins' beans and the
+     * auto-configurations, together with those of {@code grails-app/conf/spring/resources.groovy}, so
+     * they replace a bean of the same name. A plugin has no such hook: it registers its beans with
+     * {@link #beanRegistrar()} or a {@code beans} block.
+     *
+     * @return A closure that defines beans to be registered by Spring, or {@code null} for none
+     * @deprecated since 8.0 in favour of {@link #beanRegistrar()}. The underlying bean builder DSL
+     * remains available but is no longer actively supported and will not receive fixes for new
+     * issues.
+     */
+    @Deprecated(since = '8.0')
+    abstract Closure doWithSpring()
 }

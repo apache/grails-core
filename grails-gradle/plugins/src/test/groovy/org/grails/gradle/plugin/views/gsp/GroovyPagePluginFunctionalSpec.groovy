@@ -231,7 +231,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         }
         // a plugin whose controller cannot be read, and a classpath entry that holds nothing to read
         new JarOutputStream(new File(projectDir, 'damaged-plugin.jar').newOutputStream()).withCloseable { JarOutputStream out ->
-            ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+            ['META-INF/grails/plugins.imports': 'example\n'.bytes,
              'com/plugin/DamagedController.class': [0xCA, 0xFE, 0xBA, 0xBE, 0, 0] as byte[]].each { String name, byte[] bytes ->
                 out.putNextEntry(new JarEntry(name))
                 out.write(bytes)
@@ -339,7 +339,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         scaffold.visitEnd()
         controller.visitEnd()
         new JarOutputStream(new File(projectDir, 'widget-plugin.jar').newOutputStream()).withCloseable { JarOutputStream out ->
-            ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+            ['META-INF/grails/plugins.imports': 'example\n'.bytes,
              'com/plugin/WidgetController.class': controller.toByteArray(),
              'META-INF/templates/scaffolding/show.gsp': 'widget show ${className}'.bytes].each { String name, byte[] bytes ->
                 out.putNextEntry(new JarEntry(name))
@@ -399,7 +399,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
             domain.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, type, null, 'java/lang/Object', null)
             domain.visitEnd()
             new JarOutputStream(new File(projectDir, "${name}-plugin.jar").newOutputStream()).withCloseable { JarOutputStream out ->
-                ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+                ['META-INF/grails/plugins.imports': 'example\n'.bytes,
                  ("${type}Controller.class".toString()): controller.toByteArray(),
                  ("${type}.class".toString()): domain.toByteArray(),
                  'META-INF/templates/scaffolding/show.gsp': "${name} show \${className}".bytes].each { String entry, byte[] bytes ->
@@ -500,7 +500,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         scaffold.visitEnd()
         controller.visitEnd()
         new JarOutputStream(new File(projectDir, 'widget-plugin.jar').newOutputStream()).withCloseable { JarOutputStream out ->
-            ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+            ['META-INF/grails/plugins.imports': 'example\n'.bytes,
              'com/plugin/WidgetController.class': controller.toByteArray(),
              'META-INF/templates/scaffolding/show.gsp': 'widget show ${className}'.bytes].each { String name, byte[] bytes ->
                 out.putNextEntry(new JarEntry(name))
@@ -552,5 +552,103 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
 
         then: 'there is nothing to compile, as there was before any page was generated'
         compilation.task(':compileGroovyPages').outcome == TaskOutcome.NO_SOURCE
+    }
+
+    def "a plugin derives its namespaced views manifest path from the generated descriptor on clean builds with configuration cache"() {
+        given: 'a plugin whose Gradle project name differs from its *GrailsPlugin descriptor class'
+        def runner = setupTestResourceProject('gsp-compile-classpath-grails')
+        File projectDir = runner.projectDir
+        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'custom-module-name'\n"
+        new File(projectDir, 'build.gradle').text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-plugin'
+                id 'org.apache.grails.gradle.grails-gsp'
+            }
+            group = 'org.example.test'
+            version = '1.0.0'
+            grails {
+                bom = null
+                cliAutoProvision = false
+            }
+            dependencies {
+                implementation localGroovy()
+                implementation files('compiler')
+            }
+        """.stripIndent()
+        [['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
+            File standInClass = new File(projectDir, "${dir}/${standIn}")
+            standInClass.parentFile.mkdirs()
+            standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
+        }
+        // The project is compiled without the Grails compiler, so its plugins.imports is checked in
+        File imports = new File(projectDir, 'src/main/resources/META-INF/grails/plugins.imports')
+        imports.parentFile.mkdirs()
+        imports.text = 'springSecurityCore\n'
+        File view = new File(projectDir, 'grails-app/views/login/auth.gsp')
+        view.parentFile.mkdirs()
+        view.text = '<p>Login</p>'
+        File recorded = new File(projectDir, 'build/gsp-classes/main/compiler.txt')
+
+        when: 'compiling pages from a clean build with configuration cache enabled'
+        def result = executeTask('compileGroovyPages', ['--configuration-cache'])
+
+        then: 'the manifest path uses the plugin name in plugins.imports rather than the Gradle project name'
+        assertTaskSuccess('compileGroovyPages', result)
+        recorded.readLines('UTF-8').contains('viewsManifestPath=META-INF/grails/plugins/springSecurityCore/views.properties')
+
+        when: 'running again from the configuration cache after deleting compiled page outputs'
+        new File(projectDir, 'build/gsp-classes').deleteDir()
+        def reused = executeTask('compileGroovyPages', ['--configuration-cache'])
+
+        then: 'the configuration cache entry is reused and the plugin logical name is still resolved'
+        reused.output.contains('Configuration cache entry reused')
+        recorded.readLines('UTF-8').contains('viewsManifestPath=META-INF/grails/plugins/springSecurityCore/views.properties')
+    }
+
+    def "a multi-plugin jar writes a views manifest for every plugin listed in plugins.imports"() {
+        given: 'a plugin project whose plugins.imports lists two plugins'
+        def runner = setupTestResourceProject('gsp-compile-classpath-grails')
+        File projectDir = runner.projectDir
+        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'multi-plugin-jar'\n"
+        new File(projectDir, 'build.gradle').text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-plugin'
+                id 'org.apache.grails.gradle.grails-gsp'
+            }
+            group = 'org.example.test'
+            version = '1.0.0'
+            grails {
+                bom = null
+                cliAutoProvision = false
+            }
+            dependencies {
+                implementation localGroovy()
+                implementation files('compiler')
+            }
+        """.stripIndent()
+        [['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
+            File standInClass = new File(projectDir, "${dir}/${standIn}")
+            standInClass.parentFile.mkdirs()
+            standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
+        }
+        File imports = new File(projectDir, 'src/main/resources/META-INF/grails/plugins.imports')
+        imports.parentFile.mkdirs()
+        imports.text = 'alpha\nbeta\n'
+        File view = new File(projectDir, 'grails-app/views/shared/index.gsp')
+        view.parentFile.mkdirs()
+        view.text = '<p>Shared</p>'
+
+        when: 'compiling pages'
+        def result = executeTask('compileGroovyPages', ['--configuration-cache'])
+
+        then: 'every plugin in plugins.imports gets its own views.properties manifest'
+        assertTaskSuccess('compileGroovyPages', result)
+        File alphaViews = new File(projectDir, 'build/gsp-classes/main/META-INF/grails/plugins/alpha/views.properties')
+        File betaViews = new File(projectDir, 'build/gsp-classes/main/META-INF/grails/plugins/beta/views.properties')
+        alphaViews.isFile()
+        betaViews.isFile()
+        betaViews.text == alphaViews.text
     }
 }

@@ -20,6 +20,9 @@ package grails.plugin.springsecurity.ui
 
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.factory.BeanRegistrar
+
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.ui.strategy.DefaultAclStrategy
 import grails.plugin.springsecurity.ui.strategy.DefaultErrorsStrategy
@@ -32,27 +35,31 @@ import grails.plugin.springsecurity.ui.strategy.DefaultRoleStrategy
 import grails.plugin.springsecurity.ui.strategy.DefaultUserStrategy
 import grails.plugin.springsecurity.ui.strategy.MailPluginMailStrategy
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * @author Burt Beckwith
  */
 @Slf4j
+@GrailsPluginDescriptor(after = ['springSecurityCore', 'springSecurityAcl'])
 class SpringSecurityUiGrailsPlugin extends Plugin {
 
-    String grailsVersion = '7.0.0-SNAPSHOT > *'
-    String author = 'Burt Beckwith'
-    String authorEmail = ''
-    String title = 'Spring Security UI plugin'
-    String description = 'User interface extensions for the Spring Security plugin'
-    String documentation = 'https://grails.apache.org/documentation.html'
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
-    def scm = [ url: 'https://github.com/apache/grails-core']
-    def loadAfter = ['springSecurityCore', 'springSecurityAcl']
-    def profiles = ['web']
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityUiBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
 
-    Closure doWithSpring() {
+    /**
+     * The beans of the Spring Security UI plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
 
             def conf = SpringSecurityUtils.securityConfig

@@ -20,6 +20,12 @@ package org.grails.testing
 
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.GenericBeanDefinition
+import org.springframework.core.Ordered
+import org.springframework.core.PriorityOrdered
 import org.springframework.core.env.Environment
 
 import spock.lang.Specification
@@ -31,32 +37,60 @@ class DefineBeansPluginHooksSpec extends Specification implements GrailsUnitTest
         !applicationContext.containsBean('namedJsonConfigurationRegistry')
     }
 
-    static class BothHooksPlugin {
-
-        Closure doWithSpring() {
-            { ->
-                dslOnlyBean(StringBuilder)
-                sharedBean(StringBuilder)
-            }
-        }
+    static class RegistrarPlugin {
 
         BeanRegistrar beanRegistrar() {
             return { BeanRegistry registry, Environment environment ->
                 registry.registerBean('registrarOnlyBean', StringBuffer)
                 registry.registerBean('sharedBean', StringBuffer)
+                registry.registerBean('pluginDefinitionsPostProcessor', PluginDefinitionsPostProcessor)
             } as BeanRegistrar
         }
     }
 
-    void "defineBeans applies both plugin hooks, mirroring the boot order"() {
-        when: 'a plugin defining both doWithSpring() and beanRegistrar() is passed to defineBeans'
-        defineBeans(new BothHooksPlugin())
+    /** Registers what the {@code BeanRegistry} API cannot express, as a plugin's post-processor does. */
+    static class PluginDefinitionsPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered {
 
-        then: 'the DSL beans and the registrar beans are both registered'
-        applicationContext.getBean('dslOnlyBean') instanceof StringBuilder
+        @Override
+        void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+            registry.registerBeanDefinition('postProcessorBean', new GenericBeanDefinition(beanClass: StringBuilder, lazyInit: true))
+            registry.registerAlias('postProcessorBean', 'postProcessorAlias')
+        }
+
+        @Override
+        void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+        }
+
+        @Override
+        int getOrder() {
+            Ordered.HIGHEST_PRECEDENCE
+        }
+    }
+
+    static class PluginWithoutRegistrar {
+    }
+
+    void "defineBeans applies a plugin's beanRegistrar, and runs the post-processors it registers"() {
+        when: 'a plugin is passed to defineBeans after the context has been refreshed'
+        defineBeans(new RegistrarPlugin())
+
+        then: 'the registrar beans are registered'
         applicationContext.getBean('registrarOnlyBean') instanceof StringBuffer
-
-        and: 'the registrar wins a name conflict with the deprecated DSL, as at boot'
         applicationContext.getBean('sharedBean') instanceof StringBuffer
+
+        and: 'the post-processor the registrar registered ran, as at boot, though Spring would not run it any more'
+        applicationContext.getBean('postProcessorBean') instanceof StringBuilder
+        applicationContext.getBean('postProcessorAlias').is(applicationContext.getBean('postProcessorBean'))
+    }
+
+    void "defineBeans of an object without beanRegistrar registers nothing"() {
+        given:
+        int before = applicationContext.beanDefinitionCount
+
+        when:
+        defineBeans(new PluginWithoutRegistrar())
+
+        then:
+        applicationContext.beanDefinitionCount == before
     }
 }

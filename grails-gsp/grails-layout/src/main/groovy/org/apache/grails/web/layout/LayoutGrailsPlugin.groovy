@@ -26,8 +26,8 @@ import org.springframework.beans.factory.BeanRegistry
 
 import grails.config.Settings
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.Environment
-import grails.util.GrailsUtil
 import grails.util.Metadata
 import org.grails.plugins.web.taglib.GrailsLayoutTagLib
 import org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib
@@ -36,22 +36,19 @@ import org.grails.plugins.web.taglib.RenderGrailsLayoutTagLib
  * Plugin responsible for Grails Layout specific configuration.
  */
 @CompileStatic
+@GrailsPluginDescriptor(
+        after = ['groovyPages', 'i18n'],
+        dependsOn = ['core:${plugin.version}'],
+        observe = ['controllers'],
+        providedArtefacts = [
+                RenderGrailsLayoutTagLib,
+                GrailsLayoutTagLib
+        ])
 class LayoutGrailsPlugin extends Plugin {
 
     public static final String GSP_VIEW_LAYOUT_RESOLVER_ENABLED = 'grails.gsp.view.layoutViewResolver'
     public static final String DEFAULT_LAYOUT = 'grails.views.layout.default'
     public static final String GRAILS_LAYOUT_ENABLE_NONGSP = 'grails.views.layout.enable.nongsp'
-
-    def title = 'Layout'
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-    def dependsOn = [core: GrailsUtil.getGrailsVersion(), i18n: GrailsUtil.getGrailsVersion()]
-    def observe = ['controllers']
-    def loadAfter = ['groovyPages']
-
-    def providedArtefacts = [
-            RenderGrailsLayoutTagLib,
-            GrailsLayoutTagLib
-    ]
 
     @Override
     BeanRegistrar beanRegistrar() {

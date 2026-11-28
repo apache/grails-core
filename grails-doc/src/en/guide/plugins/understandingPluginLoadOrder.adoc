@@ -21,35 +21,40 @@ under the License.
 ==== Controlling Plugin Dependencies
 
 
-Plugins often depend on the presence of other plugins and can adapt depending on the presence of others. This is implemented with two properties. The first is called `dependsOn`. For example, take a look at this snippet from the Hibernate plugin:
+Plugins often depend on the presence of other plugins and can adapt depending on the presence of others. A plugin
+declares both in its `@GrailsPluginDescriptor`. The first is `dependsOn`. For example, take a look at this snippet
+from the Hibernate plugin:
 
 [source,groovy]
 ----
-class HibernateGrailsPlugin {
-
-    def version = "1.0"
-
-    def dependsOn = [dataSource: "1.0",
-                     domainClass: "1.0",
-                     i18n: "1.0",
-                     core: "1.0"]
+@GrailsPluginDescriptor(dependsOn = ['dataSource', 'domainClass', 'i18n', 'core'])
+class HibernateGrailsPlugin extends Plugin {
 }
 ----
 
-The Hibernate plugin is dependent on the presence of four plugins: the `dataSource`, `domainClass`, `i18n` and `core` plugins.
+The Hibernate plugin is dependent on the presence of four plugins: the `dataSource`, `domainClass`, `i18n` and `core`
+plugins.
 
-The dependencies will be loaded before the Hibernate plugin and if all dependencies do not load, then the plugin will not load.
+A plugin comes after the plugins it depends on, and if any of them cannot be loaded the application does not start:
+plugin discovery throws an exception naming every plugin with an unmet dependency and why, as described in
+<<unmetPluginDependencies,Unmet Dependencies>>.
 
-The `dependsOn` property also supports a mini expression language for specifying version ranges. A few examples of the syntax can be seen below:
+`dependsOn` means the plugin cannot work without the other one, so the other one must come with it: add the dependency
+that provides it, or, if the plugin only has to come after the other one when that one is present, name it in `after`
+instead. The build of a plugin, and of an application, fails on an unmet dependency and on a circular order, as described
+in <<verifyingPlugins,Checking the Plugins When the Application Is Built>>.
+
+A dependency can name a range of versions after a colon, in a mini expression language:
 
 [source,groovy]
 ----
-def dependsOn = [foo: "* > 1.0"]
-def dependsOn = [foo: "1.0 > 1.1"]
-def dependsOn = [foo: "1.0 > *"]
+@GrailsPluginDescriptor(dependsOn = ['foo:* > 1.0'])
+@GrailsPluginDescriptor(dependsOn = ['foo:1.0 > 1.1'])
+@GrailsPluginDescriptor(dependsOn = ['foo:1.0 > *'])
 ----
 
-When the wildcard * character is used it denotes "any" version. The expression syntax also excludes any suffixes such as -BETA, -ALPHA etc. so for example the expression "1.0 > 1.1" would match any of the following versions:
+When the wildcard * character is used it denotes "any" version. The expression syntax also excludes any suffixes such
+as -BETA, -ALPHA etc. so for example the expression "1.0 > 1.1" would match any of the following versions:
 
 * 1.1
 * 1.0
@@ -57,77 +62,127 @@ When the wildcard * character is used it denotes "any" version. The expression s
 * 1.0.3-SNAPSHOT
 * 1.1-BETA2
 
+`${plugin.version}` stands for the plugin's own version, which is the version of the project that builds it. Plugins
+released together, as the Grails framework's are, require one another at that version:
+`dependsOn = ['core:${plugin.version}']`. A plugin compiled outside a build that sets the version, such as one in a
+test source set, has no version. A range on a plugin without a version cannot be checked, so the application does not
+start; a plugin depends on such a plugin by name alone. A plugin that has no version itself writes
+`${plugin.version}` against an unknown version, so its range accepts any version.
 
-==== Controlling Load Order
+
+==== Controlling Plugin Order
 
 
-Using `dependsOn` establishes a "hard" dependency in that if the dependency is not resolved, the plugin will give up and won't load.  It is possible though to have a weaker dependency using the `loadAfter` and `loadBefore` properties:
+Using `dependsOn` establishes a "hard" dependency in that if the dependency is not resolved, the application does not
+start. A plugin that only has to come after or before another one, when that one is present, uses `after` and `before`:
 
 [source,groovy]
 ----
-def loadAfter = ['controllers']
+@GrailsPluginDescriptor(after = ['controllers'], before = ['rabbitmq'])
 ----
 
-Here the plugin will be loaded after the `controllers` plugin if it exists, otherwise it will just be loaded. The plugin can then adapt to the presence of the other plugin, for example the Hibernate plugin has this code in its `doWithSpring` closure:
+Here the plugin comes after the `controllers` plugin and before the `rabbitmq` plugin if they exist; a named plugin that
+is absent is ignored. The plugin can then adapt to the presence of the other plugin, for example by registering a bean
+only when the other plugin is there:
 
 [source,groovy]
 ----
-if (manager?.hasGrailsPlugin("controllers")) {
-    openSessionInViewInterceptor(OpenSessionInViewInterceptor) {
-        flushMode = HibernateAccessor.FLUSH_MANUAL
-        sessionFactory = sessionFactory
-    }
-    grailsUrlHandlerMapping.interceptors << openSessionInViewInterceptor
+@Override
+BeanRegistrar beanRegistrar() {
+    { BeanRegistry registry, Environment environment ->
+        if (manager.hasGrailsPlugin('controllers')) {
+            registry.registerBean('auditInterceptor', AuditInterceptor)
+        }
+    } as BeanRegistrar
 }
 ----
 
-Here the Hibernate plugin will only register an `OpenSessionInViewInterceptor` if the `controllers` plugin has been loaded. The `manager` variable is an instance of the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager] interface and it provides methods to interact with other plugins.
+Here the plugin only registers its `AuditInterceptor` if the `controllers` plugin has been loaded. The `manager`
+property is an instance of the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager] interface and it
+provides methods to interact with other plugins.
 
-You can also use the `loadBefore` property to specify one or more plugins that your plugin should load before:
+===== One order
+
+Grails puts the plugins in one order: a plugin comes after every plugin it depends on and every plugin its `after`
+names, and before every plugin its `before` names. Plugins these declarations leave unordered relative to each other
+come in the order of their names, so the order never depends on the order of the class path. An order that cannot be met,
+because the declarations are circular, stops the application with an exception that names the plugins of the circle and
+the declaration that puts each one after the other:
+
+[source]
+----
+Grails plugins cannot be ordered, because their order is circular: audit -> reports -> audit (reports comes after audit; audit comes after reports)
+----
+
+Every part of Grails follows that order. `GrailsPluginManager.getAllPlugins()` returns the plugins in it, their hooks are
+called in it, their bean registrars run in it, and the auto-configurations their `beans` blocks compile to are ordered
+by it. Where two plugins provide the same thing, the later one wins:
+
+* configuration: the later plugin's `plugin.yml` or `plugin.groovy` wins over an earlier plugin's;
+* messages: the later plugin's message bundles win over an earlier plugin's;
+* views: the later plugin's view, precompiled or not, wins over an earlier plugin's of the same name, also when the
+  `GroovyPagesServlet` serves it;
+* static resources: the later plugin's resource wins over an earlier plugin's;
+* URL mappings: where the mappings of two plugins match the same URL, the later plugin's mapping wins.
+
+The application's own configuration, messages, views, static resources and URL mappings win over every plugin's.
+
+===== Which bean wins
+
+The rules for beans of the same name, or of the same type where an auto-configuration backs off, are:
+
+. The application's beans, from its `doWithSpring`, `beanRegistrar()` or `grails-app/conf/spring/resources.groovy`,
+  win over every plugin's.
+. A bean a plugin registers from its `beanRegistrar()` wins over every auto-configuration's default, including those
+  of the plugins' `beans` blocks: the registrars run before Spring reads any configuration class, so a
+  `@ConditionalOnMissingBean` default backs off, and an unconditional bean of the same name is skipped.
+. Between the registrars of two plugins, the later plugin's bean wins. A plugin that replaces a bean of another plugin
+  declares `after` (or `dependsOn`) on it.
+. Between the auto-configurations of two plugins' `beans` blocks, the one of the plugin that builds on another comes
+  later, so its `@ConditionalOnMissingBean` beans back off to those of the plugin it builds on.
+. To replace a bean that another plugin's `beans` block declares, register it from your plugin's `beanRegistrar()`.
+
+The compiler orders the auto-configuration a plugin's `beans` block compiles to after those of the plugins the plugin
+depends on or names in `after`, and before those it names in `before`, and records it in the plugin's descriptor, so a
+plugin compiled later finds it. Do not order a plugin's `beans` block against another Grails plugin with
+`@AutoConfigureAfter`, `@AutoConfigureBefore` or the `after`, `before`, `afterName` and `beforeName` of
+`@AutoConfiguration`: the compiler reports it as an error, asking for `after` or `before` on `@GrailsPluginDescriptor`.
+Ordering against a Spring Boot auto-configuration that belongs to no Grails plugin, such as
+`WebMvcAutoConfiguration`, stays allowed, and the compiler adds the plugin order to it.
+
+An application that runs on code generated ahead of time made its beans with the plugins in the order of the build.
+It checks at startup that it runs with the plugins in that same order, and stops with an exception naming both orders
+if not: build the application again with the plugins it runs with.
+
+
+==== Environments
+
+
+It's not only plugin load order that you can control. You can also specify which environments your plugin should be
+loaded in:
 
 [source,groovy]
 ----
-def loadBefore = ['rabbitmq']
-----
-
-
-==== Scopes and Environments
-
-
-It's not only plugin load order that you can control. You can also specify which environments your plugin should be loaded in and which scopes (stages of a build). Simply declare one or both of these properties in your plugin descriptor:
-
-[source,groovy]
-----
-def environments = ['development', 'test', 'myCustomEnv']
+@GrailsPluginDescriptor(environmentsIncludes = ['development', 'test', 'myCustomEnv'])
 ----
 
 In this example, the plugin will only load in the 'development', 'test' and 'myCustomEnv' environments.
-
-The properties can be one of:
-
-* a string - a sole inclusion
-* a list - a list of environments to include
-* a map - for full control, with 'includes' and/or 'excludes' keys that can have string or list values
-
-For example,
+`environmentsExcludes` names the environments the plugin is not loaded in instead:
 
 [source,groovy]
 ----
-def environments = "test"
+@GrailsPluginDescriptor(environmentsExcludes = ['production'])
 ----
 
-will only include the plugin in the test environment, whereas
+==== Reading a published plugin definition
 
-[source,groovy]
-----
-def environments = ["development", "test"]
-----
+Tools can read the UTF-8 `META-INF/grails/plugins/<name>/plugin.properties` file with
+`grails.plugins.metadata.PluginDefinition.read(name, reader)`. This returns an immutable definition with symbolic class
+names: the plugin's class, version, Grails compatibility, dependency version constraints, ordering, environments,
+watched resources and contributed artefacts. Reading the definition requires no classes from the plugin, and it is
+everything Grails knows about a plugin before it creates it.
 
-will include it in both the development _and_ test environments. Finally,
-
-[source,groovy]
-----
-def environments = [includes: ["development", "test"]]
-----
-
-will do the same thing.
+For a Java plugin built directly with `javac`, put Grails and its dependencies on the processor path, so that the
+`org.grails.compiler.injection.JavaPluginDescriptorProcessor` it registers runs, compile to a class directory with
+`-d`, and supply the version with `-Agrails.plugin.version=1.0`. Package the complete output directory. With Gradle, add
+`grails-core` to the `annotationProcessor` configuration; the Grails Gradle plugin passes the version.

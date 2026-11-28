@@ -24,6 +24,7 @@ import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder
@@ -43,6 +44,7 @@ import org.springframework.security.web.savedrequest.NullRequestCache
 import grails.core.GrailsApplication
 import grails.plugin.springsecurity.BeanTypeResolver
 import grails.plugin.springsecurity.SecurityFilterPosition
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.rest.authentication.DefaultRestAuthenticationEventPublisher
 import grails.plugin.springsecurity.rest.authentication.NullRestAuthenticationEventPublisher
@@ -67,36 +69,31 @@ import grails.plugin.springsecurity.rest.token.reader.HttpHeaderTokenReader
 import grails.plugin.springsecurity.rest.token.rendering.DefaultAccessTokenJsonRenderer
 import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 @Slf4j
+@GrailsPluginDescriptor(
+        after = ['springSecurityCore'])
 class SpringSecurityRestGrailsPlugin extends Plugin {
 
-    // the version or versions of Grails the plugin is designed for
-    String grailsVersion = '7.0.0 > *'
-    List loadAfter = ['springSecurityCore']
-    List pluginExcludes = [
-            'grails-app/views/**'
-    ]
-
-    String title = 'Spring Security REST Plugin'
-    String author = 'Apache Grails Team'
-    String authorEmail = ''
-    String description = 'Implements authentication for REST APIs based on Spring Security. It uses a token-based workflow'
-
-    def profiles = ['web']
-
-    // URL to the plugin's documentation
-    String documentation = 'https://grails.apache.org/documentation.html'
-
-    // Extra (optional) plugin metadata
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-
-    def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
     GrailsApplication grailsApplication
 
-    Closure doWithSpring() {
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityRestBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security REST plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
             if (!springSecurityPluginsAreActive()) {
                 return

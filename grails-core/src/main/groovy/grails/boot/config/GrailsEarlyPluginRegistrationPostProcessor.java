@@ -51,15 +51,16 @@ import grails.util.Environment;
 import grails.util.Holders;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.grails.config.PropertySourcesConfig;
-import org.grails.spring.DefaultRuntimeSpringConfiguration;
-import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * Runs the plugin bean-registration phase of the Grails lifecycle <em>before</em> Spring Boot's
- * auto-configuration is processed, so that beans contributed by plugins via {@code doWithSpring}
- * are already present in the registry when Boot evaluates its {@code @ConditionalOnMissingBean}
- * guards — auto-configured defaults then back off in favour of the plugin beans, without any
- * override or removal afterwards.
+ * auto-configuration is processed, so that beans contributed by plugins through their
+ * {@code beanRegistrar()} are already present in the registry when Boot evaluates its
+ * {@code @ConditionalOnMissingBean} guards — auto-configured defaults then back off in favour of the
+ * plugin beans, without any override or removal afterwards. A registrar applied here can register a
+ * {@link org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor} that is
+ * {@link org.springframework.core.PriorityOrdered}: Spring runs it after this phase and still ahead of
+ * the configuration classes, so the definitions it registers are visible to the same guards.
  *
  * <p>It runs for a Grails application only: {@link GrailsPluginLifecycleInitializer} is registered for
  * every Spring Boot application that has grails-core on its class path, and this phase stands down
@@ -79,16 +80,16 @@ import org.grails.spring.RuntimeSpringConfiguration;
  * are discovered via the promoted {@link PluginDiscovery} singleton and instantiated exactly once.
  * Artefact discovery also happens here, mirroring
  * {@code GrailsApplicationPostProcessor.performGrailsInitializationSequence()}, because core plugins
- * (controllers, services, interceptors) iterate {@code grailsApplication} artefacts inside their
- * {@code doWithSpring} closures. Application classes are resolved from the source classes stashed by
+ * (controllers, services, interceptors) iterate {@code grailsApplication} artefacts to register
+ * their beans. Application classes are resolved from the source classes stashed by
  * {@link grails.boot.GrailsApp} (see {@link #APPLICATION_SOURCE_CLASSES_BEAN_NAME}) and scanned with the
  * same logic {@link GrailsAutoConfiguration#classes()} uses; an application {@code GrailsApp} did not
  * start has its sources read from the context instead.
  *
  * <p>Once complete, the {@code grailsApplication} and {@code pluginManager} singletons are promoted to
  * the bean factory together with the {@link #EARLY_REGISTRATION_COMPLETE_BEAN_NAME} marker, so
- * {@link GrailsApplicationPostProcessor} reuses them instead of rebuilding and skips the already-drained
- * plugin runtime configuration.
+ * {@link GrailsApplicationPostProcessor} reuses them instead of rebuilding and skips the plugin bean
+ * registration already performed.
  *
  * <p>In a parent/child context hierarchy, such as {@link grails.boot.GrailsAppBuilder} builds, exactly one
  * context is the Grails application. The lifecycle keeps state that is JVM-wide — {@link Holders}, the
@@ -167,7 +168,6 @@ public class GrailsEarlyPluginRegistrationPostProcessor
             pluginManager.loadPlugins();
             pluginManager.setApplicationContext(applicationContext);
 
-            pluginManager.doArtefactConfiguration();
             grailsApplication.initialise();
             // register plugin provided classes first, this gives the opportunity
             // for application classes to override those provided by a plugin
@@ -179,9 +179,7 @@ public class GrailsEarlyPluginRegistrationPostProcessor
                 singletonRegistry.destroySingleton(APPLICATION_SOURCE_CLASSES_BEAN_NAME);
             }
 
-            RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
-            pluginManager.doRuntimeConfiguration(springConfig);
-            springConfig.registerBeansWithRegistry(registry);
+            GrailsConversionServiceConverters.registerOnBeanFactory(applicationContext.getBeanFactory());
             applyBeanRegistrars(pluginManager, registry);
 
             ConfigurableListableBeanFactory beanFactory = applicationContext.getBeanFactory();
@@ -205,13 +203,13 @@ public class GrailsEarlyPluginRegistrationPostProcessor
      * Applies the {@link BeanRegistrar} exposed by each enabled plugin through
      * {@link grails.core.GrailsApplicationLifeCycle#beanRegistrar()}, in plugin order, using the
      * same adapter Spring uses for {@code GenericApplicationContext.register(BeanRegistrar...)}.
-     * Runs after the {@code doWithSpring} drain so registrar beans win any name conflicts with the
-     * deprecated DSL.
+     * A plugin applied later replaces a bean of the same name that an earlier plugin registered, and
+     * the post-processors the registrars register are discovered by Spring in this registration
+     * order, so a later plugin's post-processor of the same order also runs later.
      */
     private void applyBeanRegistrars(DefaultGrailsPluginManager pluginManager, BeanDefinitionRegistry registry) {
-        String[] activeProfiles = applicationContext.getEnvironment().getActiveProfiles();
         for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
-            if (!plugin.supportsCurrentScopeAndEnvironment() || !plugin.isEnabled(activeProfiles)) {
+            if (!plugin.supportsCurrentScopeAndEnvironment()) {
                 continue;
             }
             BeanRegistrar registrar = plugin.getBeanRegistrar();
@@ -313,7 +311,7 @@ public class GrailsEarlyPluginRegistrationPostProcessor
      * Builds the {@link PropertySourcesConfig} that backs {@code grailsApplication.config} in this
      * phase, registering the same conversion-service converters ({@link GrailsConversionServiceConverters})
      * that {@code GrailsApplicationPostProcessor.loadApplicationConfig} registers for the main lifecycle.
-     * This gives {@code doWithSpring} closures parity when reading config — null-safe navigation of
+     * This gives plugin registrars parity when reading config — null-safe navigation of
      * missing paths and {@code String -> Resource} and pattern-expanding {@code Resource[]} coercion —
      * not just scalar {@code getProperty(...)} access.
      */

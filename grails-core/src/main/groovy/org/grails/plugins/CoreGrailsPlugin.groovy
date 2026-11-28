@@ -50,11 +50,10 @@ import grails.config.ConfigProperties
 import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.support.proxy.DefaultProxyHandler
-import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.BuildSettings
 import grails.util.Environment as GrailsEnvironment
-import grails.util.GrailsUtil
 import org.grails.beans.support.PropertiesEditor
 import org.grails.core.io.DefaultResourceLocator
 import org.grails.core.support.ClassEditor
@@ -90,13 +89,14 @@ import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
 // whole rather than on the beans that name the application, so that an application either has the
 // core plugin's beans or has none of them.
 @ConditionalOnBean(GrailsApplication)
+// grails-core is compiled before the compiler that writes plugin descriptors, so this plugin's is
+// checked in: src/main/resources/META-INF/grails/plugins/core/plugin.properties. Keep the two in step.
+@GrailsPluginDescriptor(name = 'core', watchedResources = [
+        'file:./grails-app/conf/spring/resources.xml',
+        'file:./grails-app/conf/spring/resources.groovy',
+        'file:./grails-app/conf/application.groovy',
+        'file:./grails-app/conf/application.yml'])
 class CoreGrailsPlugin extends Plugin {
-
-    def version = GrailsUtil.getGrailsVersion()
-    def watchedResources = [    'file:./grails-app/conf/spring/resources.xml',
-                                'file:./grails-app/conf/spring/resources.groovy',
-                                'file:./grails-app/conf/application.groovy',
-                                'file:./grails-app/conf/application.yml']
 
     private static final String SPRING_PROXY_TARGET_CLASS_CONFIG = 'spring.aop.proxy-target-class'
 
@@ -110,7 +110,8 @@ class CoreGrailsPlugin extends Plugin {
         }
 
         // GroovyPagesGrailsPlugin registers its own caching, GSP-aware locator under this name
-        // from doWithSpring, which runs earlier, so this backs off when GSP is present.
+        // from the post-processor its registrar registers, which runs before the auto-configurations,
+        // so this backs off when GSP is present.
         bean('grailsResourceLocator', DefaultResourceLocator).conditionalOnMissingBeanName() {
             new DefaultResourceLocator().tap {
                 searchLocations = [BuildSettings.BASE_DIR.absolutePath]
@@ -147,9 +148,9 @@ class CoreGrailsPlugin extends Plugin {
     /**
      * Whether the context already has a definition under this name.
      *
-     * <p>These registrars run after the {@code doWithSpring} drain, so a plugin that has already
-     * declared a bean under one of these names has declared the one that should stand: registering
-     * over it replaces something chosen for the application with the general case.</p>
+     * <p>A definition already registered under one of these names was chosen for the application,
+     * and registering over it would replace it with the general case. A plugin loaded after this one
+     * registers its own later and replaces this one in any case.</p>
      */
     private static boolean hasBeanDefinition(GrailsApplication application, String beanName) {
         ApplicationContext context = application.mainContext
@@ -159,7 +160,7 @@ class CoreGrailsPlugin extends Plugin {
 
     /**
      * Scans the packages named by {@code grails.spring.bean.packages}. Contributed here rather
-     * than through {@code doWithSpring}'s {@code grailsContext:component-scan} element, which
+     * than through the bean builder's {@code grailsContext:component-scan} element, which
      * needs the XML namespace handler and therefore the bean builder DSL.
      */
     @Override
@@ -269,10 +270,9 @@ class CoreGrailsPlugin extends Plugin {
             if (!packagesToScan) {
                 return
             }
-            GrailsPluginManager pluginManager = manager
             registry.registerBean('grailsComponentScanPostProcessor', GrailsComponentScanPostProcessor) {
                 it.infrastructure().supplier {
-                    new GrailsComponentScanPostProcessor(packagesToScan, pluginManager)
+                    new GrailsComponentScanPostProcessor(packagesToScan)
                 }
             }
         }

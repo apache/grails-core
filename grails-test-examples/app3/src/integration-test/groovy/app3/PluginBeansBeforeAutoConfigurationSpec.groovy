@@ -26,13 +26,10 @@ import spock.lang.Specification
 /**
  * End-to-end test of the retimed plugin lifecycle through real plugin discovery and a real
  * application boot. The {@code loadafter} plugin (an app3 dependency) registers
- * {@code earlyPluginProbe} in plain {@code doWithSpring}, which now runs ahead of Spring Boot
- * auto-configuration; {@code Application} defines a
- * {@code @ConditionalOnMissingBean(name='earlyPluginProbe')} default. The plugin's bean must win.
- *
- * <p>The {@code loadafter} plugin also registers {@code registrarProbe} through the new
- * {@code beanRegistrar()} API (a closure coerced to a Spring {@code BeanRegistrar}), which the
- * matching {@code @ConditionalOnMissingBean} default must likewise defer to.
+ * {@code registrarProbe} through the {@code beanRegistrar()} API (a closure coerced to a Spring
+ * {@code BeanRegistrar}), and {@code earlyPluginProbe} from a post-processor that registrar registers;
+ * {@code Application} defines a {@code @ConditionalOnMissingBean} default for each. Both run ahead of
+ * the configuration classes, so the plugin's beans must win.
  *
  * <p>The strict ordering proof (the conditional default is never even created) is covered at unit
  * level by {@code EarlyPluginRegistrationOrderingSpec} in grails-core, including its control case.
@@ -43,9 +40,9 @@ class PluginBeansBeforeAutoConfigurationSpec extends Specification {
     @Autowired
     ApplicationContext applicationContext
 
-    void "a plugin doWithSpring bean wins over the app's @ConditionalOnMissingBean default"() {
+    void "a bean a plugin registers from a post-processor wins over the app's @ConditionalOnMissingBean default"() {
         expect: 'the plugin registered the probe ahead of auto-config, so the conditional default deferred to it'
-        applicationContext.getBean('earlyPluginProbe') == 'from-plugin-doWithSpring'
+        applicationContext.getBean('earlyPluginProbe') == 'from-plugin-postProcessor'
     }
 
     void "a plugin beanRegistrar bean wins over the app's @ConditionalOnMissingBean default"() {

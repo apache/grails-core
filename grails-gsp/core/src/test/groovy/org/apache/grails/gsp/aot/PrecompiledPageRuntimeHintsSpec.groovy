@@ -55,6 +55,7 @@ class PrecompiledPageRuntimeHintsSpec extends Specification {
     void 'the list of the pages compiled at build time is carried'() {
         expect: 'read to find the compiled pages at all'
             RuntimeHintsPredicates.resource().forResource('gsp/views.properties').test(hints)
+            RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/demo/views.properties').test(hints)
     }
 
     void 'an unrelated resource is not carried'() {

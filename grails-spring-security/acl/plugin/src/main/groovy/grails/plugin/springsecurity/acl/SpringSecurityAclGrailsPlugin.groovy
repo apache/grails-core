@@ -18,6 +18,7 @@
  */
 package grails.plugin.springsecurity.acl
 
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.cache.jcache.JCacheCacheManager
 import org.springframework.expression.spel.standard.SpelExpressionParser
 import org.springframework.security.access.annotation.SecuredAnnotationSecurityMetadataSource as SpringSecuredAnnotationSecurityMetadataSource
@@ -57,6 +58,7 @@ import org.springframework.security.crypto.password.StandardPasswordEncoder
 import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder
 
 import grails.plugin.springsecurity.BeanTypeResolver
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.acl.access.GroovyAwareAclVoter
 import grails.plugin.springsecurity.acl.access.method.ProxyAwareDelegatingMethodSecurityMetadataSource
@@ -69,11 +71,13 @@ import grails.plugin.springsecurity.acl.domain.NullAclAuditLogger
 import grails.plugin.springsecurity.acl.jdbc.GormAclLookupStrategy
 import grails.plugin.springsecurity.acl.model.GormObjectIdentityRetrievalStrategy
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.GrailsClassUtils as GCU
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
+@GrailsPluginDescriptor(after = ['springSecurityCore'])
 class SpringSecurityAclGrailsPlugin extends Plugin {
 
     public static final String ENCODING_ID_BCRYPT = 'bcrypt'
@@ -86,22 +90,24 @@ class SpringSecurityAclGrailsPlugin extends Plugin {
     public static final String ENCODING_ID_SHA1 = 'SHA-1'
     public static final String ENCODING_IDSHA256 = 'SHA-256'
 
-    String grailsVersion = '7.0.0 > *'
-    String author = 'Burt Beckwith'
-    String authorEmail = ''
-    String title = 'Spring Security ACL plugin'
-    String description = 'ACL support for the Spring Security plugin'
-    String documentation = 'https://grails.apache.org/documentation.html'
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-    def loadAfter = ['springSecurityCore']
-    def profiles = ['web']
-
     private beanTypeResolver
 
-    Closure doWithSpring() {
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityAclBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security ACL plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
 
             def conf = SpringSecurityUtils.securityConfig

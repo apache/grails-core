@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.Resource;
 
 import org.apache.grails.core.plugins.filters.PluginFilter;
 
@@ -51,40 +50,10 @@ public interface PluginDiscovery {
      * the main application context finishes bootstrapping.</p>
      *
      * @param environment the environment used to determine plugin filtering and ordering
+     * @throws grails.plugins.exceptions.PluginException if a plugin cannot be loaded, including when a
+     *         {@code dependsOn} of a plugin is not met, or when the plugins' order is circular
      */
     void init(Environment environment);
-
-    /**
-     * Returns plugins supplied dynamically instead of being discovered from classpath descriptors.
-     *
-     * <p>This is most commonly used by tests that configure plugin classes or resources directly.</p>
-     *
-     * @return dynamically configured plugins discovered outside the standard classpath descriptor scan
-     */
-    Collection<PluginInfo> getDynamicPlugins();
-
-    /**
-     * Determines whether a plugin failed during discovery or dependency resolution.
-     *
-     * @param name the name of the plugin; implementations may normalize the name before lookup
-     * @return {@code true} if the named plugin could not be loaded successfully
-     */
-    boolean hasFailedPlugin(String name);
-
-    /**
-     * Returns a plugin that failed during discovery or dependency resolution.
-     *
-     * @param name the name of the plugin; implementations may normalize the name before lookup
-     * @return the failed plugin, or {@code null} if no matching failed plugin exists
-     */
-    PluginInfo getFailedPlugin(String name);
-
-    /**
-     * Returns every plugin that failed during discovery or dependency resolution.
-     *
-     * @return the plugins that could not be loaded successfully
-     */
-    Collection<PluginInfo> getFailedPlugins();
 
     /**
      * Finds a discovered plugin by name.
@@ -104,18 +73,14 @@ public interface PluginDiscovery {
     PluginInfo findPlugin(String pluginName, Object version);
 
     /**
-     * Returns the discovered plugins in topological order.
+     * Returns the discovered plugins in their one order: a plugin comes after the plugins it depends on and those
+     * its {@code after} names, and before those its {@code before} names; plugins left unordered by these come in
+     * the order of their names. Configuration, bean registrars, hooks, artefacts, views and messages all follow
+     * this order, and where two plugins provide the same thing, the later one wins.
      *
-     * @return plugins ordered by dependency and declared load-before/load-after relationships
+     * @return the plugins in order
      */
     List<PluginInfo> getPluginsInTopologicalOrder();
-
-    /**
-     * Returns the discovered plugins in their effective load order.
-     *
-     * @return the order in which plugins should be loaded
-     */
-    List<PluginInfo> getPluginsInLoadOrder();
 
     /**
      * Determines whether a plugin with the given name has been discovered.
@@ -156,39 +121,13 @@ public interface PluginDiscovery {
     void setPluginFilter(PluginFilter filter);
 
     /**
-     * Configures Groovy plugin resources to be treated as dynamic plugins.
+     * Registers plugin classes directly, in addition to the plugins found on the class path. Each is a concrete
+     * {@code grails.plugins.Plugin} subclass annotated with {@code @GrailsPluginDescriptor}, which supplies its
+     * definition.
      *
-     * @param pluginResources the resources containing dynamically defined plugin classes
-     */
-    void setPluginResources(Resource[] pluginResources);
-
-    /**
-     * Configures resource locations to search for dynamically defined plugins.
-     *
-     * @param pluginResources the resource location patterns containing dynamically defined plugins
-     */
-    void setPluginResources(String[] pluginResources);
-
-    /**
-     * Configures a single resource location to search for dynamically defined plugins.
-     *
-     * @param resourcePath the resource location containing dynamically defined plugins
-     */
-    void setPluginResources(String resourcePath);
-
-    /**
-     * Configures explicit plugin classes to be treated as dynamic plugins.
-     *
-     * @param pluginClasses the dynamically supplied plugin classes
+     * @param pluginClasses the plugin classes
      */
     void setPluginClasses(Class<?>[] pluginClasses);
-
-    /**
-     * Returns the configured dynamic plugin resources.
-     *
-     * @return the dynamic plugin resources currently configured for discovery
-     */
-    Resource[] getPluginResources();
 
     /**
      * Resets the discovery state so plugins can be discovered again.

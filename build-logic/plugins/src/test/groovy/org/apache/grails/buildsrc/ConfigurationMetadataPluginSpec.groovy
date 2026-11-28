@@ -237,6 +237,52 @@ class ConfigurationMetadataPluginSpec extends Specification {
         metadataEntryCount() == 1
     }
 
+    def 'packaged property names match clean compilation after a Groovy property rename and class deletion'() {
+        given:
+        writeBuildScript("""
+            tasks.named('compileGroovy') { options.incremental = true }
+        """)
+        run('jar', '--max-workers=1')
+        File source = projectDir.resolve('src/main/groovy/fixture/GroovyConfiguration.groovy').toFile()
+
+        when:
+        source.text = source.text.replace('String constantValue', 'String renamedValue')
+        run('jar', '--max-workers=1')
+        Map renamed = packagedMetadata()
+
+        then:
+        property(renamed, 'fixture.groovy.constantValue') == null
+        property(renamed, 'fixture.groovy.renamedValue').defaultValue == 'constant'
+
+        when:
+        run('clean', 'jar', '--max-workers=1')
+
+        then:
+        packagedMetadata() == renamed
+
+        when:
+        assert source.delete()
+        run('jar', '--max-workers=1')
+        Map deleted = packagedMetadata()
+
+        then:
+        !deleted.properties*.name.any { it.startsWith('fixture.groovy.') }
+        property(deleted, 'overlay.only.value') != null
+
+        when:
+        run('clean', 'jar', '--max-workers=1')
+
+        then:
+        packagedMetadata() == deleted
+    }
+
+    private Map packagedMetadata() {
+        new ZipFile(projectDir.resolve('build/libs/metadata-fixture.jar').toFile()).withCloseable { archive ->
+            def entry = archive.getEntry('META-INF/spring-configuration-metadata.json')
+            archive.getInputStream(entry).withCloseable { new JsonSlurper().parse(it) as Map }
+        }
+    }
+
     def "generates static Groovy DSL metadata without executing the DSL source"() {
         given: 'a mapped DSL source and curated metadata for one of its properties'
         writeGroovyDslConfiguration(false)

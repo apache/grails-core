@@ -62,9 +62,11 @@ import grails.plugin.springsecurity.web.filter.GrailsRememberMeAuthenticationFil
 import grails.plugin.springsecurity.web.filter.IpAddressFilter
 import grails.plugin.springsecurity.web.filter.StartupGateFilter
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import groovy.util.logging.Slf4j
 import org.grails.web.config.http.GrailsFilters
 import org.grails.web.mime.HttpServletResponseExtension
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.boot.context.properties.bind.Bindable
 import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.web.servlet.FilterRegistrationBean
@@ -146,6 +148,9 @@ import jakarta.servlet.DispatcherType
  * @author Burt Beckwith
  */
 @Slf4j
+@GrailsPluginDescriptor(
+        after = ['controllers', 'hibernate', 'services'],
+        observe = ['controllers'])
 class SpringSecurityCoreGrailsPlugin extends Plugin {
 
     public static final String ENCODING_ID_BCRYPT = 'bcrypt'
@@ -159,23 +164,24 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
     public static final String ENCODING_ID_SHA1 = 'SHA-1'
     public static final String ENCODING_IDSHA256 = 'SHA-256'
 
-    String grailsVersion = '7.0.0 > *'
-    List observe = ['controllers']
-    List loadAfter = ['controllers', 'hibernate', 'hibernate4', 'hibernate5', 'services']
-    String author = 'Burt Beckwith'
-    String authorEmail = ''
-    String title = 'Spring Security Core Plugin'
-    String description = 'Spring Security Core plugin'
-    String documentation = 'https://grails.apache.org/documentation.html'
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-    def profiles = ['web']
-
     private beanTypeResolver
 
-    Closure doWithSpring() {
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityCoreBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security Core plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
             ReflectionUtils.application = SpringSecurityUtils.application = grailsApplication
 
@@ -191,7 +197,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                 return
             }
 
-            log.trace 'doWithSpring'
+            log.trace 'beanDefinitions'
 
             if (printStatusMessages) {
                 String message = '\nConfiguring Spring Security Core ...'

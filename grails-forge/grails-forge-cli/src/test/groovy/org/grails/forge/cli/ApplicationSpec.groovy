@@ -63,7 +63,7 @@ class ApplicationSpec extends Specification {
 
         expect:
         pluginManager.allPlugins*.name.sort() == ['core', 'forge']
-        pluginManager.getGrailsPlugin('forge').instance instanceof ForgeGrailsPlugin
+        pluginManager.getGrailsPlugin('forge').pluginInstance instanceof ForgeGrailsPlugin
     }
 
     void "the generator comes from the Forge plugin"() {

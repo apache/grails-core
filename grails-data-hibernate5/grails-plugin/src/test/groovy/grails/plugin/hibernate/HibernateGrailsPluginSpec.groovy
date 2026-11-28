@@ -22,31 +22,25 @@ import grails.core.DefaultGrailsApplication
 import grails.gorm.annotation.Entity
 import org.grails.config.PropertySourcesConfig
 import org.grails.plugins.DefaultGrailsPlugin
-import org.grails.spring.DefaultRuntimeSpringConfiguration
-import org.grails.spring.RuntimeSpringConfiguration
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 
 /**
- * Drives {@link HibernateGrailsPlugin#doWithSpring()} the same way the real {@code GrailsPluginManager} does: via
- * {@link org.grails.plugins.DefaultGrailsPlugin#doWithRuntimeConfiguration}, followed by merging the accumulated
- * bean definitions into a fresh {@link GenericApplicationContext} and refreshing it - exactly what
- * {@link RuntimeSpringConfiguration#registerBeansWithContext} exists for, and how a real Grails Boot application
- * merges plugin-registered beans into the application's own context. Refreshing the plugin's own internal
- * {@code GrailsApplicationContext} directly doesn't work here: it renames Spring's "environment" bean to
- * "springEnvironment" (a long-standing workaround for GRAILS-7851) which breaks the SpEL datasource expressions
- * that {@code HibernateDatastoreConnectionSourcesRegistrar} registers.
+ * Drives {@link HibernateGrailsPlugin#beanRegistrar()} the way an application does: the registrar is applied
+ * to the application's context, and the post-processor it registers registers the Hibernate bean definitions
+ * when Spring runs it, before the context is refreshed.
  */
 class HibernateGrailsPluginSpec extends Specification {
 
     @AutoCleanup
     GenericApplicationContext applicationContext
 
-    void "doWithSpring registers the Hibernate beans and prepares the config for class conversion"() {
+    void "the registrar registers the Hibernate beans and prepares the config for class conversion"() {
         given: "a Grails application with one domain class and an H2 test datasource"
         def app = new DefaultGrailsApplication([PluginSpecBook] as Class[], getClass().classLoader)
         app.initialise()
@@ -58,21 +52,24 @@ class HibernateGrailsPluginSpec extends Specification {
         ])
         app.setConfig(config)
 
-        and: "the plugin driven the same way the real GrailsPluginManager drives it"
+        and: "the plugin, as the real GrailsPluginManager creates it"
         def grailsPlugin = new DefaultGrailsPlugin(HibernateGrailsPlugin, app)
-        RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration()
-        grailsPlugin.applicationContext = springConfig.unrefreshedApplicationContext
+        applicationContext = new GenericApplicationContext()
+        grailsPlugin.applicationContext = applicationContext
 
-        expect: "the class value cannot be resolved before doWithSpring runs"
+        expect: "the class value cannot be resolved before the plugin registers its beans"
         config.getProperty('some.class', Class) == null
 
-        when: "the plugin is configured, then its beans merged into the application's real context"
-        grailsPlugin.doWithRuntimeConfiguration(springConfig)
-        applicationContext = new GenericApplicationContext()
-        springConfig.registerBeansWithContext(applicationContext)
+        when: "the plugin's registrar is applied and the context refreshed, which runs the post-processor it registered"
+        def registrar = grailsPlugin.beanRegistrar
+        new BeanRegistryAdapter(applicationContext, applicationContext.beanFactory, applicationContext.environment, registrar.getClass())
+                .register(registrar)
         applicationContext.refresh()
 
-        then: "the Hibernate beans registered by the plugin are present"
+        then: "the post-processor the registrar registered is the one that registered the beans"
+        applicationContext.containsBeanDefinition(HibernateGrailsPlugin.BEAN_DEFINITIONS_POST_PROCESSOR)
+
+        and: "the Hibernate beans registered by the plugin are present"
         applicationContext.getBean('sessionFactory', SessionFactory).metamodel.entities.size() == 1
         applicationContext.getBean(PlatformTransactionManager)
 

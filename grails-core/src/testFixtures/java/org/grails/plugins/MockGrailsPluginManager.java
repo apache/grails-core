@@ -67,22 +67,13 @@ public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
         ((MockPluginDiscovery) pluginDiscovery).registerMockPlugin(plugin);
     }
 
-    public GrailsPlugin[] getUserPlugins() {
-        return getAllPlugins();
-    }
-
     public void loadPlugins() throws PluginException {
         if (initialised) {
             return;
         }
 
-        pluginDiscovery.getPluginsInLoadOrder().forEach(pluginInfo -> {
-            GrailsPlugin plugin;
-            if (pluginInfo.isDynamic()) {
-                plugin = new DefaultGrailsPlugin(pluginInfo.getPluginClass(), application);
-            } else {
-                plugin = new BinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor(), application);
-            }
+        pluginDiscovery.getPluginsInTopologicalOrder().forEach(pluginInfo -> {
+            GrailsPlugin plugin = new DefaultGrailsPlugin(pluginInfo, application);
 
             plugin.setApplicationContext(applicationContext);
             plugin.setManager(this);
@@ -95,13 +86,6 @@ public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
     @Override
     public boolean isInitialised() {
         return true;
-    }
-
-    public void refreshPlugin(String name) {
-        GrailsPlugin plugin = plugins.get(name);
-        if (plugin != null) {
-            plugin.refresh();
-        }
     }
 
     public Collection<?> getPluginObservers(GrailsPlugin plugin) {

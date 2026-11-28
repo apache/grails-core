@@ -40,25 +40,27 @@ class PluginLoadOrderTests {
         def gcl = new GroovyClassLoader()
 
         gcl.parseClass '''
-class FiveGrailsPlugin {
-    def version = 0.1
-    def loadAfter = ['one']
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+@GrailsPluginDescriptor(after = ['one'])
+class FiveGrailsPlugin extends Plugin {
 }
 
-class FourGrailsPlugin {
-    def version = 0.1
-    def loadAfter = ['two']
+@GrailsPluginDescriptor(after = ['two'])
+class FourGrailsPlugin extends Plugin {
 }
-class OneGrailsPlugin {
-    def version = 0.1
-    def loadBefore = ['two']
+
+@GrailsPluginDescriptor(before = ['two'])
+class OneGrailsPlugin extends Plugin {
 }
-class TwoGrailsPlugin {
-    def version = 0.1
-    def loadAfter = ['three']
+
+@GrailsPluginDescriptor(after = ['three'])
+class TwoGrailsPlugin extends Plugin {
 }
-class ThreeGrailsPlugin {
-    def version = 0.1
+
+@GrailsPluginDescriptor
+class ThreeGrailsPlugin extends Plugin {
 }
 '''
 
@@ -78,10 +80,7 @@ class ThreeGrailsPlugin {
 
         GrailsPlugin[] plugins = pluginManager.allPlugins
 
-        assertEquals "one", plugins[0].name
-        assertEquals "three", plugins[1].name
-        assertEquals "five", plugins[2].name
-        assertEquals "two", plugins[3].name
-        assertEquals "four", plugins[4].name
+        // one before two, two after three, four after two, five after one; ties go by name
+        assertEquals(['one', 'five', 'three', 'two', 'four'], plugins*.name)
     }
 }

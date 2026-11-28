@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.springframework.boot.autoconfigure.AutoConfiguration
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.apache.grails.ai.async.ChatResponseStreamItemRenderer
 
 /**
@@ -37,14 +38,8 @@ import org.apache.grails.ai.async.ChatResponseStreamItemRenderer
  */
 @CompileStatic
 @AutoConfiguration
+@GrailsPluginDescriptor
 class SpringAiGrailsPlugin extends Plugin {
-
-    def grailsVersion = '8.1.0-SNAPSHOT > *'
-    def author = 'Apache Grails Team'
-    def title = 'Grails Spring AI Plugin'
-    def description = 'Integrates Spring AI with Grails applications'
-    def documentation = 'https://grails.apache.org/docs/latest/guide/usingAi.html'
-    def license = 'Apache 2.0 License'
 
     def beans = {
         // The renderer's signature names a grails-async type, so the guard sits on a class that is never

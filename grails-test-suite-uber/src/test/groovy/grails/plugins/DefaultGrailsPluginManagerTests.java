@@ -26,12 +26,20 @@ import org.apache.grails.core.plugins.DefaultPluginDiscovery;
 import org.apache.grails.core.plugins.filters.IncludingPluginFilter;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.env.StandardEnvironment;
 
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -49,22 +57,10 @@ public class DefaultGrailsPluginManagerTests {
 
         var gcl = new GroovyClassLoader();
 
-        first = gcl.parseClass("class FirstGrailsPlugin {\n" +
-            "def version = 1.0\n" +
-            "}");
-        second = gcl.parseClass("class SecondGrailsPlugin {\n" +
-            "def version = 1.0\n" +
-            "def dependsOn = [first:version]\n" +
-            "}");
-        third = gcl.parseClass("import grails.util.GrailsUtil\n" +
-                "class ThirdGrailsPlugin {\n" +
-            "def version = GrailsUtil.getGrailsVersion()\n" +
-            "def dependsOn = [i18n:version]\n" +
-            "}");
-        fourth = gcl.parseClass("class FourthGrailsPlugin {\n" +
-            "def version = 1.0\n" +
-            "def dependsOn = [second:version, third:version]\n" +
-            "}");
+        first = gcl.parseClass(plugin("First", ""));
+        second = gcl.parseClass(plugin("Second", "dependsOn = ['first:1.0']"));
+        third = gcl.parseClass(plugin("Third", "dependsOn = ['i18n:${plugin.version}']"));
+        fourth = gcl.parseClass(plugin("Fourth", "dependsOn = ['second:1.0', 'third:1.0']"));
 
         GrailsApplication app = new DefaultGrailsApplication(new Class[]{}, gcl);
         var parent = new GenericApplicationContext();
@@ -75,7 +71,6 @@ public class DefaultGrailsPluginManagerTests {
         discovery.init(new StandardEnvironment());
         parent.getDefaultListableBeanFactory().registerSingleton(PluginDiscovery.BEAN_NAME, discovery);
         var manager = new DefaultGrailsPluginManager(app, discovery);
-        manager.setParentApplicationContext(parent);
 
         manager.loadPlugins();
 
@@ -97,30 +92,22 @@ public class DefaultGrailsPluginManagerTests {
      * Test the known 1.0.2 failure where:
      *
      * mail 0.3 = has no deps
-     * quartz 0.3-SNAPSHOT: loadAfter = ['core', 'hibernate']
+     * quartz 0.3-SNAPSHOT: after = ['core', 'hibernate']
      * emailconfirmation 0.4: dependsOn = [quartz:'0.3 > *', mail: '0.2 > *']
      *
      * ...and emailconfirmation is NOT loaded first.
      */
     @Test
     @SuppressWarnings("rawtypes")
-    public void testDependenciesWithDelayedLoadingWithVersionRangeStrings() {
-        var gcl = new GroovyClassLoader();
+    public void testDependenciesWithDelayedLoadingWithVersionRangeStrings(@TempDir Path descriptors) throws IOException {
+        // The ranges are checked, so the plugins carry the versions their descriptors record, as built plugins do
+        var gcl = versionedPlugins(descriptors, Map.of("First", "0.4", "Second", "0.3", "Third", "0.3-SNAPSHOT"));
 
         // These are defined in a specific order so that the one with the range dependencies
         // is the first in the list, and its dependencies load after
-        first = gcl.parseClass("class FirstGrailsPlugin {\n" +
-            "def version = \"0.4\"\n" +
-            "def dependsOn = [second:'0.3 > *', third:'0.2 > *']\n" +
-            "}");
-        second = gcl.parseClass("class SecondGrailsPlugin {\n" +
-            "def version = \"0.3\"\n" +
-            "def dependsOn = [:]\n" +
-            "}");
-        third = gcl.parseClass("class ThirdGrailsPlugin {\n" +
-            "def version = \"0.3-SNAPSHOT\"\n" +
-            "def loadAfter = ['core', 'hibernate']\n" +
-            "}");
+        first = gcl.parseClass(plugin("First", "dependsOn = ['second:0.3 > *', 'third:0.2 > *']"));
+        second = gcl.parseClass(plugin("Second", ""));
+        third = gcl.parseClass(plugin("Third", "after = ['core', 'hibernate']"));
 
         GrailsApplication app = new DefaultGrailsApplication(new Class[]{}, gcl);
         var parent = new GenericApplicationContext();
@@ -132,7 +119,6 @@ public class DefaultGrailsPluginManagerTests {
         discovery.init(new StandardEnvironment());
         parent.getDefaultListableBeanFactory().registerSingleton(PluginDiscovery.BEAN_NAME, discovery);
         var manager = new DefaultGrailsPluginManager(app, discovery);
-        manager.setParentApplicationContext(parent);
 
         manager.loadPlugins();
 
@@ -152,17 +138,10 @@ public class DefaultGrailsPluginManagerTests {
     @Test
     public void testLoadingOrderGRAILS9426() {
         // GRAILS-9426
-        var manager = loadPlugins("class FirstGrailsPlugin {\n" +
-                    "def version = '1.0'\n" +
-                    "}", "class SecondGrailsPlugin {\n" +
-                    "def version = '1.0'\n" +
-                    "}", "import grails.util.GrailsUtil\n" +
-                                    "class ThirdGrailsPlugin {\n" +
-                                "def version = '1.0'\n" +
-                                "}", "class FourthGrailsPlugin {\n" +
-                                "def version = '1.0'\n" +
-                                "def loadBefore = ['first', 'second']\n" +
-                                "}");
+        var manager = loadPlugins(plugin("First", ""),
+                plugin("Second", ""),
+                plugin("Third", ""),
+                plugin("Fourth", "before = ['first', 'second']"));
 
         var plugins = manager.getAllPlugins();
         var pluginList = Arrays.asList(plugins);
@@ -183,6 +162,35 @@ public class DefaultGrailsPluginManagerTests {
         assertEquals(4, pluginList.size(), "Expected plugins not loaded. Expected " + 4 + " but got " + pluginList);
     }
 
+    /**
+     * The source of a plugin class, compiled at run time so that no other test discovers it from the class path.
+     * A plugin registered directly without a descriptor has no version, which satisfies every version range.
+     */
+    /**
+     * A class loader whose plugins, once parsed, have the versions given: it holds the descriptors discovery reads a
+     * plugin's version from.
+     */
+    private static GroovyClassLoader versionedPlugins(Path root, Map<String, String> versionsByPrefix) throws IOException {
+        var imports = new StringBuilder();
+        for (var entry : versionsByPrefix.entrySet()) {
+            var name = entry.getKey().substring(0, 1).toLowerCase(Locale.ROOT) + entry.getKey().substring(1);
+            imports.append(name).append('\n');
+            var descriptor = root.resolve("META-INF/grails/plugins/" + name + "/plugin.properties");
+            Files.createDirectories(descriptor.getParent());
+            Files.writeString(descriptor, "format.version=1\nname=" + name + "\nclass=" + entry.getKey() +
+                    "GrailsPlugin\nversion=" + entry.getValue() + "\n");
+        }
+        Files.writeString(root.resolve("META-INF/grails/plugins.imports"), imports);
+        return new GroovyClassLoader(new URLClassLoader(new URL[]{root.toUri().toURL()},
+                DefaultGrailsPluginManagerTests.class.getClassLoader()));
+    }
+
+    private static String plugin(String prefix, String descriptorAttributes) {
+        return "@grails.plugins.metadata.GrailsPluginDescriptor(" + descriptorAttributes + ")\n" +
+                "class " + prefix + "GrailsPlugin extends grails.plugins.Plugin {\n" +
+                "}";
+    }
+
     DefaultGrailsPluginManager loadPlugins(String firstClassString, String secondClassString, String thirdClassString, String fourthClassString) {
         var gcl = new GroovyClassLoader();
 
@@ -200,27 +208,17 @@ public class DefaultGrailsPluginManagerTests {
         discovery.setPluginFilter(new IncludingPluginFilter("first", "second", "third", "fourth"));
         discovery.init(new StandardEnvironment());
         var manager = new DefaultGrailsPluginManager(app, discovery);
-        manager.setParentApplicationContext(parent);
 
         manager.loadPlugins();
         return manager;
     }
 
     @Test
-    public void testLoadingOrderLoadBeforeAndLoadAfter() {
-        var manager = loadPlugins("class FirstGrailsPlugin {\n" +
-                    "def version = '1.0'\n" +
-                    "def loadAfter = ['second', 'third']\n" +
-                    "}", "class SecondGrailsPlugin {\n" +
-                    "def version = '1.0'\n" +
-                    "}", "import grails.util.GrailsUtil\n" +
-                                    "class ThirdGrailsPlugin {\n" +
-                                "def version = '1.0'\n" +
-                                "def loadBefore = ['fourth']\n" +
-                                "}", "class FourthGrailsPlugin {\n" +
-                                "def version = '1.0'\n" +
-                                "def loadBefore = ['first', 'second']\n" +
-                                "}");
+    public void testOrderOfBeforeAndAfter() {
+        var manager = loadPlugins(plugin("First", "after = ['second', 'third']"),
+                plugin("Second", ""),
+                plugin("Third", "before = ['fourth']"),
+                plugin("Fourth", "before = ['first', 'second']"));
 
         var plugins = manager.getAllPlugins();
         var pluginList = Arrays.asList(plugins);

@@ -22,6 +22,8 @@ package loadfirst
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
+import grails.util.GrailsUtil
+import org.apache.grails.core.plugins.PluginDiscovery
 import grails.testing.mixin.integration.Integration
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
@@ -39,6 +41,9 @@ class PluginLifecycleSpec extends Specification {
 
     @Autowired
     GrailsPluginManager pluginManager
+
+    @Autowired
+    PluginDiscovery pluginDiscovery
 
     @Autowired
     ApplicationContext applicationContext
@@ -60,16 +65,7 @@ class PluginLifecycleSpec extends Specification {
 
         then: "instance is correct type"
         plugin != null
-        plugin.instance instanceof LoadfirstGrailsPlugin
-    }
-
-    def "plugin is loaded and active"() {
-        when: "checking plugin status"
-        def plugin = pluginManager.getGrailsPlugin('loadfirst')
-
-        then: "plugin is enabled"
-        plugin != null
-        plugin.enabled
+        plugin.pluginInstance instanceof LoadfirstGrailsPlugin
     }
 
     // ========== Plugin Configuration Tests ==========
@@ -85,56 +81,30 @@ class PluginLifecycleSpec extends Specification {
         prop3 == 'Prop Three Defined By LoadFirst Plugin'
     }
 
-    def "plugin version constraint is defined"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadfirst')
-        def instance = plugin?.instance
+    def "plugin version constraint defaults to the Grails version it was compiled with"() {
+        when: "getting the definition the compiler published for the plugin"
+        def definition = pluginDiscovery.findPlugin('loadfirst').definition
 
-        then: "grails version is specified"
-        instance != null
-        instance.grailsVersion != null
-        instance.grailsVersion.contains('7.0.0')
+        then: "the grails version constraint is the compiling Grails version or later"
+        definition.grailsVersionRange == "${GrailsUtil.grailsVersion} > *"
     }
 
-    def "plugin excludes are configured"() {
-        when: "getting plugin excludes"
+    def "plugin version is the build version"() {
+        when: "getting the plugin"
         def plugin = pluginManager.getGrailsPlugin('loadfirst')
-        def instance = plugin?.instance
+
+        then: "its version is the version the compiler recorded from the build"
+        plugin != null
+        plugin.version
+        plugin.version == pluginDiscovery.findPlugin('loadfirst').pluginVersion
+    }
+
+    def "plugin excludes are published in its descriptor"() {
+        when: "getting the definition the compiler published for the plugin"
+        def definition = pluginDiscovery.findPlugin('loadfirst').definition
 
         then: "excludes are defined"
-        instance != null
-        instance.pluginExcludes != null
-        'grails-app/views/error.gsp' in instance.pluginExcludes
-    }
-
-    // ========== Plugin Metadata Tests ==========
-
-    def "plugin title is set"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadfirst')
-        def instance = plugin?.instance
-
-        then: "title is available"
-        instance?.title == 'Loadfirst'
-    }
-
-    def "plugin profiles are configured"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadfirst')
-        def instance = plugin?.instance
-
-        then: "profiles include web"
-        instance != null
-        'web' in instance.profiles
-    }
-
-    def "plugin documentation URL is configured"() {
-        when: "getting plugin instance"
-        def plugin = pluginManager.getGrailsPlugin('loadfirst')
-        def instance = plugin?.instance
-
-        then: "documentation URL is set"
-        instance?.documentation != null
+        definition.pluginExcludes == ['loadfirst/demo/**']
     }
 
     // ========== Spring Context Integration Tests ==========

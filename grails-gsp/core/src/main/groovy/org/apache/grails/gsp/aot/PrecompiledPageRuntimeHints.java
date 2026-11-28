@@ -42,10 +42,12 @@ public class PrecompiledPageRuntimeHints implements RuntimeHintsRegistrar {
 
     /** Where the pages compiled at build time are listed, read to find them at all. */
     private static final String VIEWS = "gsp/views.properties";
+    private static final String PLUGIN_VIEWS = "META-INF/grails/plugins/*/views.properties";
 
     @Override
     public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
         hints.resources().registerPattern(VIEWS);
+        hints.resources().registerPattern(PLUGIN_VIEWS);
         hints.resources().registerPattern("*" + GroovyPageMetaInfo.HTML_DATA_POSTFIX);
         hints.resources().registerPattern("*" + GroovyPageMetaInfo.LINENUMBERS_DATA_POSTFIX);
     }

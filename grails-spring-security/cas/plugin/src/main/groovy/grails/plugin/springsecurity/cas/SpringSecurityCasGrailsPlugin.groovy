@@ -28,6 +28,7 @@ import org.apereo.cas.client.session.SingleSignOutFilter
 import org.apereo.cas.client.session.SingleSignOutHttpSessionListener
 import org.apereo.cas.client.validation.Cas20ServiceTicketValidator
 
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.security.cas.ServiceProperties
@@ -39,27 +40,34 @@ import org.springframework.security.web.authentication.session.NullAuthenticated
 
 import grails.plugin.springsecurity.BeanTypeResolver
 import grails.plugin.springsecurity.SecurityFilterPosition
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.web.config.http.GrailsFilters
 
 @Slf4j
 @CompileStatic
+@GrailsPluginDescriptor(after = ['springSecurityCore'])
 class SpringSecurityCasGrailsPlugin extends Plugin {
 
-    String grailsVersion = '8.0.0-SNAPSHOT > *'
-    String title = 'Apereo CAS support for the Spring Security plugin.'
-    String description = 'Apereo CAS support for the Spring Security plugin.'
-    String documentation = 'https://apache.github.io/grails-spring-security'
-    String license = 'APACHE'
-    List loadAfter = ['springSecurityCore']
-    def organization = [name: 'Grails', url: 'https://grails.apache.org/']
-    def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-    def profiles = ['web']
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityCasBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
 
+    /**
+     * The beans of the Spring Security CAS plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
     @CompileDynamic
-    Closure doWithSpring() {
+    Closure beanDefinitions() {
         { ->
 
             def conf = SpringSecurityUtils.securityConfig

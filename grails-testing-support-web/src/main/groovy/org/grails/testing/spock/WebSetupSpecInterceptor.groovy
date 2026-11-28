@@ -51,6 +51,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 import grails.config.Settings
 import grails.core.GrailsApplication
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.testing.web.GrailsWebUnitTest
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.web.CamelCaseUrlConverter
@@ -333,7 +334,7 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
         CodecsGrailsPlugin codecsGrailsPlugin = new CodecsGrailsPlugin()
         test.defineBeans(codecsGrailsPlugin)
 
-        codecsGrailsPlugin.providedArtefacts.each { Class codecClass ->
+        CodecsGrailsPlugin.getAnnotation(GrailsPluginDescriptor).providedArtefacts().each { Class codecClass ->
             test.mockCodec(codecClass, false)
         }
 

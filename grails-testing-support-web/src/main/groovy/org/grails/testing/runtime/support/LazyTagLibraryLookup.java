@@ -20,6 +20,7 @@
 package org.grails.testing.runtime.support;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.util.ClassUtils;
 
 import grails.core.gsp.GrailsTagLibClass;
+import grails.plugins.metadata.GrailsPluginDescriptor;
 import org.grails.plugins.web.GroovyPagesGrailsPlugin;
 import org.grails.taglib.TagLibraryLookup;
 
@@ -47,7 +49,7 @@ public class LazyTagLibraryLookup extends TagLibraryLookup {
     private Map<String, GrailsTagLibClass> lazyLoadableTagLibs = new HashMap<>();
 
     public LazyTagLibraryLookup() {
-        List<Class> mockedClasses = new ArrayList<>((List<Class>) new GroovyPagesGrailsPlugin().getProvidedArtefacts());
+        List<Class> mockedClasses = new ArrayList<>(Arrays.asList(GroovyPagesGrailsPlugin.class.getAnnotation(GrailsPluginDescriptor.class).providedArtefacts()));
         ClassLoader classLoader = LazyTagLibraryLookup.class.getClassLoader();
         if (ClassUtils.isPresent("org.apache.grails.web.layout.LayoutGrailsPlugin", classLoader)) {
             // sitemesh2 support

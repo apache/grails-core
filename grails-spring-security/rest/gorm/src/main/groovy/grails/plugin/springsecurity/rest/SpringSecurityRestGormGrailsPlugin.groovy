@@ -19,39 +19,36 @@
 
 package grails.plugin.springsecurity.rest
 
+import org.springframework.beans.factory.BeanRegistrar
+
 import grails.plugin.springsecurity.SecurityFilterPosition
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.rest.token.generation.SecureRandomTokenGenerator
 import grails.plugin.springsecurity.rest.token.storage.GormTokenStorageService
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
+@GrailsPluginDescriptor(
+        after = ['springSecurityRest'])
 class SpringSecurityRestGormGrailsPlugin extends Plugin {
 
-    // the version or versions of Grails the plugin is designed for
-    String grailsVersion = '7.0.0 > *'
-    List loadAfter = ['springSecurityRest']
-    List pluginExcludes = [
-            'grails-app/views/**'
-    ]
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityRestGormBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
 
-    String title = 'Spring Security REST Plugin - GORM support'
-    String author = 'Apache Grails Team'
-    String authorEmail = ''
-    String description = 'Implements authentication for REST APIs based on Spring Security. It uses a token-based workflow'
-
-    def profiles = ['web']
-
-    // URL to the plugin's documentation
-    String documentation = 'https://grails.apache.org/documentation.html'
-
-    // Extra (optional) plugin metadata
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://www.grails.org/']
-
-    def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [ url: 'https://github.com/apache/grails-core']
-
-    Closure doWithSpring() {
+    /**
+     * The beans of the Spring Security REST GORM token storage plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
             def conf = SpringSecurityUtils.securityConfig
             if (!conf || !conf.active || !conf.rest.active) {

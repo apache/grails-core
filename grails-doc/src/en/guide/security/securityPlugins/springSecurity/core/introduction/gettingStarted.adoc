@@ -41,7 +41,7 @@ After installation, execute the `s2-quickstart` initialization script. This sets
 ----
 
 If you are installing into a Grails plugin instead of an application, you must make sure you are using  the `web-plugin` profile. Otherwise dependencies will not be met.
-Running the same command will inject the spring beans into your `GrailsPlugin` classes `doWithSpring` method.
+Running the same command will register the spring beans in your `GrailsPlugin` class's `beanRegistrar` method, adding the method when the class has none.
 
 === Plugin Configuration and Setup
 

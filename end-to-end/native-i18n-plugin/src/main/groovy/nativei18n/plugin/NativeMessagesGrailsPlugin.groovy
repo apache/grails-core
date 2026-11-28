@@ -20,13 +20,12 @@
 package nativei18n.plugin
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * A plugin whose Grails name is multi-word, so its bundle exercises both halves of the naming:
  * the descriptor records the hyphenated {@code native-messages}, while the plugin the application
  * discovers reports the logical {@code nativeMessages}.
  */
-class NativeMessagesGrailsPlugin extends Plugin {
-
-    def grailsVersion = '9.0.0-SNAPSHOT > *'
-}
+@GrailsPluginDescriptor
+class NativeMessagesGrailsPlugin extends Plugin {}

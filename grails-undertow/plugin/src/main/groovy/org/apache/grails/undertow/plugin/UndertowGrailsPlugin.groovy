@@ -22,6 +22,7 @@ package org.apache.grails.undertow.plugin
 import groovy.transform.CompileStatic
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * Plugin that runs Grails applications on the Undertow embedded servlet container.
@@ -33,13 +34,5 @@ import grails.plugins.Plugin
  * @since 8.0
  */
 @CompileStatic
-class UndertowGrailsPlugin extends Plugin {
-
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-
-    def author = 'Grails Core Team'
-    def title = 'Undertow for Grails'
-    def description = 'Runs Grails applications on the Undertow embedded servlet container'
-    def documentation = 'https://grails.apache.org/docs/latest/guide/single.html'
-
-}
+@GrailsPluginDescriptor
+class UndertowGrailsPlugin extends Plugin {}

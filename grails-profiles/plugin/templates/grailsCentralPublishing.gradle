@@ -18,9 +18,6 @@ publishing {
             from components.java
             artifact sourcesJar
             artifact javadocJar
-            artifact source:"${sourceSets.main.output.classesDir}/META-INF/grails-plugin.xml",
-                     classifier:"plugin",
-                     extension:'xml'
         }
     }
 

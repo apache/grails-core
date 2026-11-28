@@ -141,13 +141,13 @@ class PublishPlugin implements Plugin<Project> {
 
     /**
      * Maps the absolute path of every artifact of the project's Maven publications to the coordinate it is
-     * published under. Publication metadata sidecars ({@code grails-plugin.xml}, {@code profile.yml}) are left out.
+     * published under. The profile metadata sidecar ({@code profile.yml}) is left out.
      */
     protected static Map<String, String> collectPublishedArtifactCoordinates(PublishingExtension publishing) {
         Map<String, String> coordinates = [:]
         publishing.publications.withType(MavenPublication).each { MavenPublication publication ->
             publication.artifacts.each { MavenArtifact artifact ->
-                if (artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                if (artifact.file.name == 'profile.yml') {
                     return
                 }
                 String coordinate = "$publication.groupId:$publication.artifactId:$publication.version"
@@ -182,7 +182,7 @@ class PublishPlugin implements Plugin<Project> {
     /**
      * Collects the artifact files to checksum across <em>all</em> Maven publications of the project,
      * including additional publications such as the {@code cli} companion coordinate. Publication
-     * metadata sidecars ({@code grails-plugin.xml}, {@code profile.yml}) are excluded.
+     * the profile metadata sidecar ({@code profile.yml}) is excluded.
      *
      * Accumulating across every publication is essential: earlier revisions set the checksum inputs
      * per publication, so only the last-configured publication survived and companion artifacts
@@ -193,7 +193,7 @@ class PublishPlugin implements Plugin<Project> {
         publishing.publications.withType(MavenPublication).each { MavenPublication publication ->
             project.logger.lifecycle('Maven Publication Found for project: {} with name {}', project.name, publication.name)
             publication.artifacts.each { MavenArtifact artifact ->
-                if (artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                if (artifact.file.name == 'profile.yml') {
                     return
                 }
                 filesToChecksum << artifact.file

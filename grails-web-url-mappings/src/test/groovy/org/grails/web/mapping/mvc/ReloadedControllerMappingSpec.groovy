@@ -20,6 +20,7 @@ package org.grails.web.mapping.mvc
 
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.env.StandardEnvironment
 import org.springframework.mock.web.MockHttpServletRequest
 
 import grails.core.DefaultGrailsApplication
@@ -28,9 +29,11 @@ import grails.core.GrailsControllerClass
 import grails.plugins.DefaultGrailsPluginManager
 import grails.plugins.GrailsPluginManager
 import grails.util.GrailsWebMockUtil
+import grails.util.Holders
 import grails.web.mapping.AbstractUrlMappingsSpec
 import grails.web.mapping.UrlMappingsHolder
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.filters.IncludingPluginFilter
 import org.grails.core.DefaultGrailsControllerClass
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
@@ -191,6 +194,8 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
         given:
         def application = controller('reload.BookController', ['index', 'show'])
         def plugin = controller('bookstore.BookController', ['index', 'show'], null, 'bookstore')
+        GrailsPluginManager previous = Holders.pluginManager
+        Holders.pluginManager = managerOf(plugin)
         def mappings = mappingsFor(application, plugin)
 
         expect:
@@ -201,6 +206,21 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
 
         then:
         controllerFor(mappings, '/book/show').is(plugin.clazz)
+
+        cleanup:
+        Holders.pluginManager = previous
+    }
+
+    /** A plugin manager whose plugin, compiled beside the controller, lists it among its artefacts. */
+    private static GrailsPluginManager managerOf(GrailsControllerClass controller) {
+        Class<?> pluginClass = controller.clazz.classLoader.loadClass(controller.clazz.package.name + '.PluginOfController')
+        def discovery = new DefaultPluginDiscovery([pluginClass] as Class[]).tap {
+            loadPluginsFromClasspath = false
+            init(new StandardEnvironment())
+        }
+        new DefaultGrailsPluginManager(new DefaultGrailsApplication(), discovery).tap {
+            loadPlugins()
+        }
     }
 
     private GrailsControllerUrlMappings mappingsFor(GrailsControllerClass... controllers) {
@@ -221,11 +241,15 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
         String source = """
             package ${className.substring(0, lastDot)}
 
-            ${pluginName ? "@grails.plugins.metadata.GrailsPlugin(name = '${pluginName}', version = '1.0')" : ''}
             class ${className.substring(lastDot + 1)} {
                 ${namespace ? "static namespace = '${namespace}'" : ''}
                 ${actions.collect { "@grails.web.Action def ${it}() { '${it}' }" }.join('\n')}
             }
+
+            ${pluginName ? """
+                @grails.plugins.metadata.GrailsPluginDescriptor(name = '${pluginName}', providedArtefacts = [${className.substring(lastDot + 1)}])
+                class PluginOfController extends grails.plugins.Plugin {}
+            """ : ''}
         """
         new GroovyClassLoader(ReloadedControllerMappingSpec.classLoader).parseClass(source)
     }
@@ -235,7 +259,9 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
      */
     private static GenericApplicationContext runningContext(DefaultGrailsApplication grailsApplication) {
         def context = new GenericApplicationContext()
+        // the controllers plugin on the test class path needs the url mappings plugin, which this module's tests lack
         def discovery = new DefaultPluginDiscovery()
+        discovery.pluginFilter = new IncludingPluginFilter('core')
         discovery.init(context.environment)
         context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApplication)
         context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, new DefaultGrailsPluginManager(grailsApplication, discovery))

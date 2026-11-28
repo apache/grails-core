@@ -21,7 +21,6 @@ package org.grails.plugins;
 import grails.plugins.GrailsPlugin;
 import org.apache.grails.core.plugins.DefaultPluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
-import org.apache.grails.core.plugins.PluginUtils;
 
 public class MockPluginDiscovery extends DefaultPluginDiscovery {
 
@@ -34,19 +33,22 @@ public class MockPluginDiscovery extends DefaultPluginDiscovery {
         super(pluginClasses);
     }
 
+    /**
+     * Registers a plugin the test created, by the {@link PluginInfo} it was created from.
+     *
+     * @param plugin a {@link DefaultGrailsPlugin}
+     */
     public void registerMockPlugin(GrailsPlugin plugin) {
-        registerMockPlugin(PluginUtils.createPluginInfo(plugin.getPluginClass(), null, true));
-    }
-
-    public void registerMockPlugin(BinaryGrailsPlugin plugin) {
-        registerMockPlugin(PluginUtils.createPluginInfo(plugin.getPluginClass(), plugin.getPluginDescriptor().getResource(), false));
+        if (!(plugin instanceof DefaultGrailsPlugin defaultPlugin)) {
+            throw new IllegalArgumentException("A mock plugin is a DefaultGrailsPlugin, not " + plugin);
+        }
+        registerMockPlugin(defaultPlugin.getPluginInfo());
     }
 
     public void registerMockPlugin(PluginInfo pluginInfo) {
         initPluginsIfNotDefined();
 
         plugins.put(pluginInfo.getName(), pluginInfo);
-        loadOrderedPlugins.add(pluginInfo);
         orderedPlugins.add(pluginInfo);
     }
 

@@ -34,10 +34,10 @@ import org.springframework.web.servlet.i18n.CookieLocaleResolver
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
+@GrailsPluginDescriptor
 class I18nGrailsPlugin extends Plugin {
-
-    def version = "0.1"
 
     @Override
     BeanRegistrar beanRegistrar() {
@@ -60,73 +60,90 @@ class I18nGrailsPlugin extends Plugin {
 
 For more involved or reusable registration you can instead implement `BeanRegistrar` as its own class and return an instance of it from `beanRegistrar()`.
 
-Plugin beans are registered before Spring Boot processes its auto-configurations, so a bean registered here takes precedence over any Spring Boot default guarded by `@ConditionalOnMissingBean` — there is no need to override or remove Boot's beans afterwards.
+Plugin beans are registered before Spring Boot processes its auto-configurations, so a bean registered here takes precedence over any Spring Boot default guarded by `@ConditionalOnMissingBean` — there is no need to override or remove Boot's beans afterwards. The registrars of the plugins are applied in plugin order (see link:plugins.html#understandingPluginLoadOrder[Understanding Plugin Load Order]), so a plugin that comes after another replaces a bean of the same name the other one registered, and a registrar bean also replaces a bean of the same name that another plugin's `beans` block declares. The beans of the application itself — its `grails-app/conf/spring/resources.groovy`, its `Application` class — are registered later still, and replace a plugin bean of the same name.
 
-Alternatively, plugins may override the `doWithSpring` method and return a closure that defines beans using the link:spring.html#theBeanBuilderDSLExplained[Spring Bean Builder] syntax:
+A plugin contributes beans through `beanRegistrar()` and through a `beans` block (see <<compilingBeanDefinitionsIntoAutoConfiguration,below>>), and through nothing else. The bean builder hook of earlier versions, `doWithSpring`, no longer exists on `Plugin`: a plugin that still declares a `doWithSpring` method, in either its closure-returning or its `BeanBuilder` form, fails to compile, since the method would never be called and its beans would be missing. The upgrade notes show how to move its beans.
 
-[source,groovy]
-----
-import org.springframework.web.servlet.i18n.CookieLocaleResolver
-import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
-import org.springframework.context.support.ReloadableResourceBundleMessageSource
-import grails.plugins.*
+===== Definitions the BeanRegistry API cannot express
 
-class I18nGrailsPlugin extends Plugin {
-
-    def version = "0.1"
-
-    Closure doWithSpring() {{->
-        messageSource(ReloadableResourceBundleMessageSource) {
-            basename = "WEB-INF/grails-app/i18n/messages"
-        }
-        localeChangeInterceptor(LocaleChangeInterceptor) {
-            paramName = "lang"
-        }
-        localeResolver(CookieLocaleResolver)
-    }}
-}
-----
-
-NOTE: `doWithSpring` is deprecated as of Grails 8 in favour of `beanRegistrar`. It continues to work — the beans it defines register at the same early point in the lifecycle — but new code should prefer the `BeanRegistrar` API.
-
-Alternatively, you can override the `doWithSpring(BeanBuilder)` method and register beans directly against the supplied `BeanBuilder` instead of returning a closure. This avoids the closure indirection and is the recommended form for statically compiled plugins:
+`BeanRegistry` registers a bean by its class, a supplier and a few flags. Some definitions need more of Spring's bean definition model than that: an abstract parent definition other definitions inherit their properties from, a bean with aliases, autowiring by name, a prototype created by a factory method of another bean, property values that refer to other beans, or definitions computed from the artefacts of the application. Register those from a `BeanDefinitionRegistryPostProcessor` that the registrar registers. Implementing `PriorityOrdered` with `Ordered.HIGHEST_PRECEDENCE` makes Spring run it before it reads the configuration classes, so the beans it registers are in the registry when a `@ConditionalOnMissingBean` is evaluated, exactly like the beans of the registrar. Post-processors of the same order run in the order they were registered, so the post-processor of a plugin that loads later runs later, and its definitions replace those of an earlier plugin of the same name.
 
 [source,groovy]
 ----
-import org.springframework.web.servlet.i18n.CookieLocaleResolver
-import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
-import org.springframework.context.support.ReloadableResourceBundleMessageSource
-import grails.plugins.*
-import grails.spring.BeanBuilder
+import org.springframework.beans.MutablePropertyValues
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.beans.factory.config.RuntimeBeanReference
+import org.springframework.beans.factory.support.AbstractBeanDefinition
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.GenericBeanDefinition
+import org.springframework.core.Ordered
+import org.springframework.core.PriorityOrdered
+import org.springframework.core.env.Environment
+import grails.core.GrailsApplication
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
-class I18nGrailsPlugin extends Plugin {
-
-    def version = "0.1"
+@GrailsPluginDescriptor
+class ReportingGrailsPlugin extends Plugin {
 
     @Override
-    void doWithSpring(BeanBuilder beans) {
-        beans.messageSource(ReloadableResourceBundleMessageSource) {
-            basename = "WEB-INF/grails-app/i18n/messages"
-        }
-        beans.localeChangeInterceptor(LocaleChangeInterceptor) {
-            paramName = "lang"
-        }
-        beans.localeResolver(CookieLocaleResolver)
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, Environment environment ->
+            registry.registerBean('reportingBeanDefinitionsPostProcessor', ReportingBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier { new ReportingBeanDefinitionsPostProcessor(grailsApplication) }
+            }
+        } as BeanRegistrar
+    }
+}
+
+class ReportingBeanDefinitionsPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered {
+
+    private final GrailsApplication grailsApplication
+
+    ReportingBeanDefinitionsPostProcessor(GrailsApplication grailsApplication) {
+        this.grailsApplication = grailsApplication
+    }
+
+    @Override
+    void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+        // an abstract parent the renderers inherit their properties from
+        def abstractRenderer = new GenericBeanDefinition(abstract: true)
+        abstractRenderer.propertyValues.add('encoding', grailsApplication.config.getProperty('reporting.encoding', 'UTF-8'))
+        registry.registerBeanDefinition('abstractReportRenderer', abstractRenderer)
+
+        def pdfRenderer = new GenericBeanDefinition(beanClass: PdfReportRenderer, parentName: 'abstractReportRenderer',
+                lazyInit: true, autowireMode: AbstractBeanDefinition.AUTOWIRE_BY_NAME)
+        pdfRenderer.propertyValues.add('fontResolver', new RuntimeBeanReference('reportFontResolver'))
+        registry.registerBeanDefinition('pdfReportRenderer', pdfRenderer)
+        registry.registerAlias('pdfReportRenderer', 'reportRenderer')
+    }
+
+    @Override
+    void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    }
+
+    @Override
+    int getOrder() {
+        Ordered.HIGHEST_PRECEDENCE
     }
 }
 ----
 
-A plugin may override either `doWithSpring()` or `doWithSpring(BeanBuilder)`, but not both. The closure-returning `doWithSpring()` remains fully supported for backwards compatibility. Defining both forms in the same plugin is an error: the plugin will fail to load with an exception, since the two forms are alternatives and defining both indicates an incomplete migration between them. Consolidate the bean definitions into a single form.
+The definition API covers the rest of what a bean definition holds: `setScope`, `setFactoryBeanName` and `setFactoryMethodName`, `setDestroyMethodName`, `setDependsOn`, `setPrimary`, constructor arguments through `getConstructorArgumentValues()`, and lists and maps of references as `ManagedList` and `ManagedMap`. To leave a definition the application or an earlier plugin registered in place, check `registry.containsBeanDefinition(name)` before registering.
 
 
+[[compilingBeanDefinitionsIntoAutoConfiguration]]
 ==== Compiling Bean Definitions into a Spring Boot AutoConfiguration
 
 
-`beanRegistrar()` and `doWithSpring` register beans at a single, fixed point in startup: before Spring Boot processes any `{springbootapi}org/springframework/boot/autoconfigure/AutoConfiguration.html[AutoConfiguration]`. That is enough for a bean to win against a Boot default guarded by `@ConditionalOnMissingBean`, but it cannot express ordering *relative to a specific* auto-configuration — running before `WebMvcAutoConfiguration` but after `MessageSourceAutoConfiguration`, say, regardless of where those two land in Boot's overall sort. Only a real `AutoConfiguration` class can declare that ordering, via `@AutoConfiguration(before = ..., after = ...)`.
+`beanRegistrar()` registers beans at a single, fixed point in startup: before Spring Boot processes any `{springbootapi}org/springframework/boot/autoconfigure/AutoConfiguration.html[AutoConfiguration]`. That is enough for a bean to win against a Boot default guarded by `@ConditionalOnMissingBean`, but it cannot express ordering *relative to a specific* auto-configuration — running before `WebMvcAutoConfiguration` but after `MessageSourceAutoConfiguration`, say, regardless of where those two land in Boot's overall sort. Only a real `AutoConfiguration` class can declare that ordering, via `@AutoConfiguration(before = ..., after = ...)`.
 
 The link:{api}grails/compiler/beans/GrailsBeans.html[GrailsBeans] annotation lets you author bean definitions with DSL syntax similar to the classic Beans DSL, while compiling them at build time into genuine `@Bean` factory methods on a plain `AutoConfiguration` class — no closures, and nothing DSL-specific, survive into the compiled bytecode. Declare a class whose `beans` property is a closure of `bean(["name", ] Type) { ... }` statements:
 
-NOTE: On a `*GrailsPlugin.groovy` plugin descriptor or an application's `Application` class the annotation is implicit — a `beans` property is compiled automatically, the same way `doWithSpring` and `watchedResources` are conventions rather than annotated members. `@GrailsBeans` is written out only on a standalone class, as in the first example below. A class with no `beans` property is untouched.
+NOTE: On a plugin class (a `Plugin` subclass annotated with `@GrailsPluginDescriptor`) or an application's `Application` class the annotation is implicit — a `beans` property is compiled automatically. `@GrailsBeans` is written out only on a standalone class, as in the first example below. A class with no `beans` property is untouched.
 
 [source,groovy]
 ----
@@ -254,22 +271,22 @@ A standalone `@GrailsBeans` class — one that is neither a plugin descriptor no
 
 NOTE: `@GrailsBeans` does not require extending `Plugin` at all — it produces a plain Spring Boot `AutoConfiguration`, so it can be used by any Spring Boot module, not just a Grails plugin descriptor. Applications can use it too, including directly on the `Application` class — where no imports-file registration is needed, since Spring Boot processes the application class itself — see link:spring.html#springdslAdditional[Configuring Additional Beans]. Within a plugin, reach for it specifically when a bean's registration needs to be ordered against a particular other auto-configuration; otherwise `beanRegistrar()` remains the recommended way to register beans from a `Plugin`.
 
-The DSL still covers a narrower surface than `doWithSpring(BeanBuilder)`:
+The DSL covers a narrower surface than bean definitions registered from a post-processor:
 
 * Each top-level statement inside `beans { }` must be exactly `bean(...)`, `field(...)`, or `method(...)`, with their respective chaining — an `if`, a `for` loop, or any other imperative Groovy directly inside `beans { }` is a compile-time error, not a runtime one. Note that this is about the DSL's own top-level statements, not the bodies of `bean(...)`/`method(...)` closures themselves, which accept arbitrary Groovy, subject only to what is reachable from the generated class (see the last bullet below) — and `field(...)`/`method(...)` already cover the common reasons to want shared state or logic in the first place.
 * `.annotate(...)` attribute values must resolve to a constant at compile time: a literal, a reference to a `static final` field, or a concatenation of those. `.annotate(Value, value: '${' + Settings.I18N_LOCALE_RESOLVER + ':session}')` folds, `@CompileStatic` included, the same way `.value(...)` folds its arguments — the resolution happens while the DSL is compiled, before `@CompileStatic` runs, so it makes no difference whether the constant is declared on an interface or on a class. What cannot be used is anything that is not a compile-time constant: a method call, a local variable, a value read from configuration. An attribute that itself takes a nested annotation as its value isn't supported.
 * Dependencies on other beans are expressed through typed closure parameters, autowired by type; there is no `ref('beanName')` lookup. Where the type alone is ambiguous, select by name with a parameter annotation — `@Qualifier('beanName')` — as `DomainClassGrailsPlugin` does with `@Qualifier('grailsDomainClassMappingContext') MappingContext mappingContext`.
-* A `bean(...)`/`method(...)` closure body cannot reach members of the `Plugin` it was written in. The body is relocated verbatim onto the generated sibling, which extends `Object` and holds no reference to the plugin instance, so reading `config`, `grailsApplication` or `applicationContext` from a body fails — at compile time under `@CompileStatic`, and otherwise not until Spring invokes the factory method during startup. This is the one habit worth unlearning when converting from `doWithSpring`, whose closures can read plugin state freely: take injected configuration through `field(...)`, and a `GrailsApplication` (or any other bean) through a typed closure parameter.
+* A `bean(...)`/`method(...)` closure body cannot reach members of the `Plugin` it was written in. The body is relocated verbatim onto the generated sibling, which extends `Object` and holds no reference to the plugin instance, so reading `config`, `grailsApplication` or `applicationContext` from a body fails — at compile time under `@CompileStatic`, and otherwise not until Spring invokes the factory method during startup. This is the one habit worth unlearning when converting the closure of the removed `doWithSpring` hook, which could read plugin state freely: take injected configuration through `field(...)`, and a `GrailsApplication` (or any other bean) through a typed closure parameter.
 
-===== Using @GrailsBeans directly on a *GrailsPlugin.groovy class
+===== Using @GrailsBeans directly on a plugin class
 
-`@GrailsBeans` may also be applied directly to a `Plugin` subclass, so bean definitions can live in the familiar `*GrailsPlugin.groovy` file instead of a separate class:
+`@GrailsBeans` may also be applied directly to a plugin class, so bean definitions can live in the plugin class instead of a separate class:
 
 [source,groovy]
 ----
 import grails.compiler.beans.GrailsBeans
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
@@ -280,9 +297,8 @@ import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 
 @GrailsBeans
 @AutoConfiguration(before = [MessageSourceAutoConfiguration, WebMvcAutoConfiguration])
+@GrailsPluginDescriptor
 class I18nGrailsPlugin extends Plugin {
-
-    def version = GrailsUtil.getGrailsVersion()
 
     def beans = {
         bean('messageSource', ReloadableResourceBundleMessageSource) {
@@ -305,7 +321,7 @@ class I18nGrailsPlugin extends Plugin {
 }
 ----
 
-A `Plugin` subclass is instantiated by `DefaultGrailsPlugin` via plain reflection, never as a Spring bean, so it cannot itself carry `@Bean` methods or a meaningful `@AutoConfiguration`/`@Conditional*` annotation. When `@GrailsBeans` is applied to a `Plugin` subclass, the compiled `@Bean` methods land on a generated sibling class instead, in the plugin's own package by default. Its name follows the Grails plugin-descriptor convention: a class named `*GrailsPlugin` swaps that suffix for `AutoConfiguration` — the example above produces both `I18nGrailsPlugin` (with `beans` stripped, `doWithApplicationContext` untouched) and a separate `I18nAutoConfiguration` class carrying the three `@Bean` methods, exactly the name the hand-written class it replaces would have had. Any other class name appends `AutoConfiguration` (`FooPlugin` → `FooPluginAutoConfiguration`). Everything else about the plugin class — `version`, `watchedResources`, `doWithApplicationContext`, `onChange`, and so on — works exactly as it does without `@GrailsBeans`.
+A `Plugin` subclass is instantiated by `DefaultGrailsPlugin` via plain reflection, never as a Spring bean, so it cannot itself carry `@Bean` methods or a meaningful `@AutoConfiguration`/`@Conditional*` annotation. When `@GrailsBeans` is applied to a `Plugin` subclass, the compiled `@Bean` methods land on a generated sibling class instead, in the plugin's own package by default. Its name follows the Grails plugin-descriptor convention: a class named `*GrailsPlugin` swaps that suffix for `AutoConfiguration` — the example above produces both `I18nGrailsPlugin` (with `beans` stripped, `doWithApplicationContext` untouched) and a separate `I18nAutoConfiguration` class carrying the three `@Bean` methods, exactly the name the hand-written class it replaces would have had. Any other class name appends `AutoConfiguration` (`FooPlugin` → `FooPluginAutoConfiguration`). Everything else about the plugin class — its `@GrailsPluginDescriptor`, `doWithApplicationContext`, `onChange`, and so on — works exactly as it does without `@GrailsBeans`.
 
 Every annotation on the plugin class that only makes sense on whatever Spring Boot actually evaluates moves onto that sibling too, since none of them has any effect on a class Spring never processes as a bean: `@AutoConfiguration`, the whole `@Conditional*` family, `@Import`/`@ImportAutoConfiguration`/`@ImportResource`, `@ComponentScan`, `@EnableConfigurationProperties`, `@PropertySource`/`@PropertySources`, and `@AutoConfigureOrder`/`Before`/`After`. This also recognises a *composed* annotation built on top of any of these — for example a project-specific `@ConditionalOnFeature` that is itself meta-annotated with Spring Boot's `@ConditionalOnProperty` (rather than `@Conditional` directly), or a custom `@EnableSomething` meta-annotated with `@Import` — so it isn't limited to Spring's own built-in annotation types. An annotation *outside* that set (one neither listed nor meta-annotated with anything listed) stays on the plugin class, where Spring never sees it — for those, name them explicitly with `@GrailsBeans(moveAnnotations = [SomeVendorAnnotation])` and they move like the recognised ones do.
 
@@ -321,6 +337,7 @@ package com.example
 
 @GrailsBeans(autoConfigurationName = 'com.example.web.ExampleAutoConfiguration')
 @AutoConfiguration
+@GrailsPluginDescriptor
 class ExampleGrailsPlugin extends Plugin {
     def beans = { /* ... */ }
 }
@@ -344,47 +361,61 @@ However, it is possible to perform the most commons tasks of modifying the Servl
 ==== Adding New Servlets
 
 
-If you want to add a new Servlet instance the simplest way is simply to define a new Spring bean in the `doWithSpring` method:
+If you want to add a new Servlet instance the simplest way is simply to register a new Spring bean from the plugin's `beanRegistrar` method:
 
 [source,groovy]
 ----
-Closure doWithSpring() {{->
-  myServlet(MyServlet)
-}}
+@Override
+BeanRegistrar beanRegistrar() {
+    { BeanRegistry registry, Environment environment ->
+        registry.registerBean('myServlet', MyServlet)
+    } as BeanRegistrar
+}
 ----
 
 If you need to customize the servlet you can use Spring Boot's {springbootapi}org/springframework/boot/web/servlet/ServletRegistrationBean.html[ServletRegistrationBean]:
 
 [source,groovy]
 ----
-Closure doWithSpring() {{->
-  myServlet(ServletRegistrationBean, new MyServlet(), "/myServlet/*") {
-    loadOnStartup = 2
-  }
-}}
+@Override
+BeanRegistrar beanRegistrar() {
+    { BeanRegistry registry, Environment environment ->
+        registry.registerBean('myServlet', ServletRegistrationBean) { spec ->
+            spec.supplier {
+                new ServletRegistrationBean(new MyServlet(), '/myServlet/*').tap { loadOnStartup = 2 }
+            }
+        }
+    } as BeanRegistrar
+}
 ----
 
 
 ==== Adding New Servlet Filters
 
 
-Just like Servlets, the simplest way to configure a new filter is to simply define a Spring bean:
+Just like Servlets, the simplest way to configure a new filter is to simply register a Spring bean:
 
 [source,groovy]
 ----
-Closure doWithSpring() {{->
-  myFilter(MyFilter)
-}}
+@Override
+BeanRegistrar beanRegistrar() {
+    { BeanRegistry registry, Environment environment ->
+        registry.registerBean('myFilter', MyFilter)
+    } as BeanRegistrar
+}
 ----
 
 However, if you want to control the order of filter registrations you will need to use Spring Boot's {springbootapi}org/springframework/boot/web/servlet/FilterRegistrationBean.html[FilterRegistrationBean]:
 
 [source,groovy]
 ----
-myFilter(FilterRegistrationBean) {
-    filter = bean(MyFilter)
-    urlPatterns = ['/*']
-    order = Ordered.HIGHEST_PRECEDENCE + 1
+registry.registerBean('myFilter', FilterRegistrationBean) { spec ->
+    spec.supplier {
+        new FilterRegistrationBean(new MyFilter()).tap {
+            urlPatterns = ['/*']
+            order = Ordered.HIGHEST_PRECEDENCE + 1
+        }
+    }
 }
 ----
 
@@ -396,14 +427,12 @@ NOTE: Spring Boot registers the character encoding filter at `Ordered.HIGHEST_PR
 ==== Doing Post Initialisation Configuration
 
 
-Sometimes it is useful to be able do some runtime configuration after the Spring {springapi}org/springframework/context/ApplicationContext.html[ApplicationContext] has been built. In this case you can define a `doWithApplicationContext` closure property.
+Sometimes it is useful to be able do some runtime configuration after the Spring {springapi}org/springframework/context/ApplicationContext.html[ApplicationContext] has been built. In this case you can override the `doWithApplicationContext` method.
 
 [source,groovy]
 ----
-class SimplePlugin extends Plugin{
-
-    def name = "simple"
-    def version = "1.1"
+@GrailsPluginDescriptor(name = 'simple')
+class SimplePlugin extends Plugin {
 
     @Override
     void doWithApplicationContext() {

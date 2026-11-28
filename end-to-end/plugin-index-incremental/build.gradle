@@ -1,0 +1,53 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
+}
+
+dependencies {
+    // Versions come from the same BOM the framework publishes, so this harness never pins its own.
+    testImplementation platform("org.apache.grails:grails-bom:${project.findProperty('projectVersion') ?: version}")
+    // Deliberately not gradleTestKit(): it carries Gradle's own Groovy 4 onto the test classpath,
+    // which the Groovy 5 Spock this repository builds against cannot compile against. The nested
+    // build is driven through the repository's own wrapper instead, which is also the Gradle an
+    // application would use.
+    testImplementation 'org.apache.grails.data:grails-datamapping-core'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation "org.apache.grails:grails-core:${project.findProperty('projectVersion') ?: version}"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    systemProperty 'grails.e2e.offline', gradle.startParameter.offline
+    // The application the test builds resolves Grails from the same place this build does.
+    systemProperty 'grails.e2e.localMavenRepo',
+            rootProject.layout.projectDirectory.dir('../build/local-maven').asFile.absolutePath
+    systemProperty 'grails.e2e.version', project.findProperty('projectVersion') ?: version
+    systemProperty 'grails.e2e.gradlew',
+            rootProject.layout.projectDirectory.file('../gradlew').asFile.absolutePath
+    // Use our repo configuration so staged, but not released artifacts are found
+    systemProperty 'grails.e2e.pluginRepositories',
+            rootProject.layout.projectDirectory.file('../gradle/plugin-repositories.gradle').asFile.absolutePath
+    // Each case builds an application from scratch, so this is slow by nature. It belongs to a build
+    // that is already opt-in and already requires a publish, so it is not gated further.
+}

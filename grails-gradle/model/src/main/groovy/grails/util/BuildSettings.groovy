@@ -99,6 +99,24 @@ class BuildSettings {
      * The base directory of the application
      */
     public static final String APP_BASE_DIR = 'base.dir'
+
+    /**
+     * The system property that gives the compiler the version of the plugins it compiles. The Grails
+     * Gradle plugin sets it to the project version for the main source set; a plugin compiled without it
+     * has no version.
+     *
+     * @since 9.0
+     */
+    public static final String PLUGIN_VERSION = 'grails.plugin.version'
+
+    /**
+     * The system property that names the directory holding a plugin's {@code plugin.yml} or
+     * {@code plugin.groovy}, which the compiler copies beside the plugin's descriptor. The Grails Gradle
+     * plugin sets it to {@code grails-app/conf} for the main source set.
+     *
+     * @since 9.0
+     */
+    public static final String PLUGIN_CONFIG_DIR = 'grails.plugin.config.dir'
     /**
      * The name of the system property for the Grails work directory.
      */
@@ -227,6 +245,16 @@ class BuildSettings {
      * template of its own, is not.
      */
     public static final String OPTIONAL_GSP_PAGES = 'grails.views.gsp.optionalPages'
+
+    /**
+     * A property name that overrides the relative path within the GSP compilation target directory where
+     * the precompiled view registry manifest is written. Applications default to {@code gsp/views.properties};
+     * plugins write to {@code META-INF/grails/plugins/<name>/views.properties} so plugin manifests never
+     * collide across JARs, fat archives, or native images.
+     *
+     * @since 9.0
+     */
+    public static final String GSP_VIEWS_MANIFEST_PATH = 'grails.views.gsp.viewsManifestPath'
 
     /**
      * A property name whose value lists, separated by the platform's path separator, directories of

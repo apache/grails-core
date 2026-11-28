@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
 import grails.core.GrailsApplication
 
 /**
- * Used in doWithSpring to allow overriding of the class of individual Spring beans by setting a property in the config.
+ * Used while the plugins register their beans to allow overriding of the class of individual Spring beans by setting a property in the config.
  * The property name syntax is beanName + 'BeanClass', so for example to override the type of the 'authoritiesMapper'
  * bean, add a property <code>authoritiesMapperBeanClass = 'com.foo.Bar'</code> or
  * <code>authoritiesMapperBeanClass = com.foo.Bar</code>.

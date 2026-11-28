@@ -127,6 +127,12 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-plugin'
             implementationClass = 'org.grails.gradle.plugin.core.GrailsPluginGradlePlugin'
         }
+        grailsPluginVerification {
+            displayName = 'Grails Plugin Verification Gradle Plugin'
+            description = 'Checks that the Grails plugins of a project would let its application start'
+            id = 'org.apache.grails.gradle.grails-plugin-verification'
+            implementationClass = 'org.grails.gradle.plugin.verification.GrailsPluginVerificationGradlePlugin'
+        }
         grailsCli {
             displayName = 'Grails CLI Gradle Plugin'
             description = 'Configures the Grails CLI tier: the grailsCli configurations with automatic -cli companion discovery, command tasks, and the console/shell tasks'

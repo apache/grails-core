@@ -22,8 +22,8 @@ import spock.lang.Specification
 import testing.included.RegisteredGreeting
 
 /**
- * An included plugin's {@code doWithSpring} and {@code beanRegistrar} beans are registered before the
- * configuration classes are read, as an application's early phase registers them, so a
+ * An included plugin's {@code beanRegistrar} beans, and those of the post-processors it registers, are
+ * registered before the configuration classes are read, as an application's early phase registers them, so a
  * {@code @ConditionalOnMissingBean} bean backs off from them in a unit test as it does in an
  * application.
  */

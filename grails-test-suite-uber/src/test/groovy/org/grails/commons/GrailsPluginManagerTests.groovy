@@ -1,39 +1,45 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.commons
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.TempDir
 
-import org.springframework.beans.factory.support.RootBeanDefinition
-import org.springframework.beans.propertyeditors.ClassEditor
 import org.springframework.context.ApplicationContext
 import org.springframework.core.env.StandardEnvironment
-import org.springframework.web.servlet.i18n.CookieLocaleResolver
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.plugins.DefaultGrailsPluginManager
+import grails.plugins.exceptions.PluginException
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginUtils
 import org.grails.support.MockApplicationContext
 
+/**
+ * The plugin classes are compiled at run time, so that no other test discovers them from the class path.
+ */
 class GrailsPluginManagerTests extends Specification {
-
-    private static final String TEST_PLUGIN_RESOURCE_PATH = 'classpath:org/grails/plugins/ClassEditorGrailsPlugin.groovy'
 
     @Shared ApplicationContext ctx = new MockApplicationContext()
     @Shared GrailsApplication grailsApplication = new DefaultGrailsApplication().tap {
@@ -41,10 +47,87 @@ class GrailsPluginManagerTests extends Specification {
         initialise()
     }
 
+    @Shared GroovyClassLoader fixtures = new GroovyClassLoader(GrailsPluginManagerTests.classLoader).tap {
+        parseClass('''
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.beans.propertyeditors.ClassEditor
+import org.springframework.core.env.Environment
+import org.springframework.web.servlet.i18n.CookieLocaleResolver
+
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+@GrailsPluginDescriptor(dependsOn = ['another'])
+class MyGrailsPlugin extends Plugin {
+
+    static String SHUTDOWN_FIELD = 'not-updated'
+
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, Environment environment ->
+            registry.registerBean('classEditor', ClassEditor) { it.supplier { new ClassEditor(grailsApplication.classLoader) } }
+        } as BeanRegistrar
+    }
+
+    void onShutdown(Map<String, Object> event) {
+        SHUTDOWN_FIELD = 'updated'
+    }
+}
+
+@GrailsPluginDescriptor(watchedResources = ['classpath:org/codehaus/groovy/grails/plugins/*.xml'])
+class AnotherGrailsPlugin extends Plugin {
+
+    void doWithApplicationContext() {
+        applicationContext.registerBeanDefinition('localeResolver', new RootBeanDefinition(CookieLocaleResolver))
+    }
+}
+
+@GrailsPluginDescriptor(dependsOn = ['my', 'another'])
+class SomeOtherGrailsPlugin extends Plugin {
+}
+
+@GrailsPluginDescriptor(after = ['my', 'someOther'])
+class ShouldLoadLastGrailsPlugin extends Plugin {
+}
+
+@GrailsPluginDescriptor(evict = ['someOther'])
+class ShouldEvictSomeOtherGrailsPlugin extends Plugin {
+}
+
+@GrailsPluginDescriptor(observe = ['another'])
+class ObservingGrailsPlugin extends Plugin {
+
+    void onChange(Map<String, Object> event) {
+        assert event.source != null
+        event.source = 'bar'
+    }
+}
+
+@GrailsPluginDescriptor(observe = ['*'])
+class ObservingAllGrailsPlugin extends Plugin {
+}
+
+@GrailsPluginDescriptor(environmentsIncludes = ['neverCurrent'])
+class OtherEnvironmentGrailsPlugin extends Plugin {
+}
+''')
+    }
+
+    @TempDir Path temp
+
+    private Class plugin(String name) {
+        fixtures.loadClass("${name}GrailsPlugin")
+    }
+
+    private Class[] plugins(String... names) {
+        names.collect { plugin(it) } as Class[]
+    }
+
     def 'registers observers and informs them of plugin events'() {
         given: 'a plugin manager with an observed plugin and an observer plugin'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
-            pluginClasses = [MyGrailsPlugin, AnotherGrailsPlugin, ObservingGrailsPlugin] as Class[]
+            pluginClasses = plugins('My', 'Another', 'Observing')
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery).tap {
@@ -82,7 +165,7 @@ class GrailsPluginManagerTests extends Specification {
     def 'wildcard observers do not observe themselves'() {
         given: 'a wildcard observer and an observed plugin'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
-            pluginClasses = [AnotherGrailsPlugin, ObservingAllGrailsPlugin] as Class[]
+            pluginClasses = plugins('Another', 'ObservingAll')
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
@@ -105,10 +188,10 @@ class GrailsPluginManagerTests extends Specification {
         observers.empty
     }
 
-    def 'skips disabled plugins during loading'() {
-        given: 'a plugin manager with one disabled plugin'
+    def 'skips plugins that do not support the current environment during loading'() {
+        given: 'a plugin manager with one plugin limited to another environment'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
-            pluginClasses = [AnotherGrailsPlugin, DisabledGrailsPlugin] as Class[]
+            pluginClasses = plugins('Another', 'OtherEnvironment')
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
@@ -116,64 +199,78 @@ class GrailsPluginManagerTests extends Specification {
         when: 'plugins are loaded'
         pluginManager.loadPlugins()
 
-        then: 'enabled plugins are loaded and disabled plugins are skipped'
+        then: 'the plugins of the current environment are loaded and the other one is skipped'
         with(pluginManager) {
             hasGrailsPlugin('another')
-            getGrailsPlugin('another').instance
-            !hasGrailsPlugin('disabled')
+            getGrailsPlugin('another').pluginInstance
+            !hasGrailsPlugin('otherEnvironment')
         }
     }
 
-    def 'discovers plugin resources from the configured path'() {
-        given: 'the discovery is configured with the plugin resource path'
-        def pluginDiscovery = new DefaultPluginDiscovery(TEST_PLUGIN_RESOURCE_PATH)
+    def 'loads a plugin class registered directly, which has no version and so meets no version range'() {
+        given: 'a plugin class compiled outside a build that sets a version, registered directly'
+        Class classEditor = new GroovyClassLoader(GrailsPluginManagerTests.classLoader).parseClass('''
+package org.grails.plugins
 
-        when: 'plugin discovery is initialized'
-        pluginDiscovery.init(new StandardEnvironment())
-
-        then: 'the configured plugin resource is discovered'
-        pluginDiscovery.pluginResources.length == 1
-    }
-
-    def 'loads discovered plugins and resolves them by name and version'() {
-        given: 'the plugin discovery has been initialized from the resource path'
-        def pluginDiscovery = new DefaultPluginDiscovery(TEST_PLUGIN_RESOURCE_PATH).tap {
+@grails.plugins.metadata.GrailsPluginDescriptor
+class ClassEditorGrailsPlugin extends grails.plugins.Plugin {
+}
+''')
+        def pluginDiscovery = new DefaultPluginDiscovery([classEditor] as Class[]).tap {
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
-        when: 'plugins are loaded and looked up by name'
+        when: 'plugins are loaded and the classEditor plugin is requested'
         pluginManager.loadPlugins()
-
-        and: 'the classEditor plugin is requested'
         def plugin = pluginManager.getGrailsPlugin('classEditor')
 
-        then: 'the plugin is available with the expected version'
+        then: 'the plugin is available, without a version'
         plugin
         plugin.name == 'classEditor'
-        plugin.version == '1.1'
+        plugin.pluginClass.name == 'org.grails.plugins.ClassEditorGrailsPlugin'
+        plugin.version == null
 
-        when: 'the plugin is requested with the matching version'
-        plugin = pluginManager.getGrailsPlugin('classEditor', '1.1')
-
-        then: 'the plugin is returned'
-        plugin
-
-        when: 'the plugin is requested with a non-matching version'
-        plugin = pluginManager.getGrailsPlugin('classEditor', '1.2')
-
-        then: 'no plugin is returned'
-        !plugin
+        and: 'an unknown version cannot be checked against a range, so only a request for any version finds it'
+        pluginManager.getGrailsPlugin('classEditor', '*')
+        !pluginManager.getGrailsPlugin('classEditor', '1.1')
+        !pluginManager.getGrailsPlugin('classEditor', '1.1 > *')
     }
 
-    def 'loads plugins successfully when a plugin declares loadAfter dependencies'() {
+    def 'resolves a plugin by the version its descriptor on the class path records'() {
+        given: 'a plugin class whose class path holds a descriptor recording version 1.1, as a plugin jar does'
+        Path descriptor = temp.resolve(PluginUtils.getPluginDescriptorPath('versioned'))
+        Files.createDirectories(descriptor.parent)
+        Files.writeString(descriptor, 'format.version=1\nname=versioned\nclass=VersionedGrailsPlugin\nversion=1.1\n')
+        Path imports = temp.resolve(PluginUtils.PLUGINS_IMPORTS_PATH)
+        Files.writeString(imports, 'versioned\n')
+        def loader = new GroovyClassLoader(new URLClassLoader([temp.toUri().toURL()] as URL[], GrailsPluginManagerTests.classLoader))
+        Class versioned = loader.parseClass('''
+@grails.plugins.metadata.GrailsPluginDescriptor
+class VersionedGrailsPlugin extends grails.plugins.Plugin {
+}
+''')
+        def pluginDiscovery = new DefaultPluginDiscovery().tap {
+            pluginClasses = [versioned] as Class[]
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
+
+        when: 'plugins are loaded'
+        pluginManager.loadPlugins()
+
+        then: 'the plugin has the recorded version'
+        pluginManager.getGrailsPlugin('versioned').version == '1.1'
+
+        and: 'it is returned for the matching version and not for another'
+        pluginManager.getGrailsPlugin('versioned', '1.1')
+        !pluginManager.getGrailsPlugin('versioned', '1.2')
+    }
+
+    def 'loads plugins successfully when a plugin declares after'() {
         given: 'a plugin manager with a plugin that declares loadAfter dependencies'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
-            pluginClasses = [
-                    ShouldLoadLastGrailsPlugin,
-                    MyGrailsPlugin,
-                    AnotherGrailsPlugin
-            ] as Class[]
+            pluginClasses = plugins('ShouldLoadLast', 'My', 'Another')
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
@@ -187,31 +284,25 @@ class GrailsPluginManagerTests extends Specification {
         plugins.indexOf('shouldLoadLast') > plugins.indexOf('someOther')
     }
 
-    def 'does not load a plugin when required dependencies are missing'() {
-        given: 'a plugin manager missing a required dependency'
+    def 'an application whose plugin misses a required dependency does not start'() {
+        given: 'a plugin discovery missing a required dependency'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
-            pluginClasses = [
-                    MyGrailsPlugin // depends on 'another' plugin which is not included here
-            ] as Class[]
-            init(new StandardEnvironment())
+            pluginClasses = plugins('My') // depends on 'another' plugin which is not included here
         }
-        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
-        when: 'plugins are loaded'
-        pluginManager.loadPlugins()
+        when: 'the plugins are discovered'
+        pluginDiscovery.init(new StandardEnvironment())
 
-        then: 'the dependent plugin is not loaded'
-        !pluginManager.hasGrailsPlugin('my')
+        then: 'discovery fails, naming the plugin and its missing dependency'
+        def e = thrown(PluginException)
+        e.message.contains('Grails plug-in [my]')
+        e.message.contains('dependency [another] with required version [*] is missing')
     }
 
     def 'loads plugins when required dependencies are satisfied'() {
         given: 'a plugin manager with all required dependencies present'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
-            pluginClasses = [
-                    MyGrailsPlugin,
-                    AnotherGrailsPlugin,
-                    SomeOtherGrailsPlugin
-            ] as Class[]
+            pluginClasses = plugins('My', 'Another', 'SomeOther')
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
@@ -226,12 +317,7 @@ class GrailsPluginManagerTests extends Specification {
     def 'evicts superseded plugins during loading'() {
         given: 'a plugin manager with an evicting plugin'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
-            pluginClasses = [
-                    MyGrailsPlugin,
-                    AnotherGrailsPlugin,
-                    SomeOtherGrailsPlugin,
-                    ShouldEvictSomeOtherGrailsPlugin
-            ] as Class[]
+            pluginClasses = plugins('My', 'Another', 'SomeOther', 'ShouldEvictSomeOther')
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
@@ -250,11 +336,9 @@ class GrailsPluginManagerTests extends Specification {
 
     def 'invokes plugin shutdown callbacks when the manager shuts down'() {
         given: 'a plugin manager with a plugin that defines an onShutdown callback'
+        Class my = plugin('My')
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
-            pluginClasses = [
-                    MyGrailsPlugin,
-                    AnotherGrailsPlugin, // needed to satisfy the dependency of MyGrailsPlugin
-            ] as Class[]
+            pluginClasses = [my, plugin('Another')] as Class[] // Another satisfies the dependency of My
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery).tap {
@@ -268,81 +352,12 @@ class GrailsPluginManagerTests extends Specification {
         pluginManager.hasGrailsPlugin('my')
 
         and: 'its shutdown marker is unchanged'
-        MyGrailsPlugin.SHUTDOWN_FIELD == 'not-updated'
+        my.SHUTDOWN_FIELD == 'not-updated'
 
         when: 'the plugin manager is shut down'
         pluginManager.shutdown()
 
         then: 'the shutdown callback updates the marker'
-        MyGrailsPlugin.SHUTDOWN_FIELD == 'updated'
+        my.SHUTDOWN_FIELD == 'updated'
     }
-}
-
-class MyGrailsPlugin {
-
-    static SHUTDOWN_FIELD = 'not-updated'
-
-    def dependsOn = [another: 1.2]
-    def version = 1.1
-    def doWithSpring = {
-        classEditor(ClassEditor, grailsApplication.classLoader)
-    }
-    def onShutdown = {
-        SHUTDOWN_FIELD = 'updated'
-    }
-}
-
-class AnotherGrailsPlugin {
-
-    def version = 1.2
-    def watchedResources = ['classpath:org/codehaus/groovy/grails/plugins/*.xml']
-    def doWithApplicationContext = { ctx ->
-        ctx.registerBeanDefinition('localeResolver', new RootBeanDefinition(CookieLocaleResolver))
-    }
-}
-
-class SomeOtherGrailsPlugin {
-
-    def version = 1.4
-    def dependsOn = [my: 1.1, another: 1.2]
-}
-
-class ShouldLoadLastGrailsPlugin {
-
-    def loadAfter = ['my', 'someOther']
-    def version = 1.5
-}
-
-class ShouldEvictSomeOtherGrailsPlugin {
-
-    def evict = ['someOther']
-    def version = 1.1
-}
-
-class ObservingGrailsPlugin {
-
-    def version = '1.0-RC1'
-    def observe = ['another']
-
-    def onChange = { event ->
-        assert event.source != null
-        event.source = 'bar'
-    }
-}
-
-class ObservingAllGrailsPlugin {
-
-    def version = '1.0'
-    def observe = ['*']
-}
-
-/**
- * This plugin should be the last one defined here because because a grails-plugin.xml file will be generated
- * in build/classes/groovy/test/META-INF for the last plugin defined and the plugin manager will always
- * load it via finding that file. This fixes problem described in commit 3aaeaa95
- */
-class DisabledGrailsPlugin {
-
-    def version = 1.0
-    def status = 'disabled'
 }

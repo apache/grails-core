@@ -80,12 +80,10 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
     }
 
     /**
-     * Runs both halves of a plugin's Spring contribution in the order the runtime does: the
-     * deprecated {@code doWithSpring} DSL drains first, then the registrar, so registrar beans
-     * win any name conflict.
+     * Applies the plugin's registrar to the unrefreshed context, as the runtime does; the post-processors
+     * it registers run when the context is refreshed.
      */
     private static configure(DefaultGrailsPlugin plugin, WebRuntimeSpringConfiguration springConfig) {
-        plugin.doWithRuntimeConfiguration(springConfig)
         applyBeanRegistrar(plugin, springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext)
         springConfig.getApplicationContext()
     }
@@ -149,15 +147,12 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         txMgr.addProperty("dataSource", new RuntimeBeanReference("dataSource"))
         springConfig.servletContext = createMockServletContext()
 
-        corePlugin.doWithRuntimeConfiguration(springConfig)
         def discovery = new DefaultPluginDiscovery([corePluginClass] as Class[])
         discovery.init(new StandardEnvironment())
         dataSourcePlugin.manager = new GrailsWebPluginManager(ga, discovery)
-        dataSourcePlugin.doWithRuntimeConfiguration(springConfig)
 
         def pluginClass = gcl.loadClass("org.grails.plugins.services.ServicesGrailsPlugin")
         def plugin = new DefaultGrailsPlugin(pluginClass, ga)
-        plugin.doWithRuntimeConfiguration(springConfig)
 
         // the configurer that applies the beans {} config block comes from the core registrar,
         // the dataSource bean and the service beans from the registrars of their plugins

@@ -37,6 +37,7 @@ import org.springframework.web.servlet.DispatcherServlet
 import grails.config.Config
 import grails.core.GrailsApplication
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.Environment as GrailsEnvironment
 import grails.util.Metadata
 import org.grails.plugins.web.taglib.RenderSitemeshTagLib
@@ -102,24 +103,13 @@ import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 @AutoConfigureBefore(name = 'org.sitemesh.autoconfigure.SiteMeshViewResolverAutoConfiguration')
 @ConditionalOnClass(SiteMeshViewResolverBeanPostProcessor)
 @ConditionalOnSiteMeshIntegration(Integration.VIEW_RESOLVER)
+@GrailsPluginDescriptor(
+        before = ['groovyPages'],
+        providedArtefacts = [
+                RenderSitemeshTagLib,
+                Sitemesh3LayoutTagLib,
+        ])
 class Sitemesh3GrailsPlugin extends Plugin {
-
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
-
-    def title = 'SiteMesh 3'
-    def author = 'Apache Grails Team'
-    def authorEmail = ''
-    def description = 'Provides GSP layout decoration using SiteMesh 3'
-    def profiles = ['web']
-
-    def license = 'APACHE'
-
-    def loadBefore = ['groovyPages']
-
-    def providedArtefacts = [
-            RenderSitemeshTagLib,
-            Sitemesh3LayoutTagLib,
-    ]
 
     def beans = {
         // The SiteMesh 2 module (grails-layout) owns view-resolver decoration when it shares the

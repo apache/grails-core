@@ -21,9 +21,10 @@ package grails.core
 import org.springframework.beans.factory.BeanRegistrar
 
 /**
- * API which plugins implement to provide behavior in defined application lifecycle hooks.
- *
- * The {@link GrailsApplicationLifeCycle#beanRegistrar()} method can be used to register Spring beans.
+ * The lifecycle hooks a plugin and an application share. The {@link #beanRegistrar()} method registers
+ * Spring beans. The application's bean builder DSL hook, {@code doWithSpring()}, is declared by
+ * {@link GrailsApplicationClass} only: a plugin contributes beans through {@link #beanRegistrar()} or a
+ * {@code beans} block.
  *
  * @since 3.0
  * @see {@link grails.plugins.Plugin}
@@ -31,20 +32,8 @@ import org.springframework.beans.factory.BeanRegistrar
 interface GrailsApplicationLifeCycle {
 
     /**
-     * Sub classes should override to provide implementations
-     *
-     * @return A closure that defines beans to be registered by Spring
-     * @deprecated since 8.0 in favour of {@link #beanRegistrar()}. The underlying bean builder DSL
-     * remains available but is no longer actively supported and will not receive fixes for new
-     * issues — you are strongly urged to migrate to {@link #beanRegistrar()}.
-     */
-    @Deprecated(since = '8.0')
-    Closure doWithSpring()
-
-    /**
      * Sub classes should override to register beans with the Spring Framework
      * {@link org.springframework.beans.factory.BeanRegistry} using a {@link BeanRegistrar}.
-     * This is the modern, Spring-native replacement for the {@link #doWithSpring()} bean builder DSL.
      *
      * <p>The returned registrar is applied before Spring Boot auto-configuration is processed, so
      * beans registered here take precedence over Boot's {@code @ConditionalOnMissingBean} defaults.</p>
@@ -57,11 +46,9 @@ interface GrailsApplicationLifeCycle {
     }
 
     /**
-     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed in a phase where plugins can add dynamic methods. Subclasses should override
-     */
-    void doWithDynamicMethods()
-    /**
-     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed and after {#doWithDynamicMethods()} is invoked. Subclasses should override
+     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed. This is where
+     * dynamic methods or properties are added and the beans of the refreshed context are worked with.
+     * Subclasses should override
      */
     void doWithApplicationContext()
 
@@ -73,7 +60,7 @@ interface GrailsApplicationLifeCycle {
     void onConfigChange(Map<String, Object> event)
 
     /**
-     * Invoked once all prior initialization hooks: {@link GrailsApplicationLifeCycle#doWithSpring()}, {@link GrailsApplicationLifeCycle#doWithDynamicMethods()} and {@link GrailsApplicationLifeCycle#doWithApplicationContext()}
+     * Invoked once all prior initialization hooks have run, {@link GrailsApplicationLifeCycle#doWithApplicationContext()} last
      *
      * @param event The event
      */

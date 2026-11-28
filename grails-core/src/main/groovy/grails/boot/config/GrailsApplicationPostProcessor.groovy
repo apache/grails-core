@@ -122,8 +122,8 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
 
     /**
      * Determines whether {@link GrailsEarlyPluginRegistrationPostProcessor} already built the
-     * {@code grailsApplication} and {@code pluginManager} singletons and drained the plugin
-     * runtime configuration for this context. Checked on the local bean factory only, so a
+     * {@code grailsApplication} and {@code pluginManager} singletons and applied the plugins'
+     * registrars for this context. Checked on the local bean factory only, so a
      * parent context's early phase never short-circuits a child context's lifecycle.
      */
     private static boolean hasEarlyPluginRegistrationRun(ApplicationContext applicationContext) {
@@ -191,7 +191,6 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     }
 
     protected void performGrailsInitializationSequence() {
-        pluginManager.doArtefactConfiguration()
         grailsApplication.initialise()
         // register plugin provided classes first, this gives the oppurtunity
         // for application classes to override those provided by a plugin
@@ -235,11 +234,9 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         def springConfig = new DefaultRuntimeSpringConfiguration()
         def application = grailsApplication
         Holders.setGrailsApplication(application)
-
-        if (!pluginBeanRegistrationDone) {
-            // first register plugin beans; when the early phase ran they were
-            // already drained into the registry ahead of auto-configuration
-            pluginManager.doRuntimeConfiguration(springConfig)
+        if (applicationContext instanceof ConfigurableApplicationContext) {
+            // what resources.groovy and doWithSpring assign from a missing configuration key is null
+            GrailsConversionServiceConverters.registerOnBeanFactory(((ConfigurableApplicationContext) applicationContext).beanFactory)
         }
 
         // Running on generated artifacts these beans are already registered: the application's own
@@ -274,12 +271,9 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             }
         }
 
-        if (lifeCycle) {
-            def withSpring = lifeCycle.doWithSpring()
-            if (withSpring) {
-                def bb = new BeanBuilder(null, springConfig, application.classLoader)
-                bb.beans(withSpring)
-            }
+        Closure withSpring = doWithSpring()
+        if (withSpring) {
+            new BeanBuilder(null, springConfig, application.classLoader).beans(withSpring)
         }
 
         springConfig.registerBeansWithRegistry(registry)
@@ -291,8 +285,8 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         }
 
         if (lifeCycle) {
-            // the application's BeanRegistrar drains at the same point as its doWithSpring closure,
-            // after the DSL flush so registrar beans win any name conflicts with the deprecated DSL
+            // the application's BeanRegistrar is applied at the same point as its doWithSpring closure,
+            // after it, so a registrar bean replaces a doWithSpring bean of the same name
             BeanRegistrar registrar = lifeCycle.beanRegistrar()
             if (registrar != null) {
                 new BeanRegistryAdapter(registry, applicationContext, applicationContext.environment, registrar.getClass())
@@ -302,10 +296,22 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     }
 
     /**
-     * Whether the plugins' {@code doWithSpring} and {@code beanRegistrar} beans are already in the
-     * registry, so {@link #postProcessBeanDefinitionRegistry} leaves them out: true once the early
-     * phase has run. A subclass that registers them itself, ahead of the configuration classes as the
-     * early phase does, says so here.
+     * The application's beans in the bean builder DSL, registered with those of
+     * {@code resources.groovy}: {@link GrailsApplicationClass#doWithSpring()} of the application
+     * class, or {@code null} when this processor was given no application class. A subclass that
+     * stands in for an application, such as a test harness, returns its own.
+     *
+     * @return the closure, or {@code null} for none
+     */
+    protected Closure doWithSpring() {
+        applicationClass?.doWithSpring()
+    }
+
+    /**
+     * Whether the plugins' {@code beanRegistrar} beans are already in the registry, so
+     * {@link #postProcessBeanDefinitionRegistry} leaves them out: true once the early phase has run.
+     * A subclass that registers them itself, ahead of the configuration classes as the early phase
+     * does, says so here.
      */
     protected boolean isPluginBeanRegistrationDone() {
         earlyPluginRegistrationRan
@@ -314,13 +320,13 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     /**
      * Applies each enabled plugin's {@link BeanRegistrar} on the fallback path where the early
      * plugin registration phase did not run, mirroring that phase so a plugin's {@code beanRegistrar()}
-     * is honoured in every context rather than only those booted through {@code GrailsApp}. Runs after
-     * the DSL flush so registrar beans win name conflicts with the deprecated {@code doWithSpring} DSL.
+     * is honoured in every context rather than only those booted through {@code GrailsApp}. A
+     * post-processor a registrar registers here is run by Spring after this one, as a post-processor
+     * registered by another is.
      */
     protected void applyPluginBeanRegistrars(BeanDefinitionRegistry registry) {
-        String[] activeProfiles = applicationContext.environment.activeProfiles
         for (GrailsPlugin plugin in pluginManager.allPlugins) {
-            if (!plugin.supportsCurrentScopeAndEnvironment() || !plugin.isEnabled(activeProfiles)) {
+            if (!plugin.supportsCurrentScopeAndEnvironment()) {
                 continue
             }
             BeanRegistrar registrar = plugin.beanRegistrar
@@ -484,10 +490,6 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
                 }
                 Environment.setInitializing(false)
                 pluginManager.setApplicationContext(context)
-                pluginManager.doDynamicMethods()
-                for (GrailsApplicationLifeCycle lifeCycle in lifeCycleBeans) {
-                    lifeCycle.doWithDynamicMethods()
-                }
                 pluginManager.doPostProcessing(context)
                 for (GrailsApplicationLifeCycle lifeCycle in lifeCycleBeans) {
                     lifeCycle.doWithApplicationContext()

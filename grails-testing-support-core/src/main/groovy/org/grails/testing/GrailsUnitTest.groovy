@@ -26,12 +26,14 @@ import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.MessageSource
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.AnnotatedElementUtils
+import org.springframework.core.annotation.AnnotationAwareOrderComparator
 import org.springframework.util.ClassUtils
 
 import grails.compiler.beans.GrailsBeans
@@ -118,52 +120,62 @@ trait GrailsUnitTest {
 
     /**
      * Applies a {@link BeanRegistrar} to the test application context, the same way a plugin's
-     * {@code beanRegistrar()} hook is applied by the framework at boot time.
+     * {@code beanRegistrar()} hook is applied by the framework at boot time. A
+     * {@link BeanDefinitionRegistryPostProcessor} the registrar registers is run as well, in the order
+     * Spring runs post-processors, so the definitions it registers are in the context too: the context
+     * has already been refreshed, so Spring would not run it.
      */
     void defineBeans(BeanRegistrar registrar) {
         ConfigurableApplicationContext context = applicationContext
-        new BeanRegistryAdapter((BeanDefinitionRegistry) context, context.beanFactory,
+        BeanDefinitionRegistry registry = (BeanDefinitionRegistry) context
+        Set<String> processed = postProcessorNames(context) as Set<String>
+        new BeanRegistryAdapter(registry, context.beanFactory,
                 context.environment, registrar.getClass()).register(registrar)
+        List<String> registered = postProcessorNames(context).findAll { String name -> !processed.contains(name) }
+        while (registered) {
+            processed.addAll(registered)
+            List<BeanDefinitionRegistryPostProcessor> postProcessors = registered.collect { String name ->
+                context.beanFactory.getBean(name, BeanDefinitionRegistryPostProcessor)
+            }
+            AnnotationAwareOrderComparator.sort(postProcessors)
+            for (BeanDefinitionRegistryPostProcessor postProcessor : postProcessors) {
+                postProcessor.postProcessBeanDefinitionRegistry(registry)
+            }
+            for (BeanDefinitionRegistryPostProcessor postProcessor : postProcessors) {
+                postProcessor.postProcessBeanFactory(context.beanFactory)
+            }
+            registered = postProcessorNames(context).findAll { String name -> !processed.contains(name) }
+        }
         context.beanFactory.preInstantiateSingletons()
     }
 
+    private static List<String> postProcessorNames(ConfigurableApplicationContext context) {
+        context.beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor, true, false).toList()
+    }
+
     /**
-     * Applies a plugin's {@code doWithSpring()} and {@code beanRegistrar()} to the test application
-     * context. A plugin's {@code beans} block is not among them: it compiles to an auto-configuration,
-     * which is registered before the context refreshes - include the plugin through
-     * {@link #getIncludePlugins()} for that.
+     * Applies a plugin's {@code beanRegistrar()} to the test application context, with the
+     * post-processors it registers (see {@link #defineBeans(BeanRegistrar)}). A plugin's {@code beans}
+     * block is not among them: it compiles to an auto-configuration, which is registered before the
+     * context refreshes - include the plugin through {@link #getIncludePlugins()} for that.
      */
     void defineBeans(Object plugin) {
-        Class clazz = plugin.getClass()
-        // Mirror the boot order: the doWithSpring() DSL is applied first and the beanRegistrar()
-        // second, so a plugin defining both hooks (e.g. one that is mid-migration) gets both sets
-        // of beans and registrar beans win any name conflicts with the deprecated DSL
-        Closure dsl = null
+        Method beanRegistrarMethod
         try {
-            dsl = (Closure) clazz.getMethod('doWithSpring').invoke(plugin)
-        } catch (NoSuchMethodException ignored) {}
-        if (dsl == null) {
-            try {
-                dsl = (Closure) clazz.getMethod('getDoWithSpring').invoke(plugin)
-            } catch (NoSuchMethodException ignored) {}
+            beanRegistrarMethod = plugin.getClass().getMethod('beanRegistrar')
+        } catch (NoSuchMethodException ignored) {
+            return
         }
-        if (dsl != null) {
-            defineBeans(dsl)
+        BeanRegistrar registrar = (BeanRegistrar) beanRegistrarMethod.invoke(plugin)
+        if (registrar != null) {
+            defineBeans(registrar)
         }
-
-        try {
-            Method beanRegistrarMethod = clazz.getMethod('beanRegistrar')
-            BeanRegistrar registrar = (BeanRegistrar) beanRegistrarMethod.invoke(plugin)
-            if (registrar != null) {
-                defineBeans(registrar)
-            }
-        } catch (NoSuchMethodException ignored) {}
     }
 
     /**
      * Beans for the test application context in the bean builder DSL.
      *
-     * @deprecated since 8.0, as {@code doWithSpring()} is on plugins and applications, in favour of a
+     * @deprecated since 8.0, as {@code doWithSpring()} is on applications, in favour of a
      * {@code beans} block, {@link #beanRegistrar()} or a configuration class (see
      * {@link #getConfigurationClasses()}). The DSL keeps working but receives no fixes for new issues.
      */
@@ -173,9 +185,9 @@ trait GrailsUnitTest {
     }
 
     /**
-     * Registers beans in the test application context, the way an application's or a plugin's
+     * Registers beans in the test application context, the way an application's
      * {@code beanRegistrar()} does at boot and at the same point: after {@link #doWithSpring()}, so a
-     * registrar bean wins a name conflict with the deprecated DSL.
+     * registrar bean replaces a {@code doWithSpring} bean of the same name.
      *
      * @return the registrar, or {@code null} (the default) to register nothing
      * @since 8.0

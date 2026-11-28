@@ -224,6 +224,35 @@ class GroovyPageCompilerSpec extends Specification {
         compiler.compile()
     }
 
+    void 'writes the view manifest to a custom namespaced path when viewsManifestPath is configured'() {
+        given:
+            File page = new File(viewsDir, 'plugin/_card.gsp')
+            page.parentFile.mkdirs()
+            page.text = '<div>card</div>'
+
+            GroovyPageCompiler compiler = new GroovyPageCompiler()
+            compiler.viewsDir = viewsDir
+            compiler.targetDir = targetDir
+            compiler.generatedGroovyPagesDirectory = generatedDir
+            compiler.viewPrefix = '/'
+            compiler.packagePrefix = 'cards'
+            compiler.viewsManifestPath = 'META-INF/grails/plugins/cards/views.properties'
+            compiler.srcFiles = [page]
+
+        when:
+            compiler.compile()
+            File manifest = new File(targetDir, 'META-INF/grails/plugins/cards/views.properties')
+            Properties props = new Properties()
+            if (manifest.isFile()) {
+                manifest.withInputStream { props.load(it) }
+            }
+
+        then:
+            manifest.isFile()
+            !new File(targetDir, 'gsp/views.properties').exists()
+            props.stringPropertyNames().contains('/plugin/_card.gsp')
+    }
+
     private Properties registry() {
         Properties views = new Properties()
         new File(targetDir, 'gsp/views.properties').withInputStream { views.load(it) }

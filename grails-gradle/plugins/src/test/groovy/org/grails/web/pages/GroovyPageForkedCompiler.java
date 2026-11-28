@@ -47,9 +47,16 @@ public final class GroovyPageForkedCompiler {
                 optional.addAll(Files.readAllLines(Paths.get(list), StandardCharsets.UTF_8));
             }
         }
+        String viewsManifestPath = System.getProperty("grails.views.gsp.viewsManifestPath");
+        if (viewsManifestPath != null && !viewsManifestPath.isEmpty()) {
+            java.nio.file.Path manifest = Paths.get(args[1], viewsManifestPath);
+            Files.createDirectories(manifest.getParent());
+            Files.writeString(manifest, "/view.gsp=test_view_gsp\n", StandardCharsets.UTF_8);
+        }
         RecordingForkedCompiler.record(args[0], args[1],
                 "generatedViews=" + System.getProperty("grails.views.gsp.generatedViewDirectories"),
                 "optionalPages=" + String.join(",", optional),
+                "viewsManifestPath=" + viewsManifestPath,
                 "encoding=" + args[7]);
     }
 }

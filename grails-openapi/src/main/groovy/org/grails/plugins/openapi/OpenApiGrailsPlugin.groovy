@@ -29,7 +29,7 @@ import grails.core.GrailsApplication
 import grails.openapi.GrailsOpenApiGenerator
 import grails.openapi.OpenApiSettings
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.web.mapping.UrlMappingsHolder
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.openapi.springdoc.SpringdocRegistrations
@@ -39,15 +39,14 @@ import org.grails.openapi.springdoc.SpringdocRegistrations
  * classpath - contributes that description to the documents springdoc serves.
  */
 @CompileStatic
+@GrailsPluginDescriptor(
+        dependsOn = ['urlMappings:${plugin.version}'],
+        providedArtefacts = [OpenApiUrlMappings])
 class OpenApiGrailsPlugin extends Plugin {
 
     static final String GENERATOR_BEAN_NAME = 'grailsOpenApiGenerator'
 
     private static final String SPRINGDOC_CUSTOMIZER = 'org.springdoc.core.customizers.OpenApiCustomizer'
-
-    def version = GrailsUtil.grailsVersion
-    def dependsOn = [urlMappings: version]
-    def providedArtefacts = [OpenApiUrlMappings]
 
     @Override
     BeanRegistrar beanRegistrar() {

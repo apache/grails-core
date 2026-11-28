@@ -186,6 +186,32 @@ class CompilePluginSpec extends Specification {
         result.output.contains('TEST_INDY=true')
     }
 
+    def "the main Groovy compiler, and only it, is given the plugin version and grails-app/conf for plugin descriptors"() {
+        given:
+        testProjectDir.resolve('build.gradle').toFile().append('''
+            version = '9.1.0'
+            tasks.register('printDescriptorArguments') {
+                def main = tasks.named('compileGroovy', org.gradle.api.tasks.compile.GroovyCompile)
+                def test = tasks.named('compileTestGroovy', org.gradle.api.tasks.compile.GroovyCompile)
+                doLast {
+                    println "MAIN_ARGS=${main.get().groovyOptions.forkOptions.jvmArgumentProviders*.asArguments().flatten()}"
+                    println "TEST_ARGS=${test.get().groovyOptions.forkOptions.jvmArgumentProviders*.asArguments().flatten()}"
+                }
+            }
+        ''')
+
+        when:
+        def result = run(['printDescriptorArguments'])
+
+        then:
+        result.task(':printDescriptorArguments').outcome == TaskOutcome.SUCCESS
+        String main = result.output.readLines().find { it.startsWith('MAIN_ARGS=') }.replace('\\', '/')
+        String test = result.output.readLines().find { it.startsWith('TEST_ARGS=') }
+        main.contains('-Dgrails.plugin.version=9.1.0')
+        main.contains('-Dgrails.plugin.config.dir=') && main.contains('/grails-app/conf')
+        !test.contains('grails.plugin.version')
+    }
+
     private def run(List<String> arguments) {
         GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())

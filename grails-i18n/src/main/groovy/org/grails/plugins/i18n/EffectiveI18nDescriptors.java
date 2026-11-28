@@ -42,14 +42,11 @@ import org.apache.grails.core.plugins.PluginUtils;
  * <h2>Why plugin base names are reversed</h2>
  *
  * <p>Spring's {@code ResourceBundleMessageSource} resolves a code against base names in order and
- * takes the first match. The message source Grails used previously merged plugin bundles with
- * {@code Map.putAll} while iterating {@code GrailsPluginManager.getAllPlugins()}, so the <em>last</em>
- * plugin in that iteration overwrote earlier ones. {@code getAllPlugins()} returns plugins in
- * <em>topological</em> order, so reversing that order and letting the first match win reproduces the
- * previous precedence exactly.</p>
- *
- * <p>Note this cannot be reasoned about by analogy with plugin <em>configuration</em>, which uses the
- * opposite convention: there, earlier plugins take precedence.</p>
+ * takes the first match. Where two plugins define the same code, the later plugin in plugin order
+ * wins, as it does for everything else a plugin provides: configuration, beans, views and static
+ * resources. Reversing the plugin order and letting the first match win gives the later plugin its
+ * precedence. The application's own bundles come before every plugin's, so the application still
+ * wins.</p>
  *
  * @since 8.0
  */

@@ -18,8 +18,8 @@
  */
 package org.apache.grails.core.aot;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.jspecify.annotations.Nullable;
 
@@ -33,19 +33,12 @@ import grails.plugins.GrailsPluginManager;
 import org.apache.grails.core.plugins.PluginUtils;
 
 /**
- * Copies each plugin's configuration to a location of its own, where an application running on generated
- * code finds it.
+ * Ensures each loaded plugin's configuration ({@code plugin.yml} or {@code plugin.groovy}) is reachable
+ * in an ahead-of-time / native image.
  *
- * <p>A plugin's {@code plugin.yml} is found relative to the root its class was loaded from: the plugin's
- * JAR, or its build directory. A native image has no such roots. Every class in it is at the same root, so
- * every plugin's configuration is looked for at the same {@code /plugin.yml}, which is either missing or
- * one plugin's file answering for all of them. An image built without these lost every plugin's
- * configuration.</p>
- *
- * <p>The configurations are read from the plugins the application loaded, while the code is generated and
- * the roots still exist, and each is written under the name of its plugin class at
- * {@link PluginUtils#getGeneratedConfigurationPath(String, String)}, which the lookup prefers, and
- * registered as a resource.</p>
+ * <p>A plugin's configuration sits at {@code META-INF/grails/plugins/<name>/plugin.yml} (or
+ * {@code plugin.groovy}), beside its descriptor, so a resource hint for that path is all a native image
+ * needs.</p>
  *
  * @since 9.0
  */
@@ -54,31 +47,29 @@ public class PluginConfigurationBeanFactoryInitializationAotProcessor implements
     @Override
     @Nullable
     public BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
-        Map<String, Resource> configurations = configurationsOf(beanFactory);
-        if (configurations.isEmpty()) {
+        Set<String> paths = collectConfigurationPaths(beanFactory);
+        if (paths.isEmpty()) {
             return null;
         }
-        return (generationContext, beanFactoryInitializationCode) -> configurations.forEach((path, configuration) -> {
-            generationContext.getGeneratedFiles().addResourceFile(path, configuration);
-            generationContext.getRuntimeHints().resources().registerPattern(path);
-        });
+        return (generationContext, beanFactoryInitializationCode) ->
+                paths.forEach(path -> generationContext.getRuntimeHints().resources().registerPattern(path));
     }
 
-    /** Where each loaded plugin's configuration is copied to, and the configuration itself. */
-    private static Map<String, Resource> configurationsOf(ConfigurableListableBeanFactory beanFactory) {
-        Map<String, Resource> configurations = new LinkedHashMap<>();
+    private static Set<String> collectConfigurationPaths(ConfigurableListableBeanFactory beanFactory) {
+        Set<String> paths = new LinkedHashSet<>();
         if (!(beanFactory.getSingleton(GrailsPluginManager.BEAN_NAME) instanceof GrailsPluginManager pluginManager)) {
-            return configurations;
+            return paths;
         }
+        ClassLoader beanClassLoader = beanFactory.getBeanClassLoader();
         for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
             Class<?> pluginClass = plugin.getPluginClass();
-            Resource configuration = PluginUtils.readPluginConfiguration(pluginClass);
+            ClassLoader loader = pluginClass != null && pluginClass.getClassLoader() != null ?
+                    pluginClass.getClassLoader() : beanClassLoader;
+            Resource configuration = PluginUtils.readPluginConfiguration(plugin.getName(), loader);
             if (configuration != null) {
-                configurations.put(PluginUtils.getGeneratedConfigurationPath(pluginClass.getName(),
-                        configuration.getFilename()), configuration);
+                paths.add(PluginUtils.getPluginConfigPath(plugin.getName(), configuration.getFilename()));
             }
         }
-        return configurations;
+        return paths;
     }
-
 }

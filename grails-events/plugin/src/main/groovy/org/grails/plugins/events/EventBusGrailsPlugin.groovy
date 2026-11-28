@@ -27,6 +27,7 @@ import org.springframework.core.env.Environment
 
 import grails.events.bus.EventBus
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.events.bus.spring.EventBusFactoryBean
 import org.grails.events.gorm.GormDispatcherRegistrar
 import org.grails.events.spring.SpringEventTranslator
@@ -38,9 +39,8 @@ import org.grails.events.spring.SpringEventTranslator
  * @since 3.0
  */
 @CompileStatic
+@GrailsPluginDescriptor
 class EventBusGrailsPlugin extends Plugin {
-
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
 
     /**
      * Whether to translate GORM events into reactor events

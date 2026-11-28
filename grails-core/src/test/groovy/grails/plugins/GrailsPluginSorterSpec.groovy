@@ -19,284 +19,131 @@
 package grails.plugins
 
 import spock.lang.Specification
+import spock.lang.Unroll
+
+import grails.plugins.exceptions.PluginException
 
 class GrailsPluginSorterSpec extends Specification {
 
-    def "sort handles empty list"() {
+    void 'no plugins sort to no plugins'() {
+        expect:
+        sort([]).isEmpty()
+    }
+
+    void 'plugins the declarations leave unordered come in the order of their names'() {
+        expect:
+        sort([plugin('gamma'), plugin('alpha'), plugin('beta')])*.name == ['alpha', 'beta', 'gamma']
+    }
+
+    void 'a plugin comes after the plugins its after names'() {
+        expect:
+        sort([plugin('alpha', after: ['gamma']), plugin('beta'), plugin('gamma', after: ['beta'])])*.name ==
+                ['beta', 'gamma', 'alpha']
+    }
+
+    void 'a plugin comes after the plugins it depends on, as if after named them'() {
+        expect:
+        sort([plugin('alpha', dependsOn: ['beta']), plugin('beta')])*.name == ['beta', 'alpha']
+    }
+
+    void 'a plugin comes before the plugins its before names'() {
+        expect:
+        sort([plugin('alpha'), plugin('beta'), plugin('zeta', before: ['alpha'])])*.name == ['beta', 'zeta', 'alpha']
+    }
+
+    void 'after, before and dependsOn combine into one order'() {
+        expect:
+        sort([plugin('a', after: ['d']), plugin('b', before: ['d']), plugin('c', dependsOn: ['b']), plugin('d')])*.name ==
+                ['b', 'c', 'd', 'a']
+    }
+
+    void 'a plugin named in after or before that is absent is ignored'() {
+        expect:
+        sort([plugin('beta', after: ['missing']), plugin('alpha', before: ['alsoMissing'])])*.name == ['alpha', 'beta']
+    }
+
+    void 'the same declaration made by both plugins orders them once'() {
+        expect:
+        sort([plugin('beta', after: ['alpha']), plugin('alpha', before: ['beta'])])*.name == ['alpha', 'beta']
+    }
+
+    void 'a diamond comes out with every plugin after the plugins it comes after'() {
+        expect:
+        sort([plugin('d', after: ['b', 'c']), plugin('c', after: ['a']), plugin('b', after: ['a']), plugin('a')])*.name ==
+                ['a', 'b', 'c', 'd']
+    }
+
+    @Unroll
+    void 'the order does not depend on the order the plugins are found in (#permutation)'() {
+        expect:
+        sort(permutation)*.name == ['core', 'i18n', 'controllers', 'urlMappings', 'aaa', 'zzz']
+
+        where:
+        permutation << [plugin('core'), plugin('i18n', dependsOn: ['core']), plugin('controllers', dependsOn: ['core', 'i18n']),
+                        plugin('urlMappings', dependsOn: ['core', 'controllers']), plugin('zzz', after: ['aaa']),
+                        plugin('aaa', after: ['urlMappings'])].permutations().toList().subList(0, 24)
+    }
+
+    void 'a circular order fails, naming the plugins of the circle and why each comes after the other'() {
         when:
-        def sorted = sortTestPlugins([])
+        sort([plugin('alpha', after: ['beta'], before: ['gamma']), plugin('beta', dependsOn: ['gamma']), plugin('gamma'),
+              plugin('unrelated', after: ['alpha'])])
 
         then:
-        sorted.isEmpty()
+        PluginException e = thrown()
+        e.message.contains('circular')
+        e.message.contains('alpha')
+        e.message.contains('beta')
+        e.message.contains('gamma')
+        !e.message.contains('unrelated')
+        e.message.contains('alpha comes after beta')
+        e.message.contains('beta comes after gamma')
+        e.message.contains('alpha comes before gamma')
     }
 
-    def "sort handles single plugin with no dependencies"() {
-        given:
-        def alpha = new TestPlugin('alpha')
-
+    void 'a plugin ordered against itself fails'() {
         when:
-        def sorted = sortTestPlugins([alpha])
+        sort([plugin('alpha', after: ['alpha'])])
 
         then:
-        sorted == [alpha]
+        PluginException e = thrown()
+        e.message.contains('[alpha]')
     }
 
-    def "sort handles plugins with no dependencies preserving input order"() {
-        given:
-        def alpha = new TestPlugin('alpha')
-        def beta = new TestPlugin('beta')
-        def gamma = new TestPlugin('gamma')
-
+    void 'two plugins with the same name fail'() {
         when:
-        def sorted = sortTestPlugins([gamma, alpha, beta])
+        sort([plugin('alpha'), plugin('alpha')])
 
         then:
-        sorted.size() == 3
-        sorted*.name as Set == ['alpha', 'beta', 'gamma'] as Set
+        PluginException e = thrown()
+        e.message.contains('[alpha]')
     }
 
-    def "sort respects loadAfter declarations"() {
-        given:
-        def alpha = new TestPlugin('alpha')
-        def beta = new TestPlugin('beta', loadAfter: ['alpha'])
-        def gamma = new TestPlugin('gamma', loadAfter: ['beta'])
-
-        when:
-        def sorted = sortTestPlugins([gamma, alpha, beta])
-
-        then:
-        def names = sorted*.name
-        names.indexOf('alpha') < names.indexOf('beta')
-        names.indexOf('beta') < names.indexOf('gamma')
+    private static List<TestPlugin> sort(List<TestPlugin> plugins) {
+        GrailsPluginSorter.sort(plugins, { TestPlugin p -> p.name }, { TestPlugin p -> p.dependsOn + p.after },
+                { TestPlugin p -> p.before })
     }
 
-    def "sort respects loadBefore declarations"() {
-        given:
-        def alpha = new TestPlugin('alpha', loadBefore: ['gamma'])
-        def beta = new TestPlugin('beta')
-        def gamma = new TestPlugin('gamma')
-
-        when:
-        def sorted = sortTestPlugins([gamma, alpha, beta])
-
-        then:
-        def names = sorted*.name
-        names.indexOf('alpha') < names.indexOf('gamma')
+    private static TestPlugin plugin(Map<String, List<String>> declarations = [:], String name) {
+        new TestPlugin(name, declarations.dependsOn ?: [], declarations.after ?: [], declarations.before ?: [])
     }
 
-    def "sort does not use dependsOn for ordering (matches original DPM behavior)"() {
-        given: "beta declares dependsOn alpha, but no loadAfter"
-        def alpha = new TestPlugin('alpha')
-        def beta = new TestPlugin('beta')  // no loadAfter, no loadBefore
-
-        when: "sorted with beta before alpha in input"
-        def sorted = sortTestPlugins([beta, alpha])
-
-        then: "order is preserved since dependsOn is NOT used for sort ordering"
-        def names = sorted*.name
-        // Without loadAfter/loadBefore, the DFS preserves input order
-        names == ['beta', 'alpha']
-    }
-
-    def "sort handles combined loadAfter and loadBefore"() {
-        given:
-        def alpha = new TestPlugin('alpha', loadBefore: ['beta'])
-        def beta = new TestPlugin('beta')
-        def gamma = new TestPlugin('gamma', loadAfter: ['beta'])
-
-        when:
-        def sorted = sortTestPlugins([gamma, beta, alpha])
-
-        then:
-        def names = sorted*.name
-        names.indexOf('alpha') < names.indexOf('beta')
-        names.indexOf('beta') < names.indexOf('gamma')
-    }
-
-    def "sort ignores references to non-existent plugins"() {
-        given:
-        def alpha = new TestPlugin('alpha', loadAfter: ['nonExistent'])
-        def beta = new TestPlugin('beta', loadBefore: ['alsoNonExistent'])
-
-        when:
-        def sorted = sortTestPlugins([alpha, beta])
-
-        then:
-        sorted.size() == 2
-        sorted*.name as Set == ['alpha', 'beta'] as Set
-    }
-
-    def "sort with external lookup function delegates correctly"() {
-        given: "A lookup function that resolves plugins by name from a map"
-        def alpha = new TestPlugin('alpha')
-        def beta = new TestPlugin('beta', loadAfter: ['alpha'])
-        def plugins = [beta, alpha]
-        def lookup = { String name -> plugins.find { it.name == name } }
-
-        when:
-        def sorted = GrailsPluginSorter.<TestPlugin>sortPlugins(
-                plugins,
-                { TestPlugin it -> it.loadAfter as String[] },
-                { TestPlugin it -> it.loadBefore as String[] },
-                lookup
-        )
-
-        then:
-        def names = sorted*.name
-        names.indexOf('alpha') < names.indexOf('beta')
-    }
-
-    def "sort handles diamond dependency pattern"() {
-        given: "D depends on B and C, both of which depend on A"
-        def a = new TestPlugin('a')
-        def b = new TestPlugin('b', loadAfter: ['a'])
-        def c = new TestPlugin('c', loadAfter: ['a'])
-        def d = new TestPlugin('d', loadAfter: ['b', 'c'])
-
-        when:
-        def sorted = sortTestPlugins([d, c, b, a])
-
-        then:
-        def names = sorted*.name
-        names.indexOf('a') < names.indexOf('b')
-        names.indexOf('a') < names.indexOf('c')
-        names.indexOf('b') < names.indexOf('d')
-        names.indexOf('c') < names.indexOf('d')
-    }
-
-    def "sort produces same order for GrailsPlugin-like and PluginInfo-like types"() {
-        given: "Two different representations of the same plugin graph"
-        def pluginA = new TestPlugin('alpha')
-        def pluginB = new TestPlugin('beta', loadAfter: ['alpha'])
-        def pluginC = new TestPlugin('gamma', loadAfter: ['beta'])
-
-        def infoA = new TestPluginInfo('alpha')
-        def infoB = new TestPluginInfo('beta', loadAfter: ['alpha'])
-        def infoC = new TestPluginInfo('gamma', loadAfter: ['beta'])
-
-        when: "Both are sorted using the same GrailsPluginSorter"
-        def sortedPlugins = sortTestPlugins([pluginC, pluginA, pluginB])
-        def sortedInfos = sortTestInfos([infoC, infoA, infoB])
-
-        then: "The resulting order is identical"
-        sortedPlugins*.name == sortedInfos*.infoName
-    }
-
-    def "sort handles loadBefore creating a dependency chain"() {
-        given:
-        def alpha = new TestPlugin('alpha', loadBefore: ['beta'])
-        def beta = new TestPlugin('beta', loadBefore: ['gamma'])
-        def gamma = new TestPlugin('gamma')
-
-        when:
-        def sorted = sortTestPlugins([gamma, beta, alpha])
-
-        then:
-        def names = sorted*.name
-        names.indexOf('alpha') < names.indexOf('beta')
-        names.indexOf('beta') < names.indexOf('gamma')
-    }
-
-    def "sort with duplicate plugin names uses first occurrence"() {
-        given:
-        def alpha1 = new TestPlugin('alpha')
-        def alpha2 = new TestPlugin('alpha')
-        def beta = new TestPlugin('beta', loadAfter: ['alpha'])
-
-        when:
-        def sorted = sortTestPlugins([alpha1, alpha2, beta])
-
-        then: "Both alphas and beta are present"
-        sorted.size() == 3
-    }
-
-    def "sort handles loadAfter combined with loadBefore between same plugins"() {
-        given: "alpha loadBefore beta, beta also loadAfter alpha (redundant but valid)"
-        def alpha = new TestPlugin('alpha', loadBefore: ['beta'])
-        def beta = new TestPlugin('beta', loadAfter: ['alpha'])
-
-        when:
-        def sorted = sortTestPlugins([beta, alpha])
-
-        then:
-        def names = sorted*.name
-        names.indexOf('alpha') < names.indexOf('beta')
-    }
-
-    def "sort handles long chain via loadAfter"() {
-        given:
-        def a = new TestPlugin('a')
-        def b = new TestPlugin('b', loadAfter: ['a'])
-        def c = new TestPlugin('c', loadAfter: ['b'])
-        def d = new TestPlugin('d', loadAfter: ['c'])
-        def e = new TestPlugin('e', loadAfter: ['d'])
-
-        when:
-        def sorted = sortTestPlugins([e, d, c, b, a])
-
-        then:
-        sorted*.name == ['a', 'b', 'c', 'd', 'e']
-    }
-
-    /**
-     * Helper to sort TestPlugin instances using the self-contained overload.
-     */
-    private List<TestPlugin> sortTestPlugins(List<TestPlugin> plugins) {
-        GrailsPluginSorter.<TestPlugin>sort(
-                plugins,
-                { it.name },
-                { it.loadAfter as String[] },
-                { it.loadBefore as String[] }
-        )
-    }
-
-    /**
-     * Helper to sort TestPluginInfo instances using the self-contained overload.
-     */
-    private List<TestPluginInfo> sortTestInfos(List<TestPluginInfo> infos) {
-        GrailsPluginSorter.<TestPluginInfo>sort(
-                infos,
-                { it.infoName },
-                { it.loadAfter as String[] },
-                { it.loadBefore as String[] }
-        )
-    }
-
-    /**
-     * Lightweight test fixture representing a plugin with ordering metadata.
-     * Simulates GrailsPlugin-like behavior.
-     */
     static class TestPlugin {
         final String name
-        final List<String> loadAfter
-        final List<String> loadBefore
+        final List<String> dependsOn
+        final List<String> after
+        final List<String> before
 
-        TestPlugin(Map opts = [:], String name) {
+        TestPlugin(String name, List<String> dependsOn, List<String> after, List<String> before) {
             this.name = name
-            this.loadAfter = opts.loadAfter ?: []
-            this.loadBefore = opts.loadBefore ?: []
+            this.dependsOn = dependsOn
+            this.after = after
+            this.before = before
         }
 
         @Override
-        String toString() { "TestPlugin[$name]" }
-    }
-
-    /**
-     * A second lightweight test fixture with different accessor names,
-     * simulating PluginInfo-like behavior to prove the sorter is truly generic.
-     */
-    static class TestPluginInfo {
-        final String infoName
-        final List<String> loadAfter
-        final List<String> loadBefore
-
-        TestPluginInfo(Map opts = [:], String name) {
-            this.infoName = name
-            this.loadAfter = opts.loadAfter ?: []
-            this.loadBefore = opts.loadBefore ?: []
+        String toString() {
+            name
         }
-
-        @Override
-        String toString() { "TestPluginInfo[$infoName]" }
     }
 }

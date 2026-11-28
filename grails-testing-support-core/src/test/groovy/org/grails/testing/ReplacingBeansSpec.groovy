@@ -30,6 +30,7 @@ import org.springframework.core.env.Environment
 import grails.core.support.proxy.DefaultProxyHandler
 import spock.lang.Specification
 import testing.included.IncludedMessageSource
+import testing.included.IncludedProxyHandler
 import testing.included.RegisteredGreeting
 
 class TestMessageSource extends StaticMessageSource {
@@ -133,7 +134,10 @@ class IncludedPluginBeanOverHarnessDefaultSpec extends Specification implements 
     }
 
     void "an included plugin's bean wins over the harness default of the same name, as over a framework default at boot"() {
-        expect:
+        expect: 'one its registrar registers'
+        applicationContext.getBean('proxyHandler') instanceof IncludedProxyHandler
+
+        and: 'one the post-processor its registrar registers registers'
         applicationContext.getBean('messageSource') instanceof IncludedMessageSource
     }
 }

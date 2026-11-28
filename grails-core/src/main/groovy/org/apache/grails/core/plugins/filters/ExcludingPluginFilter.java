@@ -22,11 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginInfo;
 
 /**
- * A {@link PluginFilter} implementation that removes explicitly named plugins and any plugins that
- * transitively depend on them.
+ * A {@link PluginFilter} implementation that removes the explicitly named plugins.
+ *
+ * <p>Only the named plugins are removed. A plugin that depends on one of them is kept, and discovery then
+ * stops with an exception that names it, so excluding a plugin never silently takes the plugins that need it
+ * along: they are excluded by naming them too.</p>
  */
 public class ExcludingPluginFilter extends BasePluginFilter {
 
@@ -49,35 +52,27 @@ public class ExcludingPluginFilter extends BasePluginFilter {
     }
 
     /**
-     * Returns the original plugin list with the explicitly excluded plugins and their derived dependents removed.
+     * Returns the original plugin list with the explicitly excluded plugins removed.
      *
      * @param original the original plugin list in load order
-     * @param pluginList the plugins to remove from the original list
+     * @param pluginList the explicitly excluded plugins
      * @return a filtered list that preserves the original order of the remaining plugins
      */
     @Override
-    protected List<PluginMetadata> getPluginList(List<PluginMetadata> original, List<PluginMetadata> pluginList) {
+    protected List<PluginInfo> getPluginList(List<PluginInfo> original, List<PluginInfo> pluginList) {
         var newList = new ArrayList<>(original);
         newList.removeIf(pluginList::contains);
         return newList;
     }
 
     /**
-     * Adds plugins that depend on the supplied plugin, so they are excluded as well.
-     *
-     * <p>The plugin itself is ignored during the scan, and each matching dependent is registered through
-     * {@link #registerDependency(List, PluginMetadata)} so recursive traversal and deduplication are handled
-     * consistently.</p>
+     * Adds nothing: excluding a plugin does not exclude the plugins that depend on it.
      *
      * @param additionalList the list collecting plugins that should also be excluded
-     * @param plugin the plugin whose dependents should be excluded
+     * @param plugin the excluded plugin
      */
     @Override
-    protected void addPluginDependencies(List<PluginMetadata> additionalList, PluginMetadata plugin) {
-        var pluginName = plugin.getName();
-        getAllPlugins().stream()
-                .filter(p -> !pluginName.equals(p.getName())) // looking for dependents, so don't include self
-                .filter(p -> isDependentOn(p, pluginName))
-                .forEach(p -> registerDependency(additionalList, p));
+    protected void addPluginDependencies(List<PluginInfo> additionalList, PluginInfo plugin) {
+        // a dependent is kept, so discovery reports it as depending on an excluded plugin
     }
 }

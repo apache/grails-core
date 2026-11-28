@@ -18,8 +18,6 @@
  */
 package org.grails.gradle.plugin.exploded
 
-import javax.inject.Inject
-
 import groovy.transform.CompileStatic
 
 import org.gradle.api.Plugin
@@ -30,9 +28,8 @@ import org.gradle.api.artifacts.ConfigurationVariant
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.AttributeContainer
-import org.gradle.api.model.ObjectFactory
-import org.gradle.api.tasks.compile.GroovyCompile
-import org.gradle.language.jvm.tasks.ProcessResources
+import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.tasks.SourceSet
 
 import org.grails.gradle.plugin.core.GrailsExtension
 import org.grails.gradle.plugin.core.GrailsPluginGradlePlugin
@@ -47,13 +44,6 @@ class GrailsExplodedPlugin implements Plugin<Project> {
     public static final String EXPLODED_VARIANT_NAME = 'exploded'
     public static final Attribute EXPLODED_ATTRIBUTE = Attribute.of('grails.plugin.exploded', Boolean)
 
-    private ObjectFactory objects
-
-    @Inject
-    GrailsExplodedPlugin(ObjectFactory objects) {
-        this.objects = objects
-    }
-
     @Override
     void apply(Project project) {
         project.pluginManager.withPlugin(GrailsPluginGradlePlugin.PLUGIN_ID) {
@@ -65,7 +55,7 @@ class GrailsExplodedPlugin implements Plugin<Project> {
             if (grails.developmentRun) {
                 project.logger.lifecycle('bootRun detected - exploding plugin {}', project.name)
                 project.configurations.named('runtimeElements').configure { Configuration runtimeElements ->
-                    runtimeElements.outgoing.variants.create(EXPLODED_VARIANT_NAME) { ConfigurationVariant v ->
+                    runtimeElements.outgoing.variants.register(EXPLODED_VARIANT_NAME) { ConfigurationVariant v ->
                         v.attributes { AttributeContainer ac ->
                             // copy values from runtimeElements
                             runtimeElements.attributes.keySet().each { Attribute<?> key ->
@@ -78,24 +68,15 @@ class GrailsExplodedPlugin implements Plugin<Project> {
 
                             // add our additional attribute
                             ac.attribute(EXPLODED_ATTRIBUTE, true)
-
-                            def groovyCompileProvider = project.tasks.named('compileGroovy', GroovyCompile)
-                            def processResourcesProvider = project.tasks.named('processResources', ProcessResources)
-
-                            def groovyDir = groovyCompileProvider.get().destinationDirectory.get().asFile
-                            def resourcesDir = processResourcesProvider.get().destinationDir
-
-                            v.artifact(groovyDir) { ConfigurablePublishArtifact a ->
-                                a.type = ArtifactTypeDefinition.DIRECTORY_TYPE
-                                a.extension = ''
-                                a.classifier = ''
-                                a.builtBy(groovyCompileProvider, processResourcesProvider)
-                            }
-                            v.artifact(resourcesDir) { ConfigurablePublishArtifact a ->
-                                a.type = ArtifactTypeDefinition.DIRECTORY_TYPE
-                                a.extension = ''
-                                a.classifier = ''
-                                a.builtBy(groovyCompileProvider, processResourcesProvider)
+                        }
+                        def output = project.extensions.getByType(JavaPluginExtension)
+                                .sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).get().output
+                        output.each { File dir ->
+                            v.artifact(dir) { ConfigurablePublishArtifact artifact ->
+                                artifact.type = ArtifactTypeDefinition.DIRECTORY_TYPE
+                                artifact.extension = ''
+                                artifact.classifier = ''
+                                artifact.builtBy(output)
                             }
                         }
                     }

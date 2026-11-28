@@ -22,19 +22,23 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.support.BeanDefinitionOverrideException
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-
+import org.springframework.core.Ordered
+import org.springframework.core.PriorityOrdered
 import org.springframework.core.env.StandardEnvironment
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.plugins.DefaultGrailsPluginManager
 import grails.plugins.GrailsPluginManager
-import grails.plugins.Plugin
 import grails.util.Environment
 import grails.util.Holders
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
@@ -43,14 +47,15 @@ import spock.lang.Specification
 
 /**
  * Proves the architectural linchpin of {@link GrailsEarlyPluginRegistrationPostProcessor}: a plugin
- * bean registered via {@code doWithSpring} lands in the registry <em>before</em>
- * {@code ConfigurationClassPostProcessor} evaluates {@code @ConditionalOnMissingBean}, so the
- * matching Boot auto-config bean backs off — instead of the plugin having to override or remove
- * it afterwards.
+ * bean registered by its {@code beanRegistrar()}, or by a post-processor that registrar registers,
+ * lands in the registry <em>before</em> {@code ConfigurationClassPostProcessor} evaluates
+ * {@code @ConditionalOnMissingBean}, so the matching Boot auto-config bean backs off — instead of the
+ * plugin having to override or remove it afterwards — and a plugin loaded later replaces a bean of the
+ * same name that an earlier plugin registered.
  */
 class EarlyPluginRegistrationOrderingSpec extends Specification {
 
-    void 'a plugin doWithSpring bean registered early makes a @ConditionalOnMissingBean auto-config bean defer'() {
+    void 'a bean a plugin registers from a post-processor makes a @ConditionalOnMissingBean auto-config bean defer'() {
         given: 'a context whose configuration would, by itself, register a conditional myResolver'
             def ctx = new AnnotationConfigApplicationContext()
             ctx.register(EarlyOrderingAutoConfigLikeConfig)
@@ -236,7 +241,7 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             ctx.register(EarlyOrderingAutoConfigLikeConfig)
 
         and: 'a plugin exposing a BeanRegistrar promoted through plugin discovery'
-            registerDiscovery(ctx, EarlyOrderingRegistrarGrailsPlugin)
+            registerDiscovery(ctx, registrarPluginClass)
             new GrailsPluginLifecycleInitializer().initialize(ctx)
 
         when: 'the context refreshes'
@@ -252,17 +257,39 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             Environment.setInitializing(false)
     }
 
-    void 'plugin beanRegistrar and doWithSpring can coexist on one plugin'() {
-        given:
+    void 'a plugin beanRegistrar bean replaces a bean of the same name another plugin\'s generated auto-configuration declares unconditionally'() {
+        given: 'a configuration standing in for the auto-configuration a beans block compiles to, its myResolver unconditional'
             def ctx = new AnnotationConfigApplicationContext()
-            registerDiscovery(ctx, EarlyOrderingDualGrailsPlugin)
+            ctx.register(EarlyOrderingSiblingLikeConfig)
+
+        and: 'a plugin whose registrar registers myResolver'
+            registerDiscovery(ctx, registrarPluginClass)
             new GrailsPluginLifecycleInitializer().initialize(ctx)
 
         when:
             ctx.refresh()
 
-        then: 'both the DSL bean and the registrar bean are present'
-            ctx.getBean('dualDslBean') instanceof EarlyOrderingPluginResolver
+        then: 'the registrar bean was there first, so the auto-configuration bean method is skipped'
+            ctx.getBean('myResolver') instanceof EarlyOrderingPluginResolver
+            ctx.getBeansOfType(EarlyOrderingBootDefaultResolver).isEmpty()
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+    }
+
+    void 'a registrar registers beans directly and through a post-processor at once'() {
+        given:
+            def ctx = new AnnotationConfigApplicationContext()
+            registerDiscovery(ctx, dualPluginClass)
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'both the post-processor bean and the registrar bean are present'
+            ctx.getBean('dualPostProcessorBean') instanceof EarlyOrderingPluginResolver
             ctx.getBean('dualRegistrarBean') instanceof EarlyOrderingPluginResolver
 
         cleanup:
@@ -274,7 +301,7 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
     void 'a plugin beanRegistrar defined as a coerced closure registers its bean'() {
         given: 'a plugin whose beanRegistrar() is a closure coerced to BeanRegistrar (no separate class)'
             def ctx = new AnnotationConfigApplicationContext()
-            registerDiscovery(ctx, EarlyOrderingClosureRegistrarGrailsPlugin)
+            registerDiscovery(ctx, closureRegistrarPluginClass)
             new GrailsPluginLifecycleInitializer().initialize(ctx)
 
         when:
@@ -289,10 +316,42 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             Environment.setInitializing(false)
     }
 
+    void 'a plugin loaded later replaces the bean of the same name an earlier plugin registers from a post-processor: #description'() {
+        given: 'two plugins whose post-processors register sharedProbe, discovered in the order given'
+            def ctx = new AnnotationConfigApplicationContext()
+            def plugins = sharedProbePluginClasses(secondLoadsAfterFirst)
+            promoteDiscovery(ctx, discoveryOrder.collect { plugins[it] } as Class<?>[])
+            ctx.beanFactory.registerSingleton(GrailsEarlyPluginRegistrationPostProcessor.APPLICATION_SOURCE_CLASSES_BEAN_NAME,
+                    [EarlyOrderingApplication] as Class<?>[])
+            new GrailsPluginLifecycleInitializer().initialize(ctx)
+
+        when:
+            ctx.refresh()
+
+        then: 'the bean is the one of the plugin that loads last'
+            ctx.getBean('sharedProbe').class.simpleName == expected
+
+        and: 'the load order is what decided it'
+            ctx.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager).allPlugins*.name.findAll { it.startsWith('earlyOrderingShared') } ==
+                    (secondLoadsAfterFirst ? ['earlyOrderingSharedFirst', 'earlyOrderingSharedSecond'] : ['earlyOrderingSharedSecond', 'earlyOrderingSharedFirst'])
+
+        cleanup:
+            ctx.close()
+            Holders.clear()
+            Environment.setInitializing(false)
+
+        where:
+            description                                      | secondLoadsAfterFirst | discoveryOrder        || expected
+            'second loads after first, discovered first'     | true                  | ['second', 'first']   || 'EarlyOrderingSecondResolver'
+            'second loads after first, discovered second'    | true                  | ['first', 'second']   || 'EarlyOrderingSecondResolver'
+            'first loads after second, discovered first'     | false                 | ['first', 'second']   || 'EarlyOrderingFirstResolver'
+            'first loads after second, discovered second'    | false                 | ['second', 'first']   || 'EarlyOrderingFirstResolver'
+    }
+
     void 'an application doWithSpring bean still overrides a plugin bean of the same name under the default settings'() {
         given: 'a plugin registering overrideProbe and an application registering a different bean under the same name'
             def ctx = new AnnotationConfigApplicationContext()
-            registerDiscovery(ctx, EarlyOrderingOverrideGrailsPlugin)
+            registerDiscovery(ctx, overridePluginClass)
             new GrailsPluginLifecycleInitializer().initialize(ctx)
             ctx.register(EarlyOrderingOverrideApplication)
 
@@ -312,7 +371,7 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
         given: 'overriding disabled, a plugin registering overrideProbe and an app registering the same name'
             def ctx = new AnnotationConfigApplicationContext()
             ctx.allowBeanDefinitionOverriding = false
-            registerDiscovery(ctx, EarlyOrderingOverrideGrailsPlugin)
+            registerDiscovery(ctx, overridePluginClass)
             new GrailsPluginLifecycleInitializer().initialize(ctx)
             ctx.register(EarlyOrderingOverrideApplication)
 
@@ -334,17 +393,17 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
             // real instance, so a single load constructs the plugin more than once; what the retimed
             // lifecycle guarantees is a single manager pass rather than a throwaway pass plus the real
             // one (the rejected earlier approach), which would multiply this count.
-            EarlyOrderingCountingGrailsPlugin.INSTANCE_COUNT.set(0)
-            def baselineDiscovery = new DefaultPluginDiscovery([EarlyOrderingCountingGrailsPlugin] as Class<?>[])
+            EarlyOrderingCounter.INSTANCE_COUNT.set(0)
+            def baselineDiscovery = new DefaultPluginDiscovery([countingPluginClass] as Class<?>[])
             baselineDiscovery.loadPluginsFromClasspath = false
             baselineDiscovery.init(new StandardEnvironment())
             new DefaultGrailsPluginManager(new DefaultGrailsApplication(), baselineDiscovery).loadPlugins()
-            int singleLoadCount = EarlyOrderingCountingGrailsPlugin.INSTANCE_COUNT.get()
+            int singleLoadCount = EarlyOrderingCounter.INSTANCE_COUNT.get()
 
         and: 'the early phase booted through the real initializer'
-            EarlyOrderingCountingGrailsPlugin.INSTANCE_COUNT.set(0)
+            EarlyOrderingCounter.INSTANCE_COUNT.set(0)
             def ctx = new AnnotationConfigApplicationContext()
-            registerDiscovery(ctx, EarlyOrderingCountingGrailsPlugin)
+            registerDiscovery(ctx, countingPluginClass)
             new GrailsPluginLifecycleInitializer().initialize(ctx)
 
         when: 'the context refreshes'
@@ -352,7 +411,7 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
 
         then: 'the early phase instantiates the plugin no more than a single manager load — no throwaway second pass'
             singleLoadCount > 0
-            EarlyOrderingCountingGrailsPlugin.INSTANCE_COUNT.get() == singleLoadCount
+            EarlyOrderingCounter.INSTANCE_COUNT.get() == singleLoadCount
 
         cleanup:
             ctx.close()
@@ -361,9 +420,9 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
     }
 
     void 'the initializing flag is reset when the early phase throws'() {
-        given: 'a plugin whose doWithSpring throws while the early phase drains it'
+        given: 'a plugin whose beanRegistrar throws while the early phase applies it'
             def ctx = new AnnotationConfigApplicationContext()
-            registerDiscovery(ctx, EarlyOrderingThrowingGrailsPlugin)
+            registerDiscovery(ctx, throwingPluginClass)
             new GrailsPluginLifecycleInitializer().initialize(ctx)
 
         when: 'the context refreshes'
@@ -392,8 +451,8 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
                 [EarlyOrderingApplication] as Class<?>[])
     }
 
-    private static void promoteDiscovery(AnnotationConfigApplicationContext ctx, Class<?> pluginClass) {
-        def discovery = new DefaultPluginDiscovery([pluginClass] as Class<?>[])
+    private static void promoteDiscovery(AnnotationConfigApplicationContext ctx, Class<?>... pluginClasses) {
+        def discovery = new DefaultPluginDiscovery(pluginClasses)
         discovery.loadPluginsFromClasspath = false
         discovery.init(ctx.environment)
         ctx.beanFactory.registerSingleton(PluginDiscovery.BEAN_NAME, discovery)
@@ -401,13 +460,149 @@ class EarlyPluginRegistrationOrderingSpec extends Specification {
 
     private static Class<?> getEarlyOrderingPluginClass() {
         new GroovyClassLoader(EarlyPluginRegistrationOrderingSpec.classLoader).parseClass('''
-class EarlyOrderingGrailsPlugin {
-    def version = '1.0'
-    def doWithSpring = {
-        myResolver(grails.boot.config.EarlyOrderingPluginResolver)
+@grails.plugins.metadata.GrailsPluginDescriptor
+class EarlyOrderingGrailsPlugin extends grails.plugins.Plugin {
+    org.springframework.beans.factory.BeanRegistrar beanRegistrar() {
+        new grails.boot.config.EarlyOrderingPostProcessorRegistrar('earlyOrderingPostProcessor', 'myResolver',
+                grails.boot.config.EarlyOrderingPluginResolver)
     }
 }
 ''')
+    }
+
+    private static Class<?> getRegistrarPluginClass() {
+        new GroovyClassLoader(EarlyPluginRegistrationOrderingSpec.classLoader).parseClass('''
+import grails.boot.config.EarlyOrderingPluginResolver
+import grails.boot.config.EarlyOrderingResolverRegistrar
+import grails.boot.config.EarlyOrderingDualRegistrar
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+@grails.plugins.metadata.GrailsPluginDescriptor
+class EarlyOrderingRegistrarGrailsPlugin extends grails.plugins.Plugin {
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        new EarlyOrderingResolverRegistrar()
+    }
+}
+''')
+    }
+
+    private static Class<?> getDualPluginClass() {
+        new GroovyClassLoader(EarlyPluginRegistrationOrderingSpec.classLoader).parseClass('''
+import grails.boot.config.EarlyOrderingPluginResolver
+import grails.boot.config.EarlyOrderingResolverRegistrar
+import grails.boot.config.EarlyOrderingDualRegistrar
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+@grails.plugins.metadata.GrailsPluginDescriptor
+class EarlyOrderingDualGrailsPlugin extends grails.plugins.Plugin {
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        new EarlyOrderingDualRegistrar()
+    }
+}
+''')
+    }
+
+    private static Class<?> getClosureRegistrarPluginClass() {
+        new GroovyClassLoader(EarlyPluginRegistrationOrderingSpec.classLoader).parseClass('''
+import grails.boot.config.EarlyOrderingPluginResolver
+import grails.boot.config.EarlyOrderingResolverRegistrar
+import grails.boot.config.EarlyOrderingDualRegistrar
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+@grails.plugins.metadata.GrailsPluginDescriptor
+class EarlyOrderingClosureRegistrarGrailsPlugin extends grails.plugins.Plugin {
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, org.springframework.core.env.Environment environment ->
+            registry.registerBean('closureRegistrarBean', EarlyOrderingPluginResolver)
+        } as BeanRegistrar
+    }
+}
+''')
+    }
+
+    private static Class<?> getCountingPluginClass() {
+        new GroovyClassLoader(EarlyPluginRegistrationOrderingSpec.classLoader).parseClass('''
+import grails.boot.config.EarlyOrderingPluginResolver
+import grails.boot.config.EarlyOrderingResolverRegistrar
+import grails.boot.config.EarlyOrderingDualRegistrar
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+@grails.plugins.metadata.GrailsPluginDescriptor
+class EarlyOrderingCountingGrailsPlugin extends grails.plugins.Plugin {
+
+    EarlyOrderingCountingGrailsPlugin() {
+        grails.boot.config.EarlyOrderingCounter.INSTANCE_COUNT.incrementAndGet()
+    }
+}
+''')
+    }
+
+    private static Class<?> getThrowingPluginClass() {
+        new GroovyClassLoader(EarlyPluginRegistrationOrderingSpec.classLoader).parseClass('''
+import grails.boot.config.EarlyOrderingPluginResolver
+import grails.boot.config.EarlyOrderingResolverRegistrar
+import grails.boot.config.EarlyOrderingDualRegistrar
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+@grails.plugins.metadata.GrailsPluginDescriptor
+class EarlyOrderingThrowingGrailsPlugin extends grails.plugins.Plugin {
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, org.springframework.core.env.Environment environment ->
+            throw new IllegalStateException('boom from beanRegistrar')
+        } as BeanRegistrar
+    }
+}
+''')
+    }
+
+    private static Class<?> getOverridePluginClass() {
+        new GroovyClassLoader(EarlyPluginRegistrationOrderingSpec.classLoader).parseClass('''
+import grails.boot.config.EarlyOrderingPluginResolver
+import grails.boot.config.EarlyOrderingResolverRegistrar
+import grails.boot.config.EarlyOrderingDualRegistrar
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+@grails.plugins.metadata.GrailsPluginDescriptor
+class EarlyOrderingOverrideGrailsPlugin extends grails.plugins.Plugin {
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        new grails.boot.config.EarlyOrderingPostProcessorRegistrar('earlyOrderingOverridePostProcessor', 'overrideProbe',
+                EarlyOrderingPluginResolver)
+    }
+}
+''')
+    }
+
+    /**
+     * Two plugins, compiled here, whose post-processors both register {@code sharedProbe}; the one the
+     * flag names loads after the other.
+     */
+    private static Map<String, Class<?>> sharedProbePluginClasses(boolean secondLoadsAfterFirst) {
+        def loader = new GroovyClassLoader(EarlyPluginRegistrationOrderingSpec.classLoader)
+        String template = '''
+@grails.plugins.metadata.GrailsPluginDescriptor(after = LOAD_AFTER)
+class EarlyOrderingSharedNAMEGrailsPlugin extends grails.plugins.Plugin {
+    org.springframework.beans.factory.BeanRegistrar beanRegistrar() {
+        new grails.boot.config.EarlyOrderingPostProcessorRegistrar('earlyOrderingSharedNAMEPostProcessor', 'sharedProbe',
+                grails.boot.config.EarlyOrderingNAMEResolver)
+    }
+}
+'''
+        [
+                first : loader.parseClass(template.replace('NAME', 'First')
+                        .replace('LOAD_AFTER', secondLoadsAfterFirst ? '[]' : "['earlyOrderingSharedSecond']")),
+                second: loader.parseClass(template.replace('NAME', 'Second')
+                        .replace('LOAD_AFTER', secondLoadsAfterFirst ? "['earlyOrderingSharedFirst']" : '[]'))
+        ]
     }
 
     /** Stands in for a Spring Boot auto-configuration: a name-guarded conditional bean. */
@@ -422,6 +617,16 @@ class EarlyOrderingGrailsPlugin {
     }
 }
 
+/** Stands in for the auto-configuration a plugin's beans block compiles to: a bean without a condition. */
+@Configuration
+class EarlyOrderingSiblingLikeConfig {
+
+    @Bean
+    EarlyOrderingBootDefaultResolver myResolver() {
+        new EarlyOrderingBootDefaultResolver()
+    }
+}
+
 /** Stands in for the application class of a Grails application, which is what GrailsApp stashes. */
 class EarlyOrderingApplication extends GrailsAutoConfiguration {
 }
@@ -432,16 +637,6 @@ class EarlyOrderingBootDefaultResolver {
 class EarlyOrderingPluginResolver {
 }
 
-class EarlyOrderingRegistrarGrailsPlugin extends Plugin {
-
-    def version = '1.0'
-
-    @Override
-    BeanRegistrar beanRegistrar() {
-        new EarlyOrderingResolverRegistrar()
-    }
-}
-
 class EarlyOrderingResolverRegistrar implements BeanRegistrar {
 
     @Override
@@ -450,77 +645,77 @@ class EarlyOrderingResolverRegistrar implements BeanRegistrar {
     }
 }
 
-class EarlyOrderingDualGrailsPlugin extends Plugin {
-
-    def version = '1.0'
-
-    @Override
-    Closure doWithSpring() {
-        { ->
-            dualDslBean(EarlyOrderingPluginResolver)
-        }
-    }
-
-    @Override
-    BeanRegistrar beanRegistrar() {
-        new EarlyOrderingDualRegistrar()
-    }
-}
-
 class EarlyOrderingDualRegistrar implements BeanRegistrar {
 
     @Override
     void register(BeanRegistry registry, org.springframework.core.env.Environment environment) {
         registry.registerBean('dualRegistrarBean', EarlyOrderingPluginResolver)
+        new EarlyOrderingPostProcessorRegistrar('earlyOrderingDualPostProcessor', 'dualPostProcessorBean',
+                EarlyOrderingPluginResolver).register(registry, environment)
     }
 }
 
-class EarlyOrderingClosureRegistrarGrailsPlugin extends Plugin {
+class EarlyOrderingFirstResolver {
+}
 
-    def version = '1.0'
+class EarlyOrderingSecondResolver {
+}
+
+/**
+ * Registers a bean definition the way a plugin registers one the {@code BeanRegistry} API cannot
+ * express: as a highest-precedence {@link PriorityOrdered} registry post-processor.
+ */
+class EarlyOrderingDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered {
+
+    final String beanName
+    final Class<?> beanClass
+
+    EarlyOrderingDefinitionPostProcessor(String beanName, Class<?> beanClass) {
+        this.beanName = beanName
+        this.beanClass = beanClass
+    }
 
     @Override
-    BeanRegistrar beanRegistrar() {
-        { BeanRegistry registry, org.springframework.core.env.Environment environment ->
-            registry.registerBean('closureRegistrarBean', EarlyOrderingPluginResolver)
-        } as BeanRegistrar
+    void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+        registry.registerBeanDefinition(beanName, new RootBeanDefinition(beanClass))
+    }
+
+    @Override
+    void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    }
+
+    @Override
+    int getOrder() {
+        Ordered.HIGHEST_PRECEDENCE
     }
 }
 
-class EarlyOrderingCountingGrailsPlugin extends Plugin {
+/** The registrar of a plugin that registers one bean through {@link EarlyOrderingDefinitionPostProcessor}. */
+class EarlyOrderingPostProcessorRegistrar implements BeanRegistrar {
 
+    final String postProcessorName
+    final String beanName
+    final Class<?> beanClass
+
+    EarlyOrderingPostProcessorRegistrar(String postProcessorName, String beanName, Class<?> beanClass) {
+        this.postProcessorName = postProcessorName
+        this.beanName = beanName
+        this.beanClass = beanClass
+    }
+
+    @Override
+    void register(BeanRegistry registry, org.springframework.core.env.Environment environment) {
+        registry.registerBean(postProcessorName, EarlyOrderingDefinitionPostProcessor) {
+            it.infrastructure().supplier { new EarlyOrderingDefinitionPostProcessor(beanName, beanClass) }
+        }
+    }
+}
+
+class EarlyOrderingCounter {
     static final AtomicInteger INSTANCE_COUNT = new AtomicInteger()
-
-    def version = '1.0'
-
-    EarlyOrderingCountingGrailsPlugin() {
-        INSTANCE_COUNT.incrementAndGet()
-    }
-}
-
-class EarlyOrderingThrowingGrailsPlugin extends Plugin {
-
-    def version = '1.0'
-
-    @Override
-    Closure doWithSpring() {
-        { -> throw new IllegalStateException('boom from doWithSpring') }
-    }
 }
 
 class EarlyOrderingAppResolver {
-}
-
-class EarlyOrderingOverrideGrailsPlugin extends Plugin {
-
-    def version = '1.0'
-
-    @Override
-    Closure doWithSpring() {
-        { ->
-            overrideProbe(EarlyOrderingPluginResolver)
-        }
-    }
 }
 
 class EarlyOrderingOverrideApplication extends GrailsAutoConfiguration {

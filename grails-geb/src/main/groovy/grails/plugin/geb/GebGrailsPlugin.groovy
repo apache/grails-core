@@ -22,20 +22,10 @@ package grails.plugin.geb
 import groovy.transform.CompileStatic
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.plugins.metadata.PluginSource
 
 @PluginSource
 @CompileStatic
-class GebGrailsPlugin extends Plugin {
-
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
-    def pluginExcludes = []
-    def title = 'Grails Geb Plugin'
-    def author = 'Apache Grails Team'
-    def authorEmail = ''
-    def description = 'Plugin that adds Geb functional testing code generation features.'
-    def documentation = 'https://github.com/apache/grails-core/tree/HEAD/grails-geb#readme'
-    def license = 'APACHE'
-    def issueManagement = [system: 'Github Issues', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-}
+@GrailsPluginDescriptor
+class GebGrailsPlugin extends Plugin {}

@@ -30,7 +30,7 @@ import org.springframework.core.env.Environment
 import grails.config.Settings
 import grails.core.GrailsServiceClass
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.core.artefact.ServiceArtefactHandler
 import org.grails.core.exceptions.GrailsConfigurationException
 
@@ -41,13 +41,11 @@ import org.grails.core.exceptions.GrailsConfigurationException
  * @since 0.4
  */
 @CompileStatic
+@GrailsPluginDescriptor(
+        after = ['hibernate'],
+        watchedResources = ['file:./grails-app/services/**/*Service.groovy',
+                                'file:./plugins/*/grails-app/services/**/*Service.groovy'])
 class ServicesGrailsPlugin extends Plugin  {
-
-    def version = GrailsUtil.getGrailsVersion()
-    def loadAfter = ['hibernate']
-
-    def watchedResources = ['file:./grails-app/services/**/*Service.groovy',
-                            'file:./plugins/*/grails-app/services/**/*Service.groovy']
 
     @Override
     BeanRegistrar beanRegistrar() {

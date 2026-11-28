@@ -1,0 +1,4 @@
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-plugin-verification'
+}

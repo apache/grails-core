@@ -18,6 +18,7 @@ package grails.plugins.mail
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.web.pages.GroovyPagesUriService
 import groovy.transform.CompileStatic
 import jakarta.mail.Session
@@ -35,38 +36,8 @@ import org.springframework.mail.javamail.JavaMailSenderImpl
 @CompileStatic
 @AutoConfiguration
 @EnableConfigurationProperties(MailConfigurationProperties)
+@GrailsPluginDescriptor(providedArtefacts = [PlainTextMailTagLib])
 class MailGrailsPlugin extends Plugin {
-
-    def grailsVersion = '7.0.0 > *'
-    def author = 'Apache Grails Team'
-    def authorEmail = ''
-    def title = 'Provides Mail support to a running Grails application'
-    def description = '''\
-        This plugin provides a MailService class as well as configuring the necessary beans within
-        the Spring ApplicationContext.
-
-        It also adds a "sendMail" method to all controller classes. A typical example usage is:
-
-        sendMail {
-            to 'fred@g2one.com','ginger@g2one.com'
-            from 'john@g2one.com'
-            cc 'marge@g2one.com', 'ed@g2one.com'
-            bcc 'joe@g2one.com'
-            subject 'Hello John'
-            text 'this is some text'
-        }
-    '''.stripIndent(8)
-    def documentation = 'https://grails-plugins.github.io/grails-mail'
-    def license = 'Apache 2.0 License'
-    def organization = [name: 'Grails Plugins', url: 'https://github.com/grails-plugins']
-    def issueManagement = [
-        system: 'GitHub',
-        url: 'https://github.com/grails-plugins/grails-mail/issues'
-    ]
-    def scm = [
-        url: 'https://github.com/grails-plugins/grails-mail'
-    ]
-    def providedArtefacts = [PlainTextMailTagLib]
 
     def beans = {
         bean('mailSession', JndiObjectFactoryBean).conditionalOnMissingBean().annotate(ConditionalOnProperty, prefix: 'grails.mail', name: 'jndiName') { MailConfigurationProperties mailProperties ->

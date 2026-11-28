@@ -44,6 +44,7 @@ import org.gradle.jvm.toolchain.JavaToolchainService
 
 import org.grails.gradle.plugin.core.GrailsCompileStaticOptions
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
+import org.grails.gradle.plugin.core.GrailsPluginGradlePlugin
 import org.grails.gradle.plugin.core.GrailsExtension
 import org.grails.gradle.plugin.scaffolding.GenerateScaffoldedViewsTask
 import org.grails.gradle.plugin.util.SourceSets
@@ -411,6 +412,16 @@ class GroovyPagePlugin implements Plugin<Project> {
         }
 
         wireCompileStaticOptions(project, [compileGroovyPages, compileWebappGroovyPages])
+
+        project.plugins.withId(GrailsPluginGradlePlugin.PLUGIN_ID) {
+            FileCollection importsFile = GrailsPluginGradlePlugin.pluginImportsFiles(project)
+            compileGroovyPages.configure { GroovyPageForkCompileTask task ->
+                task.pluginImportsFiles.from(importsFile)
+            }
+            compileWebappGroovyPages.configure { GroovyPageForkCompileTask task ->
+                task.pluginImportsFiles.from(importsFile)
+            }
+        }
 
         compileGroovyPages.configure {
             it.dependsOn(

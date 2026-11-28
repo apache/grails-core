@@ -131,9 +131,16 @@ class MimeTypesConfiguration {
         return new DefaultMimeUtility(mimeTypesHolder.mimeTypes)
     }
 
+    /**
+     * Static, so that the resolver is created without this configuration, whose constructor collects every
+     * {@code MimeTypeProvider}, among them the renderers. A renderer reaches the GSP page locator through the renderer
+     * registry, and the locator is given this resolver, so creating this configuration for it would close a cycle that
+     * no early reference can break: this configuration would be needed while its own constructor is still collecting
+     * the renderers.
+     */
     @Bean('mimeTypeResolver')
     @Primary
-    protected MimeTypeResolver mimeTypeResolver() {
+    protected static MimeTypeResolver mimeTypeResolver() {
         return new DefaultMimeTypeResolver()
     }
 

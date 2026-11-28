@@ -25,4 +25,5 @@ org.apache.grails.core.aot.ApplicationBytecodeBeanFactoryInitializationAotProces
 org.apache.grails.core.aot.ArtefactClassesBeanFactoryInitializationAotProcessor,\
 org.apache.grails.core.aot.ArtefactReflectionBeanFactoryInitializationAotProcessor,\
 org.apache.grails.core.aot.BeanReflectionBeanFactoryInitializationAotProcessor,\
-org.apache.grails.core.aot.PluginConfigurationBeanFactoryInitializationAotProcessor
+org.apache.grails.core.aot.PluginConfigurationBeanFactoryInitializationAotProcessor,\
+org.apache.grails.core.aot.PluginOrderBeanFactoryInitializationAotProcessor
