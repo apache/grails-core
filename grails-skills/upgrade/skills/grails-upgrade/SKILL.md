@@ -865,6 +865,30 @@ The guide gives no setting that restores encrypted JWTs without a signature.
 - An association is joined once for all the entries that sort by it. `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path` for such a sort and now work.
 - Sorting by two properties of the same collection returns fewer duplicate rows. A book with three chapters occurs three times for `Book.list(sort: ['chapters.title': 'asc', 'chapters.id': 'asc'])`, rather than nine times. Update assertions that relied on the repeated joins. No compatibility setting restores them.
 
+## GORM for Hibernate 5: `merge()` of a detached instance writes its changes
+
+`merge()` of a detached instance now writes the properties that were changed, as `save(flush: true)` of the same instance does. Before, the merge returned the managed instance with the changes copied onto it, and the flush wrote nothing, so the row kept its old values. This includes an instance built by hand with the id and version of a row, one restored from a serialized copy, and one marked dirty as a whole: all of its properties are written.
+
+Search the application for `merge(` and check each call whose instance was changed before it:
+
+- An application that changes an instance it keeps in the HTTP session, for example to render a page, and calls `merge()` only to attach it again, now writes those changes. Call `discard()` on the instance, or load it again, to keep the row as it is.
+- `merge()` of a new instance is inserted once and is not followed by an update. For a new instance with an assigned id the insert used to be followed by an update, so its version was 1; it is 0 now, as after `save()`. Search for code that reads the version after such a `merge()`.
+- `merge()` of a new instance whose id belongs to an instance that the session already manages, with its insert still pending, writes the newer values. Before, the row kept the values of the first merge.
+- An instance that the session already manages is returned as it is.
+
+GORM for Hibernate 5 only. The guide gives no setting that restores the old result.
+
+## GORM for Hibernate 5: a criterion added inside `or`, `and` or `not`
+
+`add(Restrictions.eq(...))` inside `or { }`, `and { }` or `not { }` now joins that junction. Before, the criterion was added to the root and combined with the junction by AND, so an `or` returned fewer rows than it should, and a criterion in `not` was not negated.
+
+- An `or` that holds an `add(...)` can now return more rows. Search the criteria closures for `add(` inside `or`, `and` and `not`.
+- Inside a junction, `add` now returns the criterion it added instead of the `Criteria`, so `or { add(a).add(b) }`, which put both criteria at the root, throws `MissingMethodException`. Write two `add` calls instead.
+- Outside a junction `add` still returns the `Criteria`, so `add(a).add(b)` and `add(a).list()` work as before.
+- Moving the `add` out of the junction keeps the old result.
+
+The `eq`, `ne` and the other methods of the criteria builder already joined the junction they were written in; only a criterion passed to `add` did not. GORM for Hibernate 5 only. The guide gives no setting that restores the old result.
+
 ## GSP tag attributes
 
 More GSP tags HTML-encode the attribute values they write.

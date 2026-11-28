@@ -26,6 +26,11 @@ import org.hibernate.HibernateException
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.hibernate.engine.internal.ForeignKeys
+import org.hibernate.engine.spi.EntityEntry
+import org.hibernate.engine.spi.SessionImplementor
+import org.hibernate.persister.entity.EntityPersister
+import org.hibernate.proxy.HibernateProxy
 
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.InvalidPropertyException
@@ -262,9 +267,51 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
     }
 
-    protected D performMerge(final D target, final boolean flush) {
+    protected D performMerge(final D candidate, final boolean flush) {
+        // a proxy is not a mapped class: merge the entity it stands for, which an initialized proxy holds
+        final D target = candidate instanceof HibernateProxy ?
+                (D) ((HibernateProxy) candidate).hibernateLazyInitializer.implementation : candidate
+        // Hibernate copies the state of a detached instance onto the managed one without GORM's change tracking
+        // seeing it, so the properties the detached instance changed are marked on the managed one; otherwise
+        // the dirtiness strategy finds nothing to flush.
+        List<String> changed = target instanceof DirtyCheckable ? ((DirtyCheckable) target).listDirtyPropertyNames() : []
+        // a detached instance that reports a change without naming the properties, such as one restored from a
+        // serialized session, has all of its properties marked
+        boolean changedWithoutNames = changed.isEmpty() && target instanceof DirtyCheckable &&
+                ((DirtyCheckable) target).hasChanged()
         hibernateTemplate.execute { Session session ->
+            SessionImplementor implementor = (SessionImplementor) session
+            EntityPersister persister = implementor.getEntityPersister(target.getClass().name, target)
+            Serializable targetId = persister.getIdentifier(target, implementor)
+            // another instance with the id of one the session already manages, whose insert may still be pending: merge
+            // copies the newer values onto the managed one, and those values are written like the changes of a detached
+            // instance, not dropped as the state of a new insert
+            Object managedTwin = targetId == null ? null : implementor.persistenceContext.getEntity(implementor.generateEntityKey(targetId, persister))
+            boolean alreadyManaged = managedTwin != null
+            if (alreadyManaged && !managedTwin.is(target) && persister.isVersioned() && persister.getVersion(target) == null) {
+                // an instance that has not seen the insert has no version, and Hibernate would take it for a new one and make a
+                // second copy with the same id: with the version of the managed one it is a detached instance of that row
+                persister.setPropertyValue(target, persister.getVersionProperty(), persister.getVersion(managedTwin))
+            }
+            // Hibernate's own test for an instance that merge() inserts: the id and version unsaved values, and for
+            // an id it cannot judge a look at the row. A new instance is left alone after the insert, whatever id
+            // type it has and whatever changes it tracks.
+            boolean transientBefore = !alreadyManaged && ForeignKeys.isTransient(target.getClass().name, target, Boolean.FALSE, implementor)
             Object merged = session.merge(target)
+            // an interceptor that says the instance is not transient sends merge down the detached path, which finds
+            // no row and inserts one: the entry of the merged instance says that it does not exist in the database yet
+            EntityEntry mergedEntry = ((SessionImplementor) session).persistenceContext.getEntry(merged)
+            boolean inserted = !alreadyManaged && (transientBefore || (mergedEntry != null && !mergedEntry.existsInDatabase))
+            if (!inserted && merged instanceof DirtyCheckable && !merged.is(target)) {
+                if (changedWithoutNames) {
+                    ((DirtyCheckable) merged).markDirty()
+                } else {
+                    changed.each { String name -> ((DirtyCheckable) merged).markDirty(name) }
+                }
+            }
+            if (inserted && merged instanceof DirtyCheckable && !merged.is(target)) {
+                ((DirtyCheckable) merged).trackChanges()
+            }
             session.lock(merged, LockMode.NONE)
             if (flush) {
                 flushSession(session)
