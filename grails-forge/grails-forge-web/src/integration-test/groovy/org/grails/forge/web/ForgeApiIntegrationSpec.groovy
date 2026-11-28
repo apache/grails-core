@@ -699,7 +699,11 @@ class ForgeApiIntegrationSpec extends Specification {
         and: 'with the features of a REST API, and none of those a plugin does not impose on its applications'
         defaults.features*.name.contains('views-json')
         !defaults.features*.name.contains('gsp')
-        !available.features*.name.any { it in ['scaffolding', 'asset-pipeline-grails', 'openapi', 'grails-spring-security'] }
+        !available.features*.name.any { it in ['asset-pipeline-grails', 'openapi', 'grails-spring-security'] }
+
+        and: 'scaffolding, whose tools generate a REST controller and JSON views, can be selected and is not a default'
+        available.features*.name.contains('scaffolding')
+        !defaults.features*.name.contains('scaffolding')
 
         and: 'what is created is a plugin for JSON views, with none of its own'
         created.status == 201
