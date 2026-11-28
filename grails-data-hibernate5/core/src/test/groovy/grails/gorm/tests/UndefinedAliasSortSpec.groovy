@@ -34,7 +34,8 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
     void setupSpec() {
         // a sort through an association keeps the instances without it with this setting
         manager.configuration['grails.gorm.leftJoinAssociationSort'] = leftJoinSort
-        manager.domainClasses.addAll([Club, Team, Player, Contract])
+        manager.domainClasses.addAll([Club, Team, Player, Contract,
+                                      AssociationSortAuthor, AssociationSortBook, AssociationSortPublisher, AssociationSortAward])
     }
 
     void setup() {
@@ -245,6 +246,50 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
                 ['argument', 'stored', 'map'],
                 [false, true],
         ].combinations().collect { List row -> row[0] + row[1..2] }
+    }
+
+    void 'a LEFT #request of #joinPath keeps a book whose author has no publisher with root alias author and sort #sortPath using #sortForm and pagination #paged'() {
+        given: 'books whose authors have a publisher, and a book whose author has none'
+        final x = new AssociationSortPublisher(name: 'Publisher X').save(failOnError: true)
+        final y = new AssociationSortPublisher(name: 'Publisher Y').save(failOnError: true)
+        new AssociationSortBook(title: 'Published by Y', author: new AssociationSortAuthor(name: 'Ann', publisher: y).save(failOnError: true)).save(failOnError: true)
+        new AssociationSortBook(title: 'Published by X', author: new AssociationSortAuthor(name: 'Bob', publisher: x).save(failOnError: true)).save(failOnError: true)
+        new AssociationSortBook(title: 'Unpublished', author: new AssociationSortAuthor(name: 'Cat').save(failOnError: true)).save(failOnError: true)
+        manager.session.flush()
+        manager.session.clear()
+        def criteria = new DetachedCriteria(AssociationSortBook, 'author')
+        final arguments = paged ? [max: 10] : [:]
+        if (request == 'join') {
+            criteria = criteria.join(joinPath, JoinType.LEFT)
+        }
+        else {
+            arguments.fetch = [(joinPath): JoinType.LEFT]
+        }
+        if (sortForm == 'stored') {
+            criteria = criteria.sort(sortPath)
+        }
+        else {
+            arguments.sort = sortPath
+        }
+
+        when:
+        final results = criteria.list(arguments)
+
+        then: 'the sort uses the requested left join, with the compatibility setting or without it'
+        'Unpublished' in results*.title
+        results*.title - 'Unpublished' == ['Published by X', 'Published by Y']
+        !paged || results.totalCount == 3
+
+        where:
+        [request, joinPath, sortPath, sortForm, paged] << [
+                ['join', 'fetch'],
+                [
+                        ['author.publisher', 'author.publisher.name'],
+                        ['author.author.publisher', 'author.author.publisher.name'],
+                ],
+                ['argument', 'stored'],
+                [false, true],
+        ].combinations().collect { List row -> [row[0]] + row[1] + row[2..3] }
     }
 
     void 'a root-qualified #replacement replaces a canonical INNER fetch request'() {
