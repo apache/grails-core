@@ -133,6 +133,11 @@ public class GrailsConcurrentLinkedMapCache implements GrailsCache {
     }
 
     @Override
+    public boolean evictIfPresent(Object key) {
+        return this.store.remove(key) != null;
+    }
+
+    @Override
     public void clear() {
         this.store.clear();
     }

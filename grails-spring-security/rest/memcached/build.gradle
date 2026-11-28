@@ -60,6 +60,11 @@ dependencies {
 
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
     compileOnly project(':grails-core') // Provided as this is a Grails plugin
+
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testRuntimeOnly 'org.objenesis:objenesis' // MemcachedClient has no constructor without arguments
 }
 
 apply {

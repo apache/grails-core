@@ -59,6 +59,9 @@ dependencies {
     compileOnly project(':grails-core') // Provided as this is a Grails plugin
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
 
+    testImplementation 'ch.qos.logback:logback-classic', {
+        // test: Logger and ListAppender, used to capture log events
+    }
     testImplementation 'org.spockframework:spock-core'
 }
 
