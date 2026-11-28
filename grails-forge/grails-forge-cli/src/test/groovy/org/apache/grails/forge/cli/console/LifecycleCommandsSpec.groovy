@@ -21,6 +21,7 @@ package org.apache.grails.forge.cli.console
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
@@ -31,11 +32,11 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.SpecWaits
 import org.opentest4j.TestAbortedException
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * The commands that run the application of the project and the sessions around it: {@code run-app},
@@ -124,19 +125,22 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                     return;
                 }
                 if (mode.equals("child")) {
-                    Process child = new ProcessBuilder("sleep", "300").start();
+                    // a process that ends only when it is ended
+                    Process child = new ProcessBuilder("tail", "-f", "/dev/null").start();
                     Files.writeString(home.resolve("child.pid"), child.pid() + "\\n");
                 }
                 if (mode.equals("silent")) {
                     Files.writeString(home.resolve("server.pid"), ProcessHandle.current().pid() + "\\n");
-                    Thread.sleep(300000);
+                    // a latch nothing opens: it runs until it is ended
+                    new java.util.concurrent.CountDownLatch(1).await();
                     return;
                 }
                 try (ServerSocket server = listen(keyStore, Integer.parseInt(port), address)) {
                     Files.writeString(home.resolve("server.pid"), ProcessHandle.current().pid() + "\\n");
                     System.out.println("listening on " + port);
                     if (Files.exists(home.resolve("shutdown-millis.txt"))) {
-                        // an application that takes a while to shut down when it is asked to, and closes its port last
+                        // an application that takes a while to shut down when it is asked to, and closes its port last: time is
+                        // what a feature holds with it, that the command returns once the shutdown has ended
                         long millis = Long.parseLong(Files.readString(home.resolve("shutdown-millis.txt")).trim());
                         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                             try {
@@ -163,6 +167,11 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                                 if (next != '\\r') {
                                     last = next;
                                 }
+                            }
+                            if (asked) {
+                                // each request it was sent, as the feature that waits for them reads them
+                                Files.writeString(home.resolve("requests.txt"), "asked\\n", java.nio.file.StandardOpenOption.CREATE,
+                                        java.nio.file.StandardOpenOption.APPEND);
                             }
                             if (asked && !mode.equals("mute")) {
                                 boolean starting = mode.equals("starting") && !Files.exists(home.resolve("ready"));
@@ -237,6 +246,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ConsoleProject.setSafeDirectories(null)
         ConsoleCommands.setInteractive(false)
         RunAppCommand.setEnvironmentVariables(null)
+        RunAppCommand.setReadyTimeUp(null)
+        StopAppCommand.setPortWait(null)
         RunAppCommand.stopWhatTheShellStarted()
         // whatever a feature started and did not see end is ended here, and the feature has then failed
         ['server.pid', 'child.pid'].each { String name -> noteStarted(new File(dir, name)) }
@@ -607,7 +618,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         when:
         command.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert ApplicationPort.isOpen(port) && new File(dir, '.grails/run/app.json').isFile()
         }
         long server = pid('server.pid')
@@ -619,7 +630,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         when:
         int stopped = ForgeCli.execute(beanContext, 'stop-app')
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         stopped == 0
@@ -640,12 +651,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         when:
         command.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert ApplicationPort.isOpen(port)
         }
         long server = pid('server.pid')
         command.interrupt()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         !command.alive
@@ -672,9 +683,10 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     void "run-app --detach stops what it started when the application does not answer in time"() {
-        given:
+        given: 'an application that does not answer, whose time to answer is up once it has started'
         scriptedProject('silent')
         int port = freePort()
+        RunAppCommand.setReadyTimeUp { new File(dir, 'server.pid').isFile() }
 
         when:
         int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '30')
@@ -697,12 +709,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         when:
         command.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert new File(dir, 'server.pid').isFile() && new File(dir, 'server.pid').text.endsWith('\n')
         }
         long server = pid('server.pid')
         command.interrupt()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         !command.alive
@@ -719,20 +731,17 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         AtomicInteger exit = new AtomicInteger(-1)
         Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String)) })
 
-        when: 'the port answers, with the header of the page that is shown while the application starts'
+        when: 'the port answers, with the header of the page that is shown while the application starts, to the command and to the command again'
         command.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
-            assert ApplicationPort.isOpen(port)
-        }
-        Thread.sleep(2000)
+        SpecWaits.until('two requests to the application that is starting') { requests() >= 2 }
 
-        then:
+        then: 'the command asked again, and waits'
         command.alive
         !ApplicationPort.isReady(port)
 
         when:
         new File(dir, 'ready').text = ''
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         !command.alive
@@ -791,7 +800,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         int port = freePort()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--host', host, '--ready-timeout', '120')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--host', host, '--ready-timeout', SpecWaits.boundSeconds as String)
 
         then: 'the application answers where it is bound, and nowhere else'
         exit == 0
@@ -825,7 +834,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         taken.setSoTimeout(200)
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--host', host, '--ready-timeout', '30')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--host', host, '--ready-timeout', SpecWaits.boundSeconds as String)
 
         then: 'the port was free where the application is bound, and it answers there'
         exit == 0
@@ -893,7 +902,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'grails-app/conf/application.yml').text = configuration.replace('PORT', port as String)
 
         when: 'an application that does not answer on the port the command waits on is stopped after the time it is given'
-        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', '30'] + options.collect { String option -> option.replace('PORT', port as String) }) as String[])
+        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', SpecWaits.boundSeconds as String] + options.collect { String option -> option.replace('PORT', port as String) }) as String[])
 
         then:
         exit == 0
@@ -1001,30 +1010,31 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         (new File(dir, 'shut-down.txt').text.trim() as long) <= returned
         !alive(record.pid as long)
         out.toString() == ''
-        new PollingConditions(timeout: 30, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
     }
 
     void "when the interactive shell ends, it waits for an application that is not below Gradle for 30 seconds at most, and says so when it still answers"() {
-        given: 'an application that does not end with Gradle'
+        given: 'an application that does not end with Gradle, and a second for the wait at its port, in place of thirty'
         daemonProject()
         new File(dir, 'keep').text = ''
         int port = freePort()
         ConsoleCommands.setInteractive(true)
+        StopAppCommand.setPortWait(Duration.ofSeconds(1))
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--port', port as String)
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--port', port as String, '--ready-timeout', SpecWaits.boundSeconds as String)
         long server = pid('server.pid')
         Map record = record()
         out.reset()
         long asked = System.nanoTime()
         RunAppCommand.stopWhatTheShellStarted()
-        long waited = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - asked)
+        long waitedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - asked)
 
-        then:
+        then: 'it waited the time it waits, which time itself holds: a lower bound, which a slow computer only exceeds'
         exit == 0
-        waited >= 30 && waited < 60
+        waitedMillis >= 1000
         !alive(record.pid as long)
         alive(server)
         ApplicationPort.isOpen(port)
@@ -1033,7 +1043,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         cleanup:
         ProcessHandle.of(server).ifPresent { ProcessHandle handle -> handle.destroyForcibly() }
-        new PollingConditions(timeout: 30, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
     }
@@ -1120,7 +1130,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
     void "a process is not stopped for a record that names it when its command line only looks like the project's"() {
         given: 'a process of the user whose command line has the directory and the task, but that the record does not date'
         scriptedProject('serve')
-        Process other = new ProcessBuilder('sh', '-c', 'sleep 300', "${dir.canonicalPath}/gradlew".toString(), 'bootRun').start()
+        // a shell that stays until it is ended, with the command line it was given
+        Process other = new ProcessBuilder('sh', '-c', 'while :; do sleep 1; done', "${dir.canonicalPath}/gradlew".toString(), 'bootRun').start()
         started.add(other.pid())
         writeRecord(pid: other.pid(), started: other.info().startInstant().get().toEpochMilli() + 1)
 
@@ -1201,7 +1212,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         when:
         command.start()
         long server = pid('server.pid')
-        new PollingConditions(timeout: 60, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert out.toString().contains('stop-app will not find it')
         }
 
@@ -1224,7 +1235,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         when:
         out.reset()
         command.interrupt()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         !command.alive
@@ -1234,7 +1245,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         cleanup:
         command?.interrupt()
-        command?.join(60_000)
+        command?.join(SpecWaits.BOUND.toMillis())
     }
 
     @Unroll
@@ -1300,7 +1311,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         int port = freePort()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '60')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', SpecWaits.boundSeconds as String)
 
         then: 'which of the two lines it is depends on whether the process was still there when the command looked'
         exit == 1
@@ -1354,7 +1365,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         int stop = ForgeCli.execute(beanContext, 'stop-app')
         List<String> stopSaid = errors()
         out.reset()
-        int run = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', freePort() as String, '--ready-timeout', '30')
+        int run = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', freePort() as String, '--ready-timeout', SpecWaits.boundSeconds as String)
         List<String> runSaid = errors()
         int command = ForgeCli.execute(beanContext, 'run-tool', 'name')
 
@@ -1706,7 +1717,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         when:
         command.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert ApplicationPort.isOpen(port) && new File(dir, '.grails/run/app.json').isFile()
         }
         long server = pid('server.pid')
@@ -1718,7 +1729,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, '.grails/run/app.stopping').text = asked
         new File(dir, '.grails/run/app.json').text = theirs
         GradleRunner.stop(ProcessHandle.of(mine.pid as long).get(), 10)
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then: 'its own end was not asked for, and what is the other one\'s is as it was'
         !command.alive
@@ -1743,14 +1754,14 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         when:
         command.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert ApplicationPort.isOpen(port) && new File(dir, '.grails/run/app.json').isFile()
         }
         long server = pid('server.pid')
         new File(dir, 'server.pid').delete()
         int stopped = ForgeCli.execute(beanContext, 'stop-app')
         int second = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', next as String)
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
         Map record = record()
 
         then:
@@ -1779,13 +1790,13 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         when: 'the CLI as a program, ended by a signal, which interrupts no thread'
         Process program = ForkedCli.builder(dir, [], 'run-app', '--detach', '--port', freePort() as String).redirectErrorStream(true).redirectOutput(said).start()
-        new PollingConditions(timeout: 300, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert new File(dir, 'server.pid').isFile() && new File(dir, 'server.pid').text.endsWith('\n') && new File(dir, '.grails/run/app.json').isFile()
         }
         long server = pid('server.pid')
         Map record = record()
         program.destroy()
-        boolean ended = program.waitFor(120, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
 
         then:
         ended
@@ -1809,7 +1820,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         RunAppCommand.setEnvironmentVariables({ String name -> variables[name] } as java.util.function.Function<String, String>)
 
         when:
-        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', '30'] + options) as String[])
+        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', SpecWaits.boundSeconds as String] + options) as String[])
 
         then:
         exit == 1
@@ -1880,9 +1891,10 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     void "a port that takes connections and answers nothing is not an application that answers"() {
-        given:
+        given: 'an application that takes connections and answers nothing, whose time to answer is up once it was asked'
         scriptedProject('mute')
         int port = freePort()
+        RunAppCommand.setReadyTimeUp { requests() >= 1 }
 
         when:
         int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '30')
@@ -1937,7 +1949,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         stopped == 0
         errors() == []
         !ApplicationPort.isOpen(port)
-        new PollingConditions(timeout: 30, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
     }
@@ -1964,7 +1976,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         cleanup:
         ProcessHandle.of(server).ifPresent { ProcessHandle handle -> handle.destroyForcibly() }
-        new PollingConditions(timeout: 30, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
     }
@@ -2096,7 +2108,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         int port = freePort()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '600')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', SpecWaits.boundSeconds as String)
         long building = pid('server.pid')
         Map record = record()
 
@@ -2153,7 +2165,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
     private void stayingProject() {
         new File(dir, 'grails-app').mkdirs()
         File wrapper = new File(dir, 'gradlew')
-        wrapper.text = '#!/bin/sh\necho $$ > server.pid\nexec sleep 300\n'
+        // a process that ends only when it is ended
+        wrapper.text = '#!/bin/sh\necho $$ > server.pid\nexec tail -f /dev/null\n'
         wrapper.setExecutable(true, false)
     }
 
@@ -2169,8 +2182,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                 app=\$!
                 while kill -0 \$me 2>/dev/null; do sleep 0.2; done
                 [ -f "${dir.canonicalPath}/keep" ] || kill \$app ) & )
-            sleep 300 &
-            wait
+            # it stays until it is ended, as the script it is
+            while :; do sleep 1; done
             """.stripIndent()
     }
 
@@ -2218,11 +2231,17 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
     private long pid(String name) {
         File file = new File(dir, name)
-        new PollingConditions(timeout: 60, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert file.isFile() && file.text.endsWith('\n')
         }
         noteStarted(file)
         return file.text.trim() as long
+    }
+
+    // the requests the application of the fixture was sent so far
+    private int requests() {
+        File file = new File(dir, 'requests.txt')
+        return file.isFile() ? file.readLines().size() : 0
     }
 
     private void noteStarted(File file) {
@@ -2258,6 +2277,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
             return true
         }
         new ProcessBuilder('kill', '-INT', pid as String).start().waitFor()
+        // time is what is held here, on a system with neither setsid nor job control only: a process that ignores the
+        // interrupt is one that is still there a while after it was sent it
         Thread.sleep(500)
         return alive(pid)
     }

@@ -20,6 +20,7 @@ package org.apache.grails.forge.cli.console
 
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Timeout
@@ -205,8 +206,8 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         ['gradle', 'classes']                                      | 'tooling-api' | false   | '<classes>'               | 'what follows gradle is Gradle\'s to read'
         ['shell']                                                  | ''            | true    | '<:shell><--quiet>'       | 'what is typed is the shell\'s until it is left'
         ['shell']                                                  | 'tooling-api' | true    | '<:shell><--quiet>'       | 'what is typed is the shell\'s until it is left'
-        ['run-app', '--port', freePort(), '--ready-timeout', '30'] | ''            | true    | '<:bootRun><--quiet>'     | 'the application is left running there, and its build has to go on without the console'
-        ['run-app', '--port', freePort(), '--ready-timeout', '30'] | 'tooling-api' | true    | '<:bootRun><--quiet>'     | 'the application is left running there, and its build has to go on without the console'
+        ['run-app', '--port', freePort(), '--ready-timeout', SpecWaits.boundSeconds as String] | ''            | true    | '<:bootRun><--quiet>'     | 'the application is left running there, and its build has to go on without the console'
+        ['run-app', '--port', freePort(), '--ready-timeout', SpecWaits.boundSeconds as String] | 'tooling-api' | true    | '<:bootRun><--quiet>'     | 'the application is left running there, and its build has to go on without the console'
         ['compile', '--', '--no-daemon']                           | ''            | true    | '<:classes><--no-daemon>' | 'the argument is one the program gradle reads itself'
         ['compile', '--', '--no-daemon', '--', 'helpful']          | ''            | true    | '<:classes><--no-daemon><--><helpful>' | 'the argument is one the program gradle reads itself'
     }

@@ -49,7 +49,6 @@ import spock.lang.Unroll
 class InteractiveConsoleSpec extends Specification {
 
     static final String ESCAPE = '\u001b['
-    static final int SECONDS = 300
 
     File dir = Files.createTempDirectory('grailsforgeconsole').toFile().canonicalFile
     File written = new File(dir, 'out.txt')
@@ -59,7 +58,7 @@ class InteractiveConsoleSpec extends Specification {
         if (program != null) {
             program.descendants().forEach { ProcessHandle each -> each.destroyForcibly() }
             program.destroyForcibly()
-            program.waitFor(60, TimeUnit.SECONDS)
+            program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
         dir.deleteDir()
     }
@@ -106,7 +105,7 @@ class InteractiveConsoleSpec extends Specification {
         if (input == 'closed at once') {
             program.outputStream.close()
         }
-        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
 
         then: 'it asked once, under the name it was started under, and left'
         ended
@@ -136,7 +135,7 @@ class InteractiveConsoleSpec extends Specification {
                 'gradle build "two  words"\n' +
                 '  exit  \n' +
                 'gradle never\n')).start()
-        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String said = written.text
 
         then:
@@ -162,7 +161,7 @@ class InteractiveConsoleSpec extends Specification {
         console.environment().put(ProjectTools.LISTING, 'false')
         console.environment().put('NO_COLOR', '1')
         program = console.redirectInput(typed("gradle build\n${line}\ngradle never\n")).start()
-        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String said = written.text
 
         then: 'it left as at the end of its input, after the command before the line'
@@ -195,7 +194,7 @@ class InteractiveConsoleSpec extends Specification {
         console.environment().put(ProjectTools.LISTING, 'false')
         console.environment().put('NO_COLOR', '1')
         program = console.redirectInput(typed("${line}\ngradle after\n")).start()
-        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String said = written.text
 
         then: 'the line was refused as no command, and the next one was run'
@@ -305,7 +304,7 @@ class InteractiveConsoleSpec extends Specification {
                 'rn\n' +
                 'g build\n' +
                 'exit\n')).start()
-        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String said = written.text
 
         then:
@@ -339,7 +338,7 @@ class InteractiveConsoleSpec extends Specification {
                 'run app.groovy\n' +
                 'ru\n' +
                 'exit\n')).start()
-        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String said = written.text
 
         then:
@@ -367,7 +366,7 @@ class InteractiveConsoleSpec extends Specification {
 
         when: 'the input ends after a command, without exit'
         program = command(true, [], []).redirectInput(typed('gradle build\n')).start()
-        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
 
         then:
         ended
@@ -385,7 +384,7 @@ class InteractiveConsoleSpec extends Specification {
 
         when: 'without the option'
         program = command(true, asATerminal, []).redirectInput(typed(input)).start()
-        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String marked = written.text
 
         then:
@@ -395,7 +394,7 @@ class InteractiveConsoleSpec extends Specification {
 
         when:
         program = command(true, asATerminal, ['--plain-output']).redirectInput(typed(input)).start()
-        ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String plain = written.text
 
         then: 'the same console, and Gradle is asked for its plain console by the commands that run it'
@@ -419,7 +418,7 @@ class InteractiveConsoleSpec extends Specification {
 
         when: 'an input that does not end: nothing is written to it, and it is not closed'
         program = command(grails, [], args).start()
-        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
 
         then:
         ended

@@ -34,7 +34,6 @@ import spock.lang.Specification
 @IgnoreIf({ os.windows || !ForkedCli.available() })
 class ConsoleSuggestionsSpec extends Specification {
 
-    static final int SECONDS = 300
 
     // what is typed, and what is then told to type, as the command line of a shell says it
     @Shared
@@ -72,7 +71,7 @@ class ConsoleSuggestionsSpec extends Specification {
         if (program != null) {
             program.descendants().forEach { ProcessHandle each -> each.destroyForcibly() }
             program.destroyForcibly()
-            program.waitFor(60, TimeUnit.SECONDS)
+            program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
         dir.deleteDir()
     }
@@ -127,7 +126,7 @@ class ConsoleSuggestionsSpec extends Specification {
             builder.redirectInput(lines)
         }
         program = builder.start()
-        assert program.waitFor(SECONDS, TimeUnit.SECONDS)
+        assert program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         return written.text
     }
 }

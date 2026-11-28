@@ -24,6 +24,7 @@ import org.apache.grails.forge.cli.Diagnostics
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Timeout
@@ -76,7 +77,7 @@ class DiagnosticsSpec extends CommandSpec {
         System.setErr(originalErr)
         if (program != null) {
             program.destroyForcibly()
-            program.waitFor(60, TimeUnit.SECONDS)
+            program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
     }
 
@@ -172,7 +173,7 @@ class DiagnosticsSpec extends CommandSpec {
         int port = new ServerSocket(0, 1, InetAddress.loopbackAddress).withCloseable { ServerSocket socket -> socket.localPort }
 
         when: 'the wrapper ends at once, so nothing answers'
-        ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '30')
+        ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', SpecWaits.boundSeconds as String)
 
         then:
         diagnostics()[0] == "| Diagnostic gradle runner: ${NOT_SET}; effective process: an application that is left running is a process of its own, which outlives the command line".toString()
@@ -221,7 +222,7 @@ class DiagnosticsSpec extends CommandSpec {
         ProcessBuilder builder = ForkedCli.builder(dir, [], '--version').redirectErrorStream(true).redirectOutput(written)
         builder.environment().put(Diagnostics.VARIABLE, 'true')
         program = builder.start()
-        boolean ended = program.waitFor(300, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         List<String> said = written.readLines().findAll { String line -> line.startsWith('| Diagnostic') }
 
         then: 'the classes were loaded ahead, as the program does where the JVM has more than one processor'
@@ -235,7 +236,7 @@ class DiagnosticsSpec extends CommandSpec {
         when: 'without the variable'
         builder.environment().remove(Diagnostics.VARIABLE)
         program = builder.start()
-        ended = program.waitFor(300, TimeUnit.SECONDS)
+        ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
 
         then:
         ended

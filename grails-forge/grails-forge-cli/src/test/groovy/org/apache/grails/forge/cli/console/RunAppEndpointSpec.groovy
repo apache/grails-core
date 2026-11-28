@@ -21,11 +21,11 @@ package org.apache.grails.forge.cli.console
 import groovy.json.JsonSlurper
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Timeout
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * The port and the address {@code run-app} waits on are those the application is told, by the
@@ -83,7 +83,7 @@ class RunAppEndpointSpec extends CommandSpec {
         gradleProject()
         int port = freePort()
         int other = freePort()
-        List<String> line = (['run-app', '--detach', '--ready-timeout', '240'] + given).collect { String each ->
+        List<String> line = (['run-app', '--detach', '--ready-timeout', SpecWaits.boundSeconds as String] + given).collect { String each ->
             each.replace('OTHER', other as String).replace('PORT', port as String)
         }
 
@@ -129,7 +129,7 @@ class RunAppEndpointSpec extends CommandSpec {
         new File(dir, 'grails-app/conf/application.yml').text = "server:\n    port: 1\nenvironments:\n    test:\n        server:\n            port: ${port}\n"
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--ready-timeout', '60', '--', '-Dgrails.env=test')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--ready-timeout', SpecWaits.boundSeconds as String, '--', '-Dgrails.env=test')
 
         then:
         exit == 0
@@ -147,7 +147,7 @@ class RunAppEndpointSpec extends CommandSpec {
         scriptedProject()
 
         when:
-        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', '30', '--'] + given) as String[])
+        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', SpecWaits.boundSeconds as String, '--'] + given) as String[])
 
         then:
         exit == code
@@ -172,7 +172,7 @@ class RunAppEndpointSpec extends CommandSpec {
         when:
         Thread command = new Thread({ ForgeCli.execute(beanContext, 'run-app', '--', '-Dgrails.server.port=' + port) })
         command.start()
-        new PollingConditions(timeout: 120, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert ApplicationPort.isOpen(port)
             assert new File(dir, '.grails/run/app.json').isFile()
         }
@@ -182,7 +182,7 @@ class RunAppEndpointSpec extends CommandSpec {
 
         when:
         int stopped = ForgeCli.execute(beanContext, 'stop-app')
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         stopped == 0

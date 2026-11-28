@@ -26,9 +26,9 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * {@code stop-app} in a project whose {@code gradlew} is a link to {@code tools/gradlew}. The script
@@ -139,7 +139,7 @@ class LinkedWrapperStopAppSpec extends CommandSpec implements CommandFixture {
         when:
         int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '600')
         File marker = new File(dir, 'server.pid')
-        new PollingConditions(timeout: 60, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert marker.isFile() && marker.text.endsWith('\n')
         }
         long building = marker.text.trim() as long

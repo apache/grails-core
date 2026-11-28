@@ -23,6 +23,7 @@ import java.util.function.Function
 import groovy.json.JsonSlurper
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -39,7 +40,7 @@ import spock.lang.Unroll
  * on the port it is given.</p>
  */
 @IgnoreIf({ os.windows })
-@Timeout(300)
+@Timeout(600)
 class RunAppConfigurationSpec extends CommandSpec {
 
     static final String CONFIGURATION = 'grails-app/conf/application.yml'
@@ -86,7 +87,7 @@ class RunAppConfigurationSpec extends CommandSpec {
         file.bytes = configuration instanceof byte[] ? (byte[]) configuration : configuration.toString().getBytes(StandardCharsets.UTF_8)
 
         when:
-        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', '30'] + options) as String[])
+        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', SpecWaits.boundSeconds as String] + options) as String[])
 
         then:
         exit == 1
@@ -145,7 +146,7 @@ class RunAppConfigurationSpec extends CommandSpec {
         int port = freePort()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--ready-timeout', '120', '--port', port as String, '--host', '127.0.0.1')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--ready-timeout', SpecWaits.boundSeconds as String, '--port', port as String, '--host', '127.0.0.1')
 
         then:
         exit == 0

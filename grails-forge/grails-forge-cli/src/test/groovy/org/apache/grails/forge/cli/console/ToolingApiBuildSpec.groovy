@@ -23,11 +23,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Timeout
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * The commands that are a build of the project, run through the Tooling API of Gradle against a build
@@ -91,7 +91,8 @@ class ToolingApiBuildSpec extends CommandSpec {
             doLast {
                 new File(directory, 'waiting.txt').text = 'waiting\\n'
                 try {
-                    Thread.sleep(600000)
+                    // a latch nothing opens: the task runs until the cancelled build interrupts it
+                    new java.util.concurrent.CountDownLatch(1).await()
                 } finally {
                     new File(directory, 'ended.txt').text = 'ended\\n'
                 }
@@ -242,7 +243,7 @@ class ToolingApiBuildSpec extends CommandSpec {
 
         when:
         command.start()
-        new PollingConditions(timeout: 300, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert new File(dir, 'waiting.txt').isFile()
         }
 
@@ -251,7 +252,7 @@ class ToolingApiBuildSpec extends CommandSpec {
 
         when:
         command.interrupt()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         !command.alive
@@ -260,7 +261,7 @@ class ToolingApiBuildSpec extends CommandSpec {
         !GradleBuild.isRunning()
 
         and: 'the build has ended in the daemon, which is still there for the next one'
-        new PollingConditions(timeout: 30, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert new File(dir, 'ended.txt').isFile()
         }
         gradle.daemons().size() == 1

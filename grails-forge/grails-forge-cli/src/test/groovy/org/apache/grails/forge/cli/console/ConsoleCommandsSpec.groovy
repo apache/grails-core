@@ -24,7 +24,6 @@ import java.nio.file.attribute.PosixFilePermissions
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.Callable
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.zip.ZipFile
@@ -32,13 +31,14 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.Handshake
+import org.grails.forge.cli.SpecWaits
 import org.grails.forge.cli.command.BaseCommand
 import org.opentest4j.TestAbortedException
 import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * The commands that build, test and look at the project of the current directory. The projects here
@@ -67,8 +67,14 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
                     throw new GradleException('this build fails on purpose')
                 }
                 if (given.containsKey('hang')) {
-                    new File(project.projectDir, 'started.txt').text = ProcessHandle.current().pid() + '\\n'
-                    Thread.sleep(180000)
+                    // says in the directory of the handshake the property names that it has started, and waits until it is released
+                    def handshake = new File(given.hang)
+                    def part = new File(handshake, 'started.part')
+                    part.text = ProcessHandle.current().pid() + '\\n'
+                    java.nio.file.Files.move(part.toPath(), new File(handshake, 'started').toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+                    while (handshake.isDirectory() && !new File(handshake, 'release-hang').exists() && !new File(handshake, 'release-all').exists()) {
+                        Thread.sleep(50)
+                    }
                 }
             }
         }
@@ -559,31 +565,24 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
     void "continuous testing is the continuous build of Gradle, and cancelling the command stops Gradle and the build"() {
         given: 'a build without a daemon: the JVM the task runs in is then one that ends with the build; a continuous build watches the files'
         plainProject(dir, false, true)
-        File started = new File(dir, 'started.txt')
         AtomicInteger exit = new AtomicInteger(-1)
-        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'test-app', '--continuous', '-Dhang=true')) })
+        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'test-app', '--continuous', "-Dhang=${handshake.directory}".toString())) })
 
-        when:
+        when: 'the task runs, and waits until it is released'
         command.start()
-        new PollingConditions(timeout: 120, delay: 0.5).eventually {
-            assert started.isFile() && started.text.endsWith('\n')
-        }
-        long building = started.text.trim() as long
+        long building = handshake.awaitStarted()
         command.interrupt()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the cancelled command')
 
         then:
-        !command.alive
         exit.get() == 1
         lineOf('requested=') == '<testApp>'
         lineOf('stacktrace=') == 'INTERNAL_EXCEPTIONS level=LIFECYCLE continuous=true offline=false'
         errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
         !out.toString().contains('Tests PASSED')
 
-        and: 'the JVM the task ran in ends as well, long before the task would have'
-        new PollingConditions(timeout: 60, delay: 0.5).eventually {
-            assert !ProcessHandle.of(building).map { ProcessHandle handle -> handle.alive }.orElse(false)
-        }
+        and: 'the JVM the task ran in ends as well, though nothing released the task'
+        Handshake.awaitExit(building)
     }
 
     void "stats counts the source files and their lines of code by the kind of class, without Gradle"() {
@@ -1173,16 +1172,16 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         source('src/main/groovy/%', 'a source\n')
         File pipe = new File(dir, 'src/main/groovy/pipe')
         Process made = new ProcessBuilder('mkfifo', pipe.path).redirectErrorStream(true).start()
-        if (!made.waitFor(60, TimeUnit.SECONDS) || made.exitValue() != 0) {
+        if (SpecWaits.exited(made, 'the end of mkfifo') != 0) {
             throw new TestAbortedException('this system makes no named pipe here')
         }
         AtomicInteger exit = new AtomicInteger(-1)
-        // reading a pipe nothing writes to does not end: the command is not waited for longer than this
+        // reading a pipe nothing writes to does not end: the command is not waited for longer than the bound of every wait
         Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'bug-report')) })
 
         when:
         command.start()
-        command.join(120_000)
+        command.join(SpecWaits.BOUND.toMillis())
 
         then:
         !command.alive
@@ -1196,7 +1195,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         if (command?.alive) {
             // a writer lets the read of the pipe end
             new FileOutputStream(pipe).close()
-            command.join(60_000)
+            command.join(SpecWaits.BOUND.toMillis())
         }
     }
 

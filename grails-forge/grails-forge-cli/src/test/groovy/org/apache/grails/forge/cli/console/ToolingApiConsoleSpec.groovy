@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Timeout
@@ -66,7 +67,7 @@ class ToolingApiConsoleSpec extends CommandSpec {
         System.setErr(originalErr)
         if (program != null) {
             program.destroyForcibly()
-            program.waitFor(60, TimeUnit.SECONDS)
+            program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
     }
 
@@ -181,7 +182,7 @@ class ToolingApiConsoleSpec extends CommandSpec {
 
         when:
         program = builder.start()
-        boolean ended = program.waitFor(300, TimeUnit.SECONDS)
+        boolean ended = program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String said = written.text
 
         then: 'the console has ended by itself, with nothing of the Tooling API holding its JVM'

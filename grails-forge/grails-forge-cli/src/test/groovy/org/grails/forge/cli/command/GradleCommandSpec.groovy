@@ -33,15 +33,16 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.Handshake
 import org.grails.forge.cli.ForkedCli
 import org.grails.forge.cli.InteractiveShell
+import org.grails.forge.cli.SpecWaits
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import org.jline.terminal.impl.DumbTerminal
 import org.opentest4j.TestAbortedException
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * {@code gradle}, which runs the Gradle wrapper of the project the current directory is in. The
@@ -64,11 +65,17 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         tasks.register('fail') {
             doLast { throw new GradleException('this build fails on purpose') }
         }
+        // says in the directory of the handshake of the feature that it has started, and waits until it is released
         tasks.register('hang') {
-            def started = layout.projectDirectory.file('started.txt').asFile
+            def directory = providers.gradleProperty('handshake')
             doLast {
-                started.text = ProcessHandle.current().pid() + '\\n'
-                Thread.sleep(180000)
+                def handshake = new File(directory.get())
+                def part = new File(handshake, 'started.part')
+                part.text = ProcessHandle.current().pid() + '\\n'
+                java.nio.file.Files.move(part.toPath(), new File(handshake, 'started').toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+                while (handshake.isDirectory() && !new File(handshake, 'release-hang').exists() && !new File(handshake, 'release-all').exists()) {
+                    Thread.sleep(50)
+                }
             }
         }
         '''.stripIndent()
@@ -204,9 +211,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         out.reset()
         new File(dir, 'settings.gradle').delete()
         // on Windows the Gradle that has just ended can hold a file of the directory for a moment longer
-        new PollingConditions(timeout: 30, delay: 0.5).eventually {
-            assert new File(dir, '.gradle').deleteDir() && !new File(dir, '.gradle').exists()
-        }
+        SpecWaits.until('the removal of the .gradle directory the build left') { new File(dir, '.gradle').deleteDir() && !new File(dir, '.gradle').exists() }
         exit = ForgeCli.execute(beanContext, 'gradle', 'show')
 
         then:
@@ -790,33 +795,26 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
     @IgnoreIf({ os.windows })
     void "when the command is cancelled every process the wrapper started is ended, and the command says it was stopped"() {
-        given: 'a wrapper that starts a process and stays the script it is, as one that does not become Gradle'
+        given: 'a wrapper that starts a process and stays the script it is, as one that does not become Gradle; neither ends until the feature lets it'
         new File(dir, 'grails-app').mkdirs()
-        wrapper(dir, 'sleep 300 &\necho $! > started.txt\nwait\n')
-        File started = new File(dir, 'started.txt')
+        stubWrapper(dir, 'hold child &\nsay started $!\nwait\n')
         AtomicInteger exit = new AtomicInteger(-1)
         Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'gradle', 'build')) })
 
         when:
         command.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
-            assert started.isFile() && started.text.endsWith('\n')
-        }
-        long sleeper = started.text.trim() as long
-        boolean ran = ProcessHandle.of(sleeper).map { ProcessHandle handle -> handle.alive }.orElse(false)
+        long child = handshake.awaitStep('started').number(0)
+        boolean ran = SpecWaits.alive(child)
         command.interrupt()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the command')
 
         then:
         ran
-        !command.alive
         exit.get() == 1
         errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
 
-        and: 'what the script started is gone, long before it would have ended'
-        new PollingConditions(timeout: 30, delay: 0.2).eventually {
-            assert !ProcessHandle.of(sleeper).map { ProcessHandle handle -> handle.alive }.orElse(false)
-        }
+        and: 'what the script started is gone, though nothing released it'
+        Handshake.awaitExit(child)
     }
 
     void "the shell asks under the name the command line was started under, takes exit with spaces around it, and ends its last line when the input ends"() {
@@ -888,8 +886,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
     void "in the interactive shell the interrupt of the terminal cancels the command that runs, and the shell goes on"() {
         given: 'a shell on a terminal that is none, and a wrapper that does not end by itself'
         new File(dir, 'grails-app').mkdirs()
-        wrapper(dir, 'sleep 300 &\necho $! > started.txt\nwait\n')
-        File started = new File(dir, 'started.txt')
+        stubWrapper(dir, 'hold child &\nsay started $!\nwait\n')
         Terminal terminal = TerminalBuilder.builder().dumb(true).system(false)
                 .streams(new ByteArrayInputStream(new byte[0]), new ByteArrayOutputStream()).build()
         List<Integer> exits = [].asSynchronized()
@@ -904,21 +901,15 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
         when: 'Ctrl-C while the command runs'
         line.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
-            assert started.isFile() && started.text.endsWith('\n')
-        }
-        long sleeper = started.text.trim() as long
+        long child = handshake.awaitStep('started').number(0)
         terminal.raise(Terminal.Signal.INT)
-        line.join(60_000)
+        SpecWaits.join(line, 'the end of the two lines of the shell')
 
         then: 'the command was stopped, and the one after it ran'
-        !line.alive
         exits == [1, 0]
         errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
         out.toString().contains('the wrapper ran with next')
-        new PollingConditions(timeout: 30, delay: 0.2).eventually {
-            assert !ProcessHandle.of(sleeper).map { ProcessHandle handle -> handle.alive }.orElse(false)
-        }
+        Handshake.awaitExit(child)
 
         cleanup:
         terminal?.close()
@@ -934,7 +925,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         InteractiveShell shell = new InteractiveShell(ForgeCli.createCommandLine(beanContext, true), { String[] args ->
             running.countDown()
             try {
-                left.await(60, TimeUnit.SECONDS)
+                left.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
             } catch (InterruptedException ignored) {
                 interrupted.incrementAndGet()
             }
@@ -949,12 +940,11 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
         when:
         line.start()
-        assert running.await(60, TimeUnit.SECONDS)
+        SpecWaits.await(running, 'the start of the command')
         terminal.raise(Terminal.Signal.INT)
-        line.join(60_000)
+        SpecWaits.join(line, 'the end of the line of the shell')
 
         then: 'the shell was told to end, and the thread of the command was left alone'
-        !line.alive
         left.count == 0
         interrupted.get() == 0
 
@@ -966,22 +956,18 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
     void "a wrapper that another process ends was not stopped by the command, which says with what it ended, in one line"() {
         given:
         new File(dir, 'grails-app').mkdirs()
-        wrapper(dir, 'sleep 300 &\necho "$$ $!" > started.txt\nwait\n')
-        File started = new File(dir, 'started.txt')
+        stubWrapper(dir, 'hold child &\nsay started $!\nwait\n')
         AtomicInteger exit = new AtomicInteger(-1)
         Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'gradle', 'build')) })
 
         when: 'the wrapper itself is signalled, and neither the command nor this virtual machine'
         command.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
-            assert started.isFile() && started.text.endsWith('\n')
-        }
-        List<Long> pids = started.text.trim().split(' ').collect { String pid -> pid as long }
+        Handshake.Step started = handshake.awaitStep('started')
+        List<Long> pids = [started.pid, started.number(0)]
         ProcessHandle.of(pids[0]).get().destroy()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the command')
 
         then:
-        !command.alive
         exit.get() == 1
         errors() == ['| Error Gradle did not succeed: it ended with exit code 143']
 
@@ -1000,33 +986,25 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
         when: 'the output of the program is a file'
         Process program = ForkedCli.builder(dir, [], 'gradle', 'build').redirectOutput(written).redirectError(errors).start()
-        boolean ended = program.waitFor(300, TimeUnit.SECONDS)
+        int exit = SpecWaits.exited(program, 'the end of the program')
 
         then: 'the wrapper wrote to that file itself, and nothing between changed a byte'
-        ended
-        program.exitValue() == 0
+        exit == 0
         written.bytes == ('FILE\n'.bytes.toList() + [(byte) 0xff, (byte) 0xfe, (byte) 0x80] + ' bytes\n'.bytes.toList()) as byte[]
         errors.bytes == ('error '.bytes.toList() + [(byte) 0xff, (byte) 0x0a]) as byte[]
 
         when: 'the program is ended while a wrapper runs that does not end by itself'
-        wrapper(dir, 'sleep 300 &\necho $! > started.txt\necho started\nwait\n')
-        File started = new File(dir, 'started.txt')
+        stubWrapper(dir, 'hold child &\nsay started $!\necho started\nwait\n')
         program = ForkedCli.builder(dir, [], 'gradle', 'build').redirectOutput(written).redirectErrorStream(true).start()
-        new PollingConditions(timeout: 300, delay: 0.5).eventually {
-            assert started.isFile() && started.text.endsWith('\n')
-        }
-        long sleeper = started.text.trim() as long
+        long child = handshake.awaitStep('started').number(0)
         program.destroy()
-        ended = program.waitFor(120, TimeUnit.SECONDS)
+        exit = SpecWaits.exited(program, 'the end of the program')
 
         then:
-        ended
-        program.exitValue() == 143
+        exit == 143
         written.text.readLines().findAll { String line -> line.contains('| Error') || line.contains('Gradle') } ==
                 ['| Error Gradle was stopped before it finished, because the command was cancelled']
-        new PollingConditions(timeout: 30, delay: 0.2).eventually {
-            assert !ProcessHandle.of(sleeper).map { ProcessHandle handle -> handle.alive }.orElse(false)
-        }
+        Handshake.awaitExit(child)
 
         cleanup:
         program?.destroyForcibly()
@@ -1272,30 +1250,23 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
     @IgnoreIf({ os.windows })
     void "when the command is cancelled Gradle is stopped, and so is the build"() {
-        given:
+        given: 'a task that waits until the feature lets it go'
         plainProject(dir)
-        File started = new File(dir, 'started.txt')
         AtomicInteger exit = new AtomicInteger(-1)
-        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'gradle', 'hang', '-q', '--no-daemon')) })
+        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'gradle', 'hang', '-q', '--no-daemon', "-Phandshake=${handshake.directory}".toString())) })
 
         when:
         command.start()
-        new PollingConditions(timeout: 120, delay: 0.5).eventually {
-            assert started.isFile() && started.text.endsWith('\n')
-        }
-        long building = started.text.trim() as long
+        long building = handshake.awaitStarted()
         command.interrupt()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the command')
 
         then:
-        !command.alive
         exit.get() == 1
         out.toString().contains('| Error Gradle was stopped before it finished, because the command was cancelled')
 
-        and: 'the JVM the task ran in ends as well, long before the task would have'
-        new PollingConditions(timeout: 60, delay: 0.5).eventually {
-            assert !ProcessHandle.of(building).map { ProcessHandle handle -> handle.alive }.orElse(false)
-        }
+        and: 'the JVM the task ran in ends as well, though nothing released the task'
+        Handshake.awaitExit(building)
     }
 
     // the wrapper of a generated application, and around it a build that needs nothing of Grails

@@ -33,12 +33,12 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.SpecWaits
 import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Timeout
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * The commands of the application and of its plugins as commands of the CLI. The file in which the
@@ -75,8 +75,11 @@ class ProjectToolsSpec extends CommandSpec implements CommandFixture {
                     throw new GradleException('this tool fails on purpose')
                 }
                 if (vector.contains('hang')) {
+                    // says that it has started, and runs until the feature releases it, or the project is gone
                     new File(base, 'started.txt').text = file.absolutePath + '\\n'
-                    Thread.sleep(180000)
+                    while (base.isDirectory() && !new File(base, 'release-hang').exists()) {
+                        Thread.sleep(50)
+                    }
                 }
             }
         }
@@ -1012,8 +1015,8 @@ class ProjectToolsSpec extends CommandSpec implements CommandFixture {
 
     @IgnoreIf({ os.windows })
     void "commands that are run at once in a project that has no directory for what they keep all run, each with its own arguments"() {
-        given:
-        saying('sleep 1')
+        given: 'a wrapper that waits until the feature releases it, so that the commands run at the same time'
+        saying(handshake.shell + 'say started\nhold started')
         catalog([HELLO])
         int count = 12
         List<Integer> exits = Collections.synchronizedList([])
@@ -1021,9 +1024,11 @@ class ProjectToolsSpec extends CommandSpec implements CommandFixture {
             new Thread({ exits.add(ForgeCli.execute(beanContext, 'hello-world', "t${number}".toString())) })
         }
 
-        when:
+        when: 'all of them run Gradle, and then go on'
         threads*.start()
-        threads*.join(120_000)
+        handshake.awaitStep('started', count)
+        handshake.release('started')
+        threads.each { Thread thread -> SpecWaits.join(thread, 'the end of a command') }
 
         then:
         exits == [0] * count
@@ -1196,13 +1201,13 @@ class ProjectToolsSpec extends CommandSpec implements CommandFixture {
 
         when:
         command.start()
-        new PollingConditions(timeout: 120, delay: 0.5).eventually {
+        SpecWaits.eventually {
             assert started.isFile() && started.text.endsWith('\n')
         }
         File file = new File(started.text.trim())
         boolean there = file.isFile()
         command.interrupt()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         there

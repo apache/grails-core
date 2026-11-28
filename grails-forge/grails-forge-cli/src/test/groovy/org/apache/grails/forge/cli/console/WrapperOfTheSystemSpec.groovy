@@ -25,10 +25,10 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.SpecWaits
 import org.opentest4j.TestAbortedException
 import spock.lang.Requires
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * The commands that start the Gradle wrapper, with a wrapper of the system the specification runs on:
@@ -62,7 +62,8 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
             public static void main(String[] args) throws Exception {
                 Path home = Path.of("").toAbsolutePath();
                 if (args.length == 1 && args[0].equals("below-the-fixture")) {
-                    Thread.sleep(300000);
+                    // a latch nothing opens: it runs until it is ended
+                    new java.util.concurrent.CountDownLatch(1).await();
                     return;
                 }
                 StringBuilder invoked = new StringBuilder();
@@ -285,7 +286,7 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
         when: 'a command line of its own starts the application, and ends'
         Process cli = ForkedCli.builder(dir, [], 'run-app', '--detach', '--port', port as String)
                 .redirectErrorStream(true).redirectOutput(forked).redirectInput(ProcessBuilder.Redirect.from(new File(WINDOWS ? 'NUL' : '/dev/null'))).start()
-        boolean ended = cli.waitFor(240, TimeUnit.SECONDS)
+        boolean ended = cli.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         if (!ended) {
             cli.destroyForcibly()
         }
@@ -322,7 +323,7 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
         assert stopped == 0: said()
         assert errors() == []: said()
         out.toString().readLines() == ['| Stopping application...', WINDOWS ? "| Application stopped. ${GradleRunner.ENDED_AT_ONCE}".toString() : '| Application stopped.']
-        new PollingConditions(timeout: 60, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert !alive(record.pid as long) && !alive(server) && !alive(below)
         }
         !ApplicationPort.isOpen(port)
@@ -353,7 +354,7 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
         out.toString().readLines() == ['| Stopping application...',
                                        '| Application stopped. Its processes were ended at once: on Windows an application is not asked to shut down, ' +
                                                'so what it does when it is asked (its shutdown hooks, the graceful shutdown of its server) was not done.']
-        new PollingConditions(timeout: 60, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert !alive(record.pid as long) && !alive(pid('server.pid')) && !alive(pid('below.pid'))
         }
     }
@@ -370,7 +371,7 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
 
     private long pid(String name) {
         File file = new File(dir, name)
-        new PollingConditions(timeout: 60, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert file.isFile() && file.text.endsWith('\n')
         }
         long pid = file.text.trim() as long

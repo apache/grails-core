@@ -26,10 +26,10 @@ import org.grails.forge.cli.Application
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * {@code run-app} and {@code stop-app} with Gradle as it is on a developer's computer: a daemon that
@@ -129,7 +129,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
             if (program != null) {
                 program.descendants().forEach { ProcessHandle each -> each.destroyForcibly() }
                 program.destroyForcibly()
-                program.waitFor(60, TimeUnit.SECONDS)
+                program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
             }
             ForgeCli.execute(beanContext, 'stop-app')
             gradle('--stop')
@@ -181,7 +181,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
         !alive(record.pid as long)
 
         and: 'the process of the application has ended, or does within the moment it takes a process that has closed its port to end'
-        new PollingConditions(timeout: 60, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
 
@@ -198,7 +198,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
 
         when:
         command.start()
-        new PollingConditions(timeout: 300, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert ApplicationPort.isReady(port) && new File(dir, '.grails/run/app.json').isFile()
         }
         long server = pid('server.pid')
@@ -210,7 +210,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
 
         when: 'the Gradle that run-app started ends, and nothing tells the daemon but that'
         end(ProcessHandle.of(record.pid as long).get(), command)
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         !command.alive
@@ -219,7 +219,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
         !new File(dir, '.grails/run/app.json').exists()
 
         and: 'the application is ended by the daemon'
-        new PollingConditions(timeout: 60, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
         !ApplicationPort.isOpen(port)
@@ -247,7 +247,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
 
         when: 'the console has returned to the program, which goes on'
         program = builder.start()
-        new PollingConditions(timeout: 300, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert returned.isFile() && returned.text.endsWith('\n')
         }
         long server = pid('server.pid')
@@ -263,7 +263,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
         atReturn[1] == 'false'
         new File(dir, 'shut-down.txt').isFile()
         (new File(dir, 'shut-down.txt').text.trim() as long) <= (atReturn[0] as long)
-        new PollingConditions(timeout: 60, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
 
@@ -273,7 +273,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
 
     // the daemon that was there before is alive, and Gradle says of it that it is idle
     private boolean daemonIsIdle() {
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert alive(daemon)
             List<String> daemons = gradle('--status').output.readLines().findAll { String line -> line.trim() ==~ /[0-9]+\s+(IDLE|BUSY|CANCELED|STOPPING)\s.*/ }
             assert daemons.size() == 1 && daemons[0].trim() ==~ /${daemon}\s+IDLE\s.*/
@@ -287,7 +287,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
 
     private long pid(String name) {
         File file = new File(dir, name)
-        new PollingConditions(timeout: 60, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert file.isFile() && file.text.endsWith('\n')
         }
         return file.text.trim() as long

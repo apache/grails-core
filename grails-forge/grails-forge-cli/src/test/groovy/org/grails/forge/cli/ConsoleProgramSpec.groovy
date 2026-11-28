@@ -37,7 +37,6 @@ import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * A line of the interactive console that starts with an exclamation mark, which runs what follows it
@@ -48,7 +47,6 @@ import spock.util.concurrent.PollingConditions
  */
 class ConsoleProgramSpec extends Specification {
 
-    static final int SECONDS = 300
     static final String NOTHING_TO_REPEAT = '| Error There is no command to run again: ! alone runs the last command again'
 
     File dir = Files.createTempDirectory('grailsforgeprogram').toFile().canonicalFile
@@ -66,7 +64,7 @@ class ConsoleProgramSpec extends Specification {
         if (program != null) {
             program.descendants().forEach { ProcessHandle each -> each.destroyForcibly() }
             program.destroyForcibly()
-            program.waitFor(60, TimeUnit.SECONDS)
+            program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
         dir.deleteDir()
     }
@@ -179,7 +177,7 @@ class ConsoleProgramSpec extends Specification {
 
         when:
         program = command([:], [typed]).redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null'))).start()
-        assert program.waitFor(SECONDS, TimeUnit.SECONDS)
+        SpecWaits.exited(program, 'the end of the program')
         String said = written.text
 
         then: 'refused as a mistake in the command line'
@@ -280,18 +278,19 @@ class ConsoleProgramSpec extends Specification {
         System.setProperty('user.dir', dir.path)
         File started = new File(dir, 'started.txt')
         captureOutput()
-        Terminal terminal = terminal('!echo $$ > started.txt; exec sleep 300\n!echo after" "it\nexit\n')
+        // a program that ends only when it is ended
+        Terminal terminal = terminal('!echo $$ > started.txt; exec tail -f /dev/null\n!echo after" "it\nexit\n')
         AtomicInteger exit = new AtomicInteger(-1)
         Thread console = new Thread({ exit.set(shell.start(terminal)) })
 
         when: 'Ctrl-C: the terminal sends the interrupt to the program, and to the JVM of the console'
         console.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert started.isFile() && started.text.endsWith('\n')
         }
         terminal.raise(Terminal.Signal.INT)
-        new ProcessBuilder('kill', '-INT', started.text.trim()).inheritIO().start().waitFor(30, TimeUnit.SECONDS)
-        console.join(60_000)
+        new ProcessBuilder('kill', '-INT', started.text.trim()).inheritIO().start().waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
+        SpecWaits.join(console, 'the end of the thread console')
 
         then: 'the program ended by it, and the console ran the next line and left at exit'
         !console.alive
@@ -332,26 +331,27 @@ class ConsoleProgramSpec extends Specification {
             void write(byte[] bytes, int offset, int length) {
                 if (Thread.currentThread().name == 'grails-console-program-output') {
                     handing.countDown()
-                    let.await(60, TimeUnit.SECONDS)
+                    let.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
                 }
                 console.write(bytes, offset, length)
             }
         }, true))
-        Terminal terminal = terminal('!echo before it; echo $$ > started.txt; exec sleep 300\n!echo after" "it\nexit\n')
+        Terminal terminal = terminal('!echo before it; echo $$ > started.txt; exec tail -f /dev/null\n!echo after" "it\nexit\n')
         AtomicInteger exit = new AtomicInteger(-1)
         Thread shellThread = new Thread({ exit.set(shell.start(terminal)) })
 
-        when: 'the thread of the console is interrupted, as a program that runs the console in its own JVM does, and the output takes what was written a second later'
+        when: 'the thread of the console is interrupted, as a program that runs the console in its own JVM does, and the output takes what was written once the program has ended'
         shellThread.start()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert started.isFile() && started.text.endsWith('\n') && handing.count == 0
         }
+        long program = started.text.trim() as long
         shellThread.interrupt()
         Thread.start {
-            Thread.sleep(1000)
+            Handshake.awaitExit(program)
             let.countDown()
         }
-        shellThread.join(60_000)
+        SpecWaits.join(shellThread, 'the end of the thread shellThread')
 
         then: 'what the program wrote and its exit code were said, and the console ran the next line and left at exit'
         !shellThread.alive
@@ -438,7 +438,7 @@ class ConsoleProgramSpec extends Specification {
         File input = new File(dir, 'typed.txt')
         input.text = lines
         program = command(environment, []).redirectInput(input).start()
-        assert program.waitFor(SECONDS, TimeUnit.SECONDS)
+        SpecWaits.exited(program, 'the end of the program')
         return written.text
     }
 

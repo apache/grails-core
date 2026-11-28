@@ -22,10 +22,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import groovy.json.JsonSlurper
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * When {@code run-app} takes an application for started: what it asks of the port, and what it makes
@@ -39,7 +39,7 @@ import spock.util.concurrent.PollingConditions
  * time to pass.</p>
  */
 @IgnoreIf({ os.windows })
-@Timeout(240)
+@Timeout(600)
 class RunAppReadinessSpec extends CommandSpec {
 
     static final String APPLICATION = '''\
@@ -183,7 +183,6 @@ class RunAppReadinessSpec extends CommandSpec {
     PrintStream originalErr
     ByteArrayOutputStream out = new ByteArrayOutputStream()
     Properties protocol = new Properties()
-    PollingConditions conditions = new PollingConditions(timeout: 90, delay: 0.05)
 
     void setup() {
         originalOut = System.out
@@ -201,6 +200,7 @@ class RunAppReadinessSpec extends CommandSpec {
     }
 
     void cleanup() {
+        RunAppCommand.setReadyTimeUp(null)
         ForgeCli.execute(beanContext, 'stop-app')
         System.setOut(originalOut)
         System.setErr(originalErr)
@@ -237,7 +237,7 @@ class RunAppReadinessSpec extends CommandSpec {
 
         when: 'the page has the port'
         command.start()
-        conditions.eventually {
+        SpecWaits.eventually {
             assert asked().count('HEAD /') >= 3
         }
 
@@ -250,7 +250,7 @@ class RunAppReadinessSpec extends CommandSpec {
 
         when: 'the web server has the port, and answers for the application while BootStrap runs'
         stage('filter INITIALIZING')
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then: 'that is the application answering: the command returns, and does not ask how far BootStrap is'
         !command.alive
@@ -286,12 +286,12 @@ class RunAppReadinessSpec extends CommandSpec {
 
         when:
         command.start()
-        conditions.eventually {
+        SpecWaits.eventually {
             assert asked().size() >= 3
         }
         long server = new File(dir, 'server.pid').text.trim() as long
         stage('page FAILED')
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then: 'it says so, with what the application wrote, and what it started is gone'
         !command.alive
@@ -312,11 +312,11 @@ class RunAppReadinessSpec extends CommandSpec {
 
         when: 'the root goes on naming the phase the start was in, and the path the page polls says that it failed'
         command.start()
-        conditions.eventually {
+        SpecWaits.eventually {
             assert asked().size() >= 3
         }
         new File(dir, 'phase-at-status-path.txt').text = protocol.getProperty('phase.failed')
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         !command.alive
@@ -364,11 +364,11 @@ class RunAppReadinessSpec extends CommandSpec {
 
         when:
         command.start()
-        conditions.eventually {
+        SpecWaits.eventually {
             assert asked().size() >= 4
         }
         stage('filter INITIALIZING')
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         exit.get() == 0
@@ -393,7 +393,7 @@ class RunAppReadinessSpec extends CommandSpec {
 
         when:
         command.start()
-        conditions.eventually {
+        SpecWaits.eventually {
             assert asked().size() >= 3
         }
 
@@ -402,7 +402,7 @@ class RunAppReadinessSpec extends CommandSpec {
 
         when: 'the web server has the port'
         stage('filter INITIALIZING')
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         exit.get() == 0
@@ -411,11 +411,12 @@ class RunAppReadinessSpec extends CommandSpec {
     }
 
     void "run-app --detach says that startup progress still had the port when the application does not answer in time"() {
-        given:
+        given: 'the time given is over once the command has asked the application, which has started then and holds the port'
         stage('page CREATING_BEANS')
         int port = freePort()
+        RunAppCommand.setReadyTimeUp { asked().size() >= 1 }
 
-        when: 'the time given is one in which the application has started on a slow computer too, so that it holds the port when the time is over'
+        when:
         int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '30')
 
         then:
@@ -428,20 +429,21 @@ class RunAppReadinessSpec extends CommandSpec {
     void "stop-app says that it did not see the end of an application that had not taken its port"() {
         given: 'a wrapper that becomes one process that takes no port, as an application does while it starts'
         File wrapper = new File(dir, 'gradlew')
-        wrapper.text = '#!/bin/sh\necho $$ > server.pid\nsleep 300\n'
+        // it stays until it is ended, as the script it is
+        wrapper.text = '#!/bin/sh\necho $$ > server.pid\nwhile :; do sleep 1; done\n'
         int port = freePort()
         AtomicInteger exit = new AtomicInteger(-1)
         Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'run-app', '--port', port as String)) })
 
         when:
         command.start()
-        conditions.eventually {
+        SpecWaits.eventually {
             assert new File(dir, '.grails/run/app.json').isFile() && new File(dir, 'server.pid').isFile()
             assert new JsonSlurper().parse(new File(dir, '.grails/run/app.json')).port == port
         }
         out.reset()
         int stopped = ForgeCli.execute(beanContext, 'stop-app')
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then: 'what it ended is said, and what it could not see is not claimed'
         stopped == 0

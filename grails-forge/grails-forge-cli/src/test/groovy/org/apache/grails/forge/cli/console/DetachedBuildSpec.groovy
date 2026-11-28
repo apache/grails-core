@@ -21,11 +21,11 @@ package org.apache.grails.forge.cli.console
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.function.Consumer
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * A build that is left running, as {@code run-app --detach} starts it, is not sent the interrupt of
@@ -56,8 +56,8 @@ class DetachedBuildSpec extends Specification {
         new File(dir, 'grails-app').mkdirs()
         new File(dir, 'settings.gradle').text = "rootProject.name = 'plain'\n"
         File wrapper = new File(dir, 'gradlew')
-        // what it is given is written when it has begun, and then it waits, as a build does
-        wrapper.text = '#!/bin/sh\nprintf "<%s>" "$@" > started.txt\necho >> started.txt\nexec /bin/sleep 120\n'
+        // what it is given is written when it has begun, and then it waits, as a build does, until it is ended
+        wrapper.text = '#!/bin/sh\nprintf "<%s>" "$@" > started.txt\necho >> started.txt\nexec /usr/bin/tail -f /dev/null\n'
         Files.setPosixFilePermissions(wrapper.toPath(), PosixFilePermissions.fromString('rwxr-xr-x'))
     }
 
@@ -88,7 +88,7 @@ class DetachedBuildSpec extends Specification {
         start(shell, true)
 
         then: 'the process that was started is the build, and no other was started for it'
-        started.info().commandLine().orElse('gradlew').contains('gradlew') || started.info().command().orElse('').endsWith('sleep')
+        started.info().commandLine().orElse('gradlew').contains('gradlew') || started.info().command().orElse('').endsWith('tail')
         processGroup(started.pid()) == started.pid() as String
         processGroup(started.pid()) != processGroup(ProcessHandle.current().pid())
         new File(dir, 'started.txt').text == '<:bootRun><-Dgrails.env=development>\n'
@@ -107,6 +107,7 @@ class DetachedBuildSpec extends Specification {
 
         when: 'it is sent what the terminal sends the processes of its group'
         new ProcessBuilder('kill', '-INT', started.pid() as String).start().waitFor()
+        // time is what is held here: a process that ignores the interrupt is one that is still there a while after it was sent it
         Thread.sleep(1000)
 
         then:
@@ -116,7 +117,7 @@ class DetachedBuildSpec extends Specification {
         started.destroy()
 
         then:
-        new PollingConditions(timeout: 60, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert !started.alive
         }
     }
@@ -133,7 +134,7 @@ class DetachedBuildSpec extends Specification {
         assert failures == []
         assert started != null
         // the script has begun, so the shell that started it, and setsid, have become it
-        new PollingConditions(timeout: 30, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert new File(dir, 'started.txt').isFile() && new File(dir, 'started.txt').text.endsWith('\n')
         }
         assert started.alive

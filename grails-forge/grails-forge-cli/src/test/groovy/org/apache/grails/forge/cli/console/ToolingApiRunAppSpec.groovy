@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import groovy.json.JsonOutput
@@ -25,9 +26,9 @@ import groovy.json.JsonSlurper
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
-import spock.util.concurrent.PollingConditions
 
 /**
  * A {@code run-app} that stays with its application and runs the build through the Tooling API of
@@ -44,9 +45,6 @@ import spock.util.concurrent.PollingConditions
 @IgnoreIf({ os.windows })
 @Timeout(600)
 class ToolingApiRunAppSpec extends CommandSpec {
-
-    // how long an application of the build has to answer: the build compiles it first, on a runner that can be slow
-    static final int ANSWER_SECONDS = 300
 
     PrintStream originalOut
     PrintStream originalErr
@@ -69,25 +67,24 @@ class ToolingApiRunAppSpec extends CommandSpec {
 
     void cleanup() {
         GradleBuild.setRunner(null)
+        StopAppCommand.setStopWait(null)
         System.setOut(originalOut)
         System.setErr(originalErr)
         List<Long> left = []
         try {
             if (commandLine != null && commandLine.alive) {
                 commandLine.destroy()
-                commandLine.waitFor(30, TimeUnit.SECONDS)
+                commandLine.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
                 commandLine.destroyForcibly()
             }
             ForgeCli.execute(beanContext, 'stop-app')
         } finally {
             File server = new File(dir, 'server.pid')
             if (server.isFile() && server.text.trim() ==~ /[0-9]+/ && alive(server.text.trim() as long)) {
-                // an application that is still there a minute after the stop-app above is what a feature must not leave
-                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60)
-                while (alive(server.text.trim() as long) && System.nanoTime() < deadline) {
-                    Thread.sleep(100)
-                }
-                if (alive(server.text.trim() as long)) {
+                // an application that does not end after the stop-app above is what a feature must not leave
+                try {
+                    SpecWaits.ended(server.text.trim() as long, 'the end of the application after stop-app')
+                } catch (AssertionError ignored) {
                     left.add(server.text.trim() as long)
                     ProcessHandle.of(server.text.trim() as long).ifPresent { ProcessHandle handle -> handle.destroyForcibly() }
                 }
@@ -123,14 +120,14 @@ class ToolingApiRunAppSpec extends CommandSpec {
         !ApplicationPort.isOpen(port)
 
         and: 'the run-app has ended by itself, as one whose application was stopped as asked'
-        commandLine.waitFor(30, TimeUnit.SECONDS)
+        commandLine.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         commandLine.exitValue() == 0
         said.text.readLines().findAll { String line -> line.startsWith('|') } == ['| Running application...', '| Application stopped']
         !new File(dir, '.grails/run/app.json').exists()
         !new File(dir, '.grails/run/app.stopping').exists()
 
         and: 'the application has ended, and the daemon is there for the next build'
-        new PollingConditions(timeout: 60, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
         daemonIsIdle()
@@ -147,13 +144,13 @@ class ToolingApiRunAppSpec extends CommandSpec {
         new ProcessBuilder('kill', '-INT', commandLine.pid() as String).start().waitFor()
 
         then: 'the command line ends as one that was interrupted, after it has said that the build was stopped'
-        commandLine.waitFor(60, TimeUnit.SECONDS)
+        commandLine.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         commandLine.exitValue() == 130
         said.text.readLines().findAll { String line -> line.startsWith('|') } == ['| Running application...'] ||
                 said.text.contains('Gradle was stopped before it finished, because the command was cancelled')
 
         and: 'the application is ended by the daemon, which stays'
-        new PollingConditions(timeout: 60, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
         !ApplicationPort.isOpen(port)
@@ -178,8 +175,8 @@ class ToolingApiRunAppSpec extends CommandSpec {
         commandLine.destroyForcibly()
 
         then: 'nothing told the daemon but that the command line is gone'
-        commandLine.waitFor(30, TimeUnit.SECONDS)
-        new PollingConditions(timeout: 30, delay: 0.05).eventually {
+        commandLine.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
+        SpecWaits.eventually {
             assert !alive(server)
         }
         !ApplicationPort.isOpen(port)
@@ -212,14 +209,14 @@ class ToolingApiRunAppSpec extends CommandSpec {
 
         when:
         command.interrupt()
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         !command.alive
         exit.get() == 1
         errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
         !new File(dir, '.grails/run/app.json').exists()
-        new PollingConditions(timeout: 60, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
         daemonIsIdle()
@@ -237,7 +234,7 @@ class ToolingApiRunAppSpec extends CommandSpec {
         long server = pid('server.pid')
         out.reset()
         int stopped = ForgeCli.execute(beanContext, 'stop-app')
-        command.join(60_000)
+        SpecWaits.join(command, 'the end of the thread command')
 
         then:
         stopped == 0
@@ -246,7 +243,7 @@ class ToolingApiRunAppSpec extends CommandSpec {
         out.toString().readLines().findAll { String line -> line.startsWith('|') } as Set == ['| Stopping application...', '| Application stopped', '| Application stopped.'] as Set
 
         and: 'the application, a process of the daemon that has closed its port, ends'
-        new PollingConditions(timeout: 60, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
     }
@@ -257,6 +254,8 @@ class ToolingApiRunAppSpec extends CommandSpec {
         File record = new File(dir, '.grails/run/app.json')
         ProcessHandle bystander = ProcessHandle.current().parent().get()
         long began = bystander.info().startInstant().get().toEpochMilli()
+        // a second for the process that is asked to end the application, in place of thirty
+        StopAppCommand.setStopWait(Duration.ofSeconds(1))
 
         when: 'the process did not begin when the record says'
         record.text = JsonOutput.toJson([format: 1, pid: bystander.pid(), started: began + 1, port: 0, detached: false, commandLine: true])
@@ -337,7 +336,7 @@ class ToolingApiRunAppSpec extends CommandSpec {
         stopped == 0
         out.toString().readLines() == ['| Stopping application...', '| Application stopped.']
         !alive(record.pid as long)
-        new PollingConditions(timeout: 60, delay: 0.05).eventually {
+        SpecWaits.eventually {
             assert !alive(server)
         }
     }
@@ -354,15 +353,16 @@ class ToolingApiRunAppSpec extends CommandSpec {
     // waits for the application of a run-app to answer and for the record of the run-app, and fails at once, with what
     // the run-app wrote, when the run-app has ended first: an application that is then not there never answers
     private void answers(int port, Closure<Boolean> running, Closure<String> told) {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(ANSWER_SECONDS)
+        long deadline = System.nanoTime() + SpecWaits.BOUND.toNanos()
         while (!(ApplicationPort.isReady(port) && new File(dir, '.grails/run/app.json').isFile())) {
             if (!running.call()) {
                 throw new AssertionError("run-app ended before its application answered on port ${port}: ${told.call()}".toString())
             }
             if (System.nanoTime() > deadline) {
-                throw new AssertionError("The application of run-app did not answer on port ${port} within ${ANSWER_SECONDS} seconds: ${told.call()}".toString())
+                throw new AssertionError("The application of run-app did not answer on port ${port} within ${SpecWaits.boundSeconds} seconds: ${told.call()}".toString())
             }
-            Thread.sleep(100)
+            // a look at the port, until the application answers or run-app has ended
+            Thread.sleep(SpecWaits.LOOK_MILLIS)
         }
     }
 
@@ -377,7 +377,7 @@ class ToolingApiRunAppSpec extends CommandSpec {
     // the daemon of the build is alive, and Gradle says of it that it is idle
     private boolean daemonIsIdle() {
         long daemon = daemon()
-        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert alive(daemon)
             List<String> daemons = isolated.gradle(dir, '--status').output.readLines().findAll { String line -> line.trim() ==~ /[0-9]+\s+(IDLE|BUSY|CANCELED|STOPPING)\s.*/ }
             assert daemons.size() == 1 && daemons[0].trim() ==~ /${daemon}\s+IDLE\s.*/
@@ -387,7 +387,7 @@ class ToolingApiRunAppSpec extends CommandSpec {
 
     private long pid(String name) {
         File file = new File(dir, name)
-        new PollingConditions(timeout: 60, delay: 0.1).eventually {
+        SpecWaits.eventually {
             assert file.isFile() && file.text.endsWith('\n')
         }
         return file.text.trim() as long

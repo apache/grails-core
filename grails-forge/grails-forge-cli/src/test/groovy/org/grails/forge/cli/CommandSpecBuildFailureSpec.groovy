@@ -21,7 +21,6 @@ package org.grails.forge.cli
 
 import org.grails.forge.application.ApplicationType
 import spock.lang.Requires
-import spock.util.concurrent.PollingConditions
 import spock.util.environment.OperatingSystem
 
 /**
@@ -47,25 +46,26 @@ class CommandSpecBuildFailureSpec extends CommandSpec implements CommandFixture 
         executeGradleCommand('build')
         testOutputContains('BUILD SUCCESSFUL')
 
-        then:
+        then: 'the report is in the message'
         AssertionError e = thrown()
-        e.message.contains('exited with code 1')
         e.message.contains('configuration failure')
         e.message.contains('BUILD FAILED')
+
+        and: 'the build ends as a failed one does, and is not left writing to a pipe nobody reads'
+        SpecWaits.exited(process, 'the end of the generated build') == 1
     }
 
     @Requires({ !OperatingSystem.current.windows })
     void 'a build that has ended without the expected output is reported although its process is still there'() {
-        when: 'a process that writes the last line of a build and stays'
-        executeCommand(['sh', '-c', 'echo "TestServiceSpec > test something PASSED"; echo "BUILD SUCCESSFUL in 1s"; sleep 300'])
-        long started = System.currentTimeMillis()
+        when: 'a process that writes the last line of a build and stays until the feature lets it go'
+        executeCommand(['sh', '-c', handshake.shell + 'echo "TestServiceSpec > test something PASSED"; echo "BUILD SUCCESSFUL in 1s"; hold end'])
         testOutputContains('TestServiceSpec > test something FAILED')
 
-        then:
+        then: 'the wait ended while the process was still there'
         AssertionError e = thrown()
         e.message.contains('ended without producing the expected output')
         e.message.contains('test something PASSED')
-        System.currentTimeMillis() - started < 60000
+        process.alive
     }
 
     @Requires({ !OperatingSystem.current.windows })
@@ -74,8 +74,15 @@ class CommandSpecBuildFailureSpec extends CommandSpec implements CommandFixture 
         executeCommand(['sh', '-c', 'echo "BUILD FAILED in 1s"'])
         testOutputContains('BUILD FAILED')
 
+        when: 'a second build, which has written nothing yet'
+        executeCommand(['sh', '-c', handshake.shell + 'say started; hold started; echo "BUILD SUCCESSFUL in 1s"'])
+        handshake.awaitStarted()
+
+        then: 'what the spec reads is not what the build before wrote'
+        !output.toString().contains('BUILD FAILED')
+
         when:
-        executeCommand(['sh', '-c', 'sleep 5; echo "BUILD SUCCESSFUL in 1s"'])
+        handshake.release('started')
         testOutputContains('BUILD SUCCESSFUL')
 
         then:
@@ -90,17 +97,18 @@ class CommandSpecBuildFailureSpec extends CommandSpec implements CommandFixture 
         when: 'a process that writes a thousand lines and then the line, and ends before the reader can have read them all'
         executeCommand(['sh', '-c', 'i=0; while [ $i -lt 1000 ]; do echo "line $i of the build"; i=$((i + 1)); done; ' +
                 'echo "TestServiceSpec > test something PASSED"'])
+        // the process has ended when the spec looks, whatever the reader has read by then
+        SpecWaits.exited(process, 'the end of the build')
         testOutputContains('TestServiceSpec > test something PASSED')
 
         then:
         noExceptionThrown()
-        !process.alive
     }
 
     @Requires({ !OperatingSystem.current.windows })
     void 'ending a build ends the processes it started'() {
-        given: 'a process with a child that would outlive it'
-        executeCommand(['sh', '-c', 'sleep 300 & echo started; wait'])
+        given: 'a process with a child that would outlive it, as it stays until the feature lets it go'
+        executeCommand(['sh', '-c', handshake.shell + 'hold child & echo started; wait'])
         testOutputContains('started')
         List<ProcessHandle> children = process.descendants().toList()
 
@@ -109,8 +117,6 @@ class CommandSpecBuildFailureSpec extends CommandSpec implements CommandFixture 
 
         then:
         !children.empty
-        new PollingConditions(timeout: 60).eventually {
-            assert children.every { !it.alive }
-        }
+        children.each { ProcessHandle child -> SpecWaits.ended(child, "the end of the process ${child.pid()} the build started") }
     }
 }

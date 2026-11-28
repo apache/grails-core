@@ -19,15 +19,16 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.grails.forge.cli.Application
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Timeout
 import spock.lang.Unroll
-import spock.util.concurrent.PollingConditions
 
 /**
  * The interactive console run by a program in its own JVM, as an IDE or a build runs it through
@@ -45,7 +46,6 @@ import spock.util.concurrent.PollingConditions
 @Timeout(600)
 class EmbeddedConsoleSessionSpec extends Specification {
 
-    static final int SECONDS = 300
 
     File dir = Files.createTempDirectory('grailsforgeembedded').toFile().canonicalFile
     File written = new File(dir, 'out.txt')
@@ -57,7 +57,7 @@ class EmbeddedConsoleSessionSpec extends Specification {
         if (program != null) {
             program.descendants().forEach { ProcessHandle each -> each.destroyForcibly() }
             program.destroyForcibly()
-            program.waitFor(60, TimeUnit.SECONDS)
+            program.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         }
         File server = new File(dir, 'server.pid')
         if (server.isFile() && server.text.trim() ==~ /[0-9]+/) {
@@ -86,7 +86,7 @@ class EmbeddedConsoleSessionSpec extends Specification {
 
         when: 'the console has returned to the program, which goes on'
         program = builder.start()
-        new PollingConditions(timeout: SECONDS, delay: 0.2).eventually {
+        SpecWaits.eventually {
             assert returned.isFile() && returned.text.endsWith('\n')
         }
         long server = new File(dir, 'server.pid').text.trim() as long
@@ -142,7 +142,8 @@ class EmbeddedConsoleSessionSpec extends Specification {
                 new File(System.getProperty('user.dir'), 'at-return.txt').text = "${System.currentTimeMillis()} ${ApplicationPort.isOpen(port as int)}\n"
             }
             new File(System.getProperty('user.dir'), 'returned.txt').text = "${exit}\n"
-            Thread.sleep(TimeUnit.SECONDS.toMillis(SECONDS))
+            // it goes on until it is ended, as the specification does at its end
+            new CountDownLatch(1).await()
             System.exit(0)
         }
     }
