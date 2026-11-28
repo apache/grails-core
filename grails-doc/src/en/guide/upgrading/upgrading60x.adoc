@@ -1370,6 +1370,20 @@ With GORM for Hibernate, a where query, a detached criteria or a dynamic finder 
 * An unpaged criteria query whose `fetch` argument now fetches a collection can return an instance once per collection element. Previously a join type in that argument fetched nothing and did not multiply those rows. Its `totalCount` counts root instances when the requested collection join is applied through a subquery, so it can differ from the number of unpaged fetched rows.
 * A sort stored on the query with `sort()`, as in `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])`, now uses the join type requested by the `fetch` argument. It also returns books without an author. The same holds for a nested association path. Request `JoinType.INNER` to keep leaving those books out.
 
+==== A dynamic finder refuses text after its operator
+
+A dynamic finder name with text after its last operator that the finder does not understand used to run as if the text
+were not there: `findAllByAgeGreaterThanOrderByName(18)` ran as `findAllByAgeGreaterThan(18)` and returned the rows
+unsorted, with no error. The finder now throws an `IllegalArgumentException` whose message names the `sort` and `order`
+arguments, which is how a finder is sorted: `findAllByAgeGreaterThan(18, [sort: 'name'])`. Search the application for
+finders that carry an `OrderBy` or other trailing text and move the sort into the arguments. A name that ends with
+`And` or `Or` after another expression, such as `findAllByNameAndAgeInListAnd`, ran as if the last operator were
+absent, and one that ends with the other operator, such as `findAllByNameAndAgeOr`, searched a property named `ageOr`;
+both are refused now, unless the entity has a property with that name, such as `bitwiseOr`, and a name that ends with the operator the finder joins with no longer matches a finder in a data service interface. Remove the operator. A finder that
+joins with one operator and has the other inside an expression, such as `findAllByNameAndAgeOrTitle`, searched a property named
+`ageOrTitle`; it is refused now unless the entity has a property of that name. Use only `And` or only `Or`, or a `where`
+query. Finder names without trailing text or a second operator are unchanged.
+
 ==== More GSP tags HTML-encode the attribute values they write
 
 These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:

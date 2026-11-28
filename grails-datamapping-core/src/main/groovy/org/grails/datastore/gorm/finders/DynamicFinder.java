@@ -196,6 +196,10 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                         containsOperator = true;
                         operatorInUse = DEFAULT_OPERATORS[i];
 
+                        if (querySequence.endsWith(operatorInUse)) {
+                            // nothing follows the last operator, as at run time where the finder is refused
+                            return null;
+                        }
                         queryParameters = querySequence.split(operatorInUse);
                         // loop through query parameters and create expressions
                         // calculating the number of arguments required for the expression
@@ -317,12 +321,14 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                     operatorInUse = operators[i];
 
                     queryParameters = querySequence.split(operatorInUse);
+                    rejectTrailingOperator(querySequence, operatorInUse, methodName);
 
                     // loop through query parameters and create expressions
                     // calculating the number of arguments required for the expression
                     int argumentCursor = 0;
                     for (String queryParameter : queryParameters) {
                         MethodExpression currentExpression = findMethodExpression(clazz, queryParameter);
+                        rejectMixedOperators(clazz, currentExpression, operatorInUse, methodName);
                         final int requiredArgs = currentExpression.getArgumentsRequired();
                         // populate the arguments into the GrailsExpression from the argument list
                         Object[] currentArguments = new Object[requiredArgs];
@@ -653,6 +659,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             }
         }
 
+        rejectTextAfterOperator(expression, methodExpressionClass.getSimpleName());
         String propertyName = calcPropertyName(expression, methodExpressionClass.getSimpleName());
         boolean negation = false;
         if (propertyName.endsWith(NOT)) {
@@ -746,6 +753,57 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
 
         Map<?, ?> argMap = (Map<?, ?>) arguments[0];
         populateArgumentsForCriteria(clazz, query, argMap);
+    }
+
+    /**
+     * The name of a property is followed by at most one operator, and nothing may follow the operator: text after it, for
+     * example an {@code OrderBy} suffix, would otherwise be dropped and the finder would silently run without it.
+     */
+    private static void rejectTextAfterOperator(String expression, String clause) {
+        if (clause == null || clause.equals(Equal.class.getSimpleName())) {
+            return;
+        }
+        final int start = expression.indexOf(clause);
+        if (start < 0) {
+            return;
+        }
+        final String tail = expression.substring(start + clause.length());
+        if (!tail.isEmpty()) {
+            throw new IllegalArgumentException("Unexpected text [" + tail + "] after the [" + clause + "] operator in the dynamic finder expression [" +
+                    expression + "]. A dynamic finder cannot sort by name: pass the sort and order arguments, for example [sort: 'name', order: 'desc'], or use listOrderBy*.");
+        }
+    }
+
+    /**
+     * An operator that joins two expressions needs one after it: {@code split} drops the empty text that follows a last
+     * {@code And} or {@code Or}, so the finder would run as if the operator were not there; and an expression that ends with
+     * the other operator would name a property that is not there.
+     */
+    private static void rejectTrailingOperator(String querySequence, String operator, String methodName) {
+        if (querySequence.endsWith(operator)) {
+            throw new IllegalArgumentException("The dynamic finder [" + methodName + "] ends with the [" + operator +
+                    "] operator, and no expression follows it. Remove the operator or name the property after it.");
+        }
+    }
+
+    /**
+     * A finder joins its expressions with one operator: the other operator inside an expression, as in
+     * {@code findByNameAndAgeOrTitle}, would name a property that is not there ({@code ageOrTitle}) and search it.
+     * An entity that has a property of that name keeps the finder.
+     */
+    private void rejectMixedOperators(Class clazz, MethodExpression expression, String operatorInUse, String methodName) {
+        for (int i = 0; i < DEFAULT_OPERATORS.length; i++) {
+            if (DEFAULT_OPERATORS[i].equals(operatorInUse) ||
+                    !(defaultOperationPatterns[i].matcher(expression.propertyName).find() || expression.propertyName.endsWith(DEFAULT_OPERATORS[i]))) {
+                continue;
+            }
+            PersistentEntity entity = mappingContext.getPersistentEntity(clazz.getName());
+            if (entity == null || entity.getPropertyByName(expression.propertyName) == null) {
+                throw new IllegalArgumentException("The dynamic finder [" + methodName + "] joins its expressions with [" + operatorInUse +
+                        "] and also has [" + DEFAULT_OPERATORS[i] + "] in the expression [" + expression.propertyName +
+                        "], which is not a property. A finder takes one operator: use only And or only Or, or a where query.");
+            }
+        }
     }
 
     private static String calcPropertyName(String queryParameter, String clause) {

@@ -146,3 +146,5 @@ The same pagination and sorting parameters available on the link:../api/org/grai
 def books = Book.findAllByTitleLike("Harry Pot%",
                [max: 3, offset: 2, sort: "title", order: "desc"])
 ----
+
+A dynamic finder is sorted with these parameters, not with a suffix in its name: nothing may follow the operator of an expression, so `Book.findAllByYearInListOrderByTitle(years)` is refused with an `IllegalArgumentException` that names the `sort` and `order` parameters, instead of running without the sort. To list every instance sorted by a property, use `listOrderBy*`, for example `Book.listOrderByTitle()`.
