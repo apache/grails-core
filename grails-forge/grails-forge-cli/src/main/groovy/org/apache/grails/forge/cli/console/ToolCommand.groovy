@@ -413,7 +413,7 @@ class ToolCommand extends InProjectCommand {
             warnOfDeprecations(said, entry)
             warnOfEnvironment(said)
             said.flush()
-            return StandaloneToolProcess.run(project, java.program, file.classpath, written, showStacktrace(), windows, { String message -> err(message) } as Consumer<String>)
+            return StandaloneToolProcess.run(project, java, file.classpath, written, showStacktrace(), windows, { String message -> err(message) } as Consumer<String>)
         } finally {
             ToolResult.collect(project, result, name, said)
             written.close()

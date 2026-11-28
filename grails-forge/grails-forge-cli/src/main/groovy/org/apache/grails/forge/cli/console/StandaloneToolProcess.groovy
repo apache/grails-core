@@ -58,6 +58,11 @@ final class StandaloneToolProcess {
     /** The system property that says which of the diagnostics of SLF4J itself it writes. */
     static final String SLF4J_VERBOSITY = 'slf4j.internal.verbosity'
 
+    /** The option that grants the code of the class path native access, see {@link Java#getOptions()}. */
+    static final String NATIVE_ACCESS = '--enable-native-access=ALL-UNNAMED'
+
+    private static final int NATIVE_ACCESS_SINCE = 22
+
     private static final String JAVA_HOME = 'JAVA_HOME'
     private static final String ARGUMENTS_OPTION = '--args-file='
     private static final int STOP_SECONDS = 10
@@ -90,9 +95,27 @@ final class StandaloneToolProcess {
         /** Why no JVM is started, as one line; {@code null} when one is. */
         final String refusal
 
-        private Java(String program, String refusal) {
+        /** The version of the JVM as its {@code release} file says it, 0 when it is not known. */
+        final int version
+
+        private Java(String program, String refusal, int version = 0) {
             this.program = program
             this.refusal = refusal
+            this.version = version
+        }
+
+        /**
+         * From Java 22 on, the JVM warns on the standard error, in four lines, the first time code of the
+         * class path calls a restricted method, unless the code is granted native access: JLine, the
+         * terminal library of the console of Grails, which a tool can make, calls one where it uses the
+         * foreign function API, as it does from Java 22 on. The command is given that grant, as the scripts
+         * of the command line give it to the command line. An earlier Java does not warn, and a Java whose
+         * version is not known is given nothing it might not take.
+         *
+         * @return the options of the JVM that come before the class path
+         */
+        List<String> getOptions() {
+            return version >= NATIVE_ACCESS_SINCE ? [NATIVE_ACCESS] : Collections.<String>emptyList()
         }
     }
 
@@ -134,7 +157,7 @@ final class StandaloneToolProcess {
             return new Java(null, "The classes of the project are compiled for Java ${needed}, and ${from} is Java ${version}: " +
                     "set ${JAVA_HOME} to a Java ${needed} or newer")
         }
-        return new Java(home.resolve('bin').resolve(program).toString(), null)
+        return new Java(home.resolve('bin').resolve(program).toString(), null, version)
     }
 
     /**
@@ -162,7 +185,7 @@ final class StandaloneToolProcess {
      * Starts the command and waits for it.
      *
      * @param project the project
-     * @param java the program of the JVM
+     * @param java the JVM, as {@link #java} chose it
      * @param classpath the class path of the command, each entry as the file or directory it is
      * @param arguments the file of the name and the arguments of the command
      * @param stacktrace whether the command is asked for the whole stack trace of what fails
@@ -171,7 +194,7 @@ final class StandaloneToolProcess {
      * @param started given the process, as soon as there is one; can be {@code null}
      * @return 0 when the command succeeded, and 1 otherwise, after the line that says why
      */
-    static int run(ConsoleProject project, String java, List<Path> classpath, CommandArgumentsFile arguments, boolean stacktrace, boolean windows,
+    static int run(ConsoleProject project, Java java, List<Path> classpath, CommandArgumentsFile arguments, boolean stacktrace, boolean windows,
                    Consumer<String> failure, Consumer<ProcessHandle> started = null) {
         Path options
         try {
@@ -184,8 +207,10 @@ final class StandaloneToolProcess {
         try {
             // The class path of a standalone tool has none of the application, and so no logging backend for SLF4J, which the
             // tool API logs through: SLF4J would say so in three lines of its own each time a tool runs. Its errors it still says.
-            List<String> command = [java, "-Dgrails.env=${ToolCommand.ENVIRONMENT}".toString(),
-                                    "-Dbase.dir=${project.getDirectory()}".toString(), "-D${SLF4J_VERBOSITY}=ERROR".toString()]
+            List<String> command = [java.program]
+            command.addAll(java.options)
+            command.addAll(["-Dgrails.env=${ToolCommand.ENVIRONMENT}".toString(), "-Dbase.dir=${project.getDirectory()}".toString(),
+                            "-D${SLF4J_VERBOSITY}=ERROR".toString()])
             if (stacktrace) {
                 command.add('-Dgrails.full.stacktrace=true')
             }

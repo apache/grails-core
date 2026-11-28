@@ -491,6 +491,43 @@ class StandaloneToolsSpec extends CommandSpec implements CommandFixture {
         !ran.exists()
     }
 
+    @Unroll
+    void "a Java whose release file says #version #how --enable-native-access=ALL-UNNAMED, without which a restricted method JLine calls has Java warn"() {
+        given: 'a JAVA_HOME of that version, whose java writes down what it is started with and starts the Java of this JVM with it'
+        listed([TOOL])
+        written([tool: 'dependencies'])
+        File home = new File(dir, 'java-home')
+        new File(home, 'bin').mkdirs()
+        if (release != null) {
+            new File(home, 'release').text = "JAVA_VERSION=\"${release}\"\n"
+        }
+        File startedWith = new File(dir, 'started-with.txt')
+        File java = new File(home, 'bin/java')
+        java.text = "#!/bin/sh\nprintf '%s\\n' \"\$@\" > '${startedWith.path}'\n" +
+                "exec '${new File(System.getProperty('java.home'), 'bin/java').path}' \"\$@\"\n"
+        java.setExecutable(true, false)
+        StandaloneToolProcess.setJavaHome(home.path)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'tool')
+
+        then:
+        exit == 0
+        startedWith.readLines().contains('--enable-native-access=ALL-UNNAMED') == granted
+        err.toString().readLines() == ['| Running the tool tool of org.example:tool-cli-standalone:1.0, as a process of its own, without Gradle']
+        !ran.exists()
+
+        where:
+        release    || granted
+        '21.0.12'  || false
+        '22'       || true
+        '25.0.4'   || true
+        null       || false
+
+        version = release ?: 'no version'
+        how = granted ? 'is given' : 'is not given'
+    }
+
     void "the help of a standalone tool says how it runs, and the document for a tool has its target"() {
         given:
         listed([TOOL, BUILD_TOOL])
