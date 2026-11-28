@@ -71,6 +71,22 @@ println "Rendering ${results.size()} Accounts of ${results.totalCount}"
 ----
 
 
+A collection of basic values, such as an enum collection declared with `hasMany`, is queried with a nested block whose criteria address the values through the `elements` property:
+
+[source,groovy]
+----
+def contacts = Contact.createCriteria().list {
+    kinds {
+        eq('elements', ContactKind.EMAIL)
+    }
+}
+----
+
+Inside such a block `eq` and `in` are available. The query returns every `Contact` that has at least one matching value.
+
+A domain property mapped with `fetch: 'join'` on a to-one association, for example `destination fetch: 'join'`, is also loaded in the same select by `findAll()`, `list()` and criteria queries, so reading it for each row does not run one extra query per row.
+
+
 === Description
 
 
