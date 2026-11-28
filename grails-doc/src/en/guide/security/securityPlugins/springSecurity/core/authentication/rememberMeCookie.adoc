@@ -22,6 +22,14 @@ under the License.
 
 Spring Security supports creating a remember-me cookie so that users are not required to log in with a username and password for each session. This is optional and is usually implemented as a checkbox on the login form; the default `auth.gsp` supplied by the plugin has this feature.
 
+When a request arrives with a remember-me cookie and no session, the user is logged in from the cookie. What happens next depends on the request:
+
+* A page fetched with a GET is redirected to, through the authentication success handler, so that the browser lands on the page it asked for.
+* The request for the login form (`auth.loginFormUrl`) is not redirected, and reaches the login controller: a page that needs a full login sends a remembered user there, and redirecting back to the page would bounce between the two. Only the path of `auth.loginFormUrl` is compared, without its query or fragment, whether it is a path or an absolute URL.
+* A POST, PUT, PATCH, DELETE or HEAD request, or a request that comes from Ajax (see <<core-ajax>>), is not redirected: redirecting it would turn it into a GET, or into the Ajax success URL, and its action would not run. It goes on to the controller as the remembered user, and nothing is saved in the request cache for it.
+
+To redirect another kind of request, extend `GrailsRememberMeAuthenticationFilter`, override `redirects(request)` and register the subclass as the `rememberMeAuthenticationFilter` bean.
+
 .Remember-me configuration options
 [cols="30,30,40"]
 |====================
