@@ -268,4 +268,84 @@ class JunctionBook {
         where:
         [query, operator, body] << [NESTED_THIS_QUERIES.keySet().toList(), ['||', '&&'], BODIES.keySet().toList()].combinations()
     }
+
+    private static final Map<String, Closure<String>> WHERE_QUERY_HOLDERS = [
+        'a static field'                 : { String q -> "static final DetachedCriteria field = ${q}" },
+        'a static field with a modifier' : { String q -> "private static DetachedCriteria field = ${q}" },
+        'a static property'              : { String q -> "static field = ${q}" },
+        'a field'                        : { String q -> "def field = ${q}" },
+    ]
+
+    private static final Map<String, Closure<String>> WHERE_QUERIES_ON_ANOTHER_CLASS = [
+        'where'                          : { String op -> "HolderItem.where { t > 5 ${op} t < 1 }" },
+        'whereLazy'                      : { String op -> "HolderItem.whereLazy { t > 5 ${op} t < 1 }" },
+        'where with a subquery'          : { String op -> "HolderItem.where { t > 5 ${op} exists(HolderItem.where { id == 1 }.property('t')) }" },
+        'where with a subquery on this'  : { String op -> "HolderItem.where { t > 5 ${op} exists(HolderBook.where { title == 'x' }.property('title')) }" },
+    ]
+
+    @Unroll
+    void "a #query that a #holder holds is on the class it names, not on the class that holds it, with #operator"() {
+        given:
+        String source = """
+import grails.gorm.annotation.Entity
+import grails.gorm.DetachedCriteria
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@Entity
+class HolderItem {
+    Integer t
+}
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class HolderBook {
+    String title
+    ${WHERE_QUERY_HOLDERS[holder].call(WHERE_QUERIES_ON_ANOTHER_CLASS[query].call(operator))}
+}
+"""
+
+        when:
+        compile(source)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        [holder, query, operator] << [WHERE_QUERY_HOLDERS.keySet().toList(), WHERE_QUERIES_ON_ANOTHER_CLASS.keySet().toList(),
+                                      ['||', '&&']].combinations()
+    }
+
+    @Unroll
+    void "a #query that a #holder holds is a detached criteria of the class it names, with #operator"() {
+        given:
+        String source = """
+import grails.gorm.annotation.Entity
+import grails.gorm.DetachedCriteria
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@Entity
+class HolderItem {
+    Integer t
+}
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class HolderBook {
+    String title
+    ${WHERE_QUERY_HOLDERS[holder].call(WHERE_QUERIES_ON_ANOTHER_CLASS[query].call(operator))}
+}
+"""
+
+        when:
+        GroovyClassLoader loader = new GroovyClassLoader()
+        loader.parseClass(source)
+        Class<?> type = loader.loadClass('HolderBook')
+
+        then: 'the field is a detached criteria of the queried class, as its generic type says'
+        type.getDeclaredField('field').genericType.actualTypeArguments*.typeName == ['HolderItem']
+
+        where:
+        [holder, query, operator] << [WHERE_QUERY_HOLDERS.keySet().findAll { it != 'a field' }.toList(), ['where', 'whereLazy'],
+                                      ['||', '&&']].combinations()
+    }
 }

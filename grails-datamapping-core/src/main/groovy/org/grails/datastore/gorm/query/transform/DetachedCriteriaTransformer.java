@@ -307,7 +307,13 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                         Expression expression = argsExpressions.get(totalExpressions - 1);
                         if (expression instanceof ClosureExpression) {
                             ClosureExpression closureExpression = (ClosureExpression) expression;
-                            transformClosureExpression(classNode, closureExpression);
+                            // the query is on the class it names, which is not the class that holds the field when it names another
+                            ClassNode queriedClassNode = target instanceof ClassExpression ? target.getType() : classNode;
+                            if (!AstUtils.isDomainClass(queriedClassNode)) {
+                                super.visitField(node);
+                                return;
+                            }
+                            transformClosureExpression(queriedClassNode, closureExpression);
                             if (target instanceof VariableExpression) {
                                 VariableExpression ve = (VariableExpression) target;
                                 ClassNode type = ve.getType();
@@ -318,12 +324,12 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                             }
 
                             String buildMethod = mce.getMethodAsString().equals("whereLazy") ? "buildLazy" : "build";
-                            ClassNode detachedCriteriaClassNode = getParameterizedDetachedCriteriaClassNode(classNode);
+                            ClassNode detachedCriteriaClassNode = getParameterizedDetachedCriteriaClassNode(queriedClassNode);
 
-                            MethodCallExpression newInitialExpression = new MethodCallExpression(new ConstructorCallExpression(detachedCriteriaClassNode, new ArgumentListExpression(new ClassExpression(classNode))), buildMethod, new ArgumentListExpression(closureExpression));
+                            MethodCallExpression newInitialExpression = new MethodCallExpression(new ConstructorCallExpression(detachedCriteriaClassNode, new ArgumentListExpression(new ClassExpression(queriedClassNode))), buildMethod, new ArgumentListExpression(closureExpression));
                             node.setInitialValueExpression(newInitialExpression);
                             node.setType(detachedCriteriaClassNode);
-                            staticDetachedCriteriaVariables.put(node.getName(), classNode);
+                            staticDetachedCriteriaVariables.put(node.getName(), queriedClassNode);
                         }
                     }
                 }
