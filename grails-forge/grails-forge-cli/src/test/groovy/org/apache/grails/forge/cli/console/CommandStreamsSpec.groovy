@@ -280,10 +280,11 @@ class CommandStreamsSpec extends CommandSpec {
         int ran = ForgeCli.execute(context, tool, '--plain-output', '--non-interactive', 'tool', 'an argument')
         int programExit = CommandStreams.bind(program, { ConsoleProgram.run('echo program out; echo program err >&2', dir, false) } as Callable<Integer>)
 
-        then: 'Gradle wrote to the call that ran it'
+        then: 'Gradle wrote to the call that ran it: a call keeps one text, so its process has one stream, and its errors are where it wrote them'
         built == 0
-        build.standardOutput().readLines() == (0..4).collect { int line -> "build out ${line} built".toString() }
-        build.standardError().readLines() == (0..4).collect { int line -> "build err ${line} built".toString() }
+        build.standardOutput().readLines() == (0..4).collectMany { int line -> ["build out ${line} built".toString(), "build err ${line} built".toString()] }
+        build.standardError().readLines() == []
+        build.merged().readLines().findAll { it.startsWith('build ') } == build.standardOutput().readLines()
 
         and: 'so did the tool'
         ran == 0
@@ -292,8 +293,8 @@ class CommandStreamsSpec extends CommandSpec {
 
         and: 'and the program'
         programExit == 0
-        program.standardOutput().readLines() == ['program out']
-        program.standardError().readLines() == ['program err']
+        program.standardOutput().readLines() == ['program out', 'program err']
+        program.standardError().readLines() == []
 
         and: 'nothing reached the process'
         processOut.size() == 0
