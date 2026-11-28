@@ -57,7 +57,8 @@ import org.grails.build.parsing.DefaultCommandLine
  * {@code META-INF/commands} on the class path, where plugins have theirs: those of the jars Grails
  * publishes first, then those of every other jar and directory, each group in the order of the names
  * of the jars (of a directory, its path) and then of the files, whatever order the class path has. A
- * jar is searched also when it has no entry for the directory. The name of a file gives
+ * jar is searched also when it has no entry for the directory, by its manifest: a jar without a
+ * manifest is no jar of a plugin, and no script is taken from it. The name of a file gives
  * the name of the command as the Grails shell made it: a name with a hyphen in lower case, any
  * other with a hyphen in front of each of its words ({@code DataImport.groovy} is
  * {@code data-import}). A script of the project is a plain file in a directory that is reached
@@ -398,8 +399,9 @@ class ScriptCommandRunner {
     // Within each, the places are taken by the name of the jar (a directory by its path) and the files
     // of a place by their names, so the script that is run does not depend on the order the class
     // loader returns places in, which another build of the same class path need not keep. A jar that
-    // has no entry for the directory is found by its manifest, which nearly every jar has; one without
-    // either is found last, by the file names a command of that name has.
+    // has no entry for the directory is found by its manifest. A jar without a manifest is not searched,
+    // with or without an entry for the directory: every jar a build makes has one, and the scripts of a
+    // file that has none are not run.
     private URL pluginScript(String name) {
         Map<String, Place> places = new LinkedHashMap<String, Place>()
         for (URL each : Collections.list(classLoader.getResources(CLASSPATH_LOCATION))) {
@@ -420,14 +422,6 @@ class ScriptCommandRunner {
                 if (commandName(fileName) == name) {
                     return new URL(place.commands, fileName)
                 }
-            }
-        }
-        // a jar without an entry for its directory and without a manifest is in neither search
-        String className = GrailsNameUtils.getNameFromScript(name)
-        for (String fileName : [name, className, GrailsNameUtils.getPropertyName(className)].unique()) {
-            URL resource = commandName(fileName + ENDING) == name ? classLoader.getResource("${CLASSPATH_LOCATION}/${fileName}${ENDING}") : null
-            if (resource != null) {
-                return resource
             }
         }
         return null
@@ -457,6 +451,9 @@ class ScriptCommandRunner {
                 connection.setUseCaches(false)
                 JarFile jar = connection.jarFile
                 try {
+                    if (jar.manifest == null) {
+                        return
+                    }
                     String prefix = CLASSPATH_LOCATION + '/'
                     List<String> names = []
                     for (JarEntry entry : Collections.list(jar.entries())) {

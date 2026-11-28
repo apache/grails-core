@@ -436,11 +436,13 @@ class ScriptCommandRunnerSpec extends Specification {
     }
 
     def 'a script in the jar of a plugin is found by the name its file gives it, whichever way the file is named'() {
-        given: 'a jar as a build writes it, with entries for its directories'
+        given: 'a jar as a build writes it, with a manifest and entries for its directories'
         File jar = new File(plugin, 'plugin-cli.jar')
         jar.withOutputStream { OutputStream output ->
-            JarOutputStream written = new JarOutputStream(output)
-            ['META-INF/', 'META-INF/commands/'].each { String directory ->
+            Manifest manifest = new Manifest()
+            manifest.mainAttributes.put(Attributes.Name.MANIFEST_VERSION, '1.0')
+            JarOutputStream written = new JarOutputStream(output, manifest)
+            ['META-INF/commands/'].each { String directory ->
                 written.putNextEntry(new JarEntry(directory))
                 written.closeEntry()
             }
@@ -670,14 +672,30 @@ class ScriptCommandRunnerSpec extends Specification {
         'CreateThing'       | 'create-thing'        | true     || 'found'
         'XMLImport'         | 'xmli-mport'          | true     || 'found'
         'plain-name'        | 'plain-name'          | true     || 'found'
+        'Create-Thing'      | 'create-thing'        | true     || 'found'
+        'CREATE-thing'      | 'create-thing'        | true     || 'found'
         'plain-name'        | 'absent'              | true     || 'not found'
-        // a jar without a manifest is found only by the names a command has as a file
-        'createThing'       | 'create-thing'        | false    || 'found'
-        'CreateThing'       | 'create-thing'        | false    || 'found'
-        'plain-name'        | 'plain-name'          | false    || 'found'
+        // a jar without a manifest is no jar of a plugin: no script is taken from it, whatever its name
+        'createThing'       | 'create-thing'        | false    || 'not found'
+        'CreateThing'       | 'create-thing'        | false    || 'not found'
+        'plain-name'        | 'plain-name'          | false    || 'not found'
+        'Create-Thing'      | 'create-thing'        | false    || 'not found'
         'XMLImport'         | 'xmli-mport'          | false    || 'not found'
 
         withManifest = manifest ? 'with a manifest' : 'without a manifest'
+    }
+
+    def 'a jar without a manifest is not searched for scripts, also when it has an entry for the directory'() {
+        given: 'a jar that has the directory and the file, and no manifest'
+        File jar = jar('plugin-cli.jar', null, true, ['plain-name': 'plain-name'])
+        URLClassLoader loader = new URLClassLoader([jar.toURI().toURL()] as URL[], getClass().classLoader)
+
+        expect:
+        new ScriptCommandRunner(project, loader, new PrintStream(err, true)).start('--', 'plain-name') == 1
+        !new File(project, 'ran.txt').exists()
+
+        cleanup:
+        loader?.close()
     }
 
     @Unroll
