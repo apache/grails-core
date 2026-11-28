@@ -182,16 +182,27 @@ class Neo4jQuery extends Query {
             }
     ] as Map<Class<? extends Query.Projection>, ProjectionHandler<? extends Projection>>
 
+    /**
+     * A junction with no criteria is true wherever it stands, as it is on Hibernate 5: it adds no restriction in an and,
+     * makes the or it stands in true, and makes a negation false.
+     */
+    private static final CypherExpression EMPTY_JUNCTION = new CypherExpression('true')
+
     public static Map<Class<? extends Query.Criterion>, CriterionHandler<? extends Criterion>> CRITERION_HANDLERS = [
             (Query.Conjunction): new CriterionHandler<Query.Conjunction>() {
 
         @Override
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.Conjunction criterion) {
+            if (((Query.Junction) criterion).criteria.isEmpty()) {
+                return EMPTY_JUNCTION
+            }
             def inner = ((Query.Junction) criterion).criteria
                     .collect { Query.Criterion it -> dispatchCriterion(it, scope).toString() }
+                    .findAll { String expression -> expression }
                     .join(CriterionHandler.OPERATOR_AND)
-            return new CypherExpression(inner ? "( $inner )" : inner)
+            // a junction whose children add no expression, as one that holds only an empty block, is true like one without children
+            return inner ? new CypherExpression("( $inner )") : EMPTY_JUNCTION
         }
             },
             (Query.Disjunction): new CriterionHandler<Query.Disjunction>() {
@@ -199,12 +210,17 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.Disjunction criterion) {
+            if (((Query.Junction) criterion).criteria.isEmpty()) {
+                return EMPTY_JUNCTION
+            }
             scope.builder.enterDisjunction()
             try {
                 def inner = ((Query.Junction) criterion).criteria
                         .collect { Query.Criterion it -> dispatchCriterion(it, scope).toString() }
+                        .findAll { String expression -> expression }
                         .join(CriterionHandler.OPERATOR_OR)
-                return new CypherExpression(inner ? "( $inner )" : inner)
+                // a junction whose children add no expression, as one that holds only an empty block, is true like one without children
+                return inner ? new CypherExpression("( $inner )") : EMPTY_JUNCTION
             } finally {
                 scope.builder.leaveDisjunction()
             }
@@ -216,8 +232,74 @@ class Neo4jQuery extends Query {
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.Negation criterion) {
             List<Query.Criterion> criteria = criterion.criteria
-            def disjunction = new Query.Disjunction(criteria)
-            new CypherExpression("NOT (${dispatchCriterion(disjunction, scope)})")
+            if (criteria.isEmpty()) {
+                throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
+            }
+            // Negations that wrap a block whose criteria are only empty junctions: the block is a join on Hibernate 5, so the
+            // associated node has to exist whatever is negated. An odd number of negations of a true condition is false, and an even
+            // number leaves the requirement that the node exists: not { not { child { and {} } } } is the entities that have a child
+            int depth = 1
+            Query.Criterion wrapped = criteria.size() == 1 ? criteria[0] : null
+            while (wrapped instanceof Query.Negation && ((Query.Negation) wrapped).criteria.size() == 1) {
+                depth++
+                wrapped = ((Query.Negation) wrapped).criteria[0]
+            }
+            if (wrapped instanceof AssociationQuery && negatesAsExistence(scope, wrapped) &&
+                    addsNoCondition(((AssociationQuery) wrapped).criteria)) {
+                if (depth % 2 != 0) {
+                    return new CypherExpression('false')
+                }
+                CriterionScope.Existence existence = scope.intoExistence((AssociationQuery) wrapped)
+                return new CypherExpression("size([${existence.pattern} | 1]) > 0".toString())
+            }
+            // a block with criteria asks for a neighbour, as a join does, so its negation is a neighbour that fails them: a node
+            // without a neighbour is not in it. The other criteria are negated together
+            List<Query.Criterion> others = []
+            List<String> negatedBlocks = []
+            for (Query.Criterion child : criteria) {
+                if (negatesAsExistence(scope, child)) {
+                    negatedBlocks << negatedBlock(scope, (AssociationQuery) child)
+                }
+                else {
+                    others << child
+                }
+            }
+            List<String> parts = []
+            // a disjunction whose children add no expression is the shared true value: there is nothing to negate
+            CypherExpression disjunction = others.isEmpty() ? null : dispatchCriterion(new Query.Disjunction(others), scope)
+            String negated = disjunction == null || disjunction.is(EMPTY_JUNCTION) ? '' : disjunction.toString()
+            if (negated) {
+                parts << "NOT ($negated)".toString()
+            }
+            parts.addAll(negatedBlocks)
+            if (parts.isEmpty()) {
+                // nothing is left to negate, as in a negation of a block without criteria: Hibernate 5 refuses it
+                throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
+            }
+            new CypherExpression(parts.size() == 1 ? parts[0] : "( ${parts.join(CriterionHandler.OPERATOR_AND)} )".toString())
+        }
+
+        private static boolean addsNoCondition(Query.Criterion criterion) {
+            criterion instanceof Query.Junction &&
+                    ((Query.Junction) criterion).criteria.every { Query.Criterion child -> addsNoCondition(child) }
+        }
+
+        private boolean negatesAsExistence(CriterionScope scope, Query.Criterion child) {
+            child instanceof AssociationQuery && !((AssociationQuery) child).criteria.getCriteria().isEmpty() &&
+                    !(((AssociationQuery) child).association instanceof Embedded) && !scope.entity.isRelationshipEntity()
+        }
+
+        private String negatedBlock(CriterionScope scope, AssociationQuery block) {
+            CriterionScope.Existence existence = scope.intoExistence(block)
+            scope.builder.enterDisjunction()
+            String conditions
+            try {
+                conditions = dispatchCriterion(block.criteria, existence.scope).toString()
+            }
+            finally {
+                scope.builder.leaveDisjunction()
+            }
+            "size([${existence.pattern} WHERE NOT (${conditions ?: 'true'}) | 1]) > 0".toString()
         }
             },
             (Query.Equals): new CriterionHandler<Query.Equals>() {
@@ -767,14 +849,17 @@ class Neo4jQuery extends Query {
             if (scope.entity.isRelationshipEntity()) {
                 return dispatchCriterion(criterion.criteria, scope.forEnd(association))
             }
-            if (scope.builder.inDisjunction) {
+            if (scope.builder.inDisjunction && !criterion.criteria.getCriteria().isEmpty()) {
                 // a block in a disjunction is true for a node that has a matching neighbour, and false for one that
-                // has none, so the other branches still see the nodes without; a match would drop them first
+                // has none, so the other branches still see the nodes without; a match would drop them first.
+                // A block without criteria is no branch: it keeps the match, so it still asks for a neighbour.
                 CriterionScope.Existence existence = scope.intoExistence(criterion)
                 String conditions = dispatchCriterion(criterion.criteria, existence.scope).toString()
                 return new CypherExpression("size([${existence.pattern}${conditions ? ' WHERE ' + conditions : ''} | 1]) > 0".toString())
             }
-            return dispatchCriterion(criterion.criteria, scope.into(criterion))
+            CypherExpression conditions = dispatchCriterion(criterion.criteria, scope.into(criterion))
+            // a block without criteria keeps the match but adds no condition: its empty conjunction is not a branch
+            return criterion.criteria.getCriteria().isEmpty() ? new CypherExpression('') : conditions
         }
 
         /**
