@@ -76,6 +76,7 @@ import org.codehaus.groovy.transform.trait.Traits;
 
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.transform.AstPropertyResolveUtils;
+import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
 import org.grails.datastore.mapping.reflect.AstUtils;
@@ -180,6 +181,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         } finally {
             currentClassNode = null;
             detachedCriteriaVariables.clear();
+            aliases.clear();
+            aliasExpressions.clear();
         }
     }
 
@@ -189,11 +192,24 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             super.visitMethod(node);
         } finally {
             detachedCriteriaVariables.clear();
+            // an alias belongs to the method that declares it: a later method may use the same name for a local variable
+            aliases.clear();
+            aliasExpressions.clear();
         }
     }
 
     @Override
     public void visitField(FieldNode node) {
+        try {
+            visitFieldNode(node);
+        } finally {
+            // an alias belongs to the field that declares it, as to the method: fields are visited before methods
+            aliases.clear();
+            aliasExpressions.clear();
+        }
+    }
+
+    private void visitFieldNode(FieldNode node) {
         ClassNode classNode = node.getOwner();
         if (node.isStatic() && AstUtils.isDomainClass(classNode)) {
             Expression initialExpression = node.getInitialExpression();
@@ -257,6 +273,10 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
     @Override
     public void visitDeclarationExpression(DeclarationExpression expression) {
+        inAliasScope(() -> visitDeclarationExpressionInScope(expression));
+    }
+
+    private void visitDeclarationExpressionInScope(DeclarationExpression expression) {
         Expression initializationExpression = expression.getRightExpression();
         if (initializationExpression instanceof MethodCallExpression) {
             MethodCallExpression call = (MethodCallExpression) initializationExpression;
@@ -423,8 +443,30 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         return newClosureExpression;
     }
 
+    /**
+     * Runs the visit with the aliases the where queries inside it declare kept to it: an alias belongs to the query that
+     * declares it, and to the subqueries inside it, not to the next query or the next subquery, which may use the name
+     * for a local variable.
+     */
+    private void inAliasScope(Runnable visit) {
+        Map<String, Object> previousAliases = new HashMap<>(aliases);
+        Set<Expression> previousAliasExpressions = new HashSet<>(aliasExpressions);
+        try {
+            visit.run();
+        } finally {
+            aliases.clear();
+            aliases.putAll(previousAliases);
+            aliasExpressions.clear();
+            aliasExpressions.addAll(previousAliasExpressions);
+        }
+    }
+
     @Override
     public void visitMethodCallExpression(MethodCallExpression call) {
+        inAliasScope(() -> visitMethodCallExpressionInScope(call));
+    }
+
+    private void visitMethodCallExpressionInScope(MethodCallExpression call) {
         Expression objectExpression = call.getObjectExpression();
         Expression method = call.getMethod();
         Expression arguments = call.getArguments();
@@ -598,6 +640,10 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
     @Override
     public void visitStaticMethodCallExpression(StaticMethodCallExpression call) {
+        inAliasScope(() -> visitStaticMethodCallExpressionInScope(call));
+    }
+
+    private void visitStaticMethodCallExpressionInScope(StaticMethodCallExpression call) {
         String method = call.getMethod();
         Expression arguments = call.getArguments();
         if (isCandidateWhereMethod(method, arguments)) {
@@ -889,13 +935,97 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         }
     }
 
+    /** The operators of a comparison, with the operator the same comparison has when its two sides change places. */
+    private static final Map<String, String> SWAPPED_COMPARISON_OPERATORS = Map.of(
+            "==", "==", "!=", "!=", "<", ">", ">", "<", "<=", ">=", ">=", "<=");
+
+    /**
+     * Whether the expression is a path of more than one name from an alias of a class, such as {@code t.club.id} for
+     * {@code def t = Team}. An alias of a property, {@code def c = club}, is not one: a comparison with it is written
+     * on the association, as it always was.
+     */
+    private boolean isNestedAliasPath(Expression expression) {
+        if (!(expression instanceof PropertyExpression) || !(((PropertyExpression) expression).getObjectExpression() instanceof PropertyExpression)) {
+            return false;
+        }
+        String root = aliasRootName(expression);
+        return root != null && aliases.get(root) instanceof ClassNode;
+    }
+
+    /** Whether the expression is one property of an alias of a class, such as {@code c.id} for {@code def c = Club}. */
+    private boolean isAliasProperty(Expression expression) {
+        if (!(expression instanceof PropertyExpression) || !(((PropertyExpression) expression).getObjectExpression() instanceof VariableExpression)) {
+            return false;
+        }
+        return aliases.get(((VariableExpression) ((PropertyExpression) expression).getObjectExpression()).getName()) instanceof ClassNode;
+    }
+
+    /** Whether the expression is the name of a property of the class the query is on, such as {@code id}. */
+    private static boolean isPropertyOfQueriedClass(Expression expression, List<String> propertyNames, VariableScope variableScope) {
+        return expression instanceof VariableExpression && propertyNames.contains(((VariableExpression) expression).getName()) &&
+                !variableScope.isReferencedLocalVariable(((VariableExpression) expression).getName());
+    }
+
+    /** Whether the expression is an alias of a class itself, such as {@code c} for {@code def c = Club}. */
+    private boolean isClassAlias(Expression expression) {
+        return expression instanceof VariableExpression && aliases.get(((VariableExpression) expression).getName()) instanceof ClassNode;
+    }
+
+    /** The identifier of an alias of a class, {@code c.id} for {@code c}, and any other expression as it is. */
+    private Expression identifierOfClassAlias(Expression expression) {
+        if (!isClassAlias(expression)) {
+            return expression;
+        }
+        PropertyExpression identifier = new PropertyExpression(expression, GormProperties.IDENTITY);
+        identifier.setSourcePosition(expression);
+        return identifier;
+    }
+
+    /** Whether the expression is a property of an alias, or a path from one, such as {@code t.club} or {@code t.club.id}. */
+    private boolean isAliasPath(Expression expression) {
+        if (!(expression instanceof PropertyExpression)) {
+            return false;
+        }
+        String root = aliasRootName(expression);
+        return root != null && aliases.containsKey(root);
+    }
+
     private void addBinaryExpressionToNewBody(List<String> propertyNames, BlockStatement newCode, BinaryExpression be, boolean addAll, VariableScope variableScope) {
+        int statementsBefore = newCode.getStatements().size();
+        addBinaryExpressionToNewBodyUnchecked(propertyNames, newCode, be, addAll, variableScope);
+        // a comparison that names an alias must produce a criterion: one the transform cannot write is refused, not dropped from the query
+        if (newCode.getStatements().size() == statementsBefore && SWAPPED_COMPARISON_OPERATORS.containsKey(be.getOperation().getRootText()) &&
+                (isAliasPath(be.getLeftExpression()) || isAliasPath(be.getRightExpression())) &&
+                !aliasExpressions.contains(be.getLeftExpression()) && !aliasExpressions.contains(be.getRightExpression())) {
+            sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot write the comparison [" + be.getText() + "] in a where query: it compares a path of an alias with an expression this query form does not support. A path of an alias can be compared with a property of the queried class or of another alias, as in id == t.club.id or name == t.club.name; write any other condition in a subquery", be.getOperation(), sourceUnit));
+        }
+    }
+
+    private void addBinaryExpressionToNewBodyUnchecked(List<String> propertyNames, BlockStatement newCode, BinaryExpression be, boolean addAll, VariableScope variableScope) {
         Token operation = be.getOperation();
 
         String operator = operation.getRootText();
 
         Expression leftExpression = be.getLeftExpression();
         Expression rightExpression = be.getRightExpression();
+        String swappedOperator = SWAPPED_COMPARISON_OPERATORS.get(operator);
+        if (("==".equals(operator) || "!=".equals(operator)) &&
+                (isClassAlias(rightExpression) && isAliasPath(leftExpression) || isClassAlias(leftExpression) && isAliasPath(rightExpression))) {
+            // t.club == c for def c = Club: an alias of a class stands for its row, compared by its identifier, as in t.club == c.id
+            BinaryExpression byId = new BinaryExpression(identifierOfClassAlias(leftExpression), operation, identifierOfClassAlias(rightExpression));
+            byId.setSourcePosition(be);
+            addBinaryExpressionToNewBody(propertyNames, newCode, byId, addAll, variableScope);
+            return;
+        }
+        if (swappedOperator != null && (isNestedAliasPath(leftExpression) && (isAliasProperty(rightExpression) || isPropertyOfQueriedClass(rightExpression, propertyNames, variableScope)) ||
+                isAliasProperty(leftExpression) && isPropertyOfQueriedClass(rightExpression, propertyNames, variableScope))) {
+            // t.club.id == c.id or t.club.id == id: a nested path of an alias is handled on the right of the comparison, so
+            // the sides change places, and the operator with them
+            BinaryExpression swapped = new BinaryExpression(rightExpression, Token.newSymbol(swappedOperator, operation.getStartLine(), operation.getStartColumn()), leftExpression);
+            swapped.setSourcePosition(be);
+            addBinaryExpressionToNewBody(propertyNames, newCode, swapped, addAll, variableScope);
+            return;
+        }
         if (leftExpression instanceof VariableExpression) {
             VariableExpression leftVariable = (VariableExpression) leftExpression;
             String propertyName = leftVariable.getText();
@@ -1165,13 +1295,17 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             } else if ((aliased instanceof ClassNode) && (oppositeSide instanceof PropertyExpression)) {
                 String rootReference = pe.getText();
                 PropertyExpression oppositeProperty = (PropertyExpression) oppositeSide;
-                String targetObject = oppositeProperty.getObjectExpression().getText();
-                if (aliases.containsKey(targetObject)) {
+                // the alias is the root of the chain: t for t.id and for t.club.id alike
+                String targetObject = aliasRootName(oppositeProperty);
+                if (targetObject != null && aliases.containsKey(targetObject)) {
                     String methodToCall = PROPERTY_COMPARISON_OPERATOR_TO_CRITERIA_METHOD_MAP.get(operator);
                     ArgumentListExpression args = new ArgumentListExpression();
                     args.addExpression(new ConstantExpression(rootReference));
                     args.addExpression(new ConstantExpression(oppositeProperty.getText()));
                     newCode.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("this"), methodToCall, args)));
+                    // the comparison is written: the other side is not visited again as a criterion of its own, which compared
+                    // it with itself, c.id <> c.id for t.club != c.id, and so kept no row
+                    aliasExpressions.add(oppositeProperty);
                 }
 
             } else if (!variableScope.isReferencedLocalVariable(propertyName)) {
@@ -1350,15 +1484,15 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             }
         } else if (rightExpression instanceof PropertyExpression) {
             PropertyExpression pe = (PropertyExpression) rightExpression;
-            String property = pe.getObjectExpression().getText();
-            if ((leftExpression instanceof PropertyExpression) && aliases.containsKey(property)) {
+            String property = aliasRootName(pe);
+            if ((leftExpression instanceof PropertyExpression) && property != null && aliases.containsKey(property)) {
                 aliasExpressions.add(pe);
                 arguments = new ArgumentListExpression();
                 arguments.addExpression(new ConstantExpression(((PropertyExpression) leftExpression).getPropertyAsString()));
                 arguments.addExpression(new ConstantExpression(pe.getText()));
                 methodToCall = PROPERTY_COMPARISON_OPERATOR_TO_CRITERIA_METHOD_MAP.get(operator);
             }
-            else if ((leftExpression instanceof VariableExpression) && aliases.containsKey(property)) {
+            else if ((leftExpression instanceof VariableExpression) && property != null && aliases.containsKey(property)) {
                 aliasExpressions.add(pe);
                 arguments = new ArgumentListExpression();
                 arguments.addExpression(new ConstantExpression(((VariableExpression) leftExpression).getName()));
@@ -1376,6 +1510,19 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                     .addExpression(rightExpression);
         }
         newCode.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("this"), methodToCall, arguments)));
+    }
+
+    /**
+     * The name of the alias a property expression refers to, the root of the chain: the alias itself
+     * for {@code alias.property} and for {@code alias.association.property} alike, or {@code null} when
+     * the chain does not start at a variable.
+     */
+    private String aliasRootName(Expression expression) {
+        Expression current = expression;
+        while (current instanceof PropertyExpression) {
+            current = ((PropertyExpression) current).getObjectExpression();
+        }
+        return current instanceof VariableExpression ? ((VariableExpression) current).getName() : null;
     }
 
     private void addProjectionToCurrentBody(BlockStatement currentBody, String functionName, String aggregatePropertyName, VariableScope variableScope) {

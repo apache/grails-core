@@ -71,6 +71,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
@@ -111,6 +112,13 @@ public abstract class AbstractHibernateQuery extends Query {
     protected String alias;
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+
+    /**
+     * The query this query is a subquery of, or null for a query that is not one. A comparison of the subquery can
+     * name a property of an association of the enclosing query's alias, such as {@code t.club.name}, and the join it
+     * needs is made in the enclosing query.
+     */
+    protected AbstractHibernateQuery enclosingQuery;
     /**
      * The joins of the query by their association path from the root entity. {@link #createdAssociationPaths}
      * also holds each join under its alias, so an alias named like an association, as in
@@ -957,6 +965,67 @@ public abstract class AbstractHibernateQuery extends Query {
         for (int i = 0; i < joined; i++) {
             getOrRegisterJoinAt(paths[i], tokens[i]);
         }
+    }
+
+    /**
+     * Makes this query a subquery of the given query, see {@link #resolveEnclosingPath(String)}.
+     *
+     * @param enclosingQuery The query this query is a subquery of
+     */
+    public void setEnclosingQuery(AbstractHibernateQuery enclosingQuery) {
+        this.enclosingQuery = enclosingQuery;
+    }
+
+    /**
+     * Returns the path a criterion of this subquery can use for a property of an enclosing query. A path that starts at
+     * the alias of an enclosing query and goes through a to-one association, such as {@code t.club.name} for the
+     * alias {@code t}, needs a join of that association in the enclosing query, which a subquery cannot make: the
+     * join is made there, as a left join that keeps the rows where the association is null, or a join the enclosing
+     * query already has for the association is used, and the path continues from its alias. A path to the identifier
+     * of the association, such as {@code t.club.id}, needs no join and is returned as it is, as is any other path.
+     *
+     * @param propertyPath The path of the property
+     * @return The path to use in the criterion
+     */
+    public String resolveEnclosingPath(String propertyPath) {
+        int first = propertyPath.indexOf('.');
+        int last = propertyPath.lastIndexOf('.');
+        if (first < 0 || first == last) {
+            return propertyPath;
+        }
+        String rootAlias = propertyPath.substring(0, first);
+        for (AbstractHibernateQuery query = enclosingQuery; query != null; query = query.enclosingQuery) {
+            if (rootAlias.equals(query.getRootAlias())) {
+                return query.joinedPropertyPath(propertyPath.substring(first + 1), propertyPath);
+            }
+        }
+        return propertyPath;
+    }
+
+    private String getRootAlias() {
+        if (criteria != null) {
+            return criteria.getAlias();
+        }
+        return detachedCriteria != null ? detachedCriteria.getAlias() : null;
+    }
+
+    private String joinedPropertyPath(String pathFromRoot, String propertyPath) {
+        int last = pathFromRoot.lastIndexOf('.');
+        String associationPath = pathFromRoot.substring(0, last);
+        String propertyName = pathFromRoot.substring(last + 1);
+        PersistentEntity currentEntity = entity;
+        for (String token : associationPath.split("\\.")) {
+            PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
+            if (!(persistentProperty instanceof ToOne) || persistentProperty instanceof Embedded) {
+                return propertyPath;
+            }
+            currentEntity = ((Association) persistentProperty).getAssociatedEntity();
+        }
+        if (currentEntity == null || currentEntity.getIdentity() != null && propertyName.equals(currentEntity.getIdentity().getName())) {
+            return propertyPath;
+        }
+        CriteriaAndAlias join = getOrRegisterJoinAt(associationPath, associationPath.substring(associationPath.lastIndexOf('.') + 1));
+        return join.alias + '.' + propertyName;
     }
 
     /**

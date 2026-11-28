@@ -302,43 +302,43 @@ public abstract class AbstractHibernateCriterionAdapter {
         criterionAdaptors.put(Query.EqualsProperty.class, new CriterionAdaptor<Query.EqualsProperty>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.EqualsProperty criterion, String alias) {
-                String propertyName = getPropertyName(criterion, alias);
-                return Restrictions.eqProperty(propertyName, criterion.getOtherProperty());
+                String propertyName = hibernateQuery.resolveEnclosingPath(getPropertyName(criterion, alias));
+                return Restrictions.eqProperty(propertyName, hibernateQuery.resolveEnclosingPath(criterion.getOtherProperty()));
             }
         });
         criterionAdaptors.put(Query.GreaterThanProperty.class, new CriterionAdaptor<Query.GreaterThanProperty>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.GreaterThanProperty criterion, String alias) {
-                String propertyName = getPropertyName(criterion, alias);
-                return Restrictions.gtProperty(propertyName, criterion.getOtherProperty());
+                String propertyName = hibernateQuery.resolveEnclosingPath(getPropertyName(criterion, alias));
+                return Restrictions.gtProperty(propertyName, hibernateQuery.resolveEnclosingPath(criterion.getOtherProperty()));
             }
         });
         criterionAdaptors.put(Query.GreaterThanEqualsProperty.class, new CriterionAdaptor<Query.GreaterThanEqualsProperty>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.GreaterThanEqualsProperty criterion, String alias) {
-                String propertyName = getPropertyName(criterion, alias);
-                return Restrictions.geProperty(propertyName, criterion.getOtherProperty());
+                String propertyName = hibernateQuery.resolveEnclosingPath(getPropertyName(criterion, alias));
+                return Restrictions.geProperty(propertyName, hibernateQuery.resolveEnclosingPath(criterion.getOtherProperty()));
             }
         });
         criterionAdaptors.put(Query.LessThanProperty.class, new CriterionAdaptor<Query.LessThanProperty>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.LessThanProperty criterion, String alias) {
-                String propertyName = getPropertyName(criterion, alias);
-                return Restrictions.ltProperty(propertyName, criterion.getOtherProperty());
+                String propertyName = hibernateQuery.resolveEnclosingPath(getPropertyName(criterion, alias));
+                return Restrictions.ltProperty(propertyName, hibernateQuery.resolveEnclosingPath(criterion.getOtherProperty()));
             }
         });
         criterionAdaptors.put(Query.LessThanEqualsProperty.class, new CriterionAdaptor<Query.LessThanEqualsProperty>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.LessThanEqualsProperty criterion, String alias) {
-                String propertyName = getPropertyName(criterion, alias);
-                return Restrictions.leProperty(propertyName, criterion.getOtherProperty());
+                String propertyName = hibernateQuery.resolveEnclosingPath(getPropertyName(criterion, alias));
+                return Restrictions.leProperty(propertyName, hibernateQuery.resolveEnclosingPath(criterion.getOtherProperty()));
             }
         });
         criterionAdaptors.put(Query.NotEqualsProperty.class, new CriterionAdaptor<Query.NotEqualsProperty>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.NotEqualsProperty criterion, String alias) {
-                String propertyName = getPropertyName(criterion, alias);
-                return Restrictions.neProperty(propertyName, criterion.getOtherProperty());
+                String propertyName = hibernateQuery.resolveEnclosingPath(getPropertyName(criterion, alias));
+                return Restrictions.neProperty(propertyName, hibernateQuery.resolveEnclosingPath(criterion.getOtherProperty()));
             }
         });
     }
