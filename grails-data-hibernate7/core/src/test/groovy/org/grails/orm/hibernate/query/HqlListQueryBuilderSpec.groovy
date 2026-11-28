@@ -88,7 +88,7 @@ class HqlListQueryBuilderSpec extends Specification {
         entity.getHibernatePropertyByPath("destination") >> toOne
 
         expect:
-        new HqlListQueryBuilder(entity, [(HibernateQueryArgument.FETCH.value()): [destination: 'join']]).buildListHql() == "from Person e join fetch e.destination"
+        new HqlListQueryBuilder(entity, [(HibernateQueryArgument.FETCH.value()): [destination: 'join']]).buildListHql() == "from Person e left join fetch e.destination"
     }
 
     void "test buildListHql with simple sort"() {
