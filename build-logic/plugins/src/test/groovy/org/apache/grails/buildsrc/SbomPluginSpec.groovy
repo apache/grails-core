@@ -18,6 +18,15 @@
  */
 package org.apache.grails.buildsrc
 
+import java.security.MessageDigest
+import java.util.jar.JarEntry
+import java.util.jar.JarOutputStream
+
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+import org.cyclonedx.Version
+import org.cyclonedx.parsers.JsonParser
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.logging.Logging
@@ -25,6 +34,7 @@ import org.gradle.api.provider.Property
 import org.gradle.testfixtures.ProjectBuilder
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -36,8 +46,9 @@ class SbomPluginSpec extends Specification {
     private static final def LOGGER = Logging.getLogger(SbomPluginSpec)
     private static final String HIBERNATE_COMMONS = 'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar'
 
+    // the license of Hibernate 5 as cyclonedx-core-java 13 reads it from the POM: a name without an SPDX id
     private static List lgplChoice() {
-        [[license: [id: 'LGPL-2.1-only']]]
+        [[license: [name: 'GNU Library General Public License v2.1 or later', url: 'http://www.opensource.org/licenses/LGPL-2.1']]]
     }
 
     static class FakeCliArtifactExtension {
@@ -101,7 +112,57 @@ class SbomPluginSpec extends Specification {
         then: "the failure identifies the offending sbom component"
         GradleException e = thrown(GradleException)
         e.message.contains('grails-data-hibernate5-dbmigration')
-        e.message.contains('LGPL-2.1-only')
+        e.message.contains('LGPL-2.1-or-later')
+    }
+
+    void "a license that comes with only its name is recorded under the SPDX id the name stands for"() {
+        expect: 'the exempted LGPL dependency is recorded with the id in place of the name'
+        SbomPlugin.pickLicense(LOGGER, 'grails-data-hibernate5-core', 'grails-data-hibernate5-core',
+                HIBERNATE_COMMONS, lgplChoice()) ==
+                [license: [id: 'LGPL-2.1-or-later', url: 'http://www.opensource.org/licenses/LGPL-2.1']]
+    }
+
+    void "a license name with no known SPDX id fails the check"() {
+        when: 'a dependency comes with a license name that is not looked up'
+        SbomPlugin.pickLicense(LOGGER, 'grails-core', 'grails-core',
+                'pkg:maven/org.example/example@1.0?type=jar', [[license: [name: 'Example License']]])
+
+        then: 'the failure names the license'
+        final e = thrown(GradleException)
+        e.message.contains('Could not determine License id')
+        e.message.contains('Example License')
+    }
+
+    void "antlr 2.7.7 is recorded under the BSD-3-Clause license its POM links to"() {
+        expect: 'the BSD-4-Clause that cyclonedx-core-java reads from its license name is replaced'
+        SbomPlugin.pickLicense(LOGGER, 'grails-data-hibernate5-core', 'grails-data-hibernate5-core',
+                'pkg:maven/antlr/antlr@2.7.7?type=jar', [[license: [id: 'BSD-4-Clause']]]) ==
+                [license: [id: 'BSD-3-Clause', url: 'https://opensource.org/license/bsd-3-clause/']]
+    }
+
+    void "the license picked for #bomRef is valid in a CycloneDX 1.6 BOM"() {
+        given: 'a BOM with one component that has the picked license'
+        final bom = [
+                bomFormat  : 'CycloneDX',
+                specVersion: '1.6',
+                version    : 1,
+                components : [[
+                        type     : 'library',
+                        'bom-ref': bomRef,
+                        name     : 'dependency',
+                        licenses : [SbomPlugin.pickLicense(LOGGER, projectName, projectName, bomRef, choices)],
+                ]],
+        ]
+
+        expect: 'the CycloneDX schema finds no error in it'
+        new JsonParser().validate(JsonOutput.toJson(bom), Version.VERSION_16).empty
+
+        where: 'the license comes from the mapping with an id or a name, is looked up by its name, or is preferred'
+        projectName                   | bomRef                                           | choices
+        'grails-data-hibernate5-core' | 'pkg:maven/antlr/antlr@2.7.7?type=jar'           | [[license: [id: 'BSD-4-Clause']]]
+        'grails-layout'               | 'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar' | [[license: [name: 'OpenSymphony']]]
+        'grails-data-hibernate5-core' | HIBERNATE_COMMONS                                | lgplChoice()
+        'grails-core'                 | 'pkg:maven/org.example/example@1.0?type=jar'     | [[license: [id: 'Apache-2.0']]]
     }
 
     void "the sbom is written and made reproducible with the configuration cache, also when it is reused"() {
@@ -129,11 +190,194 @@ class SbomPluginSpec extends Specification {
         sbom.contains('"serialNumber": "urn:uuid:')
     }
 
+    void "the sbom is written again when an external dependency moves to another version"() {
+        given: 'a library that depends on version 1.0 of a module in a local repository'
+        publishExternalModule('1.0')
+        publishExternalModule('2.0')
+        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'library'"
+        new File(projectDir, 'gradle.properties').text = 'projectVersion=1.0.0'
+        writeLibraryDependingOnExternal('1.0')
+        build('cyclonedxDirectBom')
+
+        when: 'the sbom is built again with nothing changed'
+        final unchanged = build('cyclonedxDirectBom')
+
+        then: 'the task is up to date'
+        unchanged.task(':cyclonedxDirectBom').outcome == TaskOutcome.UP_TO_DATE
+        sbomVersions('build/library-1.0.0-sbom.json', 'external') == ['1.0']
+
+        when: 'the dependency moves to 2.0'
+        writeLibraryDependingOnExternal('2.0')
+        final moved = build('cyclonedxDirectBom')
+
+        then: 'the task runs again and the sbom lists 2.0'
+        moved.task(':cyclonedxDirectBom').outcome != TaskOutcome.UP_TO_DATE
+        sbomVersions('build/library-1.0.0-sbom.json', 'external') == ['2.0']
+
+        when: 'the dependency moves back to 1.0 and the sbom is built from a clean build'
+        writeLibraryDependingOnExternal('1.0')
+        build('clean', 'cyclonedxDirectBom')
+
+        then: 'the build cache does not hand back the sbom of 2.0'
+        sbomVersions('build/library-1.0.0-sbom.json', 'external') == ['1.0']
+    }
+
+    void "the sbom is written again when a project dependency moves to another version"() {
+        given: 'a library that depends on version 1.0 of another project of the build'
+        writeLibraryDependingOnProject()
+        writeDependencyProject('1.0')
+        build(':library:cyclonedxDirectBom')
+
+        when: 'the sbom is built again with nothing changed'
+        final unchanged = build(':library:cyclonedxDirectBom')
+
+        then: 'the task is up to date'
+        unchanged.task(':library:cyclonedxDirectBom').outcome == TaskOutcome.UP_TO_DATE
+        sbomVersions('library/build/library-1.0.0-sbom.json', 'dependency') == ['1.0']
+
+        when: 'the project moves to 2.0'
+        writeDependencyProject('2.0')
+        final moved = build(':library:cyclonedxDirectBom')
+
+        then: 'the task runs again and the sbom lists 2.0'
+        moved.task(':library:cyclonedxDirectBom').outcome != TaskOutcome.UP_TO_DATE
+        sbomVersions('library/build/library-1.0.0-sbom.json', 'dependency') == ['2.0']
+
+        when: 'the project moves back to 1.0 and the sbom is built from a clean build'
+        writeDependencyProject('1.0')
+        build(':library:clean', ':library:cyclonedxDirectBom')
+
+        then: 'the build cache does not hand back the sbom of 2.0'
+        sbomVersions('library/build/library-1.0.0-sbom.json', 'dependency') == ['1.0']
+    }
+
+    void "the sbom is written again when the bytes of an external dependency change under the same version"() {
+        given: 'a library that depends on version 1.0 of a module in a local repository'
+        publishExternalModule('1.0')
+        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'library'"
+        new File(projectDir, 'gradle.properties').text = 'projectVersion=1.0.0'
+        writeLibraryDependingOnExternal('1.0')
+        build('cyclonedxDirectBom')
+
+        when: 'the jar of 1.0 gets other bytes, as the jar of a snapshot does'
+        final jar = new File(projectDir, 'repo/org/example/external/1.0/external-1.0.jar')
+        writeJar(jar, 'other bytes')
+        final changed = build('cyclonedxDirectBom')
+
+        then: 'the task runs again and the sbom records the hash of the new bytes'
+        changed.task(':cyclonedxDirectBom').outcome != TaskOutcome.UP_TO_DATE
+        sbomSha256('build/library-1.0.0-sbom.json', 'external') == MessageDigest.getInstance('SHA-256').digest(jar.bytes).encodeHex().toString()
+    }
+
+    void "a project dependency is described without its jar being built"() {
+        given: 'a library that depends on another project of the build'
+        writeLibraryDependingOnProject()
+        writeDependencyProject('1.0')
+
+        when: 'the sbom of the library is built'
+        final result = build(':library:cyclonedxDirectBom')
+
+        then: 'the sbom lists the project, and the jar of the project is not built'
+        sbomVersions('library/build/library-1.0.0-sbom.json', 'dependency') == ['1.0']
+        result.task(':dependency:jar') == null
+    }
+
     private BuildResult buildSbomFromClean() {
         GradleRunner.create()
                 .withProjectDir(projectDir)
                 .withArguments('clean', 'cyclonedxDirectBom', '--configuration-cache', '--stacktrace')
                 .withPluginClasspath()
                 .build()
+    }
+
+    private BuildResult build(String... tasks) {
+        GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withArguments(tasks.toList() + ['--build-cache', '--configuration-cache', '--stacktrace'])
+                .withPluginClasspath()
+                .build()
+    }
+
+    private void publishExternalModule(String version) {
+        final moduleDir = new File(projectDir, "repo/org/example/external/$version")
+        moduleDir.mkdirs()
+        new File(moduleDir, "external-${version}.pom").text = """\
+            <project xmlns="http://maven.apache.org/POM/4.0.0">
+                <modelVersion>4.0.0</modelVersion>
+                <groupId>org.example</groupId>
+                <artifactId>external</artifactId>
+                <version>$version</version>
+            </project>
+        """.stripIndent()
+        writeJar(new File(moduleDir, "external-${version}.jar"), version)
+    }
+
+    private static void writeJar(File file, String content) {
+        new JarOutputStream(new FileOutputStream(file)).withCloseable { JarOutputStream jar ->
+            jar.putNextEntry(new JarEntry('version.txt'))
+            jar.write(content.bytes)
+        }
+    }
+
+    private void writeLibraryDependingOnExternal(String version) {
+        new File(projectDir, 'build.gradle').text = """
+            plugins {
+                id 'java-library'
+                id 'org.apache.grails.buildsrc.sbom'
+            }
+
+            repositories {
+                maven {
+                    url = uri('repo')
+                }
+            }
+
+            dependencies {
+                implementation 'org.example:external:$version'
+            }
+        """
+    }
+
+    private void writeLibraryDependingOnProject() {
+        new File(projectDir, 'settings.gradle').text = '''\
+            rootProject.name = 'build'
+            include 'library', 'dependency'
+        '''.stripIndent()
+        new File(projectDir, 'gradle.properties').text = 'projectVersion=1.0.0'
+        new File(projectDir, 'library').mkdirs()
+        new File(projectDir, 'library/build.gradle').text = '''
+            plugins {
+                id 'java-library'
+                id 'org.apache.grails.buildsrc.sbom'
+            }
+
+            dependencies {
+                implementation project(':dependency')
+            }
+        '''
+    }
+
+    private void writeDependencyProject(String version) {
+        new File(projectDir, 'dependency').mkdirs()
+        new File(projectDir, 'dependency/build.gradle').text = """
+            plugins {
+                id 'java-library'
+            }
+
+            group = 'org.example'
+            version = '$version'
+        """
+    }
+
+    private List<String> sbomVersions(String sbomPath, String componentName) {
+        final sbom = new JsonSlurper().parse(new File(projectDir, sbomPath)) as Map
+        final components = (sbom.components ?: []) as List<Map>
+        components.findAll { it.name == componentName }*.version as List<String>
+    }
+
+    private String sbomSha256(String sbomPath, String componentName) {
+        final sbom = new JsonSlurper().parse(new File(projectDir, sbomPath)) as Map
+        final component = (sbom.components as List<Map>).find { it.name == componentName }
+        (component.hashes as List<Map>).find { it.alg == 'SHA-256' }.content as String
     }
 }
