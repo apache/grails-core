@@ -47,7 +47,9 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
     /**
      * Sets the cache that holds the tokens. A cache that does not implement {@link Cache#evictIfPresent}, whose
      * default evicts the key and reports that the cache did not hold it, is asked for the token before the token is
-     * removed, one removal at a time, and a warning says so.
+     * removed, one removal at a time, and a warning says so. Only the class of the given cache is looked at, so a
+     * cache that wraps another and declares {@link Cache#evictIfPresent} has to return whether the wrapped cache held
+     * the key.
      */
     void setCache(Cache cache) {
         this.cache = cache
