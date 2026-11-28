@@ -441,8 +441,9 @@ class Neo4jQuery extends Query {
     }
 
     @Override
-    protected List executeQuery(PersistentEntity persistentEntity, Query.Junction criteria) {
+    protected List executeQuery(PersistentEntity persistentEntity, Query.Junction queryCriteria) {
 
+        Query.Junction criteria = resolveSubqueries(queryCriteria)
         CypherBuilder cypherBuilder = buildBaseQuery(persistentEntity, criteria)
         cypherBuilder.setOrderAndLimits(applyOrderAndLimits(cypherBuilder))
         GraphPersistentEntity graphEntity = (GraphPersistentEntity) persistentEntity
@@ -599,7 +600,8 @@ class Neo4jQuery extends Query {
      * @return The base query containing only the conditions
      */
     CypherBuilder getBaseQuery() {
-        buildBaseQuery(entity, criteria)
+        // the subqueries are run first, as for a read, so that deleteAll and updateAll select the rows a list of the same query finds
+        buildBaseQuery(entity, resolveSubqueries(criteria))
     }
 
     protected CypherBuilder buildBaseQuery(PersistentEntity persistentEntity, Query.Junction criteria) {
@@ -645,7 +647,7 @@ class Neo4jQuery extends Query {
 
     private static Collection convertEnumsInList(Collection collection) {
         collection.collect {
-            it.getClass().isEnum() ? it.toString() : it
+            it != null && it.getClass().isEnum() ? it.toString() : it
         }
     }
 

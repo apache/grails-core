@@ -480,13 +480,19 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
      * @return The Mongo query
      */
     public Document getMongoQuery() {
+        // the subqueries are run first, as for a read, so that deleteAll and updateAll select the rows a list of the same query finds
+        return getMongoQuery(resolveSubqueries(criteria));
+    }
+
+    private Document getMongoQuery(Junction queryCriteria) {
         Document query = createQueryObject(entity);
-        populateMongoQuery((AbstractMongoSession) getSession(), query, criteria, entity);
+        populateMongoQuery((AbstractMongoSession) getSession(), query, queryCriteria, entity);
         return query;
     }
 
     @Override
-    protected List executeQuery(final PersistentEntity entity, final Junction criteria) {
+    protected List executeQuery(final PersistentEntity entity, final Junction queryCriteria) {
+        final Junction criteria = resolveSubqueries(queryCriteria);
         final AbstractMongoSession mongoSession = this.mongoSession;
         com.mongodb.client.MongoCollection<Document> collection = mongoSession.getCollection(entity);
 
@@ -504,7 +510,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 dbObject = ((FindIterable<Document>) setHint(cursor)).limit(1)
                         .first();
             } else {
-                FindIterable<Document> cursor = mongoSession.find(collection, getMongoQuery());
+                FindIterable<Document> cursor = mongoSession.find(collection, getMongoQuery(criteria));
 
                 dbObject = ((FindIterable<Document>) setHint(cursor)).limit(1)
                         .first();
