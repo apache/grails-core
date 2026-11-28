@@ -212,6 +212,15 @@ public class CriteriaMethodInvoker {
             final boolean embedded =
                     attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.EMBEDDED;
 
+            if (attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.ELEMENT_COLLECTION) {
+                ElementCollectionRestrictions restrictions = new ElementCollectionRestrictions(hibernateQuery, name);
+                callable.setDelegate(restrictions);
+                callable.setResolveStrategy(Closure.DELEGATE_ONLY);
+                callable.call();
+                restrictions.apply();
+                return name;
+            }
+
             if (attribute.isAssociation() || embedded) {
                 Class<?> oldTargetClass = builder.getTargetClass();
                 Class<?> associationClass = builder.getClassForAssociationType(attribute);
@@ -412,5 +421,76 @@ public class CriteriaMethodInvoker {
         callable.setDelegate(builder);
         callable.setResolveStrategy(Closure.DELEGATE_FIRST);
         callable.call();
+    }
+
+    /**
+     * The criteria available inside a block over a collection of basic values (for example enums):
+     * the values are addressed through the {@code elements} pseudo property, as in Hibernate 5.
+     */
+    private static final class ElementCollectionRestrictions {
+
+        private static final String ELEMENTS = "elements";
+
+        private final HibernateQuery query;
+        private final String collection;
+        // The values one element of the collection may have: every restriction of the block is a test of the same
+        // element, as in Hibernate 5, so the restrictions narrow one set and no element has to be found for each.
+        private java.util.Set<Object> allowed;
+
+        private ElementCollectionRestrictions(HibernateQuery query, String collection) {
+            this.query = query;
+            this.collection = collection;
+        }
+
+        public Object eq(String property, Object value) {
+            return in(property, java.util.List.of(value));
+        }
+
+        public Object in(String property, Collection<?> values) {
+            requireElements(property);
+            if (allowed == null) {
+                allowed = new java.util.LinkedHashSet<>(values);
+            }
+            else {
+                // the values are compared as the numbers they store: 1.0 and 1.00 are not equal as Java values
+                allowed.removeIf(kept -> values.stream().noneMatch(value -> sameValue(kept, value)));
+            }
+            return this;
+        }
+
+        private static boolean sameValue(Object left, Object right) {
+            if (left instanceof Number leftNumber && right instanceof Number rightNumber) {
+                try {
+                    return toDecimal(leftNumber).compareTo(toDecimal(rightNumber)) == 0;
+                }
+                catch (NumberFormatException notFinite) {
+                    // NaN and the infinities have no decimal form
+                    return java.util.Objects.equals(left, right);
+                }
+            }
+            return java.util.Objects.equals(left, right);
+        }
+
+        private static java.math.BigDecimal toDecimal(Number number) {
+            return number instanceof java.math.BigDecimal decimal ? decimal : new java.math.BigDecimal(number.toString());
+        }
+
+        /** Adds the restriction of the block to the query: an element that is one of the values left. */
+        private void apply() {
+            if (allowed != null) {
+                query.in(collection, new java.util.ArrayList<>(allowed));
+            }
+        }
+
+        public Object inList(String property, Collection<?> values) {
+            return in(property, values);
+        }
+
+        private void requireElements(String property) {
+            if (!ELEMENTS.equals(property)) {
+                throw new IllegalArgumentException("Only the [" + ELEMENTS + "] property can be queried on the collection of basic values [" +
+                        collection + "], not [" + property + "]");
+            }
+        }
     }
 }

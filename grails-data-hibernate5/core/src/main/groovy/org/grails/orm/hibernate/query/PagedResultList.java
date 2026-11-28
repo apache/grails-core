@@ -63,6 +63,9 @@ public class PagedResultList extends grails.gorm.PagedResultList {
         if (totalCount == Integer.MIN_VALUE) {
             totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<>() {
                 public Integer doInHibernate(Session session) throws HibernateException, SQLException {
+                    // the list fetched the associations its mapping joins, and a count has no entity to fetch them into:
+                    // Hibernate rejects a fetch whose owner is not in the select list
+                    queryRoot.getFetches().clear();
                     final CriteriaQuery finalQuery = criteriaQuery.select(criteriaBuilder.count(queryRoot)).distinct(true).orderBy();
                     final Query query = session.createQuery(finalQuery);
                     hibernateTemplate.applySettings(query);
