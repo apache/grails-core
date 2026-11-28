@@ -856,6 +856,30 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results.totalCount == 3
     }
 
+    void 'a page of #api that fetches the association it is sorted by counts the teams that it returns'() {
+        when:
+        final page = query.call()
+
+        then: 'the sort reads the club through the left join of the fetch, also without the setting, so it keeps the team without a club'
+        page*.name.sort() == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']
+        page.totalCount == 4
+
+        where:
+        api                    | query
+        'a where query'        | { Team.where { name ==~ '%First%' }.list(max: 10, sort: 'club.name', fetch: [club: 'join']) }
+        'an eager where query' | { Team.where { name ==~ '%First%' }.list(max: 10, sort: 'club.name', fetch: [club: 'eager']) }
+        'a detached criteria'  | { new DetachedCriteria(Team).like('name', '%First%').join('club').list(max: 10, sort: 'club.name') }
+        'a criteria query'     | { Team.createCriteria().list(max: 10) { like('name', '%First%'); join('club', JoinType.LEFT); order('club.name') } }
+        'a list'               | { Team.list(max: 10, sort: 'club.name', fetch: [club: 'join']) }
+    }
+
+    void 'a dynamic finder and the count of a where query that fetch the association they are sorted by keep a team without a club'() {
+        expect: 'the left join of the fetch keeps the team without a club, also without the setting'
+        Team.findAllByNameLike('%First%', [sort: 'club.name', fetch: [club: 'join']])*.name.contains('Unattached First Team')
+        Team.where { name ==~ '%First%' }.join('club').sort('club.name').list().size() == 4
+        Team.where { name ==~ '%First%' }.join('club').sort('club.name').count() == 4
+    }
+
     void 'a #query with an inner join requested for an association leaves out a team without a club'() {
         expect:
         resultOf(query) == expected

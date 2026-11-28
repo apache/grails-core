@@ -28,6 +28,7 @@ import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
@@ -354,6 +355,9 @@ public class JpaCriteriaQueryCreator<T> {
                 // the list sorts through the fetch join, which leaves out no instance
                 continue;
             } else {
+                if (countOnly && cq != null && isEntityCount()) {
+                    joinFetchedAssociation(context.getRoot(), propertyName);
+                }
                 expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context), countOnly);
             }
             if (countOnly) {
@@ -449,6 +453,26 @@ public class JpaCriteriaQueryCreator<T> {
             current = association.getAssociatedEntity();
         }
         return false;
+    }
+
+    /**
+     * Joins the association to a single instance that a sort path of a count starts with, when the list that is
+     * counted fetches the association with a left join. The sort of the list reads the association through that
+     * fetch join, which keeps the instances whose association is {@code null}, so the count joins it with a left join
+     * as well, unless the criteria have joined it already: the sort of the list then reads the join of the criteria.
+     */
+    private void joinFetchedAssociation(From<?, ?> root, String propertyName) {
+        int dot = propertyName.indexOf('.');
+        if (dot < 0 || hibernateQuery == null) {
+            return;
+        }
+        String path = propertyName.substring(0, dot);
+        if (hibernateQuery.getFetchJoinPaths().contains(path) &&
+                detachedCriteria.getJoinTypes().getOrDefault(path, JoinType.LEFT) == JoinType.LEFT &&
+                entity.getPropertyByName(path) instanceof ToOne<?> toOne && !(toOne instanceof Embedded) &&
+                root.getJoins().stream().noneMatch(join -> path.equals(join.getAttribute().getName()))) {
+            root.join(path, JoinType.LEFT);
+        }
     }
 
     /**

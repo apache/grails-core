@@ -921,6 +921,8 @@ public class HibernateQuery extends Query {
                     hibernateQuery.aliases.addAll(this.aliases);
                     hibernateQuery.rowForEachElement = this.rowForEachElement;
                     hibernateQuery.clearedOrders.addAll(this.clearedOrders);
+                    // the count of a page joins an association that the list fetches and sorts by as the fetch does
+                    hibernateQuery.fetchJoinPaths.addAll(this.fetchJoinPaths);
 
                     return hibernateQuery;
                 });
