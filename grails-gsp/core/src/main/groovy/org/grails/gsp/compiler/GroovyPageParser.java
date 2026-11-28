@@ -1439,11 +1439,25 @@ public class GroovyPageParser implements Tokens {
     /**
      * Whether the code of a line of a {@code %{ }%} scriptlet can go on on the next line after a backslash and
      * mean what it means with a space in place of the line break. It cannot after a {@code /}, which can start
-     * a comment that a line break ends, nor after {@code assert}, as an assertion that fails quotes its code
+     * a comment that a line break ends, nor after the keyword {@code assert}, not a name that contains it, as an assertion that fails quotes its code
      * and would quote the backslash.
      */
     private static boolean continuesOnNextLine(StringBuilder code) {
-        return code.indexOf("/") < 0 && code.indexOf("assert") < 0;
+        return code.indexOf("/") < 0 && !containsAssertKeyword(code);
+    }
+
+    private static boolean containsAssertKeyword(StringBuilder code) {
+        int ix = code.indexOf("assert");
+        while (ix >= 0) {
+            int end = ix + "assert".length();
+            boolean wordStart = ix == 0 || !Character.isJavaIdentifierPart(code.charAt(ix - 1));
+            boolean wordEnd = end == code.length() || !Character.isJavaIdentifierPart(code.charAt(end));
+            if (wordStart && wordEnd) {
+                return true;
+            }
+            ix = code.indexOf("assert", ix + 1);
+        }
+        return false;
     }
 
     public long getLastModified() {

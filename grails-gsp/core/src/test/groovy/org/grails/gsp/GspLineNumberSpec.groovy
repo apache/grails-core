@@ -259,6 +259,10 @@ class GspLineNumberSpec extends Specification {
         'on the line after a comment in slashes, which is the line of the comment' | 'one\n%{ int a = 1 /* a */;\n FAIL }%\nthree'              || 2
         'on the line a slashy string of two lines ends on, which is the line the string starts on' | 'one\n%{ def s = /a\n b/; FAIL }%\nthree' || 2
         'on the line after an assertion, which is the line of the assertion'   | 'one\n%{ assert true;\n FAIL }%\nthree'                         || 2
+        'on the line after a call of a method whose name starts with assert' | 'one\n%{ def assertValid = { it }; assertValid(1);\n FAIL }%\nthree' || 3
+        'on the line after a call of a method whose name ends with assert' | 'one\n%{ def reassert = { it }; reassert(1);\n FAIL }%\nthree'      || 3
+        'on the line after a variable whose name has assert in the middle' | 'one\n%{ def myassertion = 1;\n FAIL }%\nthree'                      || 3
+        'on the line after an assertion in parentheses, which is the line of the assertion' | 'one\n%{ assert(true);\n FAIL }%\nthree'                  || 2
         'on the line after code that ends with a backslash, which is the line of the backslash' | 'one\n%{ def s = "a\\\\\n"; FAIL }%\nthree'  || 2
         'on the line after a line break of HTML that ends a line with a slash' | 'one\n%{ int a = 4 / 2<br>\n FAIL }%\nthree'                    || 3
         'on a later line after a line break of HTML that ends a line with a slash' | 'one\n%{ int a = 4 / 2;\n int b = 1<br>\n int c = 1;\n FAIL }%\nfive' || 5
@@ -293,6 +297,8 @@ class GspLineNumberSpec extends Specification {
         'a comment in slashes over two later lines'                            | '%{ def x = 1;\n /* one\n x = 2 */ }%${x}'              || '1'
         'a division with its operator before a line break'                     | '%{ def y = 6 /\n 2 }%${y}'                               || '3'
         'a division with its operator after a line break'                      | '%{ def y = 6\n / 2 }%${y}'                               || '3'
+        'a call of a method whose name starts with assert, then code on the next line' | '%{ def assertValid = { it }; def a = assertValid(1);\n def b = a +\n 1 }%${b}' || '2'
+        'a call of a method whose name ends with assert, then code on the next line' | '%{ def reassert = { it }; def a = reassert(1);\n def b = a +\n 1 }%${b}' || '2'
         'an assertion over several lines'                                      | '%{ def a = 1;\n assert a ==\n 1 }%${a}'                 || '1'
         'a line break of HTML in a scriptlet in braces is a line break'        | '%{ def x = 1<br> + 2 }%${x}'                             || '1'
         'a line break of the page after a line break of HTML does not end a statement' | '%{ def x = 1<br>\n def y = x +\n 2 }%${y}'     || '3'
