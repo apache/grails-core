@@ -21,8 +21,12 @@ package org.apache.grails.forge.cli.mcp.run
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.util.concurrent.BlockingQueue
+import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
@@ -101,6 +105,12 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         echo "end $task" >> build-calls.txt
         if [ -f fail ]; then echo "the build failed" >&2; exit 1; fi
         '''.stripIndent()
+
+    // what a call that waits for the build lane is told while clean holds it
+    static final String WAITING_FOR_CLEAN = 'Waiting for clean, which is running'
+
+    // the round of a call a feature holds open, see held()
+    static final Duration HELD = Duration.ofMinutes(5)
 
     ByteArrayOutputStream processErr = new ByteArrayOutputStream()
     List<Integer> exits = new CopyOnWriteArrayList<>()
@@ -412,33 +422,48 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
     }
 
     void "the builds run one at a time in the order they came, beside the other calls, and a call that waits for its lane is told which tool holds it"() {
-        given:
+        given: 'threads of the feature for the calls it holds open while it looks at the others'
         project()
         serve()
-        List<String> told = new CopyOnWriteArrayList<>()
+        ExecutorService callers = Executors.newCachedThreadPool()
+        List<String> toldSecond = new CopyOnWriteArrayList<>()
+        List<String> toldThird = new CopyOnWriteArrayList<>()
 
-        when: 'a build that runs until it is released, a second build, and a call of another lane'
-        CompletableFuture<CallToolResult> first = CompletableFuture.supplyAsync { mcp.client.tool('clean').call() }
+        when: 'a build that runs until it is released'
+        Future<CallToolResult> first = callers.submit({ -> held('clean', null) } as Callable<CallToolResult>)
         eventually { calls().contains('start clean') }
-        CompletableFuture<CallToolResult> second = CompletableFuture.supplyAsync {
-            mcp.client.tool('compile').progress({ ProgressParams params -> told << params.message() } as Consumer<ProgressParams>).call()
-        }
+
+        and: 'a second build, and a third once the second is told that it waits for its lane'
+        Future<CallToolResult> second = callers.submit({ -> held('compile', toldSecond) } as Callable<CallToolResult>)
+        eventually { toldSecond.contains(WAITING_FOR_CLEAN) }
+        Future<CallToolResult> third = callers.submit({ -> held('dependency-report', toldThird) } as Callable<CallToolResult>)
+        eventually { toldThird.contains(WAITING_FOR_CLEAN) }
+
+        and: 'a call of another lane'
         CallToolResult show = mcp.client.tool('project_show').call()
 
-        then: 'the call of another lane ran while the build did, and the second build waits'
+        then: 'the call of another lane ran while the build did, and the builds that wait are told so again while they wait'
         !show.isError()
         !first.done
-        eventually { told.contains('Waiting for clean, which is running') }
-        !calls().any { it.contains('classes') }
+        eventually { toldSecond.count(WAITING_FOR_CLEAN) >= 2 && toldThird.count(WAITING_FOR_CLEAN) >= 2 }
+        calls() == ['start clean']
 
         when:
         new File(dir, 'release').text = ''
 
-        then: 'the second build ran when the first had ended'
+        then: 'each build ran when the one before it had ended, in the order they came, however long they waited'
         !first.get(60, TimeUnit.SECONDS).isError()
         !second.get(60, TimeUnit.SECONDS).isError()
-        calls() == ['start clean', 'end clean', 'start classes', 'end classes']
-        told.contains('Running: grails compile')
+        !third.get(60, TimeUnit.SECONDS).isError()
+        calls() == ['start clean', 'end clean', 'start classes', 'end classes', 'start dependencies', 'end dependencies']
+
+        and: 'a call is told that it runs once it has its lane, and is not told after that that it waits'
+        toldSecond.contains('Running: grails compile')
+        !toldSecond.subList(toldSecond.indexOf('Running: grails compile'), toldSecond.size()).any { String message -> message.startsWith('Waiting') }
+        toldThird.contains('Running: grails dependency-report')
+
+        cleanup:
+        callers?.shutdownNow()
     }
 
     void "a call that is cancelled while it waits for its lane leaves the queue, and never runs"() {
@@ -618,6 +643,17 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         settings.waitingEvery = Duration.ofMillis(500)
         settings.progressEvery = Duration.ofMillis(200)
         return settings
+    }
+
+    // A call a feature holds open while it looks at what else runs: the round of the call, which is all of it, lasts as
+    // long as the waits of the feature may, each of which is bounded, and not the 30 s the client gives a call. What the
+    // call is told while it runs is added to the list, where there is one.
+    private CallToolResult held(String tool, List<String> told) {
+        McpSyncClient.ToolSpec call = mcp.client.tool(tool).roundTimeout(HELD)
+        if (told != null) {
+            call = call.progress({ ProgressParams params -> told << params.message() } as Consumer<ProgressParams>)
+        }
+        return call.call()
     }
 
     private List<String> calls() {
