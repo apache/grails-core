@@ -31,6 +31,7 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForgeContext
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Timeout
@@ -65,6 +66,7 @@ class McpConcurrencySpec extends CommandSpec implements CommandFixture {
         while [ $line -lt 10 ]; do
           echo "build out $line $marker"
           echo "build err $line $marker" >&2
+          # written over a while, so that the lines of the build are written while the other calls write theirs
           sleep 0.02
           line=$((line + 1))
         done
@@ -107,7 +109,7 @@ class McpConcurrencySpec extends CommandSpec implements CommandFixture {
 
     void cleanup() {
         calls.shutdownNow()
-        calls.awaitTermination(30, TimeUnit.SECONDS)
+        calls.awaitTermination(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         guard?.close()
         PlainOutput.leave()
         GradleBuild.closeConnections()
@@ -192,13 +194,13 @@ class McpConcurrencySpec extends CommandSpec implements CommandFixture {
         Map<String, CommandStreams> streams = lines.collectEntries { String kind, List<String> line -> [(kind): CommandStreams.capture()] }
         Map<String, Future<Integer>> exits = lines.collectEntries { String kind, List<String> line ->
             [(kind): calls.submit({
-                together.await(60, TimeUnit.SECONDS)
+                together.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
                 return ForgeCli.execute(context, streams[kind], (['--plain-output', '--non-interactive'] + line) as String[])
             } as Callable<Integer>)]
         }
         List<String> crossed = []
         lines.keySet().each { String kind ->
-            int exit = exits[kind].get(300, TimeUnit.SECONDS)
+            int exit = SpecWaits.get(exits[kind], "the end of the call ${kind} of round ${round}".toString())
             String output = streams[kind].merged()
             Set<String> marks = (output =~ /(?:buildmark|appmark|Ctlmark|Svcmark)\d+x/).collect { it as String } as Set<String>
             String own = "${kind}${round}x".toString()

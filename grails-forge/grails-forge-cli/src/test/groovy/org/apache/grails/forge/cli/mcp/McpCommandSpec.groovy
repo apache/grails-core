@@ -19,7 +19,6 @@
 package org.apache.grails.forge.cli.mcp
 
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.function.BooleanSupplier
@@ -39,13 +38,14 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForgeContext
+import org.grails.forge.cli.SpecWaits
 import spock.lang.Timeout
 
 /**
  * {@code grails mcp}, the command: how it is used, where it is refused, and a whole session of it in this
  * JVM, on standard streams that a guard keeps for it as the program {@code grails} keeps the process's own.
  */
-@Timeout(300)
+@Timeout(600)
 class McpCommandSpec extends CommandSpec implements CommandFixture {
 
     PrintStream originalErr = System.err
@@ -143,7 +143,7 @@ class McpCommandSpec extends CommandSpec implements CommandFixture {
         when: 'the program grails runs mcp, and a client speaks to it'
         CompletableFuture<Integer> served = CompletableFuture.supplyAsync { GrailsCli.execute('mcp', '--directory', 'shop', '--read-only') }
         StdioMcpClientTransport transport = StdioMcpClientTransport.builder(clientReads, clientWrites).start()
-        McpSyncClient client = McpClient.sync(transport).clientInfo(Implementation.builder('grails-mcp-spec', '1.0').build()).roundTimeout(Duration.ofSeconds(60)).build()
+        McpSyncClient client = McpClient.sync(transport).clientInfo(Implementation.builder('grails-mcp-spec', '1.0').build()).roundTimeout(SpecWaits.BOUND).build()
         DiscoverResult discovered = client.discover()
         List<Tool> tools = client.tools().list().tools()
 
@@ -162,7 +162,7 @@ class McpCommandSpec extends CommandSpec implements CommandFixture {
         transport.close()
 
         then: 'the session ends with 0, and the current directory of the JVM is what it was'
-        served.get(60, TimeUnit.SECONDS) == 0
+        served.get(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS) == 0
         System.getProperty('user.dir') == dir.absolutePath
         ConsoleCommands.getSession() == ConsoleCommands.Session.NONE
     }

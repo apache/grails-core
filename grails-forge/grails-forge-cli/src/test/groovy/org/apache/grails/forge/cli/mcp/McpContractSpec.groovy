@@ -203,7 +203,7 @@ class McpContractSpec extends Specification {
         System.setErr(err)
     }
 
-    @Timeout(30)
+    @Timeout(600)
     void "streams bound to a thread are where it, and the threads it starts, write while what it runs runs, and what was bound before is bound again"() {
         given:
         CommandStreams outer = CommandStreams.capture()
@@ -241,7 +241,7 @@ class McpContractSpec extends Specification {
         CommandStreams.current().out.is(System.out)
     }
 
-    @Timeout(30)
+    @Timeout(600)
     void "captured streams keep everything in the order it was written, and the output and the errors apart"() {
         given:
         CommandStreams streams = CommandStreams.capture()

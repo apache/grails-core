@@ -33,6 +33,8 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForgeContext
+import org.grails.forge.cli.Handshake
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -48,9 +50,9 @@ import spock.lang.Unroll
 @Timeout(600)
 class McpStaticStateSpec extends CommandSpec implements CommandFixture {
 
-    // the Gradle wrapper of the project: it writes down what it was told, and does what the marker it is given says
+    // the Gradle wrapper of the project, after the functions of the handshake: it writes down what it was told, and does
+    // what the marker it is given says; an application, and a build that waits, run until they are ended
     static final String WRAPPER = '''\
-        #!/bin/sh
         here="$(dirname "$0")"
         marker=none
         for argument in "$@"; do
@@ -58,26 +60,29 @@ class McpStaticStateSpec extends CommandSpec implements CommandFixture {
         done
         echo "nonInteractive=$GRAILS_NON_INTERACTIVE" > "$here/build-$marker.txt"
         for argument in "$@"; do
-          case "$argument" in *bootRun) echo $$ > "$here/app-started"; exec sleep 60 ;; esac
+          case "$argument" in *bootRun) say app-started; hold app; exit 0 ;; esac
         done
         case "$marker" in
           fail) echo "the build fails"; exit 1 ;;
-          waits) echo $$ > "$here/build-started"; echo "the build waits"; exec sleep 60 ;;
+          waits) say build-started; echo "the build waits"; hold build; exit 0 ;;
         esac
         echo "built $marker"
         '''.stripIndent()
 
-    // the class a standalone tool is started with, which here waits until it is ended
+    // the class a standalone tool is started with, which here says that it has started, whole, and runs until it is ended
     static final String WAITING_TOOL = '''\
         package org.apache.grails.core.cli;
 
         public class StandaloneToolRunner {
 
             public static void main(String[] args) throws Exception {
-                java.nio.file.Files.writeString(java.nio.file.Paths.get(System.getProperty("base.dir"), "tool-started"),
-                        String.valueOf(ProcessHandle.current().pid()));
+                java.nio.file.Path started = java.nio.file.Paths.get(System.getProperty("base.dir"), "tool-started");
+                java.nio.file.Path part = java.nio.file.Paths.get(System.getProperty("base.dir"), "tool-started.part");
+                java.nio.file.Files.writeString(part, String.valueOf(ProcessHandle.current().pid()));
+                java.nio.file.Files.move(part, started, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
                 System.out.println("the tool waits");
-                Thread.sleep(60000);
+                // a latch nothing opens
+                new java.util.concurrent.CountDownLatch(1).await();
             }
         }
         '''.stripIndent()
@@ -97,9 +102,7 @@ class McpStaticStateSpec extends CommandSpec implements CommandFixture {
         originalErr = System.err
         originalIn = System.in
         generateProject(ApplicationType.WEB)
-        File wrapper = new File(dir, 'gradlew')
-        wrapper.text = WRAPPER
-        wrapper.setExecutable(true, false)
+        stubWrapper(dir, WRAPPER)
         context = ForgeContext.of(beanContext)
         GradleBuild.setRunner(GradleBuild.PROCESS)
     }
@@ -215,18 +218,11 @@ class McpStaticStateSpec extends CommandSpec implements CommandFixture {
 
         when:
         call.start()
-        File started = new File(dir, startedFile)
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60)
-        while (!started.isFile() || started.text.trim().isEmpty()) {
-            assert System.nanoTime() < deadline: "${startedFile} was not written: ${streams.merged()}"
-            Thread.sleep(50)
-        }
-        long pid = started.text.trim() as long
+        long pid = started(step)
         call.interrupt()
-        call.join(TimeUnit.SECONDS.toMillis(30))
+        SpecWaits.join(call, 'the end of the cancelled call')
 
         then: 'the call ended, said why, and left the interrupt set'
-        !call.alive
         result.exit == exit
         streams.merged().contains(said)
         result.interrupted
@@ -235,11 +231,12 @@ class McpStaticStateSpec extends CommandSpec implements CommandFixture {
         ended(pid)
 
         where:
-        what                                | command                                                                  | startedFile     | exit | said
+        what                                | command                                                                  | step            | exit | said
         'runs Gradle'                       | ['compile', '-Dmarker=waits']                                            | 'build-started' | 1    | GradleBuild.STOPPED
         'runs a standalone tool'            | ['tool']                                                                 | 'tool-started'  | 1    | 'The command was stopped before it finished, because it was cancelled'
         'runs a program'                    | null                                                                     | 'program'       | 130  | '| Exit code 130'
-        'waits for the application it left' | ['run-app', '--detach', "--port=${freePort()}".toString(), '--ready-timeout=120'] | 'app-started' | 1 | 'The application was stopped before it answered, because the command was cancelled'
+        // a time to answer in that does not end before the call is cancelled, which is what is held
+        'waits for the application it left' | ['run-app', '--detach', "--port=${freePort()}".toString(), "--ready-timeout=${SpecWaits.boundSeconds}".toString()] | 'app-started' | 1 | 'The application was stopped before it answered, because the command was cancelled'
     }
 
     void "a context that serves several calls at once lists the values of an option for one while another describes its commands without them"() {
@@ -250,17 +247,17 @@ class McpStaticStateSpec extends CommandSpec implements CommandFixture {
         Thread describer = new Thread({
             context.withoutListing({
                 describing.countDown()
-                listed.await(30, TimeUnit.SECONDS)
+                listed.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
                 return null
             } as Supplier<Object>)
         })
 
         when: 'one thread describes, and another lists meanwhile'
         describer.start()
-        describing.await(30, TimeUnit.SECONDS)
+        SpecWaits.await(describing, 'the description of the commands')
         List<String> values = features.toList()
         listed.countDown()
-        describer.join(30_000)
+        SpecWaits.join(describer, 'the end of the description')
 
         then:
         values.size() > 1
@@ -272,22 +269,29 @@ class McpStaticStateSpec extends CommandSpec implements CommandFixture {
 
     private int run(CommandStreams streams, List<String> command) {
         if (command == null) {
-            return CommandStreams.bind(streams, { ConsoleProgram.run('echo $$ > program; exec sleep 60', dir, false) } as Callable<Integer>)
+            return CommandStreams.bind(streams, { ConsoleProgram.run(handshake.shell + 'say program\nhold program\n', dir, false) } as Callable<Integer>)
         }
         return ForgeCli.execute(context, streams, (['--plain-output', '--non-interactive'] + command) as String[])
     }
 
-    // whether a process has ended, or does within a while
-    private static boolean ended(long pid) {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
-        while (ProcessHandle.of(pid).map { ProcessHandle each -> each.alive }.orElse(false)) {
-            if (System.nanoTime() > deadline) {
-                ProcessHandle.of(pid).ifPresent { ProcessHandle each -> each.destroyForcibly() }
-                return false
-            }
-            Thread.sleep(50)
+    // the number of the process that said that it has started: a script by its handshake, the standalone tool by a file of the project
+    private long started(String step) {
+        if (step != 'tool-started') {
+            return handshake.awaitStep(step).pid
         }
-        return true
+        File file = new File(dir, step)
+        return SpecWaits.value('the start of the standalone tool', { -> file.isFile() ? (file.text.trim() as Long) : null } as Supplier<Long>)
+    }
+
+    // whether a process has ended; one that has not is ended, and the feature has failed
+    private static boolean ended(long pid) {
+        try {
+            Handshake.awaitExit(pid)
+            return true
+        } catch (AssertionError e) {
+            ProcessHandle.of(pid).ifPresent { ProcessHandle each -> each.destroyForcibly() }
+            throw e
+        }
     }
 
     private static int freePort() {

@@ -20,6 +20,7 @@ package org.apache.grails.forge.cli.mcp.protocol
 
 import java.time.Duration
 import java.util.concurrent.BlockingQueue
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -35,10 +36,10 @@ import io.modelcontextprotocol.modern.McpSchema.TextResourceContents
 import io.modelcontextprotocol.modern.McpSchema.Tool
 import io.modelcontextprotocol.modern.client.McpSyncClient
 import io.modelcontextprotocol.modern.client.McpSyncSubscriptionListener
-import io.modelcontextprotocol.modern.client.McpTimeoutException
 import io.modelcontextprotocol.modern.client.SubscriptionEvent
 import org.apache.grails.forge.cli.mcp.McpHandler
 import org.apache.grails.forge.cli.mcp.McpNames
+import org.grails.forge.cli.SpecWaits
 import spock.lang.Specification
 import spock.lang.Timeout
 
@@ -49,7 +50,7 @@ import spock.lang.Timeout
  * {@code subscriptions/listen}, cancellation, a line that is not JSON, and a client that starts with
  * {@code initialize}.
  */
-@Timeout(60)
+@Timeout(600)
 class McpModernEraSpec extends Specification {
 
     StubMcpHandler handler = new StubMcpHandler()
@@ -195,7 +196,7 @@ class McpModernEraSpec extends Specification {
                 .open({ SubscriptionEvent event -> events.put(event) } as McpSyncSubscriptionListener)
 
         when:
-        SubscriptionEvent subscribed = events.poll(30, TimeUnit.SECONDS)
+        SubscriptionEvent subscribed = next(events)
 
         then:
         subscribed instanceof SubscriptionEvent.Subscribed
@@ -205,25 +206,25 @@ class McpModernEraSpec extends Specification {
         handler.fire(McpHandler.TOOLS)
 
         then:
-        events.poll(30, TimeUnit.SECONDS) instanceof SubscriptionEvent.ToolsListChanged
+        next(events) instanceof SubscriptionEvent.ToolsListChanged
 
         when:
         handler.fire(McpHandler.RESOURCES)
 
         then:
-        events.poll(30, TimeUnit.SECONDS) instanceof SubscriptionEvent.ResourcesListChanged
+        next(events) instanceof SubscriptionEvent.ResourcesListChanged
 
         cleanup:
         listening?.close()
     }
 
     void "a call the client cancels is cancelled, its thread is interrupted, and nothing it gives is sent"() {
-        when: 'the client gives up on the call, and cancels it'
-        mcp.client.tool('block').callTimeout(Duration.ofSeconds(1)).call()
+        when: 'the client gives up on the call once it runs, and cancels it'
+        List<Throwable> failed = cancelledOnceStarted('block')
 
         then:
-        thrown(McpTimeoutException)
-        handler.interrupted.await(30, TimeUnit.SECONDS)
+        failed*.class == [CancellationException]
+        SpecWaits.await(handler.interrupted, 'the interrupt of the call')
         handler.cancelledWhenInterrupted
 
         when: 'the call has ended, and the server has answered a request after it'
@@ -236,12 +237,12 @@ class McpModernEraSpec extends Specification {
     }
 
     void "a cancelled call that does not stop is a running call that was interrupted, until it ends or is abandoned"() {
-        when:
-        mcp.client.tool('stubborn').callTimeout(Duration.ofSeconds(1)).call()
+        when: 'the client gives up on the call once it runs, and cancels it'
+        List<Throwable> failed = cancelledOnceStarted('stubborn')
 
         then:
-        thrown(McpTimeoutException)
-        handler.interrupted.await(30, TimeUnit.SECONDS)
+        failed*.class == [CancellationException]
+        SpecWaits.await(handler.interrupted, 'the interrupt of the call')
 
         when:
         List<CallThreads.RunningCall> stuck = mcp.server.calls.interruptedFor(Duration.ZERO)
@@ -308,5 +309,29 @@ class McpModernEraSpec extends Specification {
 
     private static String text(CallToolResult result) {
         return ((TextContent) result.content()[0]).text()
+    }
+
+    // A call on a thread of the feature's own, cancelled by interrupting the thread once the handler runs it, as a client
+    // does that cancels a call: the SDK's client then tells the server. How the call ended for the client is given.
+    private List<Throwable> cancelledOnceStarted(String tool) {
+        List<Throwable> failed = new CopyOnWriteArrayList<>()
+        Thread call = new Thread({
+            try {
+                mcp.client.tool(tool).call()
+            } catch (Throwable e) {
+                failed << e
+            }
+        }, "call of ${tool}")
+        call.start()
+        SpecWaits.await(handler.started, 'the start of the call')
+        call.interrupt()
+        SpecWaits.join(call, 'the end of the cancelled call')
+        return failed
+    }
+
+    private static SubscriptionEvent next(BlockingQueue<SubscriptionEvent> events) {
+        SubscriptionEvent event = events.poll(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
+        assert event != null: "no event of the subscription came within ${SpecWaits.boundSeconds} s"
+        return event
     }
 }

@@ -20,15 +20,16 @@ package org.apache.grails.forge.cli.mcp.run
 
 import java.nio.charset.StandardCharsets
 import java.time.Duration
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.function.IntConsumer
+import java.util.function.Supplier
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import io.modelcontextprotocol.modern.McpSchema.CallToolResult
 import io.modelcontextprotocol.modern.McpSchema.ResourceLink
 import io.modelcontextprotocol.modern.McpSchema.TextContent
-import io.modelcontextprotocol.modern.client.McpTimeoutException
 import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.PlainOutput
@@ -41,6 +42,8 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeContext
+import org.grails.forge.cli.Handshake
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -57,8 +60,8 @@ class McpToolResultSpec extends CommandSpec implements CommandFixture {
 
     // the Gradle wrapper of the project: it writes the result it is given beside the file of arguments, and runs until it is
     // stopped where the specification asks it to
+    // after the functions of the handshake: a slow tool runs until it is stopped, once it has set its result
     static final String WRAPPER = '''\
-        #!/bin/sh
         here="$(pwd)"
         for argument in "$@"; do
             case "$argument" in
@@ -71,9 +74,8 @@ class McpToolResultSpec extends CommandSpec implements CommandFixture {
         if [ -f result-to-give ]; then cp result-to-give "$result"; fi
         echo "the tool ran"
         if [ -f slow ]; then
-            echo $$ > build.pid
-            sleep 300 &
-            echo $! > child.pid
+            hold child &
+            say slow $!
             wait
         fi
         '''.stripIndent()
@@ -169,16 +171,26 @@ class McpToolResultSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'slow').text = ''
         serve()
 
-        when: 'the client gives up on the call, and cancels it'
-        mcp.client.tool('count-todos').callTimeout(Duration.ofSeconds(3)).call()
+        when: 'the client gives up on the call, and cancels it, once the tool has set its result'
+        List<Throwable> failed = new CopyOnWriteArrayList<>()
+        Thread call = new Thread({
+            try {
+                mcp.client.tool('count-todos').call()
+            } catch (Throwable e) {
+                failed << e
+            }
+        })
+        call.start()
+        Handshake.Step build = handshake.awaitStep('slow')
+        call.interrupt()
+        SpecWaits.join(call, 'the end of the cancelled call')
 
         then:
-        thrown(McpTimeoutException)
+        failed*.class == [CancellationException]
 
-        and: 'the build was stopped, and neither the result nor the arguments are left in the project'
-        long build = new File(dir, 'build.pid').text.trim() as long
-        long child = new File(dir, 'child.pid').text.trim() as long
-        eventually { !alive(build) && !alive(child) }
+        and: 'the build was stopped, though nothing released it, and neither the result nor the arguments are left in the project'
+        Handshake.awaitExit(build.pid)
+        Handshake.awaitExit(build.number(0))
         eventually { mcp.server.calls.running().isEmpty() }
         eventually { left() == [] }
 
@@ -197,9 +209,7 @@ class McpToolResultSpec extends CommandSpec implements CommandFixture {
     // a web application, whose Gradle wrapper is the script above, and whose build has listed one tool of the application
     private void project() {
         generateProject(ApplicationType.WEB)
-        File wrapper = new File(dir, 'gradlew')
-        wrapper.text = WRAPPER
-        wrapper.setExecutable(true, false)
+        stubWrapper(dir, WRAPPER)
         File catalog = new File(dir, ToolCatalogFile.LOCATION)
         catalog.parentFile.mkdirs()
         catalog.setText(JsonOutput.toJson([format: 1, complete: true, diagnostics: [], tools: [
@@ -223,17 +233,7 @@ class McpToolResultSpec extends CommandSpec implements CommandFixture {
         return (run.list() ?: new String[0]).findAll { String name -> name.startsWith('tool-result-') || name.startsWith('command-args-') }
     }
 
-    private static boolean alive(long pid) {
-        return ProcessHandle.of(pid).map { ProcessHandle handle -> handle.alive }.orElse(false)
-    }
-
     private static void eventually(Closure<Boolean> condition) {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60)
-        while (!condition.call()) {
-            if (System.nanoTime() > deadline) {
-                throw new AssertionError('It did not happen in 60 s')
-            }
-            Thread.sleep(20)
-        }
+        SpecWaits.until('the condition of the feature', { -> condition.call() as boolean } as Supplier<Boolean>)
     }
 }

@@ -45,6 +45,7 @@ import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForgeContext
 import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.SpecWaits
 import org.grails.forge.util.VersionInfo
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -200,7 +201,7 @@ class McpStdoutPuritySpec extends CommandSpec implements CommandFixture {
 
         cleanup:
         clientTransport?.close()
-        transport?.closeGracefully()?.block(Duration.ofSeconds(30))
+        transport?.closeGracefully()?.block(SpecWaits.BOUND)
         server?.closeGracefully()
         noCall.shutdownNow()
     }
@@ -223,7 +224,7 @@ class McpStdoutPuritySpec extends CommandSpec implements CommandFixture {
                 .redirectOutput(stdout)
                 .redirectError(stderr)
                 .start()
-        boolean ended = process.waitFor(120, TimeUnit.SECONDS)
+        boolean ended = process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
         String replaced = "The Grails wrapper of the project in ${project.path} was that of Grails 8.1.0 and is now that of Grails ${VersionInfo.grailsVersion}".toString()
 
         then: 'the wrapper was replaced'

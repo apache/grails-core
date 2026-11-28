@@ -19,8 +19,8 @@
 package org.apache.grails.forge.cli.mcp
 
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 import java.util.concurrent.BlockingQueue
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
@@ -35,7 +35,6 @@ import io.modelcontextprotocol.modern.McpSchema.TextContent
 import io.modelcontextprotocol.modern.client.McpClient
 import io.modelcontextprotocol.modern.client.McpSyncClient
 import io.modelcontextprotocol.modern.client.McpSyncSubscriptionListener
-import io.modelcontextprotocol.modern.client.McpTimeoutException
 import io.modelcontextprotocol.modern.client.SubscriptionEvent
 import io.modelcontextprotocol.modern.client.transport.StdioMcpClientTransport
 import org.apache.grails.forge.cli.GrailsCli
@@ -44,6 +43,8 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.Handshake
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
 
@@ -58,8 +59,8 @@ import spock.lang.Timeout
 @Timeout(600)
 class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
 
+    // after the functions of the handshake: testApp runs until it is ended, with a process it started
     static final String WRAPPER = '''\
-        #!/bin/sh
         case "$*" in
           *testApp*) task=testApp ;;
           *classes*) task=classes ;;
@@ -67,9 +68,8 @@ class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
         esac
         echo "$task" >> build-calls.txt
         if [ "$task" = testApp ]; then
-          echo $$ > build.pid
-          sleep 300 &
-          echo $! > child.pid
+          hold child &
+          say testApp $!
           echo "the tests run"
           wait
         fi
@@ -93,14 +93,11 @@ class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
         if (server != null) {
             List<ProcessHandle> below = server.descendants().toList()
             server.destroyForcibly()
-            server.waitFor(60, TimeUnit.SECONDS)
+            server.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
             below.each { ProcessHandle each -> each.destroyForcibly() }
         }
-        ['build.pid', 'child.pid'].each { String name ->
-            File pid = new File(dir, name)
-            if (pid.isFile()) {
-                ProcessHandle.of(pid.text.trim() as long).ifPresent { ProcessHandle each -> each.destroyForcibly() }
-            }
+        handshake.said('testApp').each { Handshake.Step build ->
+            [build.pid, build.number(0)].each { long pid -> ProcessHandle.of(pid).ifPresent { ProcessHandle each -> each.destroyForcibly() } }
         }
         stderr?.delete()
     }
@@ -142,7 +139,7 @@ class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
         BlockingQueue<SubscriptionEvent> events = new LinkedBlockingQueue<>()
         McpSyncClient.Listening listening = client.listen().toolsChanged()
                 .open({ SubscriptionEvent event -> events.put(event) } as McpSyncSubscriptionListener)
-        assert events.poll(60, TimeUnit.SECONDS) instanceof SubscriptionEvent.Subscribed
+        assert next(events) instanceof SubscriptionEvent.Subscribed
         assert !client.tools().list().tools()*.name().contains('audit-report')
 
         when: 'the build writes the catalog of the tools of the project, as it does when it compiles the project'
@@ -154,7 +151,7 @@ class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
         catalog.setLastModified(System.currentTimeMillis() + 60_000)
 
         then:
-        SubscriptionEvent changed = events.poll(60, TimeUnit.SECONDS)
+        SubscriptionEvent changed = next(events)
         changed instanceof SubscriptionEvent.ToolsListChanged
         client.tools().list().tools()*.name().contains('audit-report')
 
@@ -168,14 +165,24 @@ class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
         start()
         client.tools().list()
 
-        when:
-        client.tool('test-app').callTimeout(Duration.ofSeconds(5)).call()
+        when: 'the client gives up on it once the build has started'
+        List<Throwable> failed = new CopyOnWriteArrayList<>()
+        Thread call = new Thread({
+            try {
+                client.tool('test-app').call()
+            } catch (Throwable e) {
+                failed << e
+            }
+        })
+        call.start()
+        Handshake.Step build = handshake.awaitStep('testApp')
+        call.interrupt()
+        SpecWaits.join(call, 'the end of the cancelled call')
 
-        then:
-        thrown(McpTimeoutException)
-        long build = new File(dir, 'build.pid').text.trim() as long
-        long child = new File(dir, 'child.pid').text.trim() as long
-        eventually { !alive(build) && !alive(child) }
+        then: 'the wrapper and its child are stopped, though nothing released them'
+        failed*.class == [CancellationException]
+        Handshake.awaitExit(build.pid)
+        Handshake.awaitExit(build.number(0))
 
         and: 'the server goes on'
         !client.tool('compile').call().isError()
@@ -188,21 +195,16 @@ class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
         start()
         client.tools().list()
         CompletableFuture<CallToolResult> running = CompletableFuture.supplyAsync { client.tool('test-app').call() }
-        eventually { new File(dir, 'child.pid').isFile() }
-        long build = new File(dir, 'build.pid').text.trim() as long
-        long child = new File(dir, 'child.pid').text.trim() as long
+        Handshake.Step build = handshake.awaitStep('testApp')
 
         when: 'the client closes the standard input of the server'
-        long closed = System.nanoTime()
         server.outputStream.close()
-        boolean ended = server.waitFor(60, TimeUnit.SECONDS)
-        long tookMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - closed)
+        int exit = SpecWaits.exited(server, 'the end of grails mcp')
 
-        then:
-        ended
-        server.exitValue() == 0
-        tookMillis < 15_000
-        eventually { !alive(build) && !alive(child) }
+        then: 'it ended, with the build that would not have ended by itself'
+        exit == 0
+        Handshake.awaitExit(build.pid)
+        Handshake.awaitExit(build.number(0))
         protocolOnly()
 
         cleanup:
@@ -229,16 +231,13 @@ class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
         server.outputStream.close()
 
         then:
-        server.waitFor(60, TimeUnit.SECONDS)
-        server.exitValue() == 0
+        SpecWaits.exited(server, 'the end of grails mcp') == 0
     }
 
     // a web application, whose Gradle wrapper is the script above
     private void project() {
         generateProject(ApplicationType.WEB)
-        File wrapper = new File(dir, 'gradlew')
-        wrapper.text = WRAPPER
-        wrapper.setExecutable(true, false)
+        stubWrapper(dir, WRAPPER)
     }
 
     // grails mcp in the project, as an MCP client starts it; with the SDK's client on its streams, or none
@@ -255,7 +254,7 @@ class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
             return
         }
         transport = StdioMcpClientTransport.builder(new Kept(server.inputStream, written), server.outputStream).start()
-        client = McpClient.sync(transport).clientInfo(Implementation.builder('grails-mcp-spec', '1.0').build()).roundTimeout(Duration.ofSeconds(120)).build()
+        client = McpClient.sync(transport).clientInfo(Implementation.builder('grails-mcp-spec', '1.0').build()).roundTimeout(SpecWaits.BOUND).build()
     }
 
     // every line the server wrote on its standard output is a message of JSON-RPC
@@ -276,18 +275,10 @@ class McpServerModernClientSpec extends CommandSpec implements CommandFixture {
         return result.content().findAll { it instanceof TextContent }.collect { ((TextContent) it).text() }.join('\n')
     }
 
-    private static boolean alive(long pid) {
-        return ProcessHandle.of(pid).map { ProcessHandle handle -> handle.alive }.orElse(false)
-    }
-
-    private static void eventually(Closure<Boolean> condition) {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60)
-        while (!condition.call()) {
-            if (System.nanoTime() > deadline) {
-                throw new AssertionError('It did not happen in 60 s')
-            }
-            Thread.sleep(50)
-        }
+    private static SubscriptionEvent next(BlockingQueue<SubscriptionEvent> events) {
+        SubscriptionEvent event = events.poll(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
+        assert event != null: "no event of the subscription came within ${SpecWaits.boundSeconds} s"
+        return event
     }
 
     /** What the server writes, passed on to the client, and kept line by line. */

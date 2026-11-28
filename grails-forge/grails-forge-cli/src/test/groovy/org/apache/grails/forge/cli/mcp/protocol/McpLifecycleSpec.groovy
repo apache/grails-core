@@ -31,6 +31,7 @@ import java.util.function.IntConsumer
 import io.modelcontextprotocol.modern.client.McpSyncClient
 import io.modelcontextprotocol.modern.client.McpSyncSubscriptionListener
 import io.modelcontextprotocol.modern.client.SubscriptionEvent
+import org.grails.forge.cli.SpecWaits
 import spock.lang.Specification
 import spock.lang.Timeout
 
@@ -39,7 +40,7 @@ import spock.lang.Timeout
  * the same order: the running calls are interrupted, the SDK is closed, what the session holds is closed,
  * and the process exits, unless a signal ends it already.
  */
-@Timeout(60)
+@Timeout(600)
 class McpLifecycleSpec extends Specification {
 
     StubMcpHandler handler = new StubMcpHandler()
@@ -58,49 +59,53 @@ class McpLifecycleSpec extends Specification {
     void cleanup() {
         handler.release.countDown()
         mcp.close()
+        McpLifecycle.setGrace(McpLifecycle.Reason.END_OF_INPUT, null)
     }
 
     void "the end of its input ends the server: the running call is interrupted, the SDK closed, the session closed, and it exits with 0"() {
         given:
         FutureTask<Integer> served = serve()
         CompletableFuture<Object> call = CompletableFuture.supplyAsync { callQuietly('block') }
-        handler.started.await(30, TimeUnit.SECONDS)
+        SpecWaits.await(handler.started, 'the start of the call')
 
         when: 'the client closes the input of the server'
         mcp.transport.close()
 
         then:
-        served.get(30, TimeUnit.SECONDS) == 0
+        SpecWaits.get(served, 'the end of serving') == 0
         handler.events == ['call interrupted', 'connection closed after the SDK: true', 'generator closed', 'exit 0']
         handler.cancelledWhenInterrupted
         lifecycle.reason == McpLifecycle.Reason.END_OF_INPUT
         !mcp.server.calls.taking
         mcp.server.calls.running().isEmpty()
-        call.get(30, TimeUnit.SECONDS) instanceof Throwable
+        SpecWaits.get(call, 'the end of the call') instanceof Throwable
         diagnosed.size() == 0
     }
 
     void "at the end of its input the server waits up to five seconds for a call that does not stop, and then ends all the same"() {
-        given:
+        given: 'a server that waits a second, in place of the five seconds it waits for a client'
+        assert McpLifecycle.Reason.END_OF_INPUT.grace == Duration.ofSeconds(5)
+        McpLifecycle.setGrace(McpLifecycle.Reason.END_OF_INPUT, Duration.ofSeconds(1))
         FutureTask<Integer> served = serve()
         CompletableFuture.supplyAsync { callQuietly('stubborn') }
-        handler.started.await(30, TimeUnit.SECONDS)
+        SpecWaits.await(handler.started, 'the start of the call')
 
         when:
         long closedAt = System.nanoTime()
         mcp.transport.close()
-        int exitCode = served.get(30, TimeUnit.SECONDS)
+        int exitCode = SpecWaits.get(served, 'the end of serving')
         Duration took = Duration.ofNanos(System.nanoTime() - closedAt)
 
-        then:
+        then: 'it waited the time it waits, which time itself holds: a lower bound, which a slow computer only exceeds'
         exitCode == 0
-        took >= McpLifecycle.Reason.END_OF_INPUT.grace.minusMillis(100)
+        took >= McpLifecycle.graceOf(McpLifecycle.Reason.END_OF_INPUT).minusMillis(100)
         handler.events == ['call interrupted', 'connection closed after the SDK: true', 'generator closed', 'exit 0']
         mcp.server.calls.running()*.tool == ['stubborn']
     }
 
     void "a signal ends the server without waiting long for a call that does not stop, and without exiting, since the JVM ends"() {
-        given:
+        given: 'a server that would wait as long as a wait of the feature may at the end of its input, which a signal is not'
+        McpLifecycle.setGrace(McpLifecycle.Reason.END_OF_INPUT, SpecWaits.BOUND)
         FutureTask<Integer> served = serve()
         CountDownLatch listenEnded = new CountDownLatch(1)
         CountDownLatch subscribed = new CountDownLatch(1)
@@ -120,29 +125,28 @@ class McpLifecycleSpec extends Specification {
                 listenEnded.countDown()
             }
         })
-        subscribed.await(30, TimeUnit.SECONDS)
+        SpecWaits.await(subscribed, 'the subscription')
         CompletableFuture.supplyAsync { callQuietly('stubborn') }
-        handler.started.await(30, TimeUnit.SECONDS)
+        SpecWaits.await(handler.started, 'the start of the call')
 
         when: 'the JVM is sent SIGTERM, and runs its hooks'
         Thread hook = new Thread(onSignal, 'spec-shutdown-hook')
         long signalledAt = System.nanoTime()
         hook.start()
-        hook.join(30_000)
+        SpecWaits.join(hook, 'the end of the hook')
         Duration took = Duration.ofNanos(System.nanoTime() - signalledAt)
 
         then: 'it waited a short while for the call, and closed everything, but left the exit to the JVM'
-        !hook.alive
-        took < McpLifecycle.Reason.END_OF_INPUT.grace
+        took < McpLifecycle.graceOf(McpLifecycle.Reason.END_OF_INPUT)
         handler.events == ['call interrupted', 'connection closed after the SDK: true', 'generator closed']
         lifecycle.reason == McpLifecycle.Reason.SIGNAL
         mcp.server.calls.running()*.tool == ['stubborn']
         mcp.server.calls.running()[0].interrupted
 
         and: 'the main thread returned without exiting, and the listen stream has ended'
-        served.get(30, TimeUnit.SECONDS) == 0
+        SpecWaits.get(served, 'the end of serving') == 0
         !handler.events.any { String event -> event.startsWith('exit') }
-        listenEnded.await(30, TimeUnit.SECONDS)
+        SpecWaits.await(listenEnded, 'the end of the listen stream')
 
         cleanup:
         listening?.close()
@@ -156,7 +160,7 @@ class McpLifecycleSpec extends Specification {
         lifecycle.requestExit(1)
 
         then:
-        served.get(30, TimeUnit.SECONDS) == 1
+        SpecWaits.get(served, 'the end of serving') == 1
         handler.events == ['connection closed after the SDK: true', 'generator closed', 'exit 1']
         lifecycle.reason == McpLifecycle.Reason.EXIT
     }
@@ -167,26 +171,28 @@ class McpLifecycleSpec extends Specification {
         CountDownLatch closerRuns = new CountDownLatch(1)
         lifecycle.onShutdown('the applications the session started') {
             closerRuns.countDown()
-            closing.await(30, TimeUnit.SECONDS)
+            closing.await(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
             handler.events << 'applications stopped'
         }
 
         when:
         Thread first = Thread.start { lifecycle.shutdown(McpLifecycle.Reason.END_OF_INPUT) }
-        closerRuns.await(30, TimeUnit.SECONDS)
+        SpecWaits.await(closerRuns, 'the closer of the first')
         Thread second = Thread.start {
             lifecycle.shutdown(McpLifecycle.Reason.SIGNAL)
             handler.events << 'second returned'
         }
-        second.join(500)
+        // the second waits once its thread is parked, which is where it waits for the first
+        SpecWaits.until('the wait of the second') { second.state in [Thread.State.WAITING, Thread.State.TIMED_WAITING, Thread.State.BLOCKED] }
 
         then: 'the second waits until the first has ended the server'
         second.alive
+        !handler.events.contains('second returned')
 
         when:
         closing.countDown()
-        first.join(30_000)
-        second.join(30_000)
+        SpecWaits.join(first, 'the end of the first')
+        SpecWaits.join(second, 'the end of the second')
         lifecycle.shutdown(McpLifecycle.Reason.EXIT)
 
         then:

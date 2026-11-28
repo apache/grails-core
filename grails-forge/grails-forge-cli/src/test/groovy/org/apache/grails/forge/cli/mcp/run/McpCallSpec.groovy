@@ -22,8 +22,9 @@ import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Callable
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -43,10 +44,10 @@ import io.modelcontextprotocol.modern.McpSchema.TextResourceContents
 import io.modelcontextprotocol.modern.McpSchema.Tool
 import io.modelcontextprotocol.modern.client.McpSyncClient
 import io.modelcontextprotocol.modern.client.McpSyncSubscriptionListener
-import io.modelcontextprotocol.modern.client.McpTimeoutException
 import io.modelcontextprotocol.modern.client.SubscriptionEvent
 import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.GradleBuild
+import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.apache.grails.forge.cli.mcp.McpLeftovers
 import org.apache.grails.forge.cli.mcp.McpNames
@@ -55,6 +56,8 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeContext
+import org.grails.forge.cli.Handshake
+import org.grails.forge.cli.SpecWaits
 import org.springframework.context.ApplicationContext
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
@@ -63,15 +66,18 @@ import spock.lang.Timeout
  * Calls of {@code grails mcp}, as its server runs them in this process, driven by the SDK's own client over
  * pipes: each is a command line of the command line, run with {@code --plain-output --non-interactive} on
  * streams of its own, and its result is what it wrote and how it ended. The project's Gradle wrapper is a
- * script that writes down what it was given and does what a feature asks of it.
+ * script that writes down what it was given and does what a feature asks of it: it says when a build that is held
+ * has started, and holds it until the feature releases it ({@link org.grails.forge.cli.Handshake}). A call the feature
+ * cancels runs on a thread of the feature's own, which the feature interrupts once the call is where the feature
+ * wants it, as a client does that cancels a call.
  */
 @IgnoreIf({ os.windows })
 @Timeout(600)
 class McpCallSpec extends CommandSpec implements CommandFixture {
 
-    // the Gradle wrapper of the project: it writes down each build it is given, in the directory of the project
+    // the Gradle wrapper of the project, after the functions of the handshake: it writes down each build it is given, in
+    // the directory of the project; testApp runs until it is ended, and clean until the feature releases it
     static final String WRAPPER = '''\
-        #!/bin/sh
         if [ -f stubborn ]; then trap '' TERM; fi
         case "$*" in
           *testApp*) task=testApp ;;
@@ -84,9 +90,8 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         echo "start $task" >> build-calls.txt
         case $task in
           testApp)
-            echo $$ > build.pid
-            sleep 300 &
-            echo $! > child.pid
+            hold child &
+            say testApp $!
             echo "the tests run"
             wait
             ;;
@@ -95,7 +100,8 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
             while [ $i -lt 5000 ]; do echo "line $i of the build"; i=$((i+1)); done
             ;;
           clean)
-            while [ ! -f release ]; do sleep 0.05; done
+            say clean
+            hold clean
             echo "cleaned"
             ;;
           *)
@@ -108,9 +114,6 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
 
     // what a call that waits for the build lane is told while clean holds it
     static final String WAITING_FOR_CLEAN = 'Waiting for clean, which is running'
-
-    // the round of a call a feature holds open, see held()
-    static final Duration HELD = Duration.ofMinutes(5)
 
     ByteArrayOutputStream processErr = new ByteArrayOutputStream()
     List<Integer> exits = new CopyOnWriteArrayList<>()
@@ -128,12 +131,15 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
     void cleanup() {
         // what the server said of itself, for a feature that failed
         System.err.print(processErr.toString(StandardCharsets.UTF_8.name()))
+        // a build a feature held, which the server waits for when it is closed, ends
+        handshake.releaseAll()
         mcp?.close()
         server?.close()
         PlainOutput.leave()
         ConsoleCommands.setSession(ConsoleCommands.Session.NONE)
         GradleBuild.setRunner(null)
         GradleBuild.closeConnections()
+        GradleRunner.setStopSeconds(null)
         McpLeftovers.assertNoneLeft()
     }
 
@@ -316,7 +322,7 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         BlockingQueue<SubscriptionEvent> events = new LinkedBlockingQueue<>()
         McpSyncClient.Listening listening = mcp.client.listen().toolsChanged().resourcesChanged()
                 .open({ SubscriptionEvent event -> events.put(event) } as McpSyncSubscriptionListener)
-        assert events.poll(60, TimeUnit.SECONDS) instanceof SubscriptionEvent.Subscribed
+        assert next(events) instanceof SubscriptionEvent.Subscribed
         assert !mcp.client.tools().list().tools()*.name().contains('compile')
 
         when: 'an application is created in the directory itself'
@@ -324,7 +330,7 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
 
         then: 'the lists changed before the result came, and have the commands and the resources of a project'
         !created.isError()
-        [events.poll(60, TimeUnit.SECONDS), events.poll(60, TimeUnit.SECONDS)]*.class as Set == [SubscriptionEvent.ToolsListChanged, SubscriptionEvent.ResourcesListChanged] as Set
+        [next(events), next(events)]*.class as Set == [SubscriptionEvent.ToolsListChanged, SubscriptionEvent.ResourcesListChanged] as Set
         mcp.client.tools().list().tools()*.name().containsAll(['compile', 'create-controller', 'refresh_tools'])
         mcp.client.resources().list().resources()*.uri().contains('grails://project')
 
@@ -431,7 +437,7 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
 
         when: 'a build that runs until it is released'
         Future<CallToolResult> first = callers.submit({ -> held('clean', null) } as Callable<CallToolResult>)
-        eventually { calls().contains('start clean') }
+        handshake.awaitStep('clean')
 
         and: 'a second build, and a third once the second is told that it waits for its lane'
         Future<CallToolResult> second = callers.submit({ -> held('compile', toldSecond) } as Callable<CallToolResult>)
@@ -449,12 +455,12 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         calls() == ['start clean']
 
         when:
-        new File(dir, 'release').text = ''
+        handshake.release('clean')
 
         then: 'each build ran when the one before it had ended, in the order they came, however long they waited'
-        !first.get(60, TimeUnit.SECONDS).isError()
-        !second.get(60, TimeUnit.SECONDS).isError()
-        !third.get(60, TimeUnit.SECONDS).isError()
+        !SpecWaits.get(first, 'the result of the first build').isError()
+        !SpecWaits.get(second, 'the result of the second build').isError()
+        !SpecWaits.get(third, 'the result of the third build').isError()
         calls() == ['start clean', 'end clean', 'start classes', 'end classes', 'start dependencies', 'end dependencies']
 
         and: 'a call is told that it runs once it has its lane, and is not told after that that it waits'
@@ -470,23 +476,32 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         given:
         project()
         serve()
+        ExecutorService callers = Executors.newCachedThreadPool()
+        List<String> told = new CopyOnWriteArrayList<>()
+        List<Throwable> failed = new CopyOnWriteArrayList<>()
 
-        when: 'a build runs, and a second build is cancelled while it waits for it'
-        CompletableFuture<CallToolResult> first = CompletableFuture.supplyAsync { mcp.client.tool('clean').call() }
-        eventually { calls().contains('start clean') }
-        mcp.client.tool('compile').callTimeout(Duration.ofSeconds(2)).call()
+        when: 'a build runs, and a second build is cancelled once it is told that it waits for it'
+        Future<CallToolResult> first = callers.submit({ -> held('clean', null) } as Callable<CallToolResult>)
+        handshake.awaitStep('clean')
+        Thread second = calling('compile', told, failed)
+        eventually { told.contains(WAITING_FOR_CLEAN) }
+        second.interrupt()
+        SpecWaits.join(second, 'the end of the cancelled call')
 
-        then:
-        thrown(McpTimeoutException)
+        then: 'the client gave up on it'
+        failed*.class == [CancellationException]
 
         when: 'the first build ends, and another build is called'
-        new File(dir, 'release').text = ''
-        first.get(60, TimeUnit.SECONDS)
+        handshake.release('clean')
+        SpecWaits.get(first, 'the result of the first build')
         CallToolResult third = mcp.client.tool('dependency-report').call()
 
         then: 'the cancelled build never ran'
         !third.isError()
         calls() == ['start clean', 'end clean', 'start dependencies', 'end dependencies']
+
+        cleanup:
+        callers?.shutdownNow()
     }
 
     void "a cancelled build is interrupted: Gradle and what it started are stopped"() {
@@ -495,48 +510,70 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         serve()
 
         List<String> told = new CopyOnWriteArrayList<>()
+        List<Throwable> failed = new CopyOnWriteArrayList<>()
 
-        when:
-        mcp.client.tool('test-app').progress({ ProgressParams params -> told << params.message() } as Consumer<ProgressParams>)
-                .callTimeout(Duration.ofSeconds(3)).call()
+        when: 'the call is cancelled once the client was told of the line the build wrote'
+        Thread call = calling('test-app', told, failed)
+        eventually { told.contains('1 line; the last: the tests run') }
+        call.interrupt()
+        SpecWaits.join(call, 'the end of the cancelled call')
 
-        then:
-        thrown(McpTimeoutException)
+        then: 'the client gave up on it'
+        failed*.class == [CancellationException]
 
         and: 'while it ran, the client was told that it ran, and how many lines it wrote and the last of them'
         told[0] == 'Running: grails test-app'
-        told.contains('1 line; the last: the tests run')
 
-        and: 'the wrapper had started, and it and its child are ended'
-        long build = new File(dir, 'build.pid').text.trim() as long
-        long child = new File(dir, 'child.pid').text.trim() as long
-        eventually { !alive(build) && !alive(child) }
+        and: 'the wrapper had started, and it and its child are ended, though nothing released them'
+        Handshake.Step build = handshake.awaitStep('testApp')
+        Handshake.awaitExit(build.pid)
+        Handshake.awaitExit(build.number(0))
 
         and: 'the lane takes the next build'
         !mcp.client.tool('compile').call().isError()
     }
 
     void "a cancelled call of the generator lane is not interrupted: it writes all of its files, its result is dropped, and its lane is free once it has ended"() {
-        given: 'a directory in no project, and a project generator that takes a while to start when the first call needs it, which an interrupt would stop'
+        given: 'a directory in no project, and a project generator that starts, when the first call needs it, once the feature lets it, which an interrupt would stop'
+        CountDownLatch starting = new CountDownLatch(1)
+        CountDownLatch go = new CountDownLatch(1)
+        List<String> interrupted = new CopyOnWriteArrayList<>()
         serve(new ForgeContext({ ->
-            Thread.sleep(3000)
+            starting.countDown()
+            try {
+                go.await()
+            } catch (InterruptedException e) {
+                interrupted << 'the generator was interrupted while it started'
+                throw e
+            }
             beanContext
         } as Supplier<ApplicationContext>))
+        List<Throwable> failed = new CopyOnWriteArrayList<>()
 
-        when: 'create-app is cancelled while the generator starts'
-        mcp.client.tool('create-app').arguments([name: 'shop']).callTimeout(Duration.ofSeconds(1)).call()
+        when: 'create-app is cancelled while the generator starts, and the server has taken it for cancelled'
+        Thread call = calling('create-app', [name: 'shop'], null, failed)
+        SpecWaits.await(starting, 'the start of the generator')
+        call.interrupt()
+        SpecWaits.join(call, 'the end of the cancelled call')
+        // the server no longer runs the call once it took it for cancelled, while its command goes on in its lane
+        eventually { mcp.server.calls.running().isEmpty() }
 
-        then:
-        thrown(McpTimeoutException)
+        then: 'the client gave up on it'
+        failed*.class == [CancellationException]
 
-        when: 'a call of the same lane comes next'
+        when: 'a call of the same lane comes next, and the generator starts once that call is told that it waits'
         List<String> told = new CopyOnWriteArrayList<>()
-        CallToolResult next = mcp.client.tool('create-app').arguments([name: 'other'])
-                .progress({ ProgressParams params -> told << params.message() } as Consumer<ProgressParams>).call()
+        CallToolResult next = mcp.client.tool('create-app').arguments([name: 'other']).progress({ ProgressParams params ->
+            told << params.message()
+            if (params.message() == 'Waiting for create-app, which is running') {
+                go.countDown()
+            }
+        } as Consumer<ProgressParams>).call()
 
         then: 'it waited for the cancelled call, which went on to its end'
         !next.isError()
         told.contains('Waiting for create-app, which is running')
+        interrupted == []
 
         and: 'the cancelled call wrote the whole application, as the call that was not cancelled did'
         files(new File(dir, 'shop')).size() > 20
@@ -546,22 +583,23 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
     }
 
     void "a cancelled build that does not stop is given up on: its lane takes other builds, and after three the server asks to end with exit code 1"() {
-        given: 'a build that does not end when it is asked to, and a server that gives up on a call one second after it was cancelled'
+        given: 'a build that does not end when it is asked to, and is not ended by force while the feature runs, and a server that gives up on a call one second after it was cancelled'
         project()
         new File(dir, 'stubborn').text = ''
+        GradleRunner.setStopSeconds(SpecWaits.boundSeconds as int)
         GrailsMcpServer.Settings settings = settings()
         settings.abandonAfter = Duration.ofSeconds(1)
-        // closing the server waits for the builds it gave up on, which end when their Gradle is ended by force, 10 s after it was asked to end
-        settings.commandsAtShutdown = Duration.ofSeconds(60)
+        // closing the server waits for the builds it gave up on, which end when the feature releases them
+        settings.commandsAtShutdown = SpecWaits.BOUND
         serve(ForgeContext.of(beanContext), settings)
 
-        when:
-        3.times {
-            try {
-                mcp.client.tool('test-app').callTimeout(Duration.ofSeconds(1)).call()
-            } catch (McpTimeoutException ignored) {
-                // the client gave up on it, and cancelled it
-            }
+        when: 'three times, a build is cancelled once it has started'
+        (1..3).each { int time ->
+            Thread call = calling('test-app', null, new CopyOnWriteArrayList<Throwable>())
+            handshake.awaitStep('testApp', time)
+            // the client gave up on it, and cancelled it
+            call.interrupt()
+            SpecWaits.join(call, 'the end of the cancelled call')
             eventually { mcp.server.calls.running().isEmpty() }
         }
 
@@ -572,23 +610,25 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
                 'Its lane takes other calls again, and the next build gets a new connection to Gradle.') } == 3
         said.contains('| Error grails mcp ends: 3 calls did not end after they were cancelled. The client starts it again.')
         calls().count { it == 'start testApp' } == 3
+        handshake.said('testApp').every { Handshake.Step build -> SpecWaits.alive(build.pid) }
 
         cleanup:
         new File(dir, 'stubborn').delete()
     }
 
     void "closing the server waits a while for a command that still runs in the process, and says which it no longer waits for"() {
-        given: 'a build that takes ten seconds to end when it is cancelled, and a server that waits one second for it when it is closed'
+        given: 'a build that does not end when it is cancelled until the feature releases it, and a server that waits one second for it when it is closed'
         project()
         new File(dir, 'stubborn').text = ''
+        GradleRunner.setStopSeconds(SpecWaits.boundSeconds as int)
         GrailsMcpServer.Settings settings = settings()
         settings.commandsAtShutdown = Duration.ofSeconds(1)
         serve(ForgeContext.of(beanContext), settings)
-        try {
-            mcp.client.tool('test-app').callTimeout(Duration.ofSeconds(1)).call()
-        } catch (McpTimeoutException ignored) {
-            // the client gave up on it, and cancelled it
-        }
+        Thread call = calling('test-app', null, new CopyOnWriteArrayList<Throwable>())
+        long build = handshake.awaitStep('testApp').pid
+        // the client gave up on it, and cancelled it
+        call.interrupt()
+        SpecWaits.join(call, 'the end of the cancelled call')
 
         when:
         long closing = System.nanoTime()
@@ -596,11 +636,14 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         long tookMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - closing)
 
         then: 'it waited, and then said that the build still runs'
+        // time itself is what is held here: a lower bound, which a slow computer only exceeds
         tookMillis >= 900
         processErr.toString(StandardCharsets.UTF_8.name()).readLines().contains('| Warning grails mcp ends while a command still runs in its process (test-app): ' +
                 'what it wrote last may not be whole, and the next command of the project says so where it can')
+        SpecWaits.alive(build)
 
-        cleanup: 'the build ends by itself, before the next feature'
+        cleanup: 'the build ends once it is released, before the next feature'
+        handshake.releaseAll()
         eventually { mcp.server.calls.running().isEmpty() }
         new File(dir, 'stubborn').delete()
     }
@@ -626,9 +669,7 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
     // a web application, whose Gradle wrapper is the script above
     private void project() {
         generateProject(ApplicationType.WEB)
-        File wrapper = new File(dir, 'gradlew')
-        wrapper.text = WRAPPER
-        wrapper.setExecutable(true, false)
+        stubWrapper(dir, WRAPPER)
     }
 
     private void serve(ForgeContext context = ForgeContext.of(beanContext), GrailsMcpServer.Settings settings = settings()) {
@@ -645,15 +686,43 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         return settings
     }
 
-    // A call a feature holds open while it looks at what else runs: the round of the call, which is all of it, lasts as
-    // long as the waits of the feature may, each of which is bounded, and not the 30 s the client gives a call. What the
-    // call is told while it runs is added to the list, where there is one.
+    // A call a feature holds open while it looks at what else runs: its round lasts as long as a wait of the feature may,
+    // as that of every call does (InProcessMcp). What the call is told while it runs is added to the list, where there is one.
     private CallToolResult held(String tool, List<String> told) {
-        McpSyncClient.ToolSpec call = mcp.client.tool(tool).roundTimeout(HELD)
+        McpSyncClient.ToolSpec call = mcp.client.tool(tool)
         if (told != null) {
             call = call.progress({ ProgressParams params -> told << params.message() } as Consumer<ProgressParams>)
         }
         return call.call()
+    }
+
+    private Thread calling(String tool, List<String> told, List<Throwable> failed) {
+        return calling(tool, null, told, failed)
+    }
+
+    // A call on a thread of the feature's own, which the feature cancels by interrupting the thread, as a client does
+    // that cancels a call: the SDK's client then tells the server that it was cancelled. How the call ended for the
+    // client is added to the list.
+    private Thread calling(String tool, Map<String, Object> arguments, List<String> told, List<Throwable> failed) {
+        Thread thread = new Thread({
+            try {
+                McpSyncClient.ToolSpec call = mcp.client.tool(tool).arguments(arguments)
+                if (told != null) {
+                    call = call.progress({ ProgressParams params -> told << params.message() } as Consumer<ProgressParams>)
+                }
+                call.call()
+            } catch (Throwable e) {
+                failed << e
+            }
+        }, "call of ${tool}")
+        thread.start()
+        return thread
+    }
+
+    private static SubscriptionEvent next(BlockingQueue<SubscriptionEvent> events) {
+        SubscriptionEvent event = events.poll(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)
+        assert event != null: "no event of the subscription came within ${SpecWaits.boundSeconds} s"
+        return event
     }
 
     private List<String> calls() {
@@ -673,10 +742,6 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
         return java.nio.file.attribute.PosixFilePermissions.toString(java.nio.file.Files.getPosixFilePermissions(file.toPath()))
     }
 
-    private static boolean alive(long pid) {
-        return ProcessHandle.of(pid).map { ProcessHandle handle -> handle.alive }.orElse(false)
-    }
-
     private static List<String> files(File root) {
         List<String> found = []
         root.eachFileRecurse { File file ->
@@ -689,12 +754,6 @@ class McpCallSpec extends CommandSpec implements CommandFixture {
     }
 
     private static void eventually(Closure<Boolean> condition) {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60)
-        while (!condition.call()) {
-            if (System.nanoTime() > deadline) {
-                throw new AssertionError('It did not happen in 60 s')
-            }
-            Thread.sleep(20)
-        }
+        SpecWaits.until('the condition of the feature', { -> condition.call() as boolean } as Supplier<Boolean>)
     }
 }
