@@ -39,19 +39,10 @@ A plugin comes after the plugins it depends on, and if any of them cannot be loa
 plugin discovery throws an exception naming every plugin with an unmet dependency and why, as described in
 <<unmetPluginDependencies,Unmet Dependencies>>.
 
-`dependsOn` means the plugin cannot work without the other one, so the other one must come with it. When a plugin is
-built with the Grails Gradle plugin, the `verifyPluginDependencies` task, which `check` runs, fails the build if no
-dependency of the plugin's project provides a plugin it depends on (no artifact on the project's runtime class path holds
-`META-INF/grails/plugins/<name>/plugin.properties`):
-
-[source]
-----
-Grails plugins depend on plugins their project does not provide:
-- Grails plugin [audit] depends on [controllers], but no dependency of project :audit provides it (...)
-----
-
-Add the dependency that provides the plugin, or, if the plugin only has to come after the other one when that one is
-present, name it in `after` instead.
+`dependsOn` means the plugin cannot work without the other one, so the other one must come with it: add the dependency
+that provides it, or, if the plugin only has to come after the other one when that one is present, name it in `after`
+instead. The build of a plugin, and of an application, fails on an unmet dependency and on a circular order, as described
+in <<verifyingPlugins,Checking the Plugins When the Application Is Built>>.
 
 A dependency can name a range of versions after a colon, in a mini expression language:
 

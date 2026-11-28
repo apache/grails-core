@@ -41,7 +41,7 @@ applications at via `GRAILS_REPO_URL`.
 | `native-i18n-plugin` | A plugin shipping a namespaced message bundle (`native-messages.properties`) and a `plugin.yml`, with a multi-word plugin name. |
 | `spring-dependency-management` | A Grails 8 application that manages its versions with the legacy `io.spring.dependency-management` plugin instead of the Grails Gradle plugin's native `platform(grails-bom)`, as an upgraded Grails 7 application does. |
 | `taglib-index-incremental` | Builds a Grails 8 application **twice, without a clean**, to prove a renamed or deleted tag library cannot survive in the published tag library index. Incremental behaviour is the whole point, so it cannot be expressed by a project the core build builds once for itself. |
-| `plugin-index-incremental` | Checks Spring Boot auto-configuration imports and GORM service discovery in clean and incrementally rebuilt plugin JARs, including plugins that supply their own service providers. |
+| `plugin-index-incremental` | Checks Spring Boot auto-configuration imports and GORM service discovery in clean and incrementally rebuilt plugin JARs, including plugins that supply their own service providers, and that `check` fails on the plugins that would stop an application from starting. |
 | `cli-index-incremental` | Verifies CLI discovery from incrementally rebuilt JARs. |
 
 `legacy-g7-command-plugin` is deliberately excluded from `settings.gradle`. An included build would

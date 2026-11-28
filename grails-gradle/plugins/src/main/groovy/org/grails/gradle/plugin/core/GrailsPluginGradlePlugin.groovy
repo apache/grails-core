@@ -48,7 +48,6 @@ import org.apache.grails.gradle.publish.GrailsPublishExtension
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 import org.grails.gradle.plugin.commands.GrailsCliArtifactGradlePlugin
-import org.grails.gradle.plugin.dependencies.GrailsPluginDependenciesGradlePlugin
 import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
@@ -96,7 +95,6 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         super.apply(project)
 
         project.pluginManager.apply('java-library')
-        project.pluginManager.apply(GrailsPluginDependenciesGradlePlugin)
 
         checkForConfigurationClash(project)
         configureAstSources(project)

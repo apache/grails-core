@@ -404,7 +404,9 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                 );
             } else {
                 unresolvedDependencies.add(
-                        "dependency [" + name + "] with required version [" + requiredVersion + "] is missing"
+                        "dependency [" + name + "] with required version [" + requiredVersion + "] is missing: " +
+                                "add a dependency that provides it, or, if [" + plugin.getName() + "] only has to " +
+                                "come after [" + name + "] when it is present, name it in after instead of dependsOn"
                 );
             }
         }

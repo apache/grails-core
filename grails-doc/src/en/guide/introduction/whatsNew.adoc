@@ -98,10 +98,13 @@ class QuartzGrailsPlugin extends Plugin {
   `before` names; plugins left unordered come in the order of their names, never in the order of the class path, and a
   circular order stops the application with a message naming the circle. Configuration, bean registrars, hooks, the
   auto-configurations of `beans` blocks, views, static resources, messages and URL mappings all follow it, and where two
-  plugins provide the same thing, the later one wins. The build checks that a dependency of a plugin's project provides
-  each plugin it depends on.
+  plugins provide the same thing, the later one wins.
 * **Unmet dependencies stop the application.** A plugin whose `dependsOn` is not met no longer leaves the application
   running without it: startup fails with one exception that names every such plugin, every dependency it lacks and why.
+  A plugin built for Grails 8 stops it too, rather than being left out.
+* **Plugins checked when the application is built.** `check` runs the application's own plugin discovery for each
+  environment, with the project's class path and plugin filters, so an unmet dependency, a circular order or a plugin
+  built for Grails 8 fails the build of the application, or of the plugin, rather than its start.
 * **One way to register beans.** A plugin registers its beans with `beanRegistrar()` and with a `beans` block, and
   registers what the `BeanRegistry` API cannot express, such as abstract parents, aliases and autowiring by name, from
   a post-processor its registrar registers. The `doWithSpring` bean builder hook is gone from plugins, and a plugin

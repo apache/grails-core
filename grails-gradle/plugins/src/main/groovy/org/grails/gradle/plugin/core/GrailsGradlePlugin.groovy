@@ -89,6 +89,7 @@ import org.apache.grails.gradle.plugin.aot.TrainAotCacheTask
 import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
+import org.grails.gradle.plugin.verification.GrailsPluginVerificationGradlePlugin
 import org.springframework.boot.gradle.dsl.SpringBootExtension
 import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
@@ -148,7 +149,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
      */
     private final Map<String, Closure<String>> grailsCompilerConfigScripts = new ConcurrentHashMap<>()
 
-    List<Class<Plugin>> basePluginClasses = [IntegrationTestGradlePlugin] as List<Class<Plugin>>
+    List<Class<Plugin>> basePluginClasses = [IntegrationTestGradlePlugin, GrailsPluginVerificationGradlePlugin] as List<Class<Plugin>>
     List<String> excludedGrailsAppSourceDirs = ['migrations', 'assets']
     List<String> grailsAppResourceDirs = ['views', 'i18n', 'conf', 'migrations']
     private final ToolingModelBuilderRegistry registry

@@ -1790,9 +1790,13 @@ the one order. In it:
   compilation error; ordering against a Spring Boot auto-configuration that is not a Grails plugin's stays allowed.
 
 `dependsOn` means the plugin cannot work without the other one, so a dependency of the plugin's project must provide
-it. The Grails Gradle plugin adds `verifyPluginDependencies` to `check`, which fails the build of a plugin that depends
-on a plugin none of its project's dependencies provides. A plugin that depends on another only to come after it, when it
-is there, names it in `after` instead.
+it. A plugin that depends on another only to come after it, when it is there, names it in `after` instead.
+
+The Grails Gradle plugin adds `verifyGrailsPlugins` to `check`, in the build of every application and plugin. It runs
+the application's plugin discovery for the `development`, `test` and `production` environments, with the project's
+class path and its `grails.plugin.includes` or `grails.plugin.excludes`, and fails the build on what would stop the
+application from starting: a plugin built for Grails 8, an unmet `dependsOn`, a circular order. See
+<<verifyingPlugins,Checking the Plugins When the Application Is Built>>.
 
 Some framework plugins changed their declarations accordingly: `mimeTypes` and `converters` no longer depend on
 `controllers` (and `converters` not on `domainClass`; it comes after both), `groovyPages` and `layout` no longer depend

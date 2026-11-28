@@ -172,6 +172,43 @@ for each, every dependency it lacks and why:
 
 A plugin that depends on a plugin another plugin evicts still loads: the evicting plugin stands in for the evicted one.
 
+[[verifyingPlugins]]
+==== Checking the Plugins When the Application Is Built
+
+The Grails Gradle plugin adds `verifyGrailsPlugins` to `check`, in the build of every application and plugin. It runs the
+same discovery the application runs when it starts, with the project's runtime and compile class paths, in a JVM of the
+project's Java toolchain, so the build fails on what would stop the application from starting: a plugin built for an
+earlier Grails, a descriptor that cannot be read, an unmet `dependsOn` and a plugin order that is circular. A plugin's
+build is checked with the dependencies it declares, so a `dependsOn` that none of them provides fails it, not the
+application that uses it later.
+
+Each of the `development`, `test` and `production` environments is checked as the application starts in it: with the
+plugins that support the environment, and with the `grails.plugin.includes` or `grails.plugin.excludes` of
+`application.yml` and `application.groovy`, including their `environments` blocks. A failure names the environments
+it happens in and gives the reason the application would give:
+
+[source]
+----
+The Grails plugins of this project would stop its application from starting:
+In the development, test, production environments: Grails plug-ins cannot be loaded because their dependencies are not met:
+- Grails plug-in [audit] cannot be loaded: dependency [reports] with required version [*] is missing: add a dependency that provides it, or, if [audit] only has to come after [reports] when it is present, name it in after instead of dependsOn
+----
+
+The task writes the plugin order of each environment to `build/grails/plugin-order.txt`. A build that uses other
+environments sets them:
+
+[source,groovy]
+----
+tasks.named('verifyGrailsPlugins') {
+    environments = ['development', 'test', 'staging', 'production']
+}
+----
+
+Configuration the application gets elsewhere, such as from an environment variable, a system property or a Spring
+profile, is not known when it is built, so the application still checks its plugins again when it starts. A project
+that compiles Grails plugins without the Grails Gradle plugin applies `org.apache.grails.gradle.grails-plugin-verification`
+to get the task.
+
 ==== The Plugin Descriptor
 
 The compiler writes the plugin's descriptor beside its classes, so a plugin is described the same way however it is
