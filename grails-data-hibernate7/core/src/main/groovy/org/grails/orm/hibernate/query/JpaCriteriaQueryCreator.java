@@ -44,6 +44,7 @@ import org.springframework.core.convert.ConversionService;
 
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ToMany;
@@ -330,8 +331,7 @@ public class JpaCriteriaQueryCreator<T> {
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context, boolean countOnly) {
         // A count makes the joins of the sort, to count the rows that the list pages through, and joins a collection
         // that only the sort uses. A list that fetches a collection returns each instance once, so the count of its
-        // instances counts them once, and the fetch join of the collection, which the sort of the list goes through,
-        // leaves out no instance. The count of a query with projections has no fetch
+        // instances counts them once. The count of a query with projections has no fetch
         Set<String> fetchPaths = countOnly && cq != null && fetchesCollection() ? fetchPaths() : Collections.emptySet();
         boolean joinedCollection = false;
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
@@ -351,9 +351,6 @@ public class JpaCriteriaQueryCreator<T> {
                 // a distinct or grouped query can only be ordered by what it selects, so an order by what a
                 // projection selects sorts by the expression of the projection and not through a join of its own
                 expression = context.getFullyQualifiedExpression(propertyName);
-            } else if (sortsThroughFetchedCollection(propertyName, fetchPaths)) {
-                // the list sorts through the fetch join, which leaves out no instance
-                continue;
             } else {
                 if (countOnly && cq != null && isEntityCount()) {
                     joinFetchedAssociation(context.getRoot(), propertyName);
@@ -401,13 +398,12 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     /**
-     * Whether the query requests a fetch or a join type for a collection of the queried class.
+     * Whether the query requests a fetch or a join type for a collection of the queried class. A path through the
+     * collection is not fetched, so the list has a row for each element of the collection that its sort joins.
      */
     private boolean fetchesCollection() {
         for (String path : fetchPaths()) {
-            int dot = path == null ? -1 : path.indexOf('.');
-            String first = path == null ? null : dot < 0 ? path : path.substring(0, dot);
-            if (first != null && entity.getPropertyByName(first) instanceof ToMany<?>) {
+            if (path != null && path.indexOf('.') < 0 && entity.getPropertyByName(path) instanceof ToMany<?>) {
                 return true;
             }
         }
@@ -432,47 +428,34 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     /**
-     * Whether a sort path from the queried class goes through a collection that the query fetches. The list sorts
-     * through the fetch join of the collection, which keeps the instances whose collection is empty.
-     */
-    private boolean sortsThroughFetchedCollection(String propertyName, Set<String> fetchPaths) {
-        if (fetchPaths.isEmpty()) {
-            return false;
-        }
-        String[] tokens = propertyName.split("\\.");
-        PersistentEntity current = entity;
-        String path = null;
-        for (int i = 0; i < tokens.length - 1 && current != null; i++) {
-            if (!(current.getPropertyByName(tokens[i]) instanceof Association<?> association)) {
-                return false;
-            }
-            path = path == null ? tokens[i] : path + '.' + tokens[i];
-            if (association instanceof ToMany<?> && fetchPaths.contains(path)) {
-                return true;
-            }
-            current = association.getAssociatedEntity();
-        }
-        return false;
-    }
-
-    /**
-     * Joins the association to a single instance that a sort path of a count starts with, when the list that is
-     * counted fetches the association with a left join. The sort of the list reads the association through that
-     * fetch join, which keeps the instances whose association is {@code null}, so the count joins it with a left join
-     * as well, unless the criteria have joined it already: the sort of the list then reads the join of the criteria.
+     * Joins the association that a sort path of a count starts with, when the list that is counted fetches the
+     * association with a left join. The sort of the list reads the association, and the rest of the path after it,
+     * through that fetch join, which keeps the instances whose association is {@code null} or whose collection is
+     * empty, so the count joins it with a left join as well, unless the criteria have joined it already: the sort of
+     * the list then reads the join of the criteria. An association that the list fetches with another join type
+     * needs no join here: the sort of the count joins it with the join type that the query requests for it.
      */
     private void joinFetchedAssociation(From<?, ?> root, String propertyName) {
-        int dot = propertyName.indexOf('.');
+        String sortPath = withoutRootPrefix(propertyName);
+        int dot = sortPath.indexOf('.');
         if (dot < 0 || hibernateQuery == null) {
             return;
         }
-        String path = propertyName.substring(0, dot);
+        String path = sortPath.substring(0, dot);
+        PersistentProperty<?> property = entity.getPropertyByName(path);
         if (hibernateQuery.getFetchJoinPaths().contains(path) &&
                 detachedCriteria.getJoinTypes().getOrDefault(path, JoinType.LEFT) == JoinType.LEFT &&
-                entity.getPropertyByName(path) instanceof ToOne<?> toOne && !(toOne instanceof Embedded) &&
+                (property instanceof ToOne<?> && !(property instanceof Embedded) || property instanceof ToMany<?>) &&
                 root.getJoins().stream().noneMatch(join -> path.equals(join.getAttribute().getName()))) {
             root.join(path, JoinType.LEFT);
         }
+    }
+
+    /**
+     * A sort path without the {@code root.} prefix, which names the queried class, as the sort of a list reads it.
+     */
+    private static String withoutRootPrefix(String propertyName) {
+        return propertyName.startsWith("root.") ? propertyName.substring(5) : propertyName;
     }
 
     /**
@@ -510,7 +493,7 @@ public class JpaCriteriaQueryCreator<T> {
      * key in the table before it on the path. An explicit alias starts at its associated entity.
      */
     private static boolean endsWithForeignKey(PersistentEntity from, String propertyName, JpaQueryContext context) {
-        String[] tokens = propertyName.split("\\.");
+        String[] tokens = withoutRootPrefix(propertyName).split("\\.");
         PersistentEntity current = from;
         int first = 0;
         HibernateAlias alias = context.getAliasRegistry().getDefinition(tokens[0]);
