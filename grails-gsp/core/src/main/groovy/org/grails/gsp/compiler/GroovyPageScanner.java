@@ -19,6 +19,7 @@
 package org.grails.gsp.compiler;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -44,8 +45,14 @@ class GroovyPageScanner implements Tokens {
     private int state = HTML;
     private int len;
     private String lastNamespace;
+    // where each line of the page begins, in the text as it was before any comment was removed from it
     private List<Integer> lineNumberPositions;
     private int lastLineNumberIndex = -1;
+    // where comments were removed, in the text as it is now and in the order of the text, and how many
+    // characters had been removed up to and including each
+    private int[] removedAt = new int[16];
+    private int[] removedUpTo = new int[16];
+    private int removals;
     private String pageName = "Unknown";
     private int maxHtmlLength = DEFAULT_MAX_HTML_LENGTH;
     private Pattern isTagNameSpacePattern = Pattern.compile("^\\p{Alpha}\\w*$");
@@ -68,7 +75,8 @@ class GroovyPageScanner implements Tokens {
         lineNumberPositions = new ArrayList<>();
         // first line starts at 0
         lineNumberPositions.add(0);
-        for (int i = 0; i < len; i++) {
+        // a line break that ends the page starts no line: what is found at the end is on the last line
+        for (int i = 0; i < len - 1; i++) {
             if (text.charAt(i) == '\n') {
                 // next line starts after LF
                 lineNumberPositions.add(i + 1);
@@ -100,14 +108,44 @@ class GroovyPageScanner implements Tokens {
     }
 
     int getLineNumberForToken() {
+        return getLineNumberAt(begin2);
+    }
+
+    /**
+     * The line of the page a position of the text as it is now is on. The positions are asked for in
+     * the order of the text, by {@link #getLineNumberForToken()} for where a token begins and for where
+     * an expression begins that does not end.
+     */
+    private int getLineNumberAt(int positionNow) {
+        int position = positionNow + removedBefore(positionNow);
         for (int i = lastLineNumberIndex + 1; i < lineNumberPositions.size(); i++) {
-            if (lineNumberPositions.get(i) > begin2) {
+            if (lineNumberPositions.get(i) > position) {
                 lastLineNumberIndex = i - 1;
                 return i;
             }
         }
-        // unknown
-        return 1;
+        // no line begins after the token: it is on the last one
+        return lineNumberPositions.size();
+    }
+
+    /**
+     * The characters of comments that were removed in front of a position of the text as it is now. What
+     * directly follows a removed comment is after it, on the line the comment ended on.
+     */
+    private int removedBefore(int position) {
+        int low = 0;
+        int high = removals - 1;
+        int removed = 0;
+        while (low <= high) {
+            int middle = (low + high) >>> 1;
+            if (removedAt[middle] <= position) {
+                removed = removedUpTo[middle];
+                low = middle + 1;
+            } else {
+                high = middle - 1;
+            }
+        }
+        return removed;
     }
 
     String getNamespace() {
@@ -233,7 +271,8 @@ class GroovyPageScanner implements Tokens {
         char terminationChar = '}';
         char nextTerminationChar = 0;
         boolean startInExpression = true;
-        GroovyPageExpressionParser expressionParser = new GroovyPageExpressionParser(text, end1 - 1, terminationChar, nextTerminationChar, startInExpression);
+        int expressionStart = end1 - 1;
+        GroovyPageExpressionParser expressionParser = new GroovyPageExpressionParser(text, expressionStart, terminationChar, nextTerminationChar, startInExpression);
         int endpos = expressionParser.parse();
         if (endpos != -1) {
             end1 = endpos + 1;
@@ -244,7 +283,8 @@ class GroovyPageScanner implements Tokens {
             return found(expressionEndState, nextTerminationChar == 0 ? 1 : 2);
         }
 
-        throw new GrailsTagException("Unclosed GSP expression", pageName, getLineNumberForToken());
+        // the expression began two characters before what the parser was given, with its ${
+        throw new GrailsTagException("Unclosed GSP expression", pageName, getLineNumberAt(Math.max(expressionStart - 2, begin2)));
     }
 
     private boolean isClosingTag(char c1) {
@@ -285,8 +325,18 @@ class GroovyPageScanner implements Tokens {
                 break;
             }
         }
-        text = text.substring(0, --end1) + text.substring(ix + 4);
+        int removedFrom = --end1;
+        int removed = ix + 4 - removedFrom;
+        text = text.substring(0, removedFrom) + text.substring(ix + 4);
         len = text.length();
+        // the lines of the comment still count: what follows it is as far on in the page as it was
+        if (removals == removedAt.length) {
+            removedAt = Arrays.copyOf(removedAt, removals * 2);
+            removedUpTo = Arrays.copyOf(removedUpTo, removals * 2);
+        }
+        removedAt[removals] = removedFrom;
+        removedUpTo[removals] = removed + (removals == 0 ? 0 : removedUpTo[removals - 1]);
+        removals++;
         return true;
     }
 

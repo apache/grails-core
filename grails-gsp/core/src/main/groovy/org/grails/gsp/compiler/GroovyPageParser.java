@@ -563,20 +563,35 @@ public class GroovyPageParser implements Tokens {
             return;
         }
 
-        String text = scan.getToken().trim();
-        out.printlnToResponse(text);
+        String token = scan.getToken();
+        out.printlnToResponse(GroovyPage.OUT_STATEMENT, token.trim(), getLineNumberOfTrimmedToken(token));
     }
 
     private void expr() {
         if (!finalPass) return;
 
-        String text = scan.getToken().trim();
-        text = getExpressionText(text);
+        String token = scan.getToken();
+        int line = getLineNumberOfTrimmedToken(token);
+        String text = getExpressionText(token.trim());
         if (text != null && text.length() > 2 && text.startsWith("(") && text.endsWith(")")) {
-            out.printlnToResponse(GroovyPage.EXPRESSION_OUT_STATEMENT, text.substring(1, text.length() - 1));
+            out.printlnToResponse(GroovyPage.EXPRESSION_OUT_STATEMENT, text.substring(1, text.length() - 1), line);
         } else {
-            out.printlnToResponse(GroovyPage.EXPRESSION_OUT_STATEMENT, text);
+            out.printlnToResponse(GroovyPage.EXPRESSION_OUT_STATEMENT, text, line);
         }
+    }
+
+    /**
+     * The line of the page that the text of the token starts on once the white space in front of it is
+     * left out, as {@link String#trim()} leaves it out.
+     */
+    private int getLineNumberOfTrimmedToken(String token) {
+        int line = getCurrentOutputLineNumber();
+        for (int i = 0; i < token.length() && token.charAt(i) <= ' '; i++) {
+            if (token.charAt(i) == '\n') {
+                line++;
+            }
+        }
+        return line;
     }
 
     /**
@@ -1311,27 +1326,58 @@ public class GroovyPageParser implements Tokens {
         if (!finalPass) return;
 
         out.println();
-        write(scan.getToken().trim(), gsp);
-        out.println();
+        String token = scan.getToken();
+        int line = getLineNumberOfTrimmedToken(token);
+        if (gsp) {
+            printlnGspScript(token.trim(), line);
+        } else {
+            out.printlnPageText(token.trim(), line);
+        }
         out.println();
     }
 
-    private void write(CharSequence text, boolean gsp) {
-        if (!gsp) {
-            out.print(text);
-            return;
-        }
-
+    /**
+     * Prints the code of a {@code %{ }%} scriptlet. Each run of white space in it is printed as one space,
+     * and a line break of HTML, such as {@code <br>}, as a line feed. Each line of the generated source is
+     * recorded with the line of the page that its code starts on.
+     * <p>
+     * A run of white space with a line break of the page in it ends the line instead, with a space and a
+     * backslash, so that the code after it is on a line of its own: Groovy takes a backslash in front of a
+     * line break for white space in code and leaves both out of a string, so the code means what it means
+     * with the one space. It is one space after code that ends with a backslash, and up to the end of the line
+     * after code that {@link #continuesOnNextLine(StringBuilder)} says cannot go on on the next line, so a
+     * line of the generated source can have the code of several lines of the page.
+     *
+     * @param line the line of the page that the code starts on
+     */
+    private void printlnGspScript(String text, int line) {
+        StringBuilder code = new StringBuilder();
+        // the line of the page that the character at ix is on
+        int pageLine = line;
+        // the line of the page that the code of the line being printed starts on, or 0 before its code starts
+        int codeLine = 0;
+        // whether the code of the line being printed cannot go on on the next line, which it then cannot up to its end
+        boolean joinsLines = false;
         for (int ix = 0, ixz = text.length(); ix < ixz; ix++) {
+            int from = ix;
             char c = text.charAt(ix);
             String rep = null;
+            boolean lineFeed = false;
+            boolean continued = false;
             if (Character.isWhitespace(c)) {
+                boolean pageLineBreak = c == '\n';
                 for (ix++; ix < ixz; ix++) {
-                    if (Character.isWhitespace(text.charAt(ix))) {
+                    char next = text.charAt(ix);
+                    if (Character.isWhitespace(next)) {
+                        pageLineBreak |= next == '\n';
                         continue;
                     }
                     ix--;
                     rep = " ";
+                    if (pageLineBreak && codeLine > 0) {
+                        joinsLines = joinsLines || !continuesOnNextLine(code);
+                        continued = !joinsLines && code.charAt(code.length() - 1) != '\\';
+                    }
                     break;
                 }
             } else if (c == '&') {
@@ -1350,26 +1396,68 @@ public class GroovyPageParser implements Tokens {
                 }
             } else if (c == '<') {
                 if (match("<br>", text, ix) || match("<hr>", text, ix)) {
-                    rep = "\n";
-                    //incrementLineNumber();
+                    lineFeed = true;
                     ix += 3;
                 } else {
                     int end = match(PARA_BREAK, text, ix);
                     if (end <= 0)
                         end = match(ROW_BREAK, text, ix);
                     if (end > 0) {
-                        rep = "\n";
-                        //incrementLineNumber();
+                        lineFeed = true;
                         ix = end;
                     }
                 }
             }
-            if (rep != null) {
-                out.print(rep);
+            if (continued) {
+                code.append(" \\");
+            }
+            if (lineFeed || continued) {
+                out.printlnCode(code.toString(), codeLine > 0 ? codeLine : pageLine, true);
+                code.setLength(0);
+                codeLine = 0;
+                joinsLines = false;
             } else {
-                out.print(c);
+                if (codeLine == 0 && (rep != null ? !" ".equals(rep) : !Character.isWhitespace(c))) {
+                    codeLine = pageLine;
+                }
+                if (rep != null) {
+                    code.append(rep);
+                } else {
+                    code.append(c);
+                }
+            }
+            // the line feeds of the page in the characters this has gone past, up to and including the one at ix
+            for (int i = from; i <= ix && i < ixz; i++) {
+                if (text.charAt(i) == '\n') {
+                    pageLine++;
+                }
             }
         }
+        out.printlnCode(code.toString(), codeLine > 0 ? codeLine : pageLine, false);
+    }
+
+    /**
+     * Whether the code of a line of a {@code %{ }%} scriptlet can go on on the next line after a backslash and
+     * mean what it means with a space in place of the line break. It cannot after a {@code /}, which can start
+     * a comment that a line break ends, nor after the keyword {@code assert}, not a name that contains it, as an assertion that fails quotes its code
+     * and would quote the backslash.
+     */
+    private static boolean continuesOnNextLine(StringBuilder code) {
+        return code.indexOf("/") < 0 && !containsAssertKeyword(code);
+    }
+
+    private static boolean containsAssertKeyword(StringBuilder code) {
+        int ix = code.indexOf("assert");
+        while (ix >= 0) {
+            int end = ix + "assert".length();
+            boolean wordStart = ix == 0 || !Character.isJavaIdentifierPart(code.charAt(ix - 1));
+            boolean wordEnd = end == code.length() || !Character.isJavaIdentifierPart(code.charAt(end));
+            if (wordStart && wordEnd) {
+                return true;
+            }
+            ix = code.indexOf("assert", ix + 1);
+        }
+        return false;
     }
 
     public long getLastModified() {
