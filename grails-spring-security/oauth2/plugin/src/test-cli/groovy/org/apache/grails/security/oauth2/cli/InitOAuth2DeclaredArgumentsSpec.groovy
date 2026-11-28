@@ -25,6 +25,7 @@ import spock.lang.TempDir
 import spock.lang.Unroll
 
 import org.apache.grails.core.cli.StandaloneToolRunner
+import org.apache.grails.gradle.model.cli.JvmOptions
 
 /**
  * init-oauth2 declares its three parameters, and is held to them as the {@code grails} command line runs it: by
@@ -77,6 +78,8 @@ class InitOAuth2DeclaredArgumentsSpec extends Specification {
     private Map start(String... arguments) {
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path, '-cp', System.getProperty('java.class.path'),
                                 "-Dbase.dir=${project.path}".toString(), "-Duser.home=${new File(jvm, 'home').path}".toString()]
+        // the options the grails command line starts a standalone tool with
+        command.addAll(1, JvmOptions.of(Runtime.version().feature()))
         // the JVM that is started is counted as tested: the build says how (the grails-jacoco convention plugin)
         String coverage = System.getProperty('grails.test.fork.jacoco')
         if (coverage) {

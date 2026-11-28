@@ -32,6 +32,7 @@ import spock.lang.Unroll
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.util.Environment
+import org.apache.grails.gradle.model.cli.JvmOptions
 
 /**
  * A {@link StandaloneTool} as the {@code grails} command line starts it: by the {@code main}
@@ -256,15 +257,17 @@ class StandaloneToolRunnerSpec extends Specification {
 
     // The tools of the class path are these, which are all made when the registry is. The JVM has a home of its
     // own: the console of Grails, which a tool can make, keeps its history there, and neither reads nor writes
-    // the one of whoever runs the specification, whose state would then decide what the JVM writes.
+    // the one of whoever runs the specification, whose state would then decide what the JVM writes. It is the
+    // Java of this JVM, started with the options the grails command line starts a standalone tool with.
     private Map runWithTools(List<Class> tools, List<String> jvmArguments, String... arguments) {
         File registrations = new File(dir, 'registrations')
         new File(registrations, 'META-INF').mkdirs()
         new File(registrations, 'META-INF/grails-cli.factories').text = "${GrailsTool.name}=" + tools*.name.join(',') + '\n'
         home.mkdirs()
-        List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
-                                '-cp', registrations.path + File.pathSeparator + System.getProperty('java.class.path'),
-                                "-Dbase.dir=${dir.path}".toString(), "-Duser.home=${home.path}".toString()]
+        List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path]
+        command.addAll(JvmOptions.of(Runtime.version().feature()))
+        command.addAll(['-cp', registrations.path + File.pathSeparator + System.getProperty('java.class.path'),
+                        "-Dbase.dir=${dir.path}".toString(), "-Duser.home=${home.path}".toString()])
         command.addAll(jvmArguments)
         command.add(StandaloneToolRunner.name)
         command.addAll(arguments.toList())

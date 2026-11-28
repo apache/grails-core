@@ -25,6 +25,7 @@ import spock.lang.TempDir
 import spock.lang.Unroll
 
 import org.apache.grails.core.cli.StandaloneToolRunner
+import org.apache.grails.gradle.model.cli.JvmOptions
 
 /**
  * The tools of the Spring Security UI plugin declare their parameters, and are held to them as the
@@ -90,6 +91,8 @@ class S2uiDeclaredArgumentsSpec extends Specification {
     private Map start(String... arguments) {
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path, '-cp', System.getProperty('java.class.path'),
                                 "-Dbase.dir=${project.path}".toString(), "-Duser.home=${new File(jvm, 'home').path}".toString()]
+        // the options the grails command line starts a standalone tool with
+        command.addAll(1, JvmOptions.of(Runtime.version().feature()))
         // the JVM that is started is counted as tested: the build says how (the grails-jacoco convention plugin)
         String coverage = System.getProperty('grails.test.fork.jacoco')
         if (coverage) {

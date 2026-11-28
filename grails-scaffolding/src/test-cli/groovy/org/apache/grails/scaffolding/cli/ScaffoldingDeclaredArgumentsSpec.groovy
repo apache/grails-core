@@ -25,6 +25,7 @@ import spock.lang.TempDir
 import spock.lang.Unroll
 
 import org.apache.grails.core.cli.StandaloneToolRunner
+import org.apache.grails.gradle.model.cli.JvmOptions
 
 /**
  * The scaffolding tools declare their options and the domain classes they take, and are held to them as the
@@ -100,7 +101,9 @@ class ScaffoldingDeclaredArgumentsSpec extends Specification {
         home.mkdirs()
         File out = new File(jvm, 'stdout.txt')
         File err = new File(jvm, 'stderr.txt')
-        Process process = new ProcessBuilder([new File(System.getProperty('java.home'), 'bin/java').path, "@${options.path}".toString()] + counted +
+        // the options the grails command line starts a standalone tool with
+        List<String> jvmOptions = JvmOptions.of(Runtime.version().feature())
+        Process process = new ProcessBuilder([new File(System.getProperty('java.home'), 'bin/java').path] + jvmOptions + ["@${options.path}".toString()] + counted +
                 ["-Dbase.dir=${project.path}".toString(), "-Duser.home=${home.path}".toString(), StandaloneToolRunner.name] + arguments.toList())
                 .directory(project)
                 .redirectOutput(out)

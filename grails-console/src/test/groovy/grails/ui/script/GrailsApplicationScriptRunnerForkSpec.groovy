@@ -28,6 +28,7 @@ import spock.lang.TempDir
 import grails.boot.config.GrailsAutoConfiguration
 import grails.persistence.support.PersistenceContextInterceptor
 import grails.ui.StartedJvmCoverage
+import org.apache.grails.gradle.model.cli.JvmOptions
 
 /**
  * {@link GrailsApplicationScriptRunner} as the {@code runScript} task of a build starts it: its
@@ -110,6 +111,8 @@ class GrailsApplicationScriptRunnerForkSpec extends Specification {
                                 '-cp', System.getProperty('java.class.path'),
                                 '-Dgrails.env=development', "-Dbase.dir=${dir.path}".toString()]
         command.addAll(1, StartedJvmCoverage.jvmArguments())
+        // the options the Grails Gradle plugin gives the task that starts this JVM
+        command.addAll(1, JvmOptions.of(Runtime.version().feature()))
         command.addAll(jvmArguments)
         command.add(GrailsApplicationScriptRunner.name)
         command.addAll(scripts.toList())

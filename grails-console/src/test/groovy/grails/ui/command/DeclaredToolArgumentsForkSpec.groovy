@@ -29,6 +29,7 @@ import spock.lang.Unroll
 
 import grails.ui.StartedJvmCoverage
 import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.gradle.model.cli.JvmOptions
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.core.cli.ToolHints
 import org.apache.grails.core.cli.ToolOption
@@ -190,9 +191,9 @@ class ConsoleKeepingTool implements ApplicationTool {
         runWith(null, arguments)
     }
 
-    // The JVM the runTool task starts, with more classes in front of the class path when they are given. It has a
-    // home of its own: the console of Grails, which a tool can make, keeps its history there, and neither reads nor
-    // writes the one of whoever runs the specification.
+    // The JVM the runTool task starts, with more classes in front of the class path when they are given, and the
+    // options the Grails Gradle plugin gives that task. It has a home of its own: the console of Grails, which a tool
+    // can make, keeps its history there, and neither reads nor writes the one of whoever runs the specification.
     private Map runWith(File classes, String... arguments) {
         File home = new File(dir, 'home')
         home.mkdirs()
@@ -201,6 +202,7 @@ class ConsoleKeepingTool implements ApplicationTool {
                                 '-Dgrails.env=development', "-Dbase.dir=${dir.path}".toString(), "-Duser.home=${home.path}".toString(),
                                 GrailsApplicationContextCommandRunner.name]
         command.addAll(1, StartedJvmCoverage.jvmArguments())
+        command.addAll(1, JvmOptions.of(Runtime.version().feature()))
         command.addAll(arguments.toList())
         File out = new File(dir, 'out.txt')
         File err = new File(dir, 'err.txt')

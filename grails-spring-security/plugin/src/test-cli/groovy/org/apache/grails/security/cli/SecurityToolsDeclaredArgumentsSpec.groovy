@@ -25,6 +25,7 @@ import spock.lang.TempDir
 import spock.lang.Unroll
 
 import org.apache.grails.core.cli.StandaloneToolRunner
+import org.apache.grails.gradle.model.cli.JvmOptions
 
 /**
  * The tools of the Spring Security Core plugin declare their options and parameters, and are held to them as
@@ -143,6 +144,8 @@ class SecurityToolsDeclaredArgumentsSpec extends Specification {
         File home = new File(jvm, 'home')
         home.mkdirs()
         command.add(1, "-Duser.home=${home.path}".toString())
+        // the options the grails command line and the Grails Gradle plugin start a tool with
+        command.addAll(1, JvmOptions.of(Runtime.version().feature()))
         File out = File.createTempFile('out', '.txt', jvm)
         File err = File.createTempFile('err', '.txt', jvm)
         Process process = new ProcessBuilder(command).directory(project).redirectOutput(out).redirectError(err).start()

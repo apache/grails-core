@@ -24,6 +24,7 @@ import spock.lang.Specification
 import spock.lang.TempDir
 
 import org.apache.grails.core.cli.StandaloneToolRunner
+import org.apache.grails.gradle.model.cli.JvmOptions
 
 /**
  * The scaffolding tools run as the {@code grails} command line starts a tool that runs on its own: by
@@ -97,7 +98,9 @@ class ScaffoldingStandaloneRunSpec extends Specification {
         home.mkdirs()
         File out = new File(jvm, 'stdout.txt')
         File err = new File(jvm, 'stderr.txt')
-        Process process = new ProcessBuilder([new File(System.getProperty('java.home'), 'bin/java').path, "@${options.path}".toString()] + counted +
+        // the options the grails command line starts a standalone tool with
+        List<String> jvmOptions = JvmOptions.of(Runtime.version().feature())
+        Process process = new ProcessBuilder([new File(System.getProperty('java.home'), 'bin/java').path] + jvmOptions + ["@${options.path}".toString()] + counted +
                 ["-Dbase.dir=${project.path}".toString(), "-Duser.home=${home.path}".toString(), StandaloneToolRunner.name] + arguments.toList())
                 .directory(project)
                 .redirectOutput(out)

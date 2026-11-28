@@ -80,6 +80,7 @@ import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
 import org.grails.gradle.plugin.exploded.ExplodedDisambiguationRule
 import org.grails.gradle.plugin.exploded.GrailsExplodedPlugin
 import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
+import org.apache.grails.gradle.model.cli.JvmOptions
 import org.apache.grails.gradle.plugin.aot.AotCacheExtension
 import org.apache.grails.gradle.plugin.aot.ExtractApplicationTask
 import org.apache.grails.gradle.plugin.aot.GenerateNativeMetadataTask
@@ -1375,13 +1376,16 @@ ${importStatements}
     }
 
     /**
-     * Configures JVM arguments required for compatibility with Java 23+.
+     * Configures JVM arguments required for compatibility with Java 22+.
      *
-     * <p>Java 24 introduced restrictions on native access ({@code JEP 472}) that cause
-     * warnings from libraries such as hawtjni (used by JLine) and Netty that call
-     * {@code System.loadLibrary} or declare native methods. The
-     * {@code --enable-native-access=ALL-UNNAMED} flag suppresses these warnings and
-     * will become mandatory in a future JDK release when the default changes to deny.</p>
+     * <p>From Java 22 on, code that calls a restricted method of the foreign function API
+     * without native access has the JVM warn ({@code JEP 454}), as JLine, the terminal library
+     * of the console of Grails, does where it uses that API; Java 24 added the same for
+     * libraries such as hawtjni and Netty that call {@code System.loadLibrary} or declare
+     * native methods ({@code JEP 472}). The {@code --enable-native-access=ALL-UNNAMED} flag
+     * suppresses these warnings and will become mandatory in a future JDK release when the
+     * default changes to deny. The options and the versions they are given from are those of
+     * {@link JvmOptions}, which the {@code grails} command line gives a tool it starts too.</p>
      *
      * <p>Java 23 began terminal deprecation of {@code sun.misc.Unsafe} memory-access
      * methods ({@code JEP 471/498}). Netty 4.1.x uses {@code Unsafe.allocateMemory}
@@ -1412,9 +1416,9 @@ ${importStatements}
     private void applyCompatArgs(Project project, JavaForkOptions task, String taskName) {
         int targetVersion = resolveTargetJavaVersion(project)
 
-        if (targetVersion >= 24) {
-            task.jvmArgs('--enable-native-access=ALL-UNNAMED')
-            project.logger.info("Grails: adding --enable-native-access=ALL-UNNAMED to ${taskName} for Java ${targetVersion} compatibility")
+        for (String option : JvmOptions.of(targetVersion)) {
+            task.jvmArgs(option)
+            project.logger.info("Grails: adding ${option} to ${taskName} for Java ${targetVersion} compatibility")
         }
 
         if (targetVersion >= 23) {

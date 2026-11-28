@@ -31,6 +31,7 @@ import grails.ui.StartedJvmCoverage
 import org.apache.grails.core.cli.ApplicationCommand
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.gradle.model.cli.JvmOptions
 
 /**
  * {@link GrailsApplicationContextCommandRunner} as the {@code runTool} task of a build starts it: its
@@ -138,6 +139,8 @@ class GrailsApplicationContextCommandRunnerForkSpec extends Specification {
                                 '-Dgrails.env=development', "-Dbase.dir=${dir.path}".toString(),
                                 GrailsApplicationContextCommandRunner.name]
         command.addAll(1, StartedJvmCoverage.jvmArguments())
+        // the options the Grails Gradle plugin gives the task that starts this JVM
+        command.addAll(1, JvmOptions.of(Runtime.version().feature()))
         command.addAll(arguments.toList())
         File out = new File(dir, 'out.txt')
         File err = new File(dir, 'err.txt')

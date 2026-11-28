@@ -29,6 +29,7 @@ import java.util.function.Supplier
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import groovy.transform.CompileStatic
+import org.apache.grails.gradle.model.cli.JvmOptions
 
 /**
  * Starts a command that runs as a process of its own, without Gradle, and waits for it: a plain JVM
@@ -58,11 +59,6 @@ final class StandaloneToolProcess {
 
     /** The system property that says which of the diagnostics of SLF4J itself it writes. */
     static final String SLF4J_VERBOSITY = 'slf4j.internal.verbosity'
-
-    /** The option that grants the code of the class path native access, see {@link Java#getOptions()}. */
-    static final String NATIVE_ACCESS = '--enable-native-access=ALL-UNNAMED'
-
-    private static final int NATIVE_ACCESS_SINCE = 22
 
     private static final String JAVA_HOME = 'JAVA_HOME'
     private static final String ARGUMENTS_OPTION = '--args-file='
@@ -107,17 +103,15 @@ final class StandaloneToolProcess {
         }
 
         /**
-         * From Java 22 on, the JVM warns on the standard error, in four lines, the first time code of the
-         * class path calls a restricted method, unless the code is granted native access: JLine, the
-         * terminal library of the console of Grails, which a tool can make, calls one where it uses the
-         * foreign function API, as it does from Java 22 on. The command is given that grant, as the scripts
-         * of the command line give it to the command line. An earlier Java does not warn, and a Java whose
-         * version is not known is given nothing it might not take.
+         * The options of {@link JvmOptions} for the version of the JVM, which the Grails Gradle plugin gives
+         * the processes of a build too: from Java 22 on, native access, without which a restricted method
+         * JLine calls has Java warn on the standard error. A Java whose version is not known is given
+         * nothing it might not take.
          *
          * @return the options of the JVM that come before the class path
          */
         List<String> getOptions() {
-            return version >= NATIVE_ACCESS_SINCE ? [NATIVE_ACCESS] : Collections.<String>emptyList()
+            return JvmOptions.of(version)
         }
     }
 
