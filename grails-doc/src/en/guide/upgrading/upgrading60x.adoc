@@ -1370,6 +1370,14 @@ With GORM for Hibernate, a where query, a detached criteria or a dynamic finder 
 * An unpaged criteria query whose `fetch` argument now fetches a collection can return an instance once per collection element. Previously a join type in that argument fetched nothing and did not multiply those rows. Its `totalCount` counts root instances when the requested collection join is applied through a subquery, so it can differ from the number of unpaged fetched rows.
 * A sort stored on the query with `sort()`, as in `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])`, now uses the join type requested by the `fetch` argument. It also returns books without an author. The same holds for a nested association path. Request `JoinType.INNER` to keep leaving those books out.
 
+==== The total of a paged criteria with groupProperty counts the groups
+
+The `totalCount` of a paged criteria result that uses a `groupProperty` projection, for example
+`Item.createCriteria().list(max: 10) { projections { groupProperty('city') } }`, is now the number of groups, as the page it
+belongs to is. Previously it was the number of rows before grouping, so a page of 3 groups from 6 rows reported a total of 6.
+Code that paged through such a result by `totalCount` now stops after the last group, and code that worked around the
+larger number needs no workaround. Criteria without a grouping projection count rows as before.
+
 ==== More GSP tags HTML-encode the attribute values they write
 
 These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:
