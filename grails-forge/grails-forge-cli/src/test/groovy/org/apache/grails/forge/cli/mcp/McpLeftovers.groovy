@@ -18,8 +18,10 @@
  */
 package org.apache.grails.forge.cli.mcp
 
+import java.util.function.Supplier
 import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.PlainOutput
+import org.grails.forge.cli.SpecWaits
 
 /**
  * What a specification that runs {@code grails mcp}, or its command lines, in this JVM leaves behind for
@@ -35,18 +37,15 @@ class McpLeftovers {
     /** What the threads that run the commands of the generator and direct lanes are named, followed by a number. */
     static final String COMMAND_THREADS = 'grails-mcp-command-'
 
-    private static final long WAIT_MILLIS = 5_000L
-
     /**
-     * Waits a moment for a thread of a command that has just ended to be gone, and then holds that
-     * nothing is left.
+     * Waits for a thread of a command that has just ended to be gone, and then holds that nothing is left.
      */
     static void assertNoneLeft() {
-        long deadline = System.currentTimeMillis() + WAIT_MILLIS
-        while (!commandThreads().isEmpty() && System.currentTimeMillis() < deadline) {
-            Thread.sleep(20)
+        try {
+            SpecWaits.until('the end of the threads of the commands of grails mcp', { -> commandThreads().isEmpty() } as Supplier<Boolean>)
+        } catch (AssertionError e) {
+            throw new AssertionError("commands of grails mcp still run after the feature: ${commandThreads()*.name}; ${e.message}".toString())
         }
-        assert commandThreads().isEmpty(): "commands of grails mcp still run after the feature: ${commandThreads()*.name}"
         assert !PlainOutput.isOn(): 'the output is still plain after the feature: a command line of a call still runs, or plain output was entered and not left'
         assert ConsoleCommands.getSession() == ConsoleCommands.Session.NONE: "the session is still ${ConsoleCommands.getSession()} after the feature"
     }

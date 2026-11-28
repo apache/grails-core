@@ -19,8 +19,8 @@
 package org.apache.grails.forge.cli.mcp.protocol
 
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.function.Supplier
 
 import groovy.json.JsonSlurper
 import io.modelcontextprotocol.modern.McpSchema.Implementation
@@ -28,12 +28,16 @@ import io.modelcontextprotocol.modern.client.McpClient
 import io.modelcontextprotocol.modern.client.McpSyncClient
 import io.modelcontextprotocol.modern.client.transport.StdioMcpClientTransport
 import org.apache.grails.forge.cli.mcp.McpHandler
+import org.grails.forge.cli.SpecWaits
 
 /**
  * A server of {@code grails mcp} and the SDK's modern client in one JVM, over pipes: what the client writes
  * is the server's standard input, and what the server writes its standard output, every line of which is
  * also kept, so that a spec can read what the server wrote. A spec can also write a line of its own to the
  * server, as a client that is not the SDK's would.
+ *
+ * <p>A call of the client and a wait of a spec last at most the bound of every wait of the specs
+ * ({@link SpecWaits#BOUND}): a call a spec holds open while it looks at others is not given up on by the client.</p>
  */
 class InProcessMcp implements Closeable {
 
@@ -55,7 +59,7 @@ class InProcessMcp implements Closeable {
         transport = StdioMcpClientTransport.builder(clientInput, toServer).start()
         client = McpClient.sync(transport)
                 .clientInfo(Implementation.builder('grails-mcp-spec', '1.0').build())
-                .roundTimeout(Duration.ofSeconds(30))
+                .roundTimeout(SpecWaits.BOUND)
                 .build()
     }
 
@@ -77,28 +81,18 @@ class InProcessMcp implements Closeable {
         return new ArrayList<String>(written)
     }
 
-    /** Waits up to 30 s for the server to write a line that the condition holds for, and gives it. */
+    /** Waits for the server to write a line that the condition holds for, and gives it. */
     Map<String, Object> awaitLine(Closure<Boolean> condition) {
-        long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos()
-        while (System.nanoTime() < deadline) {
-            Map<String, Object> line = lines().find(condition)
-            if (line != null) {
-                return line
-            }
-            Thread.sleep(20)
+        try {
+            return SpecWaits.value('a line of the server that the condition holds for', { -> lines().find(condition) } as Supplier<Map<String, Object>>)
+        } catch (AssertionError e) {
+            throw new AssertionError("${e.message}; it wrote ${written}".toString())
         }
-        throw new AssertionError("The server wrote no such line; it wrote ${written}".toString())
     }
 
-    /** Waits up to 30 s for the condition to hold. */
+    /** Waits for the condition to hold. */
     static void await(Closure<Boolean> condition) {
-        long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos()
-        while (!condition.call()) {
-            if (System.nanoTime() > deadline) {
-                throw new AssertionError('It did not happen in 30 s')
-            }
-            Thread.sleep(20)
-        }
+        SpecWaits.until('the condition', { -> condition.call() as boolean } as Supplier<Boolean>)
     }
 
     @Override

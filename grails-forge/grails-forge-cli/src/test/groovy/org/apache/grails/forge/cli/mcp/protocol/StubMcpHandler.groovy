@@ -130,7 +130,8 @@ class StubMcpHandler implements McpHandler {
                 callThread = Thread.currentThread()
                 started.countDown()
                 try {
-                    Thread.sleep(600_000)
+                    // a latch nothing opens: the call runs until it is interrupted
+                    new CountDownLatch(1).await()
                 } catch (InterruptedException ignored) {
                     interruptedNow(context)
                 }

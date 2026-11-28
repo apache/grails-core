@@ -21,6 +21,7 @@ package org.apache.grails.forge.cli.console
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.TimeUnit
+import org.grails.forge.cli.SpecWaits
 
 /**
  * What a specification that runs Gradle itself, and not a script in its place, builds its projects
@@ -89,7 +90,8 @@ final class IsolatedGradle {
 
     /** The line of the settings of a project that writes down which process reads them, for settings that have a name of their own. */
     String getRecording() {
-        return "new File('${new File(registry, 'daemons.txt').canonicalPath}') << (ProcessHandle.current().pid() + '\\n')\n"
+        return "new File('${new File(registry, 'daemons.txt').canonicalPath}') << (ProcessHandle.current().pid() + ' ' + " +
+                "ProcessHandle.current().info().startInstant().map { it.toEpochMilli() }.orElse(0L) + '\\n')\n"
     }
 
     /**
@@ -183,7 +185,7 @@ final class IsolatedGradle {
         Process process = new ProcessBuilder([new File(dir, 'gradlew').path] + arguments.toList())
                 .directory(dir).redirectErrorStream(true).redirectOutput(output)
                 .redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null'))).start()
-        if (!process.waitFor(300, TimeUnit.SECONDS)) {
+        if (!process.waitFor(SpecWaits.BOUND.toMillis(), TimeUnit.MILLISECONDS)) {
             process.destroyForcibly()
             return [exit: -1, output: output.text]
         }
@@ -198,11 +200,24 @@ final class IsolatedGradle {
         if (!known.isFile()) {
             return []
         }
-        return known.readLines().findAll { String line -> line ==~ /[0-9]+/ }.unique().collect { String line -> ProcessHandle.of(line as long).orElse(null) }
+        return known.readLines().findAll { String line -> line ==~ /[0-9]+ [0-9]+/ }.unique().collect { String line -> recorded(line) }
                 .findAll { ProcessHandle each -> each != null && each.alive && isDaemon(each) }
     }
 
-    // the number of a process that has ended is given to another one
+    // the process a line names by its number, when it is the one that wrote the line: began when the line says
+    private static ProcessHandle recorded(String line) {
+        List<String> parts = line.split(' ') as List<String>
+        ProcessHandle process = ProcessHandle.of(parts[0] as long).orElse(null)
+        if (process == null) {
+            return null
+        }
+        long began = process.info().startInstant().map { it.toEpochMilli() }.orElse(0L)
+        return began == (parts[1] as long) ? process : null
+    }
+
+    // The number of a process that has ended is given to another one, which can be a Gradle daemon of another build that
+    // runs on this computer, of another specification too: a process is taken for a daemon of these projects only when it
+    // began when the line that names it says (recorded), and is a Gradle daemon.
     private static boolean isDaemon(ProcessHandle process) {
         Process ps = new ProcessBuilder('ps', '-ww', '-o', 'command=', '-p', process.pid() as String).redirectErrorStream(true).start()
         String command = ps.inputStream.text
@@ -218,6 +233,7 @@ final class IsolatedGradle {
         left.each { ProcessHandle each -> each.destroy() }
         left.each { ProcessHandle each ->
             try {
+                // a daemon is given ten seconds to end when it is asked to, and is then ended by force
                 each.onExit().get(10, TimeUnit.SECONDS)
             } catch (Exception ignored) {
                 each.destroyForcibly()
