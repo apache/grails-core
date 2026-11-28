@@ -106,6 +106,7 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     protected Criteria criteria;
+    private Boolean cacheableBeforeLock;
     protected org.hibernate.criterion.DetachedCriteria detachedCriteria;
     protected AbstractHibernateQuery.HibernateProjectionList hibernateProjectionList;
     protected String alias;
@@ -727,15 +728,34 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query cache(boolean cache) {
-        criteria.setCacheable(cache);
+        if (cacheableBeforeLock != null) {
+            // a locking query stays out of the cache; the setting that is asked for now is the one that comes back
+            cacheableBeforeLock = cache;
+        }
+        else {
+            criteria.setCacheable(cache);
+        }
 
         return super.cache(cache);
     }
 
     @Override
     public Query lock(boolean lock) {
-        criteria.setCacheable(false);
-        criteria.setLockMode(LockMode.PESSIMISTIC_WRITE);
+        if (lock) {
+            if (cacheableBeforeLock == null) {
+                cacheableBeforeLock = ((CriteriaImpl) criteria).getCacheable();
+            }
+            criteria.setCacheable(false);
+            criteria.setLockMode(LockMode.PESSIMISTIC_WRITE);
+        }
+        else {
+            // a query that does not lock is cached as it was before it was asked to lock
+            if (cacheableBeforeLock != null) {
+                criteria.setCacheable(cacheableBeforeLock);
+                cacheableBeforeLock = null;
+            }
+            criteria.setLockMode(LockMode.NONE);
+        }
         return super.lock(lock);
     }
 
