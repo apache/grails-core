@@ -1737,6 +1737,10 @@ descriptors only, and it no longer creates a plugin to find out what it is. A de
 a class missing from the class path, or a class that is not a `Plugin`, stops the application from starting instead of
 the plugin being skipped.
 
+A plugin built for Grails 8 is not skipped either. A jar that has a `META-INF/grails-plugin.xml` and no
+`META-INF/grails/plugins.imports` stops the application from starting, with an error that names the jar: use a
+version of that plugin built for Grails 9, or remove the dependency on it.
+
 ===== Unmet Plugin Dependencies Stop the Application
 
 Grails 8 logged a plugin whose `dependsOn` was not met at `ERROR` and started the application without it. Grails 9

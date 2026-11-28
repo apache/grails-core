@@ -18,6 +18,9 @@
  */
 package org.apache.grails.core.plugins
 
+import java.util.jar.JarOutputStream
+import java.util.zip.ZipEntry
+
 import ch.qos.logback.classic.Level
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -143,6 +146,54 @@ class PluginDiscoverySpec extends Specification {
         def e = thrown(PluginException)
         e.message.contains('starterMetrics')
         e.message.contains('names no plugin class')
+
+        cleanup:
+        classLoader?.close()
+        tempDir.deleteDir()
+    }
+
+    def 'fails, naming the jar, on a plugin built for an earlier Grails instead of leaving it out'() {
+        given: 'a jar described only by the grails-plugin.xml of Grails 8, beside a Grails 9 plugin'
+        def tempDir = File.createTempDir()
+        File earlierJar = new File(tempDir, 'asset-pipeline-grails-5.2.3.jar')
+        new JarOutputStream(new FileOutputStream(earlierJar)).withCloseable { jar ->
+            jar.putNextEntry(new ZipEntry('META-INF/grails-plugin.xml'))
+            jar << '<plugin name="asset-pipeline" version="5.2.3"/>'.getBytes('UTF-8')
+            jar.closeEntry()
+        }
+        File current = new File(tempDir, 'current')
+        writePluginDescriptor(current, 'current', 'format.version=1\nname=current\nclass=com.example.CurrentGrailsPlugin\n')
+        def classLoader = new URLClassLoader([current, earlierJar]*.toURI()*.toURL() as URL[], (ClassLoader) null)
+
+        when:
+        new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
+
+        then:
+        def e = thrown(PluginException)
+        e.message.contains('built for an earlier Grails')
+        e.message.contains('asset-pipeline-grails-5.2.3.jar')
+        e.message.contains('Use a version of each plugin built for this Grails, or remove the dependency on it.')
+        !e.message.contains('current/')
+
+        cleanup:
+        classLoader?.close()
+        tempDir.deleteDir()
+    }
+
+    def 'a grails-plugin.xml beside a plugins.imports does not stop discovery'() {
+        given: 'a class path root with both, such as a jar built for Grails 9 that still carries the old file'
+        def tempDir = File.createTempDir()
+        writePluginDescriptor(tempDir, 'both', 'format.version=1\nname=both\nclass=com.example.AbsentGrailsPlugin\n')
+        new File(tempDir, 'META-INF/grails-plugin.xml').text = '<plugin name="both"/>'
+        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when:
+        new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
+
+        then: 'discovery reads the Grails 9 descriptor, and fails only on its absent class'
+        def e = thrown(PluginException)
+        !e.message.contains('earlier Grails')
+        e.message.contains('cannot be loaded')
 
         cleanup:
         classLoader?.close()
