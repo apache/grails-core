@@ -203,9 +203,10 @@ public class JpaCriteriaQueryCreator<T> {
         boolean deferForRightJoin = bags < 2 && requested.entrySet().stream().anyMatch(entry ->
                 entry.getValue() == JoinType.RIGHT && firstCollection(entry.getKey().split("\\.")) == -1);
         for (Query.Order order : sortOrders(countsList)) {
-            int dot = order.getProperty().lastIndexOf('.');
+            String sortPath = withoutRootPrefix(order.getProperty());
+            int dot = sortPath.lastIndexOf('.');
             if (dot > 0) {
-                collectCollectionPaths(order.getProperty().substring(0, dot), joinedCollections);
+                collectCollectionPaths(sortPath.substring(0, dot), joinedCollections);
             }
         }
 
@@ -588,6 +589,13 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     /**
+     * A sort path without the {@code root.} prefix, which names the queried class, as the sort of a list reads it.
+     */
+    private static String withoutRootPrefix(String propertyName) {
+        return propertyName.startsWith("root.") ? propertyName.substring(5) : propertyName;
+    }
+
+    /**
      * Whether an expression is read from a collection, through a join of the collection or through its path.
      */
     private static boolean readsCollection(Expression<?> expression) {
@@ -614,7 +622,7 @@ public class JpaCriteriaQueryCreator<T> {
      * key in the table before it on the path. An explicit alias starts at its associated entity.
      */
     private static boolean endsWithForeignKey(PersistentEntity from, String propertyName, JpaQueryContext context) {
-        String[] tokens = propertyName.split("\\.");
+        String[] tokens = withoutRootPrefix(propertyName).split("\\.");
         PersistentEntity current = from;
         int first = 0;
         HibernateAlias alias = context.getAliasRegistry().getDefinition(tokens[0]);

@@ -576,6 +576,25 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         page.totalCount == 3
     }
 
+    void 'a page of #api that fetches the collection it is sorted by with an inner join counts the owners that it returns'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final page = query.call()
+
+        then: 'the sort reads the scores through the inner join of the fetch, which leaves out the owner without a score'
+        page*.name.sort() == ['Ann', 'Bob']
+        page.totalCount == 2
+
+        where:
+        api                | query
+        'a where query'    | { AssociationSortOwner.where { name ==~ '%' }.list(max: 10, sort: 'scores.score', fetch: [scores: JoinType.INNER]) }
+        'a detached query' | { new DetachedCriteria(AssociationSortOwner).join('scores', JoinType.INNER).list(max: 10, sort: 'scores.score') }
+        'a criteria query' | { AssociationSortOwner.createCriteria().list(max: 10) { join('scores', JoinType.INNER); order('scores.score') } }
+    }
+
     void 'every row of #api sorted by a collection is on a page that its total reaches'() {
         given:
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
@@ -697,6 +716,56 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         then:
         page*.name == ['Premier']
         page.totalCount == 1
+    }
+
+    void 'the total of #api that fetches the players and is sorted by their contracts counts the teams that it returns'() {
+        given: 'a team whose player has no contract, and a team without players'
+        saveArsenalPlayers()
+        final noContract = new Team(name: 'No Contract Team').save(failOnError: true)
+        new Player(name: 'Uncontracted', team: noContract).save(failOnError: true)
+        new Team(name: 'No Players Team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final List result = query.call()
+
+        then: 'the sort reads the players through the left join of the fetch, and the contract with the join of the sort'
+        result[0].sort() == ((leftJoinSort ? ['No Contract Team', 'No Players Team'] : []) + ['Arsenal First Team',
+                'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']).sort()
+        result[1] == result[0].size()
+
+        where:
+        api                 | query
+        'a where query'     | { pageOf(Team.where { name ==~ '%' }.list(max: 10, sort: 'players.contract.salary', fetch: [players: 'join'])) }
+        'a where count'     | { [Team.where { name ==~ '%' }.join('players').sort('players.contract.salary').list()*.name,
+                                 Team.where { name ==~ '%' }.join('players').sort('players.contract.salary').count()] }
+        'a detached query'  | { pageOf(new DetachedCriteria(Team).join('players').list(max: 10, sort: 'players.contract.salary')) }
+        'a criteria query'  | { pageOf(Team.createCriteria().list(max: 10) { join('players', JoinType.LEFT); order('players.contract.salary') }) }
+        'a list'            | { pageOf(Team.list(max: 10, sort: 'players.contract.salary', fetch: [players: 'join'])) }
+    }
+
+    void 'every team of #api sorted by the players and requesting a join of their contracts is on a page that its total reaches'() {
+        given: 'a second player of a team, and a player without a contract'
+        saveArsenalPlayers()
+
+        when: 'the pages that a pager asks for, which stops at the total'
+        final first = query.call(0)
+        final names = [] as Set
+        for (int offset = 0; offset < first.totalCount; offset += 2) {
+            names.addAll(query.call(offset)*.name)
+        }
+
+        then: 'the list fetches no path through the players, so the total counts the rows of the players that it pages through'
+        names == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team'] as Set
+
+        where:
+        api                | query
+        'a criteria query' | { int offset -> Team.createCriteria().list(max: 2, offset: offset) { join('players.contract', JoinType.INNER); order('players.name') } }
+        'a where query'    | { int offset -> Team.where { name ==~ '%' }.list(max: 2, offset: offset, sort: 'players.name', fetch: ['players.contract': 'join']) }
+    }
+
+    protected static List pageOf(page) {
+        [page*.name, page.totalCount]
     }
 
     protected void saveArsenalPlayers() {
@@ -897,6 +966,26 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         Team.findAllByNameLike('%First%', [sort: 'club.name', fetch: [club: 'join']])*.name.contains('Unattached First Team')
         Team.where { name ==~ '%First%' }.join('club').sort('club.name').list().size() == 4
         Team.where { name ==~ '%First%' }.join('club').sort('club.name').count() == 4
+    }
+
+    void 'a page of a where query sorted by #sort with the root prefix keeps a team without a club, fetching the club: #fetch'() {
+        when:
+        final page = Team.where { name ==~ '%First%' }.list(fetch ? [max: 10, sort: sort, fetch: [club: 'join']] : [max: 10, sort: sort])
+
+        then: 'the sort reads the foreign key, or the left join of the fetch, as the sort without the prefix does'
+        page*.name.sort() == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']
+        page.totalCount == 4
+
+        where:
+        sort             | fetch
+        'root.club.id'   | false
+        'root.club.id'   | true
+        'root.club.name' | true
+    }
+
+    void 'the count of a where query that fetches the club and is sorted by root.club.name keeps a team without a club'() {
+        expect:
+        Team.where { name ==~ '%First%' }.join('club').sort('root.club.name').count() == 4
     }
 
     void 'a #query with an inner join requested for an association leaves out a team without a club'() {
