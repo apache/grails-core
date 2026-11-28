@@ -132,8 +132,7 @@ public class GrailsHibernateQueryUtils {
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
                 for (Object sort : sortMap.keySet()) {
-                    final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(c, entity, (String) sort, order, ignoreCase);
+                    addOrderPossiblyNested(c, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
@@ -191,8 +190,7 @@ public class GrailsHibernateQueryUtils {
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
                 for (Object sort : sortMap.keySet()) {
-                    final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
@@ -268,9 +266,20 @@ public class GrailsHibernateQueryUtils {
     }
 
     /**
+     * The direction of one entry of a map of sort properties: {@code desc} in any case sorts descending, and anything
+     * else sorts ascending, as the direction of a sort always has on this line.
+     */
+    static String sortDirection(Object property, Object direction) {
+        if (direction instanceof CharSequence && DynamicFinder.ORDER_DESC.equalsIgnoreCase(direction.toString())) {
+            return DynamicFinder.ORDER_DESC;
+        }
+        return DynamicFinder.ORDER_ASC;
+    }
+
+    /**
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
-    private static void addOrderPossiblyNested(Criteria c, PersistentEntity entity, String sort, String order, boolean ignoreCase) {
+    static void addOrderPossiblyNested(Criteria c, PersistentEntity entity, String sort, String order, boolean ignoreCase) {
         addOrderPossiblyNested(c, null, entity, sort, order, ignoreCase);
     }
 
@@ -417,36 +426,20 @@ public class GrailsHibernateQueryUtils {
     }
 
     /**
-     * Add order directly to criteria.
+     * Add order directly to criteria, after any order already there.
      */
     private static void addOrder(PersistentEntity entity,
                                  CriteriaQuery query,
                                  From queryRoot,
                                  CriteriaBuilder criteriaBuilder,
                                  String sort, String order, boolean ignoreCase) {
-        if (sort.equalsIgnoreCase(entity.getIdentity().getName())) {
-            Expression path = queryRoot;
-
-            if (ignoreCase) {
-                path = criteriaBuilder.upper(path);
-            }
-            if (DynamicFinder.ORDER_DESC.equals(order)) {
-                addOrder(query, criteriaBuilder.desc(path));
-            } else {
-                addOrder(query, criteriaBuilder.asc(path));
-            }
-        } else {
-            Expression path = queryRoot.get(sort);
-
-            if (ignoreCase) {
-                path = criteriaBuilder.upper(path);
-            }
-            if (DynamicFinder.ORDER_DESC.equals(order)) {
-                addOrder(query, criteriaBuilder.desc(path));
-            } else {
-                addOrder(query, criteriaBuilder.asc(path));
-            }
+        // an entity with a composite id has no single identity property
+        final PersistentProperty identity = entity.getIdentity();
+        Expression path = identity != null && sort.equalsIgnoreCase(identity.getName()) ? queryRoot : queryRoot.get(sort);
+        if (ignoreCase) {
+            path = criteriaBuilder.upper(path);
         }
+        addOrder(query, DynamicFinder.ORDER_DESC.equals(order) ? criteriaBuilder.desc(path) : criteriaBuilder.asc(path));
     }
 
     /**

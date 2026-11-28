@@ -1370,6 +1370,19 @@ With GORM for Hibernate, a where query, a detached criteria or a dynamic finder 
 * An unpaged criteria query whose `fetch` argument now fetches a collection can return an instance once per collection element. Previously a join type in that argument fetched nothing and did not multiply those rows. Its `totalCount` counts root instances when the requested collection join is applied through a subquery, so it can differ from the number of unpaged fetched rows.
 * A sort stored on the query with `sort()`, as in `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])`, now uses the join type requested by the `fetch` argument. It also returns books without an author. The same holds for a nested association path. Request `JoinType.INNER` to keep leaving those books out.
 
+==== Hibernate 5: criteria map sorts, composite id sorts and empty in lists
+
+These calls on Hibernate 5 returned the wrong rows or failed. Each now does what it asks:
+
+* A map as the `sort` argument of a criteria or detached criteria, `list(sort: [a: 'asc', b: 'desc'])`, threw a `ClassCastException`. It now orders by every property, in the order the map lists them, as `list` does.
+* A sort by a property of an association, in a string or a map, on a criteria builder constructed with a session factory, `new HibernateCriteriaBuilder(Book, sessionFactory).list(sort: 'author.name') { }`, threw `IllegalArgumentException: Unexpected: class is not a domain class`. It now sorts as the criteria of the domain class does, and uses a join of the association that the criteria already has.
+* Sorting a domain class with a composite id by one of the properties of the id threw a `NullPointerException`; it sorts now (issue https://github.com/apache/grails-core/issues/14451[#14451]).
+* A sort that the call gives keeps the default sort of the mapping off, as `sort:` always did.
+* An empty list given to `inList`, or to `in` in any of its forms, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched no row on PostgreSQL, MySQL and MariaDB (issues https://github.com/apache/grails-core/issues/14653[#14653] and https://github.com/apache/grails-core/issues/14457[#14457]).
+* A default `sort` of a `hasMany` that names a property the associated entity does not have failed with a `NullPointerException` at startup; the error now names the association and the sort.
+
+To keep the earlier result for a sort, remove the sort from the query. To keep it for an empty list whose negation is required for every match, return an empty list before the query when the input list is empty: removing the criterion returns every row, not none. When the negated list is one side of an `or`, leave that side out when the list is empty: it matched nothing there, so the other sides alone gave the earlier result, and returning an empty list would drop their rows. An `or` that is itself inside a `not` gives the same result as before, so leave it as it is: dropping a side of it would change the result.
+
 ==== More GSP tags HTML-encode the attribute values they write
 
 These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:

@@ -493,7 +493,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query in(String property, List values) {
-        addToCriteria(Restrictions.in(calculatePropertyName(property), values));
+        addToCriteria(AbstractHibernateCriterionAdapter.inRestriction(calculatePropertyName(property), values));
         return this;
     }
 
@@ -1663,7 +1663,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
         @Override
         public Query in(String property, List values) {
-            addToCriteria(Restrictions.in(calculatePropertyName(property), values));
+            addToCriteria(AbstractHibernateCriterionAdapter.inRestriction(calculatePropertyName(property), values));
             return this;
         }
 

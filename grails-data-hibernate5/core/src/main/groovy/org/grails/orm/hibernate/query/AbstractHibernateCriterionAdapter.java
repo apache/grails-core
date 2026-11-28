@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -267,10 +268,21 @@ public abstract class AbstractHibernateCriterionAdapter {
                     return Property.forName(getPropertyName(criterion, alias)).in(toHibernateDetachedCriteria(hibernateQuery, subquery));
                 }
                 else {
-                    return Restrictions.in(getPropertyName(criterion, alias), inListQuery.getValues());
+                    return inRestriction(getPropertyName(criterion, alias), inListQuery.getValues());
                 }
             }
         });
+    }
+
+    /**
+     * An "in" restriction on the given values. A list with no values matches nothing, so it is an explicit false: an
+     * empty IN list is not valid SQL on every database, and the negation of one has to match every row.
+     */
+    static Criterion inRestriction(String propertyName, Collection<?> values) {
+        if (values == null || values.isEmpty()) {
+            return Restrictions.sqlRestriction("1=0");
+        }
+        return Restrictions.in(propertyName, values);
     }
 
     protected void addLikeCriterionAdapters() {
