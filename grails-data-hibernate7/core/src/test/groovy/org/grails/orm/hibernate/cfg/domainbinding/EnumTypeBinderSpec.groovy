@@ -120,6 +120,38 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         Person05 | UserTypeEnumType | UserTypeEnumType.class.getName() | null              | false
     }
 
+    def "a maxSize shorter than the longest constant name does not make the column too short for a valid value"() {
+        given: 'an enum whose longest constant, OUT_OF_STOCK, is 12 characters, with a maxSize of 2'
+        def table = new Table("person")
+        def property = setupProperty(PersonSizedShort, "status", table)
+
+        when:
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
+
+        then: 'the column holds the longest name, as maxSize does not validate an enum'
+        simpleValue.getColumns()[0].getLength() == 12L
+    }
+
+    @Unroll
+    def "maxSize is applied to the column of a #mapping: #applied"() {
+        given:
+        def table = new Table("person")
+        def property = setupProperty(clazz, "status", table)
+
+        when:
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
+
+        then: 'maxSize reaches a string-mapped enum column and leaves an ordinal one at the default'
+        (simpleValue.getColumns()[0].getLength() == 42L) == applied
+
+        where:
+        clazz               | mapping   | applied
+        PersonSizedDefault  | "default" | true
+        PersonSizedString   | "string"  | true
+        PersonSizedOrdinal  | "ordinal" | false
+        PersonSizedCollection | "collection of enum values, where maxSize is the number of values" | false
+    }
+
     @Unroll
     def "should set column nullability"() {
         given: "A root entity and its enum property"
@@ -240,6 +272,20 @@ enum Status01 { AVAILABLE, OUT_OF_STOCK }
     Long id; Status01 status
     static constraints = { status nullable: false }
 }
+@Entity class PersonSizedDefault {
+    Long id; Status01 status
+    static constraints = { status maxSize: 42 }
+}
+@Entity class PersonSizedString {
+    Long id; Status01 status
+    static mapping = { status enumType: "string" }
+    static constraints = { status maxSize: 42 }
+}
+@Entity class PersonSizedOrdinal {
+    Long id; Status01 status
+    static mapping = { status enumType: "ordinal" }
+    static constraints = { status maxSize: 42 }
+}
 @Entity class Person02 {
     Long id; Status01 status
     static mapping = { status enumType: "string" }
@@ -283,4 +329,12 @@ class UserTypeEnumType implements UserType {
     @Override boolean isMutable() { false }
     @Override Serializable disassemble(Object value) { (Serializable)value }
     @Override Object assemble(Serializable cached, Object owner) { cached }
+}
+@Entity class PersonSizedCollection {
+    Long id; Set<Status01> status
+    static constraints = { status maxSize: 42 }
+}
+@Entity class PersonSizedShort {
+    Long id; Status01 status
+    static constraints = { status maxSize: 2 }
 }

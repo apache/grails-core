@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps;
@@ -49,6 +50,7 @@ public class EnumTypeBinder {
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final CreateKeyForProps createKeyForProps;
+    private final StringColumnConstraintsBinder stringColumnConstraintsBinder = new StringColumnConstraintsBinder();
 
     public EnumTypeBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -98,10 +100,12 @@ public class EnumTypeBinder {
         Class<?> propertyType = property.getEnumType();
         PropertyConfig pc = property.getHibernateMappedForm();
         String typeName = property.getTypeName(propertyType);
+        GrailsEnumType enumType = null;
         if (typeName != null) {
             simpleValue.setTypeName(typeName);
         } else {
-            GrailsEnumType.fromString(pc.getEnumType()).configure(simpleValue, propertyType);
+            enumType = GrailsEnumType.fromString(pc.getEnumType());
+            enumType.configure(simpleValue, propertyType);
         }
         Properties enumProperties = new Properties();
         enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
@@ -118,6 +122,20 @@ public class EnumTypeBinder {
         Table t = simpleValue.getTable();
         t.addColumn(column);
         simpleValue.addColumn(column);
+        // on a collection of enum values the constraints are those of the collection: maxSize is the number of its values,
+        // and an allowed value is a whole collection, so neither is the length of the column of one value
+        if ((enumType == GrailsEnumType.DEFAULT || enumType == GrailsEnumType.STRING) && !(property instanceof HibernateBasicProperty)) {
+            stringColumnConstraintsBinder.bindStringColumnConstraints(column, pc, null);
+            // maxSize does not validate an enum value, so a value whose name is longer than the column would pass validation and
+            // fail in the database: the column holds the longest name of the enum at least
+            int longestName = 0;
+            for (Object constant : propertyType.getEnumConstants()) {
+                longestName = Math.max(longestName, ((Enum<?>) constant).name().length());
+            }
+            if (column.getLength() != null && column.getLength() < longestName) {
+                column.setLength((long) longestName);
+            }
+        }
         createKeyForProps.createKeyForProps(property, path, t, columnName);
 
         if (!pc.getColumns().isEmpty()) {

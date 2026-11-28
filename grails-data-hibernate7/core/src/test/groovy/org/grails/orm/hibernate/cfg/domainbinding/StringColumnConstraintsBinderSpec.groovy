@@ -101,6 +101,31 @@ class StringColumnConstraintsBinderSpec extends Specification {
     }
 
 
+    def "should leave the column length when the allowed values are not strings"() {
+        given: 'an enum property lists its constants, and a collection property lists whole collections'
+        mappedForm.getMaxSize() >> null
+        mappedForm.getInList() >> [java.util.concurrent.TimeUnit.SECONDS, ['abcdef'], 7]
+        def originalLength = column.length
+
+        when:
+        binder.bindStringColumnConstraints(column, mappedForm, null)
+
+        then:
+        column.length == originalLength
+    }
+
+    def "should read the strings of a list that has other values too"() {
+        given:
+        mappedForm.getMaxSize() >> null
+        mappedForm.getInList() >> [java.util.concurrent.TimeUnit.SECONDS, '9', ['abcdef']]
+
+        when:
+        binder.bindStringColumnConstraints(column, mappedForm, null)
+
+        then:
+        column.length == 9
+    }
+
     def "should prioritize maxSize over inList when both are present"() {
         given:
         mappedForm.getMaxSize() >> 1
