@@ -76,7 +76,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
             return originalMethodCallExpr
         }
 
-        VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
+        Expression cacheManagerVariableExpression = grailsCacheManagerExpression()
         handleCacheCondition(sourceUnit, annotationNode,  methodNode, originalMethodCallExpr, newMethodBody)
 
         BlockStatement cachingBlock = block()
@@ -122,7 +122,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
 
         newMethodBody.addStatement(
             // if(grailsCacheManager != null)
-            ifS(notNullX(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)),
+            ifS(notNullX(grailsCacheManagerExpression()),
                     cachingBlock
             )
         )

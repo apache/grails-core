@@ -58,9 +58,33 @@ class BookSpec extends AutoStartedMongoSpec {
 
 If a shared `MongoDatastore` field is declared and `shouldInitializeDatastore()` returns `true` (the default), the datastore is bootstrapped against domain classes in the packages returned by `getMongoPackages()` (defaults to the package of the specification).
 
+=== Sharing a Container with Test Helpers
+
+Since Grails 7.0.18, a unit-test helper that is not a specification can call the public
+`org.apache.grails.testing.mongo.StartMongoGrailsUnitExtension.getSharedContainer()` accessor. This lets the helper
+reuse the container that `AutoStartedMongoSpec` instances on the same thread share instead of starting another one.
+The first request on a thread starts its container; later requests on that thread return the same container.
+
+Call the accessor after Spock has started its global extensions, for example from `setupSpec()` or a helper called
+by it:
+
+[source,groovy]
+----
+import org.apache.grails.testing.mongo.StartMongoGrailsUnitExtension
+
+def container = StartMongoGrailsUnitExtension.getSharedContainer()
+----
+
+The accessor throws `IllegalStateException` before the unit-test extension has started or after it has stopped.
+Spock manages the extension's lifecycle, and the extension stops the shared containers when the test run ends.
+Callers must not stop the returned container or invoke the extension's lifecycle methods themselves: another
+specification or helper can still need the container.
+
 == Integration Testing
 
 For integration tests, Spock global extensions start a single MongoDB container for the test run when MongoDB is not already listening on port `27017`. Connection details are exposed via system properties such as `grails.mongodb.url`, `grails.mongodb.host`, and `grails.mongodb.port`.
+
+The extension stops a container it started when the test run ends. It does not stop an existing MongoDB server.
 
 == MongoDB Container Version
 

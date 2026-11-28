@@ -41,7 +41,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
-import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 
 /**
  * Implementation of {@link CacheEvict}
@@ -59,7 +58,7 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
 
-        VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
+        Expression cacheManagerVariableExpression = grailsCacheManagerExpression()
         handleCacheCondition(sourceUnit, annotationNode,  methodNode, originalMethodCallExpr, newMethodBody)
 
         BlockStatement cachingBlock = block()
@@ -98,7 +97,7 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
 
         newMethodBody.addStatement(
                 // if(grailsCacheManager != null)
-                ifS(notNullX(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)),
+                ifS(notNullX(grailsCacheManagerExpression()),
                         cachingBlock
                 )
         )
