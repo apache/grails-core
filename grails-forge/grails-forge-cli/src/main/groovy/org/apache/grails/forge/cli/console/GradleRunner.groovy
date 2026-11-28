@@ -102,6 +102,7 @@ final class GradleRunner extends GradleBuild {
     private static volatile String shell = SHELL
     private static volatile String shellPath
     private static volatile Boolean asked
+    private static volatile Integer givenSeconds
 
     private final Consumer<String> failure
     private final boolean windows
@@ -153,6 +154,18 @@ final class GradleRunner extends GradleBuild {
      */
     static void setAsksToEnd(Boolean asks) {
         asked = asks
+    }
+
+    /**
+     * Replaces how long a process that is stopped ({@link #stop(ProcessHandle, int)}) is given to end by itself
+     * before it is ended by force, whatever the caller gives it, for a specification: one of a process that does
+     * not end when it is asked, which is to be ended by force at a moment the specification chooses and not at
+     * one that races what it looks at.
+     *
+     * @param seconds the time a process is given; {@code null} for the one each caller gives
+     */
+    static void setStopSeconds(Integer seconds) {
+        givenSeconds = seconds
     }
 
     /**
@@ -259,12 +272,14 @@ final class GradleRunner extends GradleBuild {
      * @return whether all of them have ended
      */
     static boolean stop(ProcessHandle process, int seconds) {
+        Integer replaced = givenSeconds
+        int given = replaced != null ? replaced.intValue() : seconds
         List<ProcessHandle> started = new ArrayList<ProcessHandle>(process.descendants().toList())
         Collections.reverse(started)
         started.add(process)
         started.each { ProcessHandle each -> each.destroy() }
         // where a process is not asked, it has been ended: the wait is for the system to say so
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(asksToEnd() ? seconds : Math.min(seconds, FORCED_SECONDS))
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(asksToEnd() ? given : Math.min(given, FORCED_SECONDS))
         try {
             for (ProcessHandle each : started) {
                 each.onExit().get(Math.max(0L, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)

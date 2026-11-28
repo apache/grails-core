@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.file.Path
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -56,6 +57,8 @@ class StopAppCommand extends InProjectCommand {
     static final int PORT_SECONDS = 30
     // between two looks at whether the run-app that was asked has ended, or the port is free: a user waits half of it on average
     private static final int POLL_MILLIS = 50
+    private static volatile Duration portWait
+    private static volatile Duration stopWait
     private static final String RECORD = "${RunDirectory.LOCATION}/${RunningApplication.RECORD}"
     private static final String NOT_RUNNING = 'No application that run-app started is running for this project'
 
@@ -108,7 +111,8 @@ class StopAppCommand extends InProjectCommand {
                     'Nothing was stopped; end that command where it runs')
             return 1
         }
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(STOP_SECONDS)
+        Duration replaced = stopWait
+        long deadline = System.nanoTime() + (replaced != null ? replaced.toNanos() : TimeUnit.SECONDS.toNanos(STOP_SECONDS))
         while (running.process.isAlive() && running.isRecorded()) {
             if (System.nanoTime() > deadline || !pause()) {
                 running.withdraw(directory)
@@ -175,6 +179,28 @@ class StopAppCommand extends InProjectCommand {
     }
 
     /**
+     * Replaces how long the end of an application is waited for at its port ({@link #PORT_SECONDS}), for a
+     * specification: one of an application that does not end, which holds that the wait ends without waiting it out.
+     * What is said keeps the seconds of {@link #PORT_SECONDS}.
+     *
+     * @param wait the time; {@code null} for {@link #PORT_SECONDS}
+     */
+    static void setPortWait(Duration wait) {
+        portWait = wait
+    }
+
+    /**
+     * Replaces how long a run-app that stays with the application is given to end it once it was asked to, for a
+     * specification: one of a process that does not end when it is asked, which holds that it is left alone without
+     * waiting the time out. What is said keeps the seconds the command gives.
+     *
+     * @param wait the time; {@code null} for the seconds the command gives
+     */
+    static void setStopWait(Duration wait) {
+        stopWait = wait
+    }
+
+    /**
      * Waits until nothing takes connections on a port of this computer any more, for {@link #PORT_SECONDS} at most:
      * the end of an application whose process is not below what was ended, as under a Gradle daemon, which is seen
      * there and only there.
@@ -185,7 +211,8 @@ class StopAppCommand extends InProjectCommand {
      */
     @PackageScope
     static boolean closed(int port, String address) {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(PORT_SECONDS)
+        Duration replaced = portWait
+        long deadline = System.nanoTime() + (replaced != null ? replaced.toNanos() : TimeUnit.SECONDS.toNanos(PORT_SECONDS))
         while (ApplicationPort.isOpen(port, address)) {
             if (System.nanoTime() > deadline) {
                 return false

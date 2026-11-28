@@ -28,6 +28,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.function.BooleanSupplier
 import java.util.function.Consumer
 import java.util.function.Function
 import groovy.transform.CompileStatic
@@ -136,6 +137,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     // what stops them when the JVM ends while the shell runs; guarded by STARTED_IN_SHELL
     private static Thread stopsWithJvm
     private static volatile Function<String, String> environmentVariables = ENVIRONMENT
+    private static volatile BooleanSupplier readyTimeUp
 
     @CommandLine.Option(names = ['--port'], paramLabel = 'PORT', description = 'The port the application answers on. Without it, the port its configuration names, or 8080.')
     Integer port
@@ -262,6 +264,17 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
      */
     static void setEnvironmentVariables(Function<String, String> variables) {
         environmentVariables = variables == null ? ENVIRONMENT : variables
+    }
+
+    /**
+     * Replaces what tells the wait for the application that the time it is given ({@code --ready-timeout}) is up, for
+     * a specification: one of an application that does not answer, which is to be given up on once what it holds has
+     * happened, and not after the time on the clock, which a slow computer may need for the start alone.
+     *
+     * @param timeUp says whether the time is up; {@code null} for the clock
+     */
+    static void setReadyTimeUp(BooleanSupplier timeUp) {
+        readyTimeUp = timeUp
     }
 
     @Override
@@ -656,7 +669,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
                 GradleRunner.stop(started, STOP_SECONDS)
                 return "The application failed to start: its startup progress says so on port ${answersOn}. What was started was stopped"
             }
-            if (System.nanoTime() > deadline) {
+            if (timeUp(deadline)) {
                 boolean accepts = ApplicationPort.isOpen(answersOn, address)
                 GradleRunner.stop(started, STOP_SECONDS)
                 String seen = !accepts ? '' : start.isReported() ?
@@ -675,6 +688,11 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             }
         }
         return null
+    }
+
+    private static boolean timeUp(long deadline) {
+        BooleanSupplier replaced = readyTimeUp
+        return replaced != null ? replaced.getAsBoolean() : System.nanoTime() > deadline
     }
 
     private void said(Path log) {

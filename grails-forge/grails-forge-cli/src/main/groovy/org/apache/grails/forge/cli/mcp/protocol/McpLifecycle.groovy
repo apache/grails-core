@@ -20,6 +20,7 @@ package org.apache.grails.forge.cli.mcp.protocol
 
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
@@ -77,6 +78,9 @@ final class McpLifecycle {
         }
     }
 
+    // the graces a specification gave in place of those of the reasons
+    private static final Map<Reason, Duration> GIVEN_GRACES = new ConcurrentHashMap<>()
+
     /** Exits the JVM with the exit code: what ends {@code grails mcp}, unless something else is given. */
     static final IntConsumer SYSTEM_EXIT = { int exitCode -> System.exit(exitCode) } as IntConsumer
 
@@ -118,6 +122,30 @@ final class McpLifecycle {
         this.diagnostics = Objects.requireNonNull(diagnostics, 'diagnostics')
         this.exit = Objects.requireNonNull(exit, 'exit')
         this.signals = Objects.requireNonNull(signals, 'signals')
+    }
+
+    /**
+     * Replaces how long the server waits for the running calls to end once it has interrupted them, when it ends
+     * for a reason, for a specification: one that holds what is waited for without waiting it out in full, or
+     * that tells the waits of two reasons apart by more than the time a slow computer takes.
+     *
+     * @param reason the reason
+     * @param grace the time; {@code null} for the {@linkplain Reason#grace grace of the reason}
+     */
+    static void setGrace(Reason reason, Duration grace) {
+        if (grace == null) {
+            GIVEN_GRACES.remove(reason)
+        } else {
+            GIVEN_GRACES.put(reason, grace)
+        }
+    }
+
+    /**
+     * @param reason the reason
+     * @return how long the server waits for the running calls to end when it ends for the reason
+     */
+    static Duration graceOf(Reason reason) {
+        return GIVEN_GRACES.getOrDefault(reason, reason.grace)
     }
 
     /**
@@ -194,7 +222,7 @@ final class McpLifecycle {
             CallThreads calls = server.calls
             calls.stopTaking()
             calls.interruptAll()
-            awaitCalls(calls, reason.grace)
+            awaitCalls(calls, graceOf(reason))
             server.close()
             closers.each { Closer closer -> close(closer) }
         } finally {
