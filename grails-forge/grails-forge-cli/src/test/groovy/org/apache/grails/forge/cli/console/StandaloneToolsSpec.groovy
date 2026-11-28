@@ -29,6 +29,9 @@ import groovy.json.JsonSlurper
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.ForkedCli
+import org.grails.forge.cli.Handshake
+import org.grails.forge.cli.SpecWaits
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
 
@@ -58,6 +61,8 @@ class StandaloneToolsSpec extends CommandSpec implements CommandFixture {
 
         public class StandaloneToolRunner {
 
+            static final String HANDSHAKE = "GRAILS_SPEC_HANDSHAKE";
+
             public static void main(String[] args) throws Exception {
                 System.out.println("arguments=" + args.length);
                 String file = args[0].substring("--grails-args-file=".length());
@@ -78,6 +83,17 @@ class StandaloneToolsSpec extends CommandSpec implements CommandFixture {
                 }
                 if (vector.contains("\\"seven\\"")) {
                     System.exit(7);
+                }
+                if (vector.contains("\\"hold\\"")) {
+                    // says in the directory of the handshake of the feature that it has started, and runs until it is released
+                    java.nio.file.Path handshake = java.nio.file.Paths.get(System.getenv(HANDSHAKE));
+                    java.nio.file.Path part = handshake.resolve("started.part");
+                    java.nio.file.Files.write(part, (ProcessHandle.current().pid() + "\\n").getBytes("UTF-8"));
+                    java.nio.file.Files.move(part, handshake.resolve("started"), java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+                    while (java.nio.file.Files.isDirectory(handshake) && !java.nio.file.Files.exists(handshake.resolve("release-started"))
+                            && !java.nio.file.Files.exists(handshake.resolve("release-all"))) {
+                        Thread.sleep(50);
+                    }
                 }
             }
         }
@@ -196,6 +212,29 @@ class StandaloneToolsSpec extends CommandSpec implements CommandFixture {
         argument | code
         'fail'   | 1
         'seven'  | 7
+    }
+
+    @IgnoreIf({ !ForkedCli.available() })
+    void "the CLI as a program says that the tool was stopped when the program is ended, and ends the tool"() {
+        given: 'a standalone tool that runs until the feature lets it go, which the program is to run'
+        listed([TOOL])
+        written([tool: 'dependencies'])
+        File written = new File(dir, 'out.txt')
+        ProcessBuilder builder = ForkedCli.builder(dir, [], 'tool', 'hold').redirectOutput(written).redirectErrorStream(true)
+        builder.environment().put('GRAILS_SPEC_HANDSHAKE', handshake.directory.path)
+
+        when: 'the program is ended while the tool runs'
+        Process program = builder.start()
+        long tool = handshake.awaitStarted()
+        program.destroy()
+        int exit = SpecWaits.exited(program, 'the end of the program')
+
+        then: 'the program said so, as it ended'
+        exit == 143
+        written.text.readLines().findAll { String line -> line.contains('| Error') } == ['| Error The command was stopped before it finished, because it was cancelled']
+
+        and: 'the tool is gone, though nothing released it'
+        Handshake.awaitExit(tool)
     }
 
     void "what the command line was asked for reaches the process: the whole stack trace, plain output, and that nothing may wait for what is typed"() {

@@ -23,6 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.regex.Matcher
@@ -66,6 +67,7 @@ final class StandaloneToolProcess {
     private static final String JAVA_HOME = 'JAVA_HOME'
     private static final String ARGUMENTS_OPTION = '--args-file='
     private static final int STOP_SECONDS = 10
+    private static final String STOPPED = 'The command was stopped before it finished, because it was cancelled'
     private static final int OUTPUT_SECONDS = 10
     private static final Pattern VERSION = Pattern.compile(/(?m)^JAVA_VERSION="?(\d+)(?:\.(\d+))?/)
     private static final int MAX_RELEASE = 64 * 1024
@@ -262,23 +264,72 @@ final class StandaloneToolProcess {
             builder.redirectInput(ProcessBuilder.Redirect.from(new File(windows ? 'NUL' : '/dev/null')))
             builder.environment().put(GradleBuild.NON_INTERACTIVE, 'true')
         }
-        Process process
+        AtomicBoolean stopped = new AtomicBoolean()
+        AtomicBoolean said = new AtomicBoolean()
+        // said once and by whoever comes first: this JVM can end before the thread of the command gets to say it
+        Runnable sayStopped = {
+            if (said.compareAndSet(false, true)) {
+                failure.accept(STOPPED)
+            }
+        } as Runnable
+        // When this JVM is ended while the command runs, the command is not left running without it; the line comes
+        // before the wait for what does not end by itself, which is then ended by force. As for Gradle (GradleRunner),
+        // the hook is there before the command is, and the command is started while the hook holds what it reads: a
+        // JVM that is ended while the command is being started stops it once it has started, and one that is ended
+        // before starts none. With the hook added after the start, a JVM ended in between ran no hook, and left the
+        // command running.
+        Object starting = new Object()
+        AtomicBoolean ending = new AtomicBoolean()
+        AtomicReference<Process> launched = new AtomicReference<Process>()
+        Thread whenEnded = new Thread({
+            Process running
+            synchronized (starting) {
+                ending.set(true)
+                running = launched.get()
+            }
+            if (running != null) {
+                stopped.set(true)
+                sayStopped.run()
+                GradleRunner.stop(running.toHandle(), STOP_SECONDS)
+            }
+        } as Runnable, 'grails-standalone-command-stop')
         try {
-            process = builder.start()
-        } catch (IOException | IllegalArgumentException e) {
-            failure.accept("Java (${GradleRunner.line(command[0])}) could not be started for the command: ${GradleRunner.line(e.getMessage())}".toString())
+            Runtime.getRuntime().addShutdownHook(whenEnded)
+        } catch (IllegalStateException ignored) {
+            // this JVM is being ended already: the command is not started
             return 1
         }
-        if (started != null) {
-            started.accept(process.toHandle())
+        try {
+            Process process
+            synchronized (starting) {
+                if (ending.get()) {
+                    // the hook has run: this JVM is being ended, and the command is not started
+                    return 1
+                }
+                try {
+                    process = builder.start()
+                } catch (IOException | IllegalArgumentException e) {
+                    failure.accept("Java (${GradleRunner.line(command[0])}) could not be started for the command: ${GradleRunner.line(e.getMessage())}".toString())
+                    return 1
+                }
+                launched.set(process)
+            }
+            if (started != null) {
+                started.accept(process.toHandle())
+            }
+            return waitFor(process, inherited, out, err, stopped, sayStopped, failure)
+        } finally {
+            try {
+                Runtime.getRuntime().removeShutdownHook(whenEnded)
+            } catch (IllegalStateException ignored) {
+                // the JVM is shutting down, and the hook runs
+            }
         }
-        AtomicBoolean stopped = new AtomicBoolean()
-        // when this JVM is ended while the command runs, the command is not left running without it
-        Thread whenEnded = new Thread({
-            stopped.set(true)
-            GradleRunner.stop(process.toHandle(), STOP_SECONDS)
-        } as Runnable, 'grails-standalone-command-stop')
-        Runtime.getRuntime().addShutdownHook(whenEnded)
+    }
+
+    // waits for the command that was started, and says how it ended
+    private static int waitFor(Process process, boolean inherited, PrintStream out, PrintStream err, AtomicBoolean stopped, Runnable sayStopped,
+                               Consumer<String> failure) {
         // as while a command waits for Gradle: the interrupt of the console cancels the command, and not the console
         GradleBuild.waiting()
         Thread output = inherited ? null : copy(process.getInputStream(), out)
@@ -290,7 +341,7 @@ final class StandaloneToolProcess {
                 errors.join(TimeUnit.SECONDS.toMillis(OUTPUT_SECONDS))
             }
             if (stopped.get() || (exit != 0 && Thread.currentThread().isInterrupted())) {
-                failure.accept('The command was stopped before it finished, because it was cancelled')
+                sayStopped.run()
                 return 1
             }
             if (exit != 0) {
@@ -299,18 +350,13 @@ final class StandaloneToolProcess {
             }
             return 0
         } catch (InterruptedException ignored) {
-            failure.accept('The command was stopped before it finished, because it was cancelled')
+            sayStopped.run()
             stopped.set(true)
             GradleRunner.stop(process.toHandle(), STOP_SECONDS)
             Thread.currentThread().interrupt()
             return 1
         } finally {
             GradleBuild.waited()
-            try {
-                Runtime.getRuntime().removeShutdownHook(whenEnded)
-            } catch (IllegalStateException ignored) {
-                // the JVM is shutting down, and the hook runs
-            }
         }
     }
 
