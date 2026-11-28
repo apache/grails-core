@@ -310,7 +310,8 @@ class SbomPlugin implements Plugin<Project> {
                 throw new GradleException("Cannot find license information for id ${licenseId} to use for bomRef ${bomRef} in project ${task.project.name}")
             }
 
-            return licenseBlock
+            // each entry of a component's licenses holds its license under the key license
+            return [license: licenseBlock]
         }
 
         if (!(licenseChoices instanceof List) || licenseChoices.isEmpty()) {
