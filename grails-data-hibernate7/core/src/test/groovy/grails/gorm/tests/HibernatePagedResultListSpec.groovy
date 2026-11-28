@@ -81,8 +81,6 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
 
         when:
         def results = HPBook.list(max: 2, offset: 1, sort: "id")
-        results.totalCount // Ensure initialized before serialization
-
         // Serialize
         def baos = new ByteArrayOutputStream()
         def oos = new ObjectOutputStream(baos)
@@ -98,6 +96,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         then:
         deserializedResults.size() == 2
         deserializedResults.totalCount == 5
+        results.totalCount == 5
         deserializedResults.max == 2
         deserializedResults.offset == 1
         deserializedResults[0].title == "Book 2"

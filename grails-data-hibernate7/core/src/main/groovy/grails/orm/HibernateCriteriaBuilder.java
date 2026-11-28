@@ -171,6 +171,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         HibernateSession session = (HibernateSession) datastore.connect();
         hibernateQuery = new HibernateQuery(
                 session, (GrailsHibernatePersistentEntity) datastore.getMappingContext().getPersistentEntity(targetClass.getName()));
+        hibernateQuery.setRowForEachElement(true);
         setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
         criteriaMethodInvoker = new CriteriaMethodInvoker(this);
     }
@@ -998,19 +999,19 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @Override
     public Criteria and(Closure<?> callable) {
-        hibernateQuery.and(callable);
+        hibernateQuery.and(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
     @Override
     public Criteria or(Closure<?> callable) {
-        hibernateQuery.or(callable);
+        hibernateQuery.or(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
     @Override
     public Criteria not(Closure<?> callable) {
-        hibernateQuery.not(callable);
+        hibernateQuery.not(criteriaMethodInvoker.evaluatedByBuilder(callable));
         return this;
     }
 
@@ -1482,6 +1483,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     void resetQueryState() {
         hibernateQuery = new HibernateQuery(
                 (HibernateSession) hibernateQuery.getSession(), hibernateQuery.getEntity());
+        hibernateQuery.setRowForEachElement(true);
         uniqueResult = false;
         scroll = false;
         count = false;

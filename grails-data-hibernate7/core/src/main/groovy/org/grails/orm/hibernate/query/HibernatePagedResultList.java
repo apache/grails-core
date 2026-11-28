@@ -22,8 +22,12 @@ import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
+
+import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
@@ -92,6 +96,20 @@ public class HibernatePagedResultList extends grails.gorm.PagedResultList {
             Query query = getQuery();
             if (query == null) {
                 totalCount = 0;
+            } else if (query instanceof SelectHqlQuery hqlQuery) {
+                // Static list uses HQL; cloning it as a criteria query loses its sort and fetch joins.
+                String countHql = new HqlListQueryBuilder(entity, hqlQuery.queryContext.settings().settings()).buildCountHql();
+                // The listeners of a query prepare the session for it, as the one that enables the filter of a
+                // multi-tenant entity does. The total can be read in another session than the list was, or
+                // for another tenant, so the count announces itself as the list did.
+                Datastore datastore = hqlQuery.getSession().getDatastore();
+                ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
+                if (publisher != null) {
+                    publisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
+                }
+                Number result = ((GrailsHibernateTemplate) hqlQuery.getHibernateTemplate()).execute(session ->
+                        session.createSelectionQuery(countHql, Long.class).getSingleResult());
+                totalCount = result.intValue();
             } else {
                 Object clonedQuery = query.clone();
                 if (!(clonedQuery instanceof Query)) {

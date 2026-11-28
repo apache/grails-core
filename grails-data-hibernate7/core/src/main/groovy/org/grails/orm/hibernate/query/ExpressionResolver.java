@@ -15,14 +15,22 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.Arrays;
+
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
+import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
 import jakarta.persistence.metamodel.Bindable;
 import jakarta.persistence.metamodel.PluralAttribute;
 import jakarta.persistence.metamodel.SingularAttribute;
+
+import org.hibernate.query.sqm.tree.from.SqmAttributeJoin;
+import org.hibernate.query.sqm.tree.from.SqmFrom;
+import org.hibernate.query.sqm.tree.from.SqmJoin;
 
 import grails.orm.HibernateCriteriaBuilder;
 
@@ -34,10 +42,20 @@ import grails.orm.HibernateCriteriaBuilder;
 public class ExpressionResolver {
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
+    // whether an association that only a sort uses is joined with a left join: the leftJoinAssociationSort setting
+    private boolean leftJoinSort;
 
     public ExpressionResolver(AliasRegistry aliasRegistry, JoinTracker joinTracker) {
         this.aliasRegistry = aliasRegistry;
         this.joinTracker = joinTracker;
+    }
+
+    /**
+     * @param leftJoinSort whether an association that is joined only for a sort is joined with a left join, which
+     *     keeps the rows where the association is {@code null}, and not with an inner join
+     */
+    void setLeftJoinSort(boolean leftJoinSort) {
+        this.leftJoinSort = leftJoinSort;
     }
 
     public Expression<?> resolve(String path) {
@@ -117,6 +135,137 @@ public class ExpressionResolver {
         }
         boolean inherited = aliasRegistry.isDefined(name) || aliasRegistry.hasRealized(name) || joinTracker.getJoin(name) != null;
         return inherited ? getPath(joinTracker.getRoot(), name) : null;
+    }
+
+    /**
+     * Resolves the property that an order sorts by. A path that crosses associations is not resolved as a plain
+     * path, because Hibernate joins such a path with an implicit inner join, which leaves out the rows where an
+     * association is {@code null}. Each association on the path is joined explicitly instead: a join that the
+     * query already has for the association is reused, and any other is joined for the sort, unless a join type
+     * was requested for the association: with a left join when the {@code grails.gorm.leftJoinAssociationSort}
+     * setting is enabled, and with an inner join otherwise.
+     * <p>
+     * A path that ends with a foreign key, the identifier of an association whose key is a column of the table
+     * before it, needs no join for that association: Hibernate reads the column, which keeps the rows where the
+     * association is {@code null} as it is. The JPA metamodel does not tell which side of an association has the
+     * key, so the caller says whether the path ends with one.
+     * <p>
+     * A collection that only the sort uses is read through its path, as with Hibernate 5, also with the setting:
+     * Hibernate joins the path with an inner join and returns a row for each element, and it joins the rest of the
+     * path, read through the elements, with inner joins as well. A count selects no instance and orders nothing, so
+     * the path would not join the collection at all; it asks for the join, to count those rows, and joins the
+     * associations after the collection with an inner join, as the path does. A path through an embedded component
+     * is read as it is.
+     *
+     * @param path the property path of the order
+     * @param endsWithForeignKey whether the last two attributes of the path are an association and its
+     *     identifier, with the foreign key on the side of the path
+     * @param joinCollections whether a collection that only the sort uses is joined, with an inner join
+     * @return the expression to sort by, or {@code null} if the path cannot be resolved
+     */
+    Expression<?> resolveSort(String path, boolean endsWithForeignKey, boolean joinCollections) {
+        String cleanPath = path != null && path.startsWith("root.") ? path.substring(5) : path;
+        if (cleanPath == null || cleanPath.indexOf('.') < 0 || cleanPath.startsWith("{alias}") ||
+                cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR) ||
+                aliasRegistry.isDefined(cleanPath)) {
+            return resolve(path);
+        }
+
+        String[] tokens = cleanPath.split("\\.");
+        From<?, ?> from = joinTracker.getRoot();
+        // the path of the association from the root, by which a join type is requested for it
+        String associationPath = "";
+        int first = 0;
+        HibernateAlias definition = aliasRegistry.getDefinition(tokens[0]);
+        if (definition != null && definition.explicit() || definition == null && aliasRegistry.hasRealized(tokens[0])) {
+            if (!(resolveFromAlias(tokens[0], null) instanceof From<?, ?> aliased)) {
+                return resolve(path);
+            }
+            from = aliased;
+            associationPath = definition != null ? definition.path() : null;
+            first = 1;
+        }
+
+        // whether the count has joined a collection that the list reads through its path, after which it joins
+        // with inner joins, as Hibernate joins the rest of that path
+        boolean afterCollection = false;
+        for (int i = first; i < tokens.length - 1; i++) {
+            if (associationPath != null) {
+                associationPath = associationPath.isEmpty() ? tokens[i] : associationPath + '.' + tokens[i];
+            }
+            Path<?> attribute = getPath(from, tokens[i]);
+            if (attribute == null || !(attribute.getModel() instanceof Attribute<?, ?> model) || !model.isAssociation()) {
+                // the rest of the path is a component path or a property, which resolves as it is
+                return getPath(from, String.join(".", Arrays.copyOfRange(tokens, i, tokens.length)));
+            }
+            // the joins after such a collection are made by the sort, as the path of the list reads them
+            From<?, ?> join = afterCollection ? null : queryJoin(from, tokens[i], associationPath);
+            if (join == null) {
+                if (i == tokens.length - 2 && endsWithForeignKey ||
+                        model.isCollection() && !joinCollections) {
+                    // a foreign key, or the elements of a collection, read through the path
+                    return getPath(from, String.join(".", Arrays.copyOfRange(tokens, i, tokens.length)));
+                }
+                if (model.isCollection()) {
+                    // a sort by a collection leaves out the instances whose collection is empty, as with Hibernate 5
+                    join = from.join(tokens[i], JoinType.INNER);
+                    afterCollection = true;
+                } else {
+                    // with the setting, a left join keeps the instances whose association is null
+                    join = from.join(tokens[i], leftJoinSort && !afterCollection ? JoinType.LEFT : JoinType.INNER);
+                }
+            }
+            from = join;
+        }
+        return getPath(from, tokens[tokens.length - 1]);
+    }
+
+    /**
+     * Returns the join that the query has or requests for an association that an order sorts through, or
+     * {@code null} if it has none: a join that the query already has for the association, or a join of the type
+     * that the query requests for its path.
+     */
+    private From<?, ?> queryJoin(From<?, ?> from, String attributeName, String associationPath) {
+        Join<?, ?> existing = existingJoin(from, attributeName);
+        if (existing != null) {
+            return existing;
+        }
+        // The tracker qualifies a block-relative path against the plan of the whole query. A request for
+        // team.club belongs to club inside the team block, not to an inherited alias merely named club.
+        JoinType planned = associationPath != null ? joinTracker.plannedType(associationPath) : null;
+        if (planned != null) {
+            return from.join(attributeName, planned);
+        }
+        HibernateAlias requested = associationPath != null && aliasRegistry.isOwnDefined(associationPath) ?
+                aliasRegistry.getDefinition(associationPath) : null;
+        if (requested != null && !requested.explicit()) {
+            return from.join(attributeName, requested.joinType());
+        }
+        return null;
+    }
+
+    /**
+     * Returns the join that a source already has for an attribute, or {@code null} if it has none. Hibernate keeps
+     * the joins of a source in the order in which they were made, while {@link From#getJoins()} returns them as a
+     * set, which has no order, so the first join of the attribute is read from the SQM joins.
+     * <p>
+     * A fetch of the association is a join as well. It is only used when the query has no other join of the
+     * association, since the criteria of the query apply to the other join.
+     */
+    private static Join<?, ?> existingJoin(From<?, ?> from, String attributeName) {
+        Join<?, ?> fetch = null;
+        for (SqmJoin<?, ?> join : ((SqmFrom<?, ?>) from).getSqmJoins()) {
+            if (join instanceof SqmAttributeJoin<?, ?> attributeJoin &&
+                    attributeName.equals(attributeJoin.getAttribute().getName())) {
+                if (!attributeJoin.isFetched()) {
+                    return attributeJoin;
+                }
+                if (fetch == null) {
+                    fetch = attributeJoin;
+                }
+            }
+        }
+        return fetch;
     }
 
     private Expression<?> resolveFromAlias(String alias, String subPath) {

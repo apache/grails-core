@@ -18,9 +18,11 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -77,6 +79,9 @@ public class HibernateQuery extends Query {
     private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
     private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
     private final Set<String> fetchJoinPaths = new LinkedHashSet<>();
+    private boolean rowForEachElement;
+    // the orders that clearOrders removed: a count keeps their joins, which decide the rows that a list pages through
+    private final List<Order> clearedOrders = new ArrayList<>();
     protected String alias;
     protected int aliasCount;
     protected Deque<GrailsHibernatePersistentEntity> entityStack = new LinkedList<>();
@@ -431,9 +436,19 @@ public class HibernateQuery extends Query {
 
     @Override
     public Query clearOrders() {
+        clearedOrders.addAll(detachedCriteria.getOrders());
         detachedCriteria.getOrders().clear();
         super.clearOrders();
         return this;
+    }
+
+    /**
+     * The orders that {@link #clearOrders()} removed. A count of the query keeps their joins without ordering, as
+     * with Hibernate 5, where the alias that an order joins stays when the order is cleared: the joins of a sort
+     * decide which rows a list pages through, so the total of a page counts the rows that the list returns.
+     */
+    List<Order> getClearedOrders() {
+        return clearedOrders;
     }
 
     @Override
@@ -479,9 +494,35 @@ public class HibernateQuery extends Query {
         return list(getCurrentSession());
     }
 
+    /**
+     * Sets whether a list sorted by a property of a collection has an instance once for each element of the
+     * collection, as a criteria query has, and not once, as a where query, a detached criteria and a dynamic
+     * finder have. {@code max} and {@code offset} page through the rows of the elements in both.
+     *
+     * @param rowForEachElement whether an instance is listed once for each element
+     */
+    public void setRowForEachElement(boolean rowForEachElement) {
+        this.rowForEachElement = rowForEachElement;
+    }
+
     public List list(Session session) {
         var creator = createJpaCriteriaQueryCreator();
-        return getHibernateQueryExecutor().list(session, creator.createQuery(), creator.getParameterValues());
+        List results = getHibernateQueryExecutor().list(session, creator.createQuery(), creator.getParameterValues());
+        if (!creator.isDistinctInMemory() && (rowForEachElement || !creator.isSortedByCollection())) {
+            return results;
+        }
+        // the query could not select distinct entities for the order it has, so an entity that a join of a
+        // collection repeats is listed where it comes first, as a distinct list was with Hibernate 5. A where
+        // query, a detached criteria and a dynamic finder sorted by a collection list an instance once from
+        // the rows that they read as well, as they do with Hibernate 5
+        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        List distinct = new ArrayList<>(results.size());
+        for (Object result : results) {
+            if (seen.add(result)) {
+                distinct.add(result);
+            }
+        }
+        return distinct;
     }
 
     private HibernateQueryExecutor getHibernateQueryExecutor() {
@@ -543,7 +584,7 @@ public class HibernateQuery extends Query {
 
             ConversionService cs = getSession().getMappingContext().getConversionService();
             var creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs, this);
-            creator.populateSubquery(innerSubquery);
+            creator.populateCountSubquery(innerSubquery);
 
             countQuery.from(innerSubquery);
             countQuery.select(cb.count(cb.literal(1)));
@@ -878,6 +919,10 @@ public class HibernateQuery extends Query {
                     }
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
                     hibernateQuery.aliases.addAll(this.aliases);
+                    hibernateQuery.rowForEachElement = this.rowForEachElement;
+                    hibernateQuery.clearedOrders.addAll(this.clearedOrders);
+                    // the count of a page joins an association that the list fetches and sorts by as the fetch does
+                    hibernateQuery.fetchJoinPaths.addAll(this.fetchJoinPaths);
 
                     return hibernateQuery;
                 });
