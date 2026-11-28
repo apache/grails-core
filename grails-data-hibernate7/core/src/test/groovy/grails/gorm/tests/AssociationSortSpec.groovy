@@ -773,6 +773,35 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'a where query'    | { int offset -> Team.where { name ==~ '%' }.list(max: 2, offset: offset, sort: 'players.name', fetch: ['players.contract': 'join']) }
     }
 
+    void 'every instance of a criteria query sorted by #sort through an alias of a collection is on a page that its total reaches'() {
+        given: 'an owner without a score, a second player of a team, a player without a contract, and a team whose player has none'
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true)
+        saveArsenalPlayers()
+        final noContract = new Team(name: 'No Contract Team').save(failOnError: true)
+        new Player(name: 'Uncontracted', team: noContract).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when: 'the pages that a pager asks for, which stops at the total'
+        final first = query.call(10, 0)
+        final names = [] as Set
+        for (int offset = 0; offset < first.totalCount; offset += 2) {
+            names.addAll(query.call(2, offset)*.name)
+        }
+
+        then: 'the alias joins the collection without fetching it, so the total counts a row for each element, as on 8.0.x'
+        first.totalCount == total
+        names == expected as Set
+
+        where:
+        sort           | total | expected           | query
+        's.score'      | 4     | ['Ann', 'Bob']     | { int max, int offset -> AssociationSortOwner.createCriteria().list(max: max, offset: offset) { createAlias('scores', 's'); order('s.score'); order('name') } }
+        'scores.score' | 4     | ['Ann', 'Bob']     | { int max, int offset -> AssociationSortOwner.createCriteria().list(max: max, offset: offset) { createAlias('scores', 's'); order('scores.score'); order('name') } }
+        'p.name'       | 7     | TEAMS_WITH_PLAYERS | { int max, int offset -> Team.createCriteria().list(max: max, offset: offset) { createAlias('players', 'p'); order('p.name') } }
+    }
+
+    protected static final List<String> TEAMS_WITH_PLAYERS = ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team',
+            'No Contract Team', 'Unattached First Team']
+
     protected static List pageOf(page) {
         [page*.name, page.totalCount]
     }
