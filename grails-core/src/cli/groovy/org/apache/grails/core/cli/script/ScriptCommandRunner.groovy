@@ -402,15 +402,25 @@ class ScriptCommandRunner {
     // has no entry for the directory is found by its manifest. A jar without a manifest is not searched,
     // with or without an entry for the directory: every jar a build makes has one, and the scripts of a
     // file that has none are not run.
+    // the jars without a manifest that it was said of that no script is taken from them
+    private final Set<String> saidOfJars = new HashSet<String>()
+
     private URL pluginScript(String name) {
         Map<String, Place> places = new LinkedHashMap<String, Place>()
+        Set<String> withoutManifest = new TreeSet<String>()
         for (URL each : Collections.list(classLoader.getResources(CLASSPATH_LOCATION))) {
-            add(places, each)
+            add(places, each, withoutManifest)
         }
         for (URL each : Collections.list(classLoader.getResources(JarFile.MANIFEST_NAME))) {
             // a directory with a manifest has its scripts in a directory the first search finds
             if (each.protocol == 'jar') {
-                add(places, each)
+                add(places, each, withoutManifest)
+            }
+        }
+        for (String jar : withoutManifest) {
+            // said once for a jar, however many scripts are looked for
+            if (saidOfJars.add(jar)) {
+                err.println("No script is taken from ${jar}: it has files in ${CLASSPATH_LOCATION} and no manifest, and the jar of a plugin has a manifest.")
             }
         }
         List<Place> ordered = new ArrayList<Place>(places.values())
@@ -428,7 +438,7 @@ class ScriptCommandRunner {
     }
 
     // adds the place a resource of the class path is in, unless it is there already or has no scripts
-    private static void add(Map<String, Place> places, URL resource) {
+    private static void add(Map<String, Place> places, URL resource, Set<String> withoutManifest) {
         try {
             if (resource.protocol == 'file') {
                 File commands = new File(resource.toURI())
@@ -451,9 +461,6 @@ class ScriptCommandRunner {
                 connection.setUseCaches(false)
                 JarFile jar = connection.jarFile
                 try {
-                    if (jar.manifest == null) {
-                        return
-                    }
                     String prefix = CLASSPATH_LOCATION + '/'
                     List<String> names = []
                     for (JarEntry entry : Collections.list(jar.entries())) {
@@ -463,6 +470,13 @@ class ScriptCommandRunner {
                         }
                     }
                     String path = connection.jarFileURL.path
+                    if (jar.manifest == null) {
+                        // no jar of a plugin: it is said, where it has scripts, and none of them is run
+                        if (names.any { String each -> commandName(each) != null }) {
+                            withoutManifest.add(path)
+                        }
+                        return
+                    }
                     places.put(location, new Place(location, path.substring(path.lastIndexOf('/') + 1), !names.isEmpty() && isGrails(jar.manifest), names,
                             new URL("jar:${location}!/${prefix}")))
                 } finally {

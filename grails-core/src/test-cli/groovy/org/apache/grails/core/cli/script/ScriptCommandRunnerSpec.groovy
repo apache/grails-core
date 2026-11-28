@@ -694,6 +694,10 @@ class ScriptCommandRunnerSpec extends Specification {
         new ScriptCommandRunner(project, loader, new PrintStream(err, true)).start('--', 'plain-name') == 1
         !new File(project, 'ran.txt').exists()
 
+        and: 'which jar it is and why is said, once'
+        err.toString().readLines().findAll { it.startsWith('No script is taken from ') } ==
+                ["No script is taken from ${jar.toURI().toURL().path}: it has files in META-INF/commands and no manifest, and the jar of a plugin has a manifest.".toString()]
+
         cleanup:
         loader?.close()
     }
