@@ -936,6 +936,40 @@ With GORM for Hibernate, a where query, a detached criteria, a dynamic finder or
 - To keep the previous result of a query, remove the join type that it requests, or request `JoinType.LEFT`.
 - Check queries that store a sort with `sort()` before passing a `fetch` argument to `list` or `find`. `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])` now also returns books without an author. Request `JoinType.INNER` to keep leaving them out; nested paths follow the same rule.
 
+## GORM for Hibernate 5: query arguments reach where queries and dynamic finders
+
+- `readOnly`, `fetchSize`, `timeout` and `flushMode` were ignored by `where` queries, dynamic finders and `findAll(Map, Closure)`. They are applied now, so `Person.where { age > 18 }.list(readOnly: true)` loads read-only entities. Search for these four arguments on those calls. To keep the earlier result, remove the argument from the call.
+
+## GORM for Hibernate 5: bulk deleteAll and updateAll reject max and offset
+
+- `deleteAll()` and `updateAll(Map)` on a `where` query or `DetachedCriteria` run one statement with no row limit, so a query with `max` or an `offset` other than 0 wrote to every matching row. It now throws `InvalidDataAccessResourceUsageException` and writes nothing; an `offset` of 0 is accepted. Search for `deleteAll` and `updateAll` after `max` or `offset`.
+- To keep writing every matching row, call `deleteAll()` or `updateAll(Map)` on the query before `max` or `offset` are applied to it. To limit the rows written, select the ids with the limit, then delete or update by id: `Person.where { id in ids }.deleteAll()`.
+
+## GORM for Hibernate 5: sorts, empty in lists and paged totals
+
+- A map as the `sort` argument, `list(sort: [a: 'asc', b: 'desc'])`, orders by every property in the order listed; the static `list(sort: map)` kept only the last one. Sorting by a property of a composite id works. A sort no longer joins an association that the query's own block already joined. Review code that relied on the old order.
+- An empty list given to `inList`, or to `in`, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched nothing on PostgreSQL, MySQL and MariaDB, where Hibernate writes an empty list as `in (null)`. On H2, which accepts an empty `IN` list, they already matched every row. To keep the earlier result on those three databases, when the negated list is required for every match, return an empty list before running the query when the input list is empty; dropping the criterion would return every row. When the negated list is one side of an `or`, leave that side out when the list is empty: it matched nothing there, so the other sides alone gave the earlier result, and returning an empty list would drop their rows. An `or` that is itself inside a `not` gives the same result as before, so leave it as it is: dropping a side of it would change the result.
+- The `totalCount` of a paged criteria with a `groupProperty` projection is the number of groups, not the number of rows before grouping. Remove workarounds for the larger number.
+- A default `sort` of a `hasMany` that names a property the associated entity does not have fails at startup with an error that names the association and the sort.
+
+## GORM: a dynamic finder refuses text after its operator
+
+- A finder name with trailing text it does not understand, such as `findAllByAgeGreaterThanOrderByName(18)`, ran as if the text were absent, unsorted and with no error. It now throws `IllegalArgumentException` naming the `sort` and `order` arguments. Search for finders with `OrderBy` or other trailing text and move the sort into the arguments: `findAllByAgeGreaterThan(18, [sort: 'name'])`. A name that ends with `And` or `Or` after another expression, such as `findAllByNameAndAgeInListAnd`, ran as if the last operator were absent, and one that ends with the other operator, such as `findAllByNameAndAgeOr`, searched a property named `ageOr`; both are refused now, and a data service interface method no longer matches a finder. Remove the operator. A finder that joins with one operator and has the other inside an expression, such as `findAllByNameAndAgeOrTitle`, searched a property named `ageOrTitle`; it is refused now unless the entity has a property of that name. Use only `And` or only `Or`, or a `where` query.
+
+## GORM for Hibernate 5: enum columns take the length of maxSize
+
+- Search for enum properties with a `maxSize` or an `inList` constraint. An enum stored as a string ignored a `maxSize` constraint, so its column was `VARCHAR(255)`; it takes the length a `String` property takes now, and a column created from an `inList` of enum constants is as long as the longest constant name. Only a schema that Hibernate creates changes: an application that manages its schema by hand or by migration keeps its columns, and `hbm2ddl.auto: update` does not change an existing one.
+
+## GORM for Hibernate 5: the query cache follows the cache option, and lock: false no longer locks
+
+- A query is cached when the mapping of its entity caches, when `cache: true` or `cache(true)` asks for it, or when `grails.hibernate.cache.queries` is `true`; an explicit `false` always keeps it out of the cache. A criteria `cache(false)` and a `cache: false` argument were overridden before, and a sort through a cached association cached a query that nothing asked to cache. To keep the old result for one query, pass `cache: true`.
+- A finder with `lock: false` took a write lock, as with `true`. It takes none now, so `[lock: params.boolean('lock')]` locks only when the parameter is true. An application that relied on `lock: false` to lock must pass `lock: true`.
+
+## Spring Security: remember-me redirect
+
+- Search for subclasses of `GrailsRememberMeAuthenticationFilter` and for calls to `setAuthenticationSuccessHandler`. A remember-me login is redirected only for a GET page request that is not an Ajax call and not the request for the login form. A POST, PUT, PATCH, DELETE, HEAD or Ajax request goes on to the controller as the remembered user instead of being turned into a GET, and the login form request reaches the login controller.
+- `GrailsRememberMeAuthenticationFilter.setAuthenticationSuccessHandler` no longer sets Spring Security's handler; the redirect is decided in `onSuccessfulAuthentication`. A subclass that overrides it without calling `super` no longer redirects. To redirect another kind of request, subclass the filter, override `redirects(request)` to return `true` for it, and register it as the `rememberMeAuthenticationFilter` bean.
+
 # After the Upgrade
 
 ## Verification Checklist
