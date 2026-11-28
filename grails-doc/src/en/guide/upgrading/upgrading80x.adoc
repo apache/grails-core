@@ -41,21 +41,27 @@ Remove the dependency once your configuration is clean.
 [TIP]
 ====
 **Let your coding agent work through this guide.**
-Grails publishes the `grails-8-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent.
+Grails publishes the `grails-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent, and lists the changes of each Grails 8 release.
 Extract it with the SkillsJars Gradle plugin, as xref:gettingStarted#agentSkills[Agent Skills] describes.
-While the application is still on Grails 7, declare the skill with its version, since the Grails 7 BOM does not manage it:
+While the application is still on Grails 7, declare the skill with its version, since the Grails 7 BOM manages the upgrade skill of Grails 7:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
+skill 'org.apache.grails.skills:grails-upgrade:{version}'
 ----
 ====
+
+The changes are listed by release. Apply the section of every release after the one the application is on, up to and including the release it is upgrading to.
+
+[[grails-8-0-0]]
+=== Grails 8.0.0
 
 ==== 1. Java 21 Minimum Requirement
 
 Grails 8 requires a minimum of Java 21 to both build and run Grails applications.
 This is an increase from Grails 7, which required Java 17.
+Grails 8 also supports Java 25 (the next LTS after Java 21).
 Update your project's toolchain, CI pipelines, and deployment environments to use JDK 21 or later.
 
 ===== 1.1 Gradle 9.7 Minimum Requirement
@@ -299,6 +305,7 @@ response.status = HttpStatus.FOUND.value()
 ----
 
 [[micronaut-integration]]
+
 ==== 7. Micronaut Integration
 
 The Grails Micronaut plugin and its BOMs are now maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository].
@@ -329,6 +336,7 @@ There is no Grails 8 configuration switch that restores the verbose enum-object 
 If an external API contract still requires that shape, register a custom object marshaller explicitly.
 
 [[jackson3-default]]
+
 ==== 9. Jackson 3 is the New Default
 
 Spring Boot 4 ships Jackson 3 (`tools.jackson.*`) and auto-configures a `JsonMapper` bean instead of the Jackson 2 `ObjectMapper`.
@@ -683,7 +691,7 @@ Add the corresponding `@AutoConfigureMockMvc` / `@AutoConfigureWebClient` / `@Au
 // Before
 @SpringBootTest
 class MyControllerSpec extends Specification {
-    @Autowired MockMvc mockMvc      // injected automatically
+    @Autowired MockMvc mockMvc       // injected automatically
     @Autowired TestRestTemplate rest // injected automatically
 }
 
@@ -1191,6 +1199,7 @@ Rendering an enum value as JSON will now instead throw a `ConverterException`.
 See https://github.com/apache/grails-core/pull/15212[PR 15212] for more details on this change.
 
 [[_hibernate_5_to_hibernate_7_migration]]
+
 ==== 26. Hibernate 5 to Hibernate 7 Migration
 
 Grails 8 supports both Hibernate 5 (the default) and Hibernate 7.
@@ -1450,24 +1459,6 @@ class SportsCar extends Car {
 }
 ----
 
-===== 26.11 Custom User Types
-
-Hibernate 7 changed the `org.hibernate.usertype.UserType` contract. The interface is generic in the Java type, `sqlTypes()` became `getSqlType()`, and `nullSafeGet()` and `nullSafeSet()` take a column position and a `WrapperOptions` in place of the column names and the session. A `UserType` written for Hibernate 5 does not compile against Hibernate 7 and must be rewritten.
-
-A type that spans several columns no longer implements `UserType` with several `sqlTypes()`. It implements `org.hibernate.usertype.CompositeUserType`, whose `embeddable()` method names a class whose persistent attributes describe the columns. GORM binds such a property as a component: the columns of its `type` mapping are assigned to the attributes in the alphabetical order of their names, which is also the index that `getPropertyValue()` and `instantiate()` use, and a column that is not listed is named after the property and the attribute. In Hibernate 5, the columns followed the order of `getPropertyNames()` instead, so check the column order of every multi-column mapping when you port a `CompositeUserType`. The GORM guide describes the mapping under _Custom Hibernate Types_.
-
-===== 26.12 Several Unidirectional hasMany Associations on One Owner
-
-Under Hibernate 7, an owner with two or more unidirectional `hasMany` associations wrote no rows to their join tables: an element added to any of them was lost at flush (issue https://github.com/apache/grails-core/issues/16665[#16665]). This is fixed when each association has a join table of its own, which is the default for associations to different classes (`item_roles` and `item_tags` for `static hasMany = [roles: Role, tags: Tag]`) and also the case when two associations to the same class map different tables with `joinTable`. Each such join table is written, as under Hibernate 5.
-
-Two unidirectional associations to the same class share one join table by default, named after the owner and the element class, with a key column per association (`item_role` with `item_roles_id` and `item_deny_roles_id` for `static hasMany = [roles: Role, denyRoles: Role]`). Such a shared table is now written as well: each association keeps its rows unique by its own key column and the element. Two lists or two maps sharing a join table are written too (issue https://github.com/apache/grails-core/issues/16700[#16700]): each keeps its rows unique by its own key and index columns, since a position or a map key is taken once while an element may repeat, and the table has no primary key, because the one Hibernate makes over one list's key and index columns rejects every row of the other list. A schema created by an earlier Grails 8 release has that primary key and `NOT NULL` owner-key and index columns, which `dbCreate` of `update` does not change: drop the primary key and make the owner-key and index columns nullable with a migration. On most databases that is a unique key per association; on Oracle and on Db2 for Linux, UNIX and Windows, which compare the non-null columns of a partially null row in a unique key, it is one unique key over the key columns of both associations and the element. A schema created by an earlier Grails 8 release has the single unique key Hibernate made for the first association: `dbCreate` of `update` adds the second one, and on Oracle and Db2 for Linux, UNIX and Windows a migration has to replace that key with the wider one. Each collection on a shared join table isolates its rows during reads, element removals, and bulk deletes: for lists and maps sharing the same foreign-key and element columns, queries and deletions are restricted by each list's distinct index column so neither collection interferes with the other. A bag has no key; its elements may repeat.
-
-Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*` or by binding a smaller set of ids, deleted every join table row of the owner, so the association lost all its elements (issue https://github.com/apache/grails-core/issues/16691[#16691]). Hibernate 7 deletes such a row by the owner's key and only those element columns that are not nullable, and the element column of a GORM join table is nullable. GORM now gives a set or a bag of entities in a join table a collection persister that deletes the row by the owner and the element, as Hibernate 5 did; the schema does not change. An application that configures a persister class resolver of its own with `hibernate.persister.resolver` keeps it, and with it the Hibernate 7 behaviour. Likewise, GORM configures `hibernate.query.sqm.translator` to `RestrictedCollectionSqmTranslatorFactory` by default so that `is empty` on associations that share a key column (issue https://github.com/apache/grails-core/issues/16748[#16748]) translates to a count query; an application that configures an SQM query translator factory of its own keeps it, and with it the standard Hibernate 7 behaviour.
-
-===== 26.13 Collection Criteria Next to Association Blocks
-
-Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
-
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
@@ -1535,6 +1526,7 @@ class BookSpec extends Specification implements DomainUnitTest<Book> {
 ----
 
 [[groovy5-behavior-changes]]
+
 ==== 28. Apache Groovy 5 Behavior Changes
 
 Grails 8 upgrades from Apache Groovy 4 to Apache Groovy 5.
@@ -1610,35 +1602,6 @@ Its setter is retained, so assigning `attrs.gspTagSyntaxCall` still invokes that
 Subscript assignment, `attrs['gspTagSyntaxCall'] = value`, now stores an attribute of that name, as `attrs.put('gspTagSyntaxCall', value)` does; in Grails 7 it invoked the setter.
 
 NOTE: When adding a class that extends `grails.util.TypeConvertingMap`, do not declare a no-argument `getX()` or `isX()` method on it, or the entry `x` becomes unreachable for the same reason. Statically compiled callers bind directly to the accessor, so the collision cannot be corrected at runtime.
-
-===== 28.4 Map entries named `properties` or `metaClass`
-
-The accessor-first resolution described above applies to every `Map`, not only to a class that declares an accessor of its own, because every Groovy object has the `properties` and `metaClass` properties.
-In Groovy 4 `map.properties` and `map['properties']` read the map entry.
-In Groovy 5 both return the Groovy meta-properties of the map object, in dynamic and in statically compiled code alike, and `map['properties'] = value` throws `groovy.lang.ReadOnlyPropertyException`.
-`metaClass` reads the same way. Assigning to it through a subscript was never a map put: in Groovy 4 as in Groovy 5 it sets the metaclass of the map, and a value that is not a `MetaClass` throws `groovy.lang.GroovyCastException`.
-`class` and `empty` are exempt and still address the map entry.
-
-Such keys are common in data an application does not control; the `properties` member of a GeoJSON `Feature` is one.
-Grails 8 stores and loads them through the `Map` API, so they round-trip through a `Map` property or an embedded map of a GORM for MongoDB entity, and through data binding of a `Map` property, whether the value arrives as a nested map or as an indexed key such as `attributes[properties]`.
-
-Application code that reads one of these keys from a `Map` must call `get`:
-
-[source,groovy]
-----
-Map feature = place.geoJson    // a Map property holding a GeoJSON Feature
-
-feature.get('properties')      // the entry
-feature.properties             // the meta-properties of the map object
-feature['properties']          // the same, on Groovy 5
-----
-
-With GORM for MongoDB, a loaded `Map` property comes back as a dirty-checking wrapper with accessors of its own, named `target`, `parent`, `property`, `originalSize` and `assigned`.
-The wrapper resolves those five names to the map entry, in dotted and subscript form, so an entry such as `parent` reads and writes through the wrapper as it does through the plain map, and as it did in Grails 7.
-The one form that still reaches the accessor is dotted access from statically compiled code, which binds at compile time as it always has; read such an entry with `get` there.
-
-With GORM for Hibernate, a loaded `Map` property is Hibernate's `PersistentMap`, and its accessors are not redirected.
-In Groovy 5, `attrs.key`, `attrs['value']`, `attrs.owner`, `attrs.role`, `attrs.size`, `attrs.session` and `attrs.dirty`, among others, return the state of the collection rather than the entry; read such an entry with `get`.
 
 ==== 29. MIME Types Are Now Framework Defaults
 
@@ -1805,6 +1768,7 @@ Beans contributed through the application's `resources.groovy` or `resources.xml
 The one exception is a `@Configuration` class registered there, which is no longer processed — see <<resources-groovy-configuration-classes,`@Configuration` classes registered in `resources.groovy`>> below.
 
 [[plugin-beans-before-autoconfiguration]]
+
 ==== 33. Plugin Beans Now Register Before Spring Boot Auto-Configuration
 
 In Grails 7 and earlier, the beans a plugin contributed through `doWithSpring` were registered *after* Spring Boot had processed its auto-configurations.
@@ -1904,7 +1868,6 @@ or by annotating the `Application` class with `@ComponentScan` so that configura
 Alternatively, declare the beans themselves — in `resources.groovy`, or in a `beans` block on the `Application` class (see link:spring.html#springdslAdditional[Configuring Additional Beans]).
 
 Plugin authors who previously told users to replace a plugin-provided `@Configuration` class through `resources.groovy` should ship that class as a Spring Boot auto-configuration and let users customize it through `@ConditionalOnMissingBean`-guarded beans or configuration properties instead.
-
 
 ==== 34. Compile-Time GORM Query Safety Check
 
@@ -2075,6 +2038,7 @@ Add a `logback-spring.xml` file when properties are not enough — for example c
 TIP: When generating a project with https://start.grails.org[Grails Forge], select the *Logback Configuration* feature to have a starter `grails-app/conf/logback-spring.xml` — the configuration shown above composed with a `<springProfile name="development">` block — generated for you.
 
 [[cli-companion-artifacts]]
+
 ==== 37. CLI Commands Move to Companion `-cli` Artifacts
 
 Grails commands (`ApplicationCommand` implementations) no longer ship inside runtime plugin
@@ -2749,7 +2713,6 @@ or pass an actual domain class if that is what you meant:
 Tenants.withId(SomeDomainClass, tenantId) { ... }
 ----
 
-
 ==== 46. Startup Banner Shows the Servlet Container and Spring Security
 
 The banner now reports the servlet container it is running on, and the version of Spring Security where the
@@ -2786,6 +2749,7 @@ once, not twice.
 
 A version option that names none of the known keys is now reported as a warning after the banner is printed,
 rather than being dropped in silence.
+
 ==== 47. Message Bundles Resolved by Spring Boot
 
 Grails no longer registers a `messageSource` bean. Spring Boot's `MessageSourceAutoConfiguration`
@@ -3086,7 +3050,6 @@ NOTE: Spring's filter is contributed by `WebMvcAutoConfiguration`, which backs o
 declaring `@EnableWebMvc`. Grails contributes its own filter in that case, so asking for Boot's still leaves a
 filter on the chain rather than silently leaving none. Previously the two definitions could also collide on the
 shared `hiddenHttpMethodFilter` bean name and fail application startup; they no longer can.
-
 
 ==== 51. Tag Libraries Are Described When Compiled
 
@@ -3480,7 +3443,6 @@ webRequest.getCurrentRequest() >> request
 def webRequest = new GrailsWebRequest(request, response, servletContext)
 ----
 
-
 ==== 55. URL Mapping Names Come From the URI, Not From Request Parameters
 
 A mapping that captures its controller, action or namespace from the URL — `"/$controller/$action?/$id?"`,
@@ -3779,6 +3741,7 @@ declaration, so it is read strictly at compile time and at runtime alike.
 See <<upgrading>> for the full description of the XML parsing defaults.
 
 [[groovy-compiler-config-scripts]]
+
 ==== 62. Generated Groovy Compiler Configuration Scripts
 
 On Gradle 9.7+, configure `groovyOptions.configurationScriptFile` before task execution. Assigning
@@ -4067,7 +4030,7 @@ needs to expect the value it would have had on Hibernate 5:
 [source,groovy]
 ----
 def book = new Book(title: 'Grails').save(flush: true)   // id generator: 'increment'
-assert book.version == 0                                  // was 1 before Grails 8.0
+assert book.version == 0                                 // was 1 before Grails 8.0
 ----
 
 ===== 67.2 Persistence Listeners Receive Persist and Merge Events
@@ -4812,7 +4775,57 @@ for template renders:
 Objects passed with `bean` or `collection` are not part of `model`. See
 link:theWebLayer.html#definingInterceptors[Defining Interceptors].
 
-==== 85. Gradle Configuration Cache
+[[grails-8-0-1]]
+=== Grails 8.0.1
+
+==== Custom User Types
+
+Hibernate 7 changed the `org.hibernate.usertype.UserType` contract. The interface is generic in the Java type, `sqlTypes()` became `getSqlType()`, and `nullSafeGet()` and `nullSafeSet()` take a column position and a `WrapperOptions` in place of the column names and the session. A `UserType` written for Hibernate 5 does not compile against Hibernate 7 and must be rewritten.
+
+A type that spans several columns no longer implements `UserType` with several `sqlTypes()`. It implements `org.hibernate.usertype.CompositeUserType`, whose `embeddable()` method names a class whose persistent attributes describe the columns. GORM binds such a property as a component: the columns of its `type` mapping are assigned to the attributes in the alphabetical order of their names, which is also the index that `getPropertyValue()` and `instantiate()` use, and a column that is not listed is named after the property and the attribute. In Hibernate 5, the columns followed the order of `getPropertyNames()` instead, so check the column order of every multi-column mapping when you port a `CompositeUserType`. The GORM guide describes the mapping under _Custom Hibernate Types_.
+
+==== Several Unidirectional hasMany Associations on One Owner
+
+Under Hibernate 7, an owner with two or more unidirectional `hasMany` associations wrote no rows to their join tables: an element added to any of them was lost at flush (issue https://github.com/apache/grails-core/issues/16665[#16665]). This is fixed when each association has a join table of its own, which is the default for associations to different classes (`item_roles` and `item_tags` for `static hasMany = [roles: Role, tags: Tag]`) and also the case when two associations to the same class map different tables with `joinTable`. Each such join table is written, as under Hibernate 5.
+
+Two unidirectional associations to the same class share one join table by default, named after the owner and the element class, with a key column per association (`item_role` with `item_roles_id` and `item_deny_roles_id` for `static hasMany = [roles: Role, denyRoles: Role]`). Such a shared table is now written as well: each association keeps its rows unique by its own key column and the element. Two lists or two maps sharing a join table are written too (issue https://github.com/apache/grails-core/issues/16700[#16700]): each keeps its rows unique by its own key and index columns, since a position or a map key is taken once while an element may repeat, and the table has no primary key, because the one Hibernate makes over one list's key and index columns rejects every row of the other list. A schema created by an earlier Grails 8 release has that primary key and `NOT NULL` owner-key and index columns, which `dbCreate` of `update` does not change: drop the primary key and make the owner-key and index columns nullable with a migration. On most databases that is a unique key per association; on Oracle and on Db2 for Linux, UNIX and Windows, which compare the non-null columns of a partially null row in a unique key, it is one unique key over the key columns of both associations and the element. A schema created by an earlier Grails 8 release has the single unique key Hibernate made for the first association: `dbCreate` of `update` adds the second one, and on Oracle and Db2 for Linux, UNIX and Windows a migration has to replace that key with the wider one. Each collection on a shared join table isolates its rows during reads, element removals, and bulk deletes: for lists and maps sharing the same foreign-key and element columns, queries and deletions are restricted by each list's distinct index column so neither collection interferes with the other. A bag has no key; its elements may repeat.
+
+Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*` or by binding a smaller set of ids, deleted every join table row of the owner, so the association lost all its elements (issue https://github.com/apache/grails-core/issues/16691[#16691]). Hibernate 7 deletes such a row by the owner's key and only those element columns that are not nullable, and the element column of a GORM join table is nullable. GORM now gives a set or a bag of entities in a join table a collection persister that deletes the row by the owner and the element, as Hibernate 5 did; the schema does not change. An application that configures a persister class resolver of its own with `hibernate.persister.resolver` keeps it, and with it the Hibernate 7 behaviour. Likewise, GORM configures `hibernate.query.sqm.translator` to `RestrictedCollectionSqmTranslatorFactory` by default so that `is empty` on associations that share a key column (issue https://github.com/apache/grails-core/issues/16748[#16748]) translates to a count query; an application that configures an SQM query translator factory of its own keeps it, and with it the standard Hibernate 7 behaviour.
+
+==== Collection Criteria Next to Association Blocks
+
+Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
+
+==== Map entries named `properties` or `metaClass`
+
+The accessor-first resolution described above applies to every `Map`, not only to a class that declares an accessor of its own, because every Groovy object has the `properties` and `metaClass` properties.
+In Groovy 4 `map.properties` and `map['properties']` read the map entry.
+In Groovy 5 both return the Groovy meta-properties of the map object, in dynamic and in statically compiled code alike, and `map['properties'] = value` throws `groovy.lang.ReadOnlyPropertyException`.
+`metaClass` reads the same way. Assigning to it through a subscript was never a map put: in Groovy 4 as in Groovy 5 it sets the metaclass of the map, and a value that is not a `MetaClass` throws `groovy.lang.GroovyCastException`.
+`class` and `empty` are exempt and still address the map entry.
+
+Such keys are common in data an application does not control; the `properties` member of a GeoJSON `Feature` is one.
+Grails 8 stores and loads them through the `Map` API, so they round-trip through a `Map` property or an embedded map of a GORM for MongoDB entity, and through data binding of a `Map` property, whether the value arrives as a nested map or as an indexed key such as `attributes[properties]`.
+
+Application code that reads one of these keys from a `Map` must call `get`:
+
+[source,groovy]
+----
+Map feature = place.geoJson    // a Map property holding a GeoJSON Feature
+
+feature.get('properties')      // the entry
+feature.properties             // the meta-properties of the map object
+feature['properties']          // the same, on Groovy 5
+----
+
+With GORM for MongoDB, a loaded `Map` property comes back as a dirty-checking wrapper with accessors of its own, named `target`, `parent`, `property`, `originalSize` and `assigned`.
+The wrapper resolves those five names to the map entry, in dotted and subscript form, so an entry such as `parent` reads and writes through the wrapper as it does through the plain map, and as it did in Grails 7.
+The one form that still reaches the accessor is dotted access from statically compiled code, which binds at compile time as it always has; read such an entry with `get` there.
+
+With GORM for Hibernate, a loaded `Map` property is Hibernate's `PersistentMap`, and its accessors are not redirected.
+In Groovy 5, `attrs.key`, `attrs['value']`, `attrs.owner`, `attrs.role`, `attrs.size`, `attrs.session` and `attrs.dirty`, among others, return the state of the collection rather than the entry; read such an entry with `get`.
+
+==== Gradle Configuration Cache
 
 The Grails Gradle plugins of Grails 8.0, and the Asset Pipeline and Grails Publish plugins in the versions the Grails 8.0 BOM manages, support the https://docs.gradle.org/{gradleVersion}/userguide/configuration_cache.html[Gradle configuration cache].
 Applications and plugins created with Grails 8.0 enable it in `gradle.properties`.
@@ -4830,7 +4843,7 @@ When upgrading from an earlier Grails 8 milestone or release candidate, update t
 With the configuration cache, task actions such as `doFirst` and `doLast` closures may not use `project`, other tasks or build script properties while they run, and Gradle fails the build when a build script or another Gradle plugin does.
 See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cache] for how to adapt build scripts and what to do about plugins that do not support it.
 
-==== 86. Grails Data Plugins Leave the Buildscript Classpath
+==== Grails Data Plugins Leave the Buildscript Classpath
 
 Builds generated by earlier versions of Grails Forge placed the Grails Data plugin on the Gradle `buildscript` classpath, next to the Grails Gradle plugins, and in `buildSrc` when the build used one:
 
@@ -4866,7 +4879,7 @@ Left in place, the plugin and its transitive Grails Data modules are loaded by t
 A build whose `buildscript` classpath still carries the plugin can fail at configuration time with an error such as `java.lang.NoSuchMethodError: 'java.lang.Number org.codehaus.groovy.runtime.typehandling.NumberMath.remainder(java.lang.Number, java.lang.Number)'` raised from `GlobalDetachedCriteriaASTTransformation`.
 The same applies to `grails-data-hibernate7` and to any other Grails module that registers a global transformation: none of them belong on the `buildscript` classpath.
 
-==== 87. Only Tenants.withoutId runs without a tenant with DISCRIMINATOR multi-tenancy
+==== Only Tenants.withoutId runs without a tenant with DISCRIMINATOR multi-tenancy
 
 With `DISCRIMINATOR` multi-tenancy, only `Tenants.withoutId` and `@WithoutTenant` run without a tenant. A tenant id of `default` is a tenant id like any other, whether a `TenantResolver` returns it or it is passed to `Tenants.withId`. Queries return the instances of the tenant `default`, and a saved instance gets the tenant id `default`.
 
@@ -4879,7 +4892,7 @@ With `DISCRIMINATOR` multi-tenancy, only `Tenants.withoutId` and `@WithoutTenant
 * A `TenantResolver` that returns `null` now causes a `TenantNotFoundException`, as a resolver that finds no tenant does, in every multi-tenancy mode.
 * The `DATABASE` and `SCHEMA` modes are otherwise unchanged.
 
-==== 88. Lookups by id are restricted to the current tenant with DISCRIMINATOR multi-tenancy
+==== Lookups by id are restricted to the current tenant with DISCRIMINATOR multi-tenancy
 
 With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB, GORM for Neo4j and GORM's in-memory datastore used by unit tests now restrict `get`, `read`, `exists`, `getAll`, `load` and `proxy` to the current tenant, as queries and dynamic finders already were. Previously these methods looked an instance up by its id alone, so they returned an instance that belongs to another tenant. GORM for Hibernate is unchanged: it already restricts `get`, `read`, `exists` and `getAll` to the current tenant, and `load` and `proxy` since the previous note.
 
@@ -4888,13 +4901,211 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB, GORM for Neo4j and GORM's 
 * Inside `Tenants.withoutId { }` lookups by id work as before. With GORM for MongoDB and GORM's in-memory datastore they are not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `default` restricts a lookup by id to that tenant as it restricts a query.
 * A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
 
-==== 89. Data binding white lists apply wherever a class is compiled
+==== Data binding white lists apply wherever a class is compiled
 
 As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, the lists of bindable properties that Grails generates for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields, are generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no lists and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got them, and in the permissive mode a class without them was bound without restriction.
 
 * A command object compiled apart from the controller that binds it, in a plugin or in a shared module, a `Validateable` object bound as a nested property, and a command object declared inside another class are now bound by their `bindable` constraints and their `transients`, like a command object compiled with its controller. As a consequence, in the permissive mode their dynamically typed properties, declared with `def` or as `Object`, are no longer bound by default. Declare a type for such a property, or mark it `bindable: true`.
+* A GORM entity compiled outside `grails-app/domain`, such as an `@Entity` class in `src/main/groovy` or in a shared module, now gets the lists a domain class in `grails-app/domain` gets, as GORM declares a `transients` list on every entity, and is bound by the same rules. In particular, `bindData` no longer binds its `id`, `version`, `dateCreated` and `lastUpdated`. Previously, in the permissive mode, such a class was bound without restriction, its `id` and `version` included.
 * A class compiled against an already compiled parent takes the parent's bindable properties from the compiled parent. When the parent was compiled by an earlier version of Grails, or without the data binding library on its compile classpath, the compiler warns that the lists of the subclass are derived from the parent's bytecode and asks for the parent to be recompiled. Recompile the plugin or module that holds the parent with Grails 8.0.1 or later, or 7.0.18 or later, to clear the warning.
 * A property of type `org.springframework.validation.Errors`, such as the `errors` property of a domain class or of a `Validateable` object, is never bound from request data, whatever a generated list names.
 * `bindData` with an `exclude` list, including the `bindData(target, source, List excludes)` overloads, keeps the generated list in effect in the permissive mode too and removes the excluded properties from it. Previously, in the permissive mode, an `exclude` list without an `include` list set the generated list aside, so that only the excluded properties were kept out.
 * A class that gets the lists now carries them as new `public static final` fields. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the lists, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+==== An Exception Mapping Matches the Exception That Was Thrown Before Its Root Cause
+
+As of Grails 8.0.1, a `"500"` mapping that names an exception is matched against the exception that was thrown first and its root cause second, both when the error handler is chosen and when the request is routed to it. The routing used to look only at the root cause.
+
+* A mapping that names an exception with a cause of its own now answers it, where the mapping without an exception answered before.
+* Where the exception and its root cause each match a mapping, the mapping for the exception now answers. With the mappings below, a `DataAccessException` caused by a `SQLException` used to go to `database`, and now goes to `runtime`:
++
+[source,groovy]
+----
+"500"(controller: 'errors', action: 'database', exception: SQLException)
+"500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
+----
++
+To keep sending it to `database`, map `DataAccessException` there as well, declared after the mapping for `RuntimeException`: where several mappings match an exception, the one declared last answers. That sends every `DataAccessException` there, not only one caused by a `SQLException`.
+* For an exception that Groovy or Grails wrapped, the `cause` of `request.exception` in the error handler is now the exception the action threw rather than its root cause.
+
+[[java25-memory-upgrade]]
+
+==== Metaspace and Compressed Class Pointers on Java 25
+
+Both Java 21 and Java 25 leave metaspace unlimited by default unless you set an explicit ceiling with `-XX:MaxMetaspaceSize`; this default has been unchanged since JDK 8.
+On both versions, `-XX:MetaspaceSize` sets the initial high-water mark that triggers garbage collection, not a limit on metaspace growth. The JVM adjusts this threshold according to metadata usage.
+
+A Grails application loads a large number of classes — plugins, Hibernate entity mappings, GSP-compiled views, Spring beans — so metaspace can account for a significant part of the process's native memory on either JDK.
+In a container environment this is especially important: the heap limit (`-Xmx` or `-XX:MaxRAMPercentage`) does not cover metaspace, so a container sized only for the heap can be killed by the container runtime's OOM killer when metaspace grows beyond the remaining native memory budget.
+
+**What to do when running on Java 25:**
+
+Set an explicit metaspace ceiling with `-XX:MaxMetaspaceSize` so the JVM raises `OutOfMemoryError: Metaspace` before the container runtime kills the process:
+
+[source,bash]
+----
+java -Xmx512m -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar application.jar
+----
+
+Or, using percentage-based heap sizing in a container:
+
+[source,bash]
+----
+java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar application.jar
+----
+
+Tune `-XX:MaxMetaspaceSize` from a measured baseline: run the application under representative load, observe metaspace usage with `jcmd <pid> VM.metaspace`, and add a safety margin.
+
+The `-XX:+/-UseCompressedClassPointers` flag is deprecated in Java 25 and becomes obsolete in JDK 27 (https://github.com/openjdk/jdk/commit/da296cbea1[JDK-8363996]), where it is accepted with a warning and ignored.
+
+* If your startup scripts pass `-XX:+UseCompressedClassPointers`, remove it because it is the default.
+* If they pass `-XX:-UseCompressedClassPointers` to disable compressed class pointers, check the class-space use that `jcmd <pid> VM.metaspace` reports before you drop it.
+Dropping it changes the memory layout, and from JDK 27 compressed class pointers are always on, whether or not the flag is there.
+
+See <<java25-memory,Metaspace and Off-Heap Memory>> in the deployment guide for full details, including a systemd service unit example.
+
+==== An Exception an Action Throws Is Recorded on the HTTP Server Observation
+
+As of Grails 8.0.1, an exception an action throws is recorded as an error on the observation of the request.
+
+* When an error view answered, as the `"500"(view: '/error')` mapping of a generated application does, `http.server.requests` tagged the 500 with `error` and `exception` values of `none`, and tracing did not see a failure.
+* A `500` mapping to a controller tagged it with `GrailsWrappedRuntimeException` and with the `uri` of that controller, so every failure it answered looked like the same route.
+* Both now report the exception the action threw and the route of the action, and the span of the request is marked as failed. That includes an `Error`, such as a failed `assert`, rather than the `ServletException` Spring MVC wraps it in. A client error is not recorded, and neither is a failure inside `g:include`, whose error page is rendered inside a page that goes on to answer the request.
+* After a forward to an error controller, the `jakarta.servlet.error.exception` request attribute holds the exception the action threw rather than a `GrailsWrappedRuntimeException`, for a filter that reads it once the chain has returned. Inside the error controller it still holds the wrapper.
+* These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before, and a dashboard that reads the `uri` of an error controller will find those failures under the routes of the actions.
+* The route is now set before the Grails interceptors run, so that a failure in one is reported under the route of the action. An interceptor whose `before()` returns `false`, to render a 403 or to redirect, stopped the request before its route was set, so the request was reported with a `uri` of `UNKNOWN`, or `REDIRECTION` for a redirect. It is now reported under the route of the action, so a dashboard or alert keyed on those `uri` values sees those requests move.
+
+==== `rlike` Is the Same on Hibernate 5 and Hibernate 7
+
+`rlike` is now rendered from one declaration of the supported databases in each Hibernate module, and the two modules agree on which databases fall back to `like`.
+
+* With Hibernate 5, a database that has no regular expression operator that Grails uses, such as SQL Server, Sybase, CockroachDB and Db2 for z/OS, no longer fails with `rlike is not supported with the configured dialect`: `rlike` falls back to `like`, as it does with Hibernate 7, so `%` and `_` are the wildcards there and not regular expression characters. Check queries that used `rlike` on such a database, as they now match different rows instead of failing.
+* Whether case matters follows the database: Oracle, H2 and Db2 match case-sensitively, and MySQL and MariaDB by the collation of the column. PostgreSQL matches with `~` (case-sensitive) with Hibernate 7 and `~*` (case-insensitive) with Hibernate 5; see issue 16882.
+
+See the `rlike` entry of the criteria reference for the databases that match with a regular expression.
+
+==== The OAuth `callback` parameter of the Spring Security REST plugin needs allowed origins
+
+The Spring Security REST plugin redirects to the URL in the `callback` parameter of `/oauth/authenticate/<provider>`, with the token appended, only when the URL's origin, that is its scheme, host and port, is listed in the new setting `grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins`, and the URL has a path, a query or a fragment after the host. It ignores any other `callback` URL, and every `callback` URL when the setting is missing, and redirects to the `frontendCallbackUrl` instead, as it does without the parameter. It checks the URL when the login starts and again when it completes, and a new login drops the `callback` URL of an earlier login that was not completed. An application that passes the `callback` parameter lists the origins of its frontend:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins = ['https://my.frontend-app.com']
+----
+
+Since the plugin became part of Grails, the `callback` parameter failed with a `MissingMethodException`. It works again within these limits.
+
+==== Encrypted JWTs of the Spring Security REST plugin are signed
+
+As of Grails 8.0.1, with `grails.plugin.springsecurity.rest.token.storage.jwt.useEncryptedJwt` enabled, the Spring Security REST plugin signs the claims with the RSA private key, using RS256, before it encrypts them with the RSA public key, and it accepts an encrypted JWT only when the JWT inside carries a valid signature made with the private key.
+
+* Access and refresh tokens issued before the upgrade are no longer accepted, so users have to log in again. When several instances of an application share the keys, upgrade them together: an instance that was not upgraded rejects the tokens of an upgraded one, and the other way round.
+* An application that generates or validates encrypted JWTs needs both keys, also when a custom `RSAKeyProvider` provides them. The private key must be at least 2048 bits long. A shorter key fails with an `IllegalArgumentException` when a token is generated. Use the key pair for these tokens only: the plugin accepts any JWT that is signed with the private key and encrypted with the public key, whatever issued it.
+* For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
+* With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
+* An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+==== More GSP tags HTML-encode the attribute values they write
+
+These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:
+
+* `<g:form>`, `<g:uploadForm>` and `<g:formActionSubmit>`: the URL in `action` and `formaction`, and the hidden fields that a `RequestDataValueProcessor` adds to a form.
+* `<g:checkBox>`: `name`, `value`, `form`, and the `id` taken from the name, on the checkbox and on its hidden field.
+* `<g:actionSubmitImage>`: `value`, the `action` in the button's name, and `src`.
+* `<g:datePicker>`: `name`, `id` and `selectDateClass`, on the labels, the hidden field and each select.
+* `<g:radio>` and `<g:radioGroup>`: `name`, and on `<g:radio>` the `id` taken from it.
+* `<g:select>`: the key of `noSelection`.
+* `<g:field>`: `type`.
+* `<g:withTag>`: the values of `attrs` that are not closures.
+* `<g:external>`: `uri`, and `<g:javascript>`: `src`.
+* `<g:paginate>`: `class`, on the current step.
+* `<g:sortableColumn>`: `title`, which it writes as the text of the column's link. A text from `titleKey` is written as the message source returns it. Mark a `title` that holds markup with `raw()`.
+* `<g:renderException>`: `detailsClass`, `stackClass`, `filenameClass`, `snippetClass`, `lineClass`, `lineNumberClass` and `lineErrorClass`.
+
+The browser decodes the attribute, so a value without a character reference reaches it unchanged. The markup changes, though: an `&` in the URL of a form is written as `+&amp;+`, as `<g:link>` writes it in an `href`.
+
+A value encoded with `encodeAsHTML()` before it reaches the tag is written once, not encoded again. That holds for a String, for a value captured from a GSP body with `<g:set>`, and for the output of a tag such as `fieldValue()`, also when a `RequestDataValueProcessor` returns the value unchanged. When the processor changes the value, the tag encodes what the processor returns, so a value encoded beforehand is encoded twice, as `<g:textField>` already did. There is one more exception: `<g:form>` and `<g:formActionSubmit>` build their URL from `uri`, `base`, `controller` and their other link attributes and only then encode it, so a value encoded beforehand is encoded twice there, as it already was in the `href` of `<g:link>`. Pass those values unencoded. A `url` attribute that the tag writes as it is given is written once. A character reference written in the page, as in `+name="a&amp;b"+`, is encoded as well: write the character itself.
+
+A value marked with `raw()` is still written as given by the tags that wrote it so before, and so are the text and the `default` of `message()`, which comes back marked raw. Where a `RequestDataValueProcessor` is registered, `<g:textField>` and the other field tags encode what the processor returns, as before, and `<g:radio>` encodes such a value in any case, as before. Do not pass request data through `raw()` or as the `default` of `message()`.
+
+`<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
+
+A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== A Second Cache Manager No Longer Stops a Cached Application From Starting
+
+The cache annotations are given their cache manager by type. Grails 8.0.0 failed to start when the application context had a second `CacheManager` beside the plugin's `grailsCacheManager` and Spring could not choose between them, as when neither is marked primary or has a `@Priority`, which is what happens when the Spring Security plugin's `cacheUsers` is set. The annotations now use `grailsCacheManager` there. Two cache managers both marked primary, or sharing the highest `@Priority`, still fail to start, as Spring rejects them before it looks further; mark only one primary, or give one the higher priority. A cache manager whose `@Priority` is only on the object its factory method or `FactoryBean` returns, with the declared type a plain `CacheManager`, is not seen as preferred beside `grailsCacheManager`, which the annotations then use; mark it primary to keep it. Wherever Spring can choose, such as a cache manager marked primary or with a `@Priority`, it chooses as before, and with caching turned off (`grails.cache.enabled: false`) nothing changes. This applies to classes compiled against Grails 8.0.0 too, so plugins need not be recompiled. The cache tags use `grailsCacheManager` by name, as before.
+
+Where the cache manager has no cache of the name an annotation gives, as a `JCacheCacheManager` has none it was not configured with, the annotated method now runs uncached, and a warning names the class and the cache once. Grails 8.0.0 failed with a `NullPointerException` on each call. This applies to classes compiled against this version.
+
+==== A sort by an association uses the left join that a query requests for it with Hibernate 5
+
+With GORM for Hibernate 5, a where query, a detached criteria or a dynamic finder that requests a left join of an association, with `join('owner', JoinType.LEFT)` or `fetch: [owner: JoinType.LEFT]`, and sorts by a property of that association, as with `sort: 'owner.lastName'`, now returns the instances without the association. As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, the sort uses the left join that the query requests. Previously the sort joined the association again with an inner join, so those instances were left out, although the same query without the sort returned them. GORM for Hibernate 7 already returned them.
+
+* The `totalCount` of a paged list counts the same instances as the list.
+* To leave out the instances without the association, as before, request an inner join with `JoinType.INNER`, or add a criterion such as `owner != null`.
+* A sort by an association for which the query requests no join type, or the fetch mode `join`, still joins it with an inner join.
+
+==== `list` sorts by every property of a sort map with Hibernate 5
+
+With GORM for Hibernate 5, `list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, sorted by the last entry of the map only. As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, it sorts by every entry, in the order of the map, as GORM for Hibernate 7 already did. The same applies to a default sort that the mapping declares for more than one property, as in `sort author: 'asc', title: 'desc'`: `list` sorted by its last property only. An association is joined once for all the entries that sort by it. `list` joined it once for each entry, and `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path`. To sort by one property, as before, pass that property alone.
+
+The rows on a page can change because every sort property now participates before `max` and `offset` are applied. Sorting by two properties of the same collection also returns fewer duplicate rows: a book with three chapters occurs three times for `Book.list(sort: ['chapters.title': 'asc', 'chapters.id': 'asc'])`, rather than nine times from two joins of the chapters. There is no compatibility setting: both changes apply the sort that the call requests. Pass just the last sort property to retain the former single-property ordering.
+
+==== A setting makes a sort by an association keep every instance with Hibernate 5
+
+With GORM for Hibernate 5, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join. The sort therefore leaves out the instances whose association is `null`, and the `totalCount` of a paged list and `count` do not count them. That is unchanged by default. As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, the new `grails.gorm.leftJoinAssociationSort` setting makes such a sort join the association with a left join, so that a sort no longer changes which instances a query returns:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        leftJoinAssociationSort: true
+----
+
+The setting applies to `list`, to `find` and `findAll` with an example, to `findWhere` and `findAllWhere`, to dynamic finders, to a criteria query that is passed pagination arguments, such as `Book.createCriteria().list(sort: 'author.name', max: 10) { ... }`, and to where queries and detached criteria.
+
+* With the setting, the instances whose association is `null` are returned and counted. Whether they come first or last depends on how the database sorts nulls. To leave them out, add a criterion that the association is not `null`, such as `Book.where { author != null }.list(sort: 'author.name')`.
+* A where query or a detached criteria that has criteria on the association still joins it for those criteria, with an inner join by default, and the sort uses that join.
+* A sort by a property of a collection, such as `Author.list(sort: 'books.title')`, still joins the collection with an inner join, and leaves out the instances whose collection is empty.
+* The setting is disabled by default in Grails 7 and in Grails 8.0. Explicitly setting it to `false` logs a startup warning that Grails 9 removes the setting. The planned default in Grails 8.1 is `true`. It is listed with the other settings of this kind in link:upgrading.html#compatibilitySettings[Compatibility Settings].
+
+==== A join type requested for an association is always applied with Hibernate 5
+
+With GORM for Hibernate 5, a where query, a detached criteria, a dynamic finder or a criteria query can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, with `join('author', JoinType.INNER)`, or, on a data service method that queries by its parameters, such as `Book find(String title)`, with `@Join(value = 'author', type = JoinType.INNER)`. In a where query, a detached criteria and a dynamic finder, the requested join type was only used when the query also had criteria on the association, and a criteria query never used it. The association was otherwise fetched with an outer join, whatever join type was requested, so the query also returned the instances whose association is `null`. As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, a requested join type other than `JoinType.LEFT` is applied whether or not anything else in the query uses the association.
+
+* With `JoinType.INNER`, the instances whose association is `null`, or whose collection is empty, are no longer returned by `list`, `get` and `find`, and no longer counted by `count` or by the `totalCount` of a paged list. The association is still fetched. This also applies to a collection of a basic type, such as `static hasMany = [tags: String]`, for which the requested join type was ignored. To return these instances as before, request `JoinType.LEFT` or `'join'`.
+* `JoinType.RIGHT` is applied as well. It leaves out the same instances as `JoinType.INNER` and still fetches the association. For an association to a single instance, a right join also has a row for each associated instance that none of the queried instances refers to, such as an author without a book, unless the criteria of the query exclude it. When returning entities, `list` keeps one `null` per such row, and `count` and `totalCount` count each of them. A property projection still returns repeated values, including `null`, once when the query joins; this existing behavior can make its result size differ from the count. For a collection, a right join returns the same instances as an inner join. This now also applies when a where query or a detached criteria has criteria on the collection, as in `Author.where { books { title ==~ 'The%' } }.join('books', JoinType.RIGHT)`: such a query returned `null` for each element that no instance has, and counted it.
+* A query that is used as a subquery applies the join type that it requests as well, so a subquery with `join('author', JoinType.INNER)` no longer selects the instances without an author.
+* `updateAll` and `deleteAll` apply the join type that the where query or the detached criteria requests too, so they leave out the instances that the join type leaves out of `list`: `Book.where { title ==~ 'Draft%' }.join('author', JoinType.INNER).deleteAll()` no longer deletes the drafts without an author. To update or delete those as well, as before, do not request a join type for the association, or request `JoinType.LEFT`. A sort is not applied to an update or a delete: while `grails.gorm.leftJoinAssociationSort` is off, a sort by a property of an association leaves the instances whose association is `null` out of `list`, and `updateAll` and `deleteAll` still change them. MySQL, and MariaDB before version 10.3, do not allow an update or a delete to select from the table that it modifies. With a MySQL dialect, or a MariaDB dialect older than `MariaDB103Dialect`, `updateAll` and `deleteAll` therefore select the identifiers of the instances first, and then update or delete the instances with those identifiers, when the join type is requested for a path that leads back to the queried class, such as the `parent` of a category, or that starts with a collection of a basic type.
+* A join type requested for a path through more than one association, such as `fetch: ['author.publisher': JoinType.INNER]`, was ignored unless the query had criteria on the path. Every association on the path is now joined and fetched, with the requested join type for the last one, so `JoinType.INNER` leaves out the instances without an author as well as those whose author has no publisher. When the path passes through a collection, such as `books` in `fetch: ['books.publisher': JoinType.INNER]`, the query is restricted to the instances for which the join returns a row, and counts each of them once. The collection and the other associations on the path are fetched as well, with outer joins, so the collection holds all of its elements, also the books without a publisher: a join type decides which instances a query returns, and never leaves elements out of a fetched collection. A where query and a dynamic finder return each author once, and a criteria query returns an author once for each of the books that it fetches. A `JoinType.LEFT` requested for such a path, as in `fetch: ['books.publisher': JoinType.LEFT]`, now fetches the associations on the path as well: it fetched none of them.
+* Bulk operations also apply join types requested inside a subquery, including a subquery in an `or` or `and` block. They first select the matching root identifiers with the query's join restrictions and tenant filters, then update or delete those identifiers in batches. A bidirectional collection is correlated through its owning property so the tenant filter remains bound. Criteria on an association that already failed in bulk operations remain unsupported.
+* A query with a property projection applies the requested join type too.
+* Sorting a where query, detached criteria or dynamic finder through a nested `JoinType.LEFT` request also keeps intermediate associations outer when only the sort uses them. For example, `fetch: ['books.publisher': JoinType.LEFT], sort: 'books.publisher.name'` keeps an author without books, and books without a publisher, even with `grails.gorm.leftJoinAssociationSort` disabled. Explicit intermediate join types, replacement fetch modes and association criteria keep their existing precedence. Paged collection sorts load the complete collection separately rather than initializing it from limited joined rows.
+* When `max` or a positive `offset` pages the query, collections on a requested join path are loaded separately when accessed. Fetching them from the limited joined rows would leave the session with incomplete collections. The requested join type still restricts the root instances and their count.
+* For a collection joined only by that request, pagination now applies to root instances rather than joined collection rows, so a page can contain more distinct instances than before, up to `max`. For example, `Author.where { ... }.list(fetch: [books: JoinType.LEFT], max: 2, sort: 'name')` can now return two authors where it previously returned only the first author's joined rows. The fetch mode `'join'`, including `join('books')` without a type, still pages joined rows and can load an incomplete collection, as before. `JoinType.LEFT` and `'join'` therefore preserve the same unrestricted root selection but no longer necessarily return the same page.
+* On data services, this applies to methods that query by their parameters, such as `Book find(String title)`. Methods named as dynamic finders, such as `findByTitle` and `findAllByTitleLike`, still treat `@Join` as a fetch mode and do not apply its join type.
+* `select('author')` or `join('author')` after a requested left join keeps that join for the query's criteria, in a criteria query as well as in a where query or a detached criteria, so an alternative criterion on the book can now return a book without an author. A later fetch mode that replaces an inner join also applies to property projections: `property('author.name').join('author', JoinType.INNER).join('author')` can now include `null`.
+
+==== A where query uses the join type that it requests for each join of the association with Hibernate 5
+
+With GORM for Hibernate 5, a where query, a detached criteria or a dynamic finder can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, or with `join('author', JoinType.INNER)`. The join type is used when the criteria, a projection or a sort of the query join the association. As of Grails 8.0.1, and 7.0.18 on the 7.0.x line, it no longer matters in which order the query was put together.
+
+* A join type that the `fetch` argument requests is now also used for an association that the where query or the detached criteria itself has criteria or a projection on. Such an association was joined before the argument was read: with an inner join for criteria and with a left join for a projection, whatever the argument requested. `Book.where { author.name == 'Stephen King' || title == 'Anonymous' }.list(fetch: [author: JoinType.LEFT])` now also returns the book without an author that matches the title, as it already did when the join type was requested with `join('author', JoinType.LEFT)`.
+* A join type for a nested association is requested by its path. `join('author.publisher', JoinType.LEFT)` is now used for the join that criteria on `author.publisher` make, which was an inner join whatever was requested. A join type requested for an association of the queried class, such as `publisher`, is no longer used for a nested association of the same name.
+* In a criteria query, `join('author', JoinType.INNER)` fetched the association with an outer join, and a `JoinType` in the `fetch` argument of `list`, as in `Book.createCriteria().list(fetch: [author: JoinType.INNER]) { ... }`, did not fetch the association at all. Both now use the requested type, including for an association block or a declared alias, regardless of whether `join` appears before or after the block. A requested left join also keeps books without an author when another branch of an `or` matches them, or when the query sorts by the author. Without pagination the association is fetched; with pagination, collections load separately as described above.
+* A requested join type also replaces an explicit join type on `createAlias`. For example, `createAlias('author', 'a', CriteriaSpecification.LEFT_JOIN)` followed by `join('author', JoinType.INNER)` now leaves out books without an author; the alias's left join previously kept them.
+* A paged criteria query with `join('books', JoinType.LEFT)` now pages root instances when the collection is joined only for fetching. A page that previously contained the same author twice can now contain two authors. This is the same pagination change described above for where queries. Plain `join('books')` and `fetch: [books: 'join']` still page joined rows and can repeat a root on the page, as before.
+* An unpaged criteria query whose `fetch` argument now fetches a collection can return an instance once per collection element. Previously a join type in that argument fetched nothing and did not multiply those rows. Its `totalCount` counts root instances when the requested collection join is applied through a subquery, so it can differ from the number of unpaged fetched rows.
+* A sort stored on the query with `sort()`, as in `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])`, now uses the join type requested by the `fetch` argument. It also returns books without an author. The same holds for a nested association path. Request `JoinType.INNER` to keep leaving those books out.
+
+==== An enum stored as a string takes the length of its maxSize constraint with Hibernate 5
+
+With Hibernate 5, an enum property stored as a string ignored a `maxSize` constraint, so its column was always
+`VARCHAR(255)` while a `String` property honoured it. The column now takes the same length constraints as a `String`
+property, and a column created from an `inList` of enum constants is as long as the longest constant name. The length
+only shows in a schema that Hibernate creates: an application that manages its schema by hand or with a migration tool
+keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
+The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
+enum, so the column is made as long as the longest name, and no value of the enum fails at the database.

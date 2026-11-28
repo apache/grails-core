@@ -23,6 +23,8 @@ import org.hibernate.boot.model.FunctionContributor;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.type.StandardBasicTypes;
 
+import org.grails.orm.hibernate.dialect.SupportedDatabase;
+
 public class GrailsRLikeFunctionContributor implements FunctionContributor {
 
     public static final String RLIKE = "rlike";
@@ -31,8 +33,7 @@ public class GrailsRLikeFunctionContributor implements FunctionContributor {
     public void contributeFunctions(FunctionContributions functionContributions) {
         Dialect dialect = functionContributions.getDialect();
 
-        // Use the Enum to resolve the pattern
-        String pattern = RegexDialectPattern.findPatternForDialect(dialect);
+        String pattern = SupportedDatabase.forDialect(dialect).regexPattern();
 
         functionContributions
                 .getFunctionRegistry()

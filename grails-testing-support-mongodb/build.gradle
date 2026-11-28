@@ -43,6 +43,9 @@ dependencies {
 
     implementation 'org.apache.groovy:groovy'
     implementation 'org.spockframework:spock-core'
+    implementation 'com.github.docker-java:docker-java-api', {
+        // impl: Ulimit, version follows org.testcontainers:testcontainers
+    }
 
     api 'org.testcontainers:testcontainers-mongodb'
 

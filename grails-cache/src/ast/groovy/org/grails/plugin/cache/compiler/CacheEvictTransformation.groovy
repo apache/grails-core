@@ -41,7 +41,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
-import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 
 /**
  * Implementation of {@link CacheEvict}
@@ -59,13 +58,16 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
 
-        VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
+        Expression cacheManagerVariableExpression = grailsCacheManagerExpression()
         handleCacheCondition(sourceUnit, annotationNode,  methodNode, originalMethodCallExpr, newMethodBody)
 
         BlockStatement cachingBlock = block()
 
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
         VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
+
+        // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
+        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheDeclaration, cachingBlock)
 
         Statement statement
 
@@ -82,20 +84,20 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
             statement = stmt(callX(cacheDeclaration, 'clear'))
         } else {
             // def $_method_parameter_map = [name:value]
-            declareAndInitializeParameterValueMap(annotationNode, methodNode, cachingBlock)
+            declareAndInitializeParameterValueMap(annotationNode, methodNode, cacheBlock)
 
             // def $_cache_cacheKey = customCacheKeyGenerator.generate(className, methodName, hashCode, $_method_parameter_map)
-            VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cachingBlock)
+            VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cacheBlock)
 
             // $_cache_cacheVariable.evict($_cache_cacheKey)
             statement = stmt(callX(cacheDeclaration, 'evict', cacheKeyDeclaration))
         }
 
-        cachingBlock.addStatement(statement)
+        cacheBlock.addStatement(statement)
 
         newMethodBody.addStatement(
                 // if(grailsCacheManager != null)
-                ifS(notNullX(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)),
+                ifS(notNullX(grailsCacheManagerExpression()),
                         cachingBlock
                 )
         )

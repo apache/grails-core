@@ -56,6 +56,11 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     ConfigObject grailsConfig = new ConfigObject()
     boolean isTransactional = true
 
+    /**
+     * Configuration of the datastore that a specification adds in its setupSpec method, by property name
+     */
+    Map<String, Object> configuration = [:]
+
     @Override
     void setup(Class<? extends Specification> spec) {
         cleanRegistry()
@@ -70,6 +75,7 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
             grailsApplication.config.putAll(grailsConfig)
         }
 
+        grailsConfig.putAll(configuration)
         hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(grailsConfig), domainClasses as Class[])
         transactionManager = hibernateDatastore.getTransactionManager()
         sessionFactory = hibernateDatastore.sessionFactory

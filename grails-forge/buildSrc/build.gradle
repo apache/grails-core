@@ -33,6 +33,9 @@ configurations.configureEach {
 }
 
 dependencies {
+    // Gradle plugins are declared by their implementation artifact, not by their plugin marker
+    // (<id>:<id>.gradle.plugin). A marker is a POM-only module, so Gradle also requests a jar for it
+    // that does not exist, and a proxy repository answers that miss from upstream, not from its cache.
     implementation "${gradleBomDependencies['grails-publish-plugin']}"
     implementation "io.micronaut.build.internal:micronaut-gradle-plugins:$micronautGradlePlugins"
     implementation "com.fizzed:rocker-compiler:$rockerVersion"
@@ -41,7 +44,7 @@ dependencies {
     implementation "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleJvmVersion"
     implementation "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion"
     implementation "com.gradleup.shadow:shadow-gradle-plugin:$shadowVersion"
-    implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:$apacheRatVersion"
+    implementation "org.nosphere.apache:creadur-rat-gradle:$apacheRatVersion"
     implementation "org.apache.grails:grails-gradle-plugins:$projectVersion", {
         exclude group: 'org.yaml'
         exclude group: 'org.asciidoctor'
@@ -49,7 +52,7 @@ dependencies {
     implementation "org.antlr:antlr4-runtime:$antlr4Version"
     implementation "org.apache.ant:ant:$antVersion"
     implementation "org.apache.grails.gradle:grails-gradle-common:$projectVersion"
-    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:$gradleCycloneDxPluginVersion"
+    implementation "org.cyclonedx:cyclonedx-gradle-plugin:$gradleCycloneDxPluginVersion"
 }
 
 gradlePlugin {

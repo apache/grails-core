@@ -27,6 +27,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
@@ -97,6 +98,147 @@ class GormRegistrySpec extends Specification {
 
         then:
         registry.findSingleTransactionManager("ds1") == txManager
+    }
+
+    void 'findCurrentTenantTransactionManager returns the transaction manager of the connection of the tenant bound for the default datastore'() {
+        given:
+        final registry = GormRegistry.instance
+        final defaultDatastore = Stub(Datastore)
+        final tenantTransactionManager = Stub(PlatformTransactionManager)
+        registry.initializeDatastore(defaultDatastore)
+        registry.registerDatastore('ds1', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        })
+
+        expect:
+        CurrentTenantHolder.withTenant(defaultDatastore, 'ds1') {
+            registry.findCurrentTenantTransactionManager()
+        } == tenantTransactionManager
+
+        and: 'there is none without a tenant, for the tenant default, or for a tenant without a connection'
+        registry.findCurrentTenantTransactionManager() == null
+        CurrentTenantHolder.withTenant(defaultDatastore, ConnectionSource.DEFAULT) {
+            registry.findCurrentTenantTransactionManager()
+        } == null
+        CurrentTenantHolder.withTenant(defaultDatastore, 'unknown') {
+            registry.findCurrentTenantTransactionManager()
+        } == null
+    }
+
+    void 'findCurrentTenantTransactionManager considers only the tenant bound for the default datastore while another datastore has a different one'() {
+        given:
+        final registry = GormRegistry.instance
+        final defaultDatastore = Stub(Datastore)
+        final otherDatastore = Stub(Datastore)
+        final tenantTransactionManager = Stub(PlatformTransactionManager)
+        registry.initializeDatastore(defaultDatastore)
+        registry.registerDatastore('ds1', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        })
+
+        expect:
+        CurrentTenantHolder.withTenant(defaultDatastore, 'ds1') {
+            CurrentTenantHolder.withTenant(otherDatastore, 'ds2') {
+                registry.findCurrentTenantTransactionManager()
+            }
+        } == tenantTransactionManager
+
+        and: 'a tenant bound for another datastore only does not count'
+        CurrentTenantHolder.withTenant(otherDatastore, 'ds1') {
+            registry.findCurrentTenantTransactionManager()
+        } == null
+    }
+
+    void 'findCurrentTenantTransactionManager with a datastore considers the tenant bound for that datastore'() {
+        given:
+        final registry = GormRegistry.instance
+        final defaultDatastore = Stub(Datastore)
+        final serviceDatastore = Stub(Datastore)
+        final tenantTransactionManager = Stub(PlatformTransactionManager)
+        registry.initializeDatastore(defaultDatastore)
+        registry.registerDatastore('ds1', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        })
+
+        expect:
+        CurrentTenantHolder.withTenant(defaultDatastore, 'ds2') {
+            CurrentTenantHolder.withTenant(serviceDatastore, 'ds1') {
+                registry.findCurrentTenantTransactionManager(serviceDatastore)
+            }
+        } == tenantTransactionManager
+
+        and: 'without a datastore, the one of the default datastore'
+        CurrentTenantHolder.withTenant(defaultDatastore, 'ds1') {
+            registry.findCurrentTenantTransactionManager(null)
+        } == tenantTransactionManager
+    }
+
+    void 'findCurrentTenantTransactionManager takes the connection of the tenant from the datastore it is bound for when that datastore has several'() {
+        given:
+        final registry = GormRegistry.instance
+        final tenantTransactionManager = Stub(PlatformTransactionManager)
+        final connectionDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        }
+        final datastore = Stub(MultipleConnectionSourceCapableDatastore) {
+            getDatastoreForConnection('ds1') >> connectionDatastore
+            getDatastoreForConnection('ds2') >> { throw new ConfigurationException('No datastore found for connection named [ds2]') }
+        }
+        final otherConnectionDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> Stub(PlatformTransactionManager)
+        }
+        registry.initializeDatastore(Stub(Datastore))
+        registry.registerDatastore('ds1', otherConnectionDatastore)
+        registry.registerDatastore('ds2', otherConnectionDatastore)
+
+        expect: 'not the connection of that name of another datastore'
+        CurrentTenantHolder.withTenant(datastore, 'ds1') {
+            registry.findCurrentTenantTransactionManager(datastore)
+        } == tenantTransactionManager
+
+        and: 'none when the datastore has no connection of that name, although another datastore has'
+        CurrentTenantHolder.withTenant(datastore, 'ds2') {
+            registry.findCurrentTenantTransactionManager(datastore)
+        } == null
+    }
+
+    void 'findCurrentTenantTransactionManagerByType considers the tenant bound for the datastore of the type'() {
+        given:
+        final registry = GormRegistry.instance
+        final defaultDatastore = Stub(Datastore)
+        final tenantTransactionManager = Stub(PlatformTransactionManager)
+        final connectionDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        }
+        final typedDatastore = Stub(MultipleConnectionSourceCapableDatastore) {
+            getDatastoreForConnection('ds1') >> connectionDatastore
+        }
+        registry.initializeDatastore(defaultDatastore)
+        registry.registerDatastoreByType(typedDatastore)
+
+        expect:
+        CurrentTenantHolder.withTenant(defaultDatastore, 'ds2') {
+            CurrentTenantHolder.withTenant(typedDatastore, 'ds1') {
+                registry.findCurrentTenantTransactionManagerByType(MultipleConnectionSourceCapableDatastore)
+            }
+        } == tenantTransactionManager
+
+        and: 'a tenant bound for the default datastore only does not count'
+        CurrentTenantHolder.withTenant(defaultDatastore, 'ds1') {
+            registry.findCurrentTenantTransactionManagerByType(MultipleConnectionSourceCapableDatastore)
+        } == null
+
+        and: 'there is none without a datastore of the type'
+        CurrentTenantHolder.withTenant(typedDatastore, 'ds1') {
+            registry.findCurrentTenantTransactionManagerByType(TransactionCapableDatastore)
+        } == null
+    }
+
+    void 'findCurrentTenantTransactionManager returns null when no datastore is registered'() {
+        expect:
+        CurrentTenantHolder.withTenant(Stub(Datastore), 'ds1') {
+            GormRegistry.instance.findCurrentTenantTransactionManager()
+        } == null
     }
 
     void "findTransactionManager returns transaction manager for entity"() {

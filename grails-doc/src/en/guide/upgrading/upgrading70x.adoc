@@ -22,6 +22,11 @@ under the License.
 To ensure compatibility with Grails 7.0.x, please review the following upgrade instructions carefully.
 This guide outlines the necessary steps & warnings to upgrade your Grails project.
 
+The changes are listed by release. Apply the section of every release after the one the application is on, up to and including the release it is upgrading to.
+
+[[grails-7-0-0]]
+=== Grails 7.0.0
+
 ==== 1. Java 17 as baseline:
 
 Starting from Grails 7, Java 17 serves as the baseline requirement for the framework, matching Spring Framework and Spring Boot's minimum Java version.
@@ -113,82 +118,6 @@ Because all Grails projects will apply the Grails Gradle plugin, the BOM is auto
 You can override a version in the BOM by setting the associated Gradle property.
 The possible gradle properties are generated as part of this documentation.
 Please see link:{versionsRef}Grails%20BOM.html[Grails BOM Dependencies] for a quick reference.
-
-===== 4.1 BOM Property Changes
-
-The initial Grails 7.0.0 release had an issue where properties in the bom were not correctly populated. The 7.0.4 release restored properties, but the naming was inconsistent and duplicated. Later versions of Grails 7 reworked the properties for the following reasons:
-
-* to follow previous naming strategies used by Grails 6 and earlier.
-* to remove duplicate properties.
-* to clearly delineate between profile dependencies.
-* to remove non-published projects.
-* to fix invalid versions for properties used by asciidoctor & rxjava.
-
-Detailed differences follow in subsequent sections.
-
-===== 4.2 Property Name Standardization
-
-In the prior 7.0.0 Grails versions, there were numerous duplicated properties for third-party dependencies, with one variant using hyphens (e.g., byte-buddy.version) and an identical one using dots (e.g., byte.buddy.version), both set to the same value. This applies to properties like:
-
-    asset-pipeline-gradle.version / asset.pipeline.gradle.version
-    byte-buddy.version / byte.buddy.version
-    commons-text.version / commons.text.version
-    directory-watcher.version / directory.watcher.version
-    grails-publish-plugin.version / grails.publish.version (though this is slightly inconsistent in naming)
-    javaparser-core.version / javaparser.core.version
-    bootstrap-icons.version / bootstrap.icons.version (literal duplicate entries)
-    commons-codec.version / commons.codec.version
-    geb-spock.version / geb.spock.version
-    asset-pipeline-bom.version / asset.pipeline.bom.version
-    spock.version / spock.bom.version (values match but names differ slightly)
-    jackson.version / jackson.bom.version
-    groovy.version / groovy.bom.version
-    selenium.version / selenium.bom.version
-
-To resolve this duplication and standardize naming conventions, the Grails team has consolidated these properties. All dotted variants have been removed. Only the hyphenated forms are retained (e.g., byte-buddy.version, asset-pipeline-gradle.version).
-
-Additionally, Grails-specific properties in earlier Grails 7 versions used dots in their names (e.g., grails.async.version, grails.data.hibernate5.version). These have been refactored to use hyphens instead (e.g., grails-async.version, grails-data-hibernate5.version). This aligns them with the third-party property naming convention.
-
-These changes eliminate redundancy and enforce consistency across the Grails bom & the boms it inherits.
-
-===== 4.3 Profile Properties are renamed
-
-In previous Grails 7 versions, profile-specific properties were not prefixed with `grails-profile`.  These have been corrected as follows:
-
-    base.version - grails-profile-base.version
-    plugin.version - grails-profile-plugin.version
-    profile.version - grails-profile-profile.version
-    rest.api.version - grails-profile-rest-api.version
-    rest.api.plugin.version - grails-profile-rest-api-plugin.version
-    web.version - grails-profile-web.version
-    web.plugin.version - grails-profile-web-plugin.version
-
-===== 4.4 Removal of Redundant or Unused Properties
-
-Several groups of related properties have been consolidated or removed in later Grails 7 versions:
-
-* Liquibase: (liquibase-hibernate5.version, liquibase.version, liquibase.cdi.version, liquibase.core.version, liquibase5.hibernate.version) have been replaced by `liquibase-hibernate5.version`
-* MongoDB: (mongodb.version, bson.version, mongodb.driver.core.version, mongodb.driver.sync.version, bson.record.codec.version) have been replaced by `mongodb.version`
-* Sitemesh: (starter-sitemesh.version, spring.boot.starter.sitemesh.version) have been consolidated to `starter-sitemesh.version`
-* Ant: (ant.version and ant.junit.version) have been consolidated to `ant.version`
-* Spring Boot sub-components: (spring.boot.cli.version and spring.boot.gradle.plugin.version) have been consolidated to use `spring-boot.version`
-* Asciidoctor Gradle: asciidoctor.gradle.jvm.version was renamed to `asciidoctor-gradle-jvm.version`
-* Spring Boot dependencies: `spring.boot.dependencies.version` was renamed to `spring-boot.version`
-* Liquibase Hibernate: liquibase.hibernate5.version & liquibase-hibernate5.version were consolidated to liquibase-hibernate5.version
-
-===== 4.5 Specific Property Value Changes
-
-rxjava properties were incorrect previously, they are now fixed per the below:
-
-* `rxjava.version` (for RxJava 1.x, groupId io.reactivex) was set to 3.1.11 instead of 1.3.8
-* `rxjava2.version` (for RxJava 2.x, groupId io.reactivex.rxjava2) was set to 3.1.11 instead of 2.2.21
-* `rxjava3.version` (for RxJava 3.x, groupId io.reactivex.rxjava3) was set to 3.1.11 and remains 3.1.11
-
-===== 4.6 Additions and Refinements in <dependencyManagement>
-
-Several boms are imported and previously used customized property names for them. They now align with a single property name.  Most importantly, `spring-boot-dependencies` now uses `${spring-boot.version}` (aligning with the removal of spring.boot.dependencies.version).
-
-All published Grails projects continue to have separate properties to allow for overriding their versions individually.
 
 ==== 5. Coordinate Changes
 
@@ -582,14 +511,14 @@ To learn more about development reloading options, please see the link:gettingSt
 [source,yml]
 .application.yml
 ----
-    hibernate:
-        allow_update_outside_transaction: true
+hibernate:
+    allow_update_outside_transaction: true
     cache:
         queries: false
         use_second_level_cache: true
         use_query_cache: false
         region:
-        factory_class: 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
+            factory_class: 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
 ----
 
 If your application sets `hibernate.cache.region.factory_class` to `org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory` it will add the `non-jakarta` version of `hibernate-core` to your classpath which will cause `NoClassDefFoundError` and `ClassNotFoundException` errors.
@@ -599,8 +528,8 @@ You will need to change it to `jcache` and add the Ehcache dependency as follows
 [source,yml]
 .application.yml
 ----
-    hibernate:
-        allow_update_outside_transaction: true
+hibernate:
+    allow_update_outside_transaction: true
     cache:
         queries: false
         use_second_level_cache: true
@@ -810,11 +739,19 @@ If your application or API consumers depend on the previous JSON format for `Cal
 
 This change applies to both the `grails-converters` module (standard JSON rendering) and the `grails-views-gson` module (JSON views).
 
-===== 12.26 Enum JSON/XML Serialization
+[[grails-7-0-1]]
+=== Grails 7.0.1
+
+This release has no upgrade notes.
+
+[[grails-7-0-2]]
+=== Grails 7.0.2
+
+==== Enum JSON/XML Serialization
 
 As of Grails 7.0.2, enum serialization has been enhanced to support round-trip compatibility between JSON/XML serialization and deserialization. The legacy enum marshaller, which produced verbose output with type metadata, has been deprecated in favor of a simpler format that matches how enums are expected on input.
 
-====== Legacy Behavior (Deprecated)
+===== Legacy Behavior (Deprecated)
 
 Previously, enums were serialized with metadata:
 
@@ -837,7 +774,7 @@ Previously, enums were serialized with metadata:
 
 This format is **asymmetric** - when POSTing data, you send `"stage":"SUBMIT"`, but when GETting data, you receive the verbose object structure.
 
-====== New Behavior (Recommended)
+===== New Behavior (Recommended)
 
 The new `SimpleEnumMarshaller` serializes enums as simple string values, providing **round-trip compatibility**:
 
@@ -857,7 +794,7 @@ The new `SimpleEnumMarshaller` serializes enums as simple string values, providi
 
 Now the format you POST is the same format you GET back.
 
-====== Migration
+===== Migration
 
 To opt-in to the new behavior, add the following to your `application.yml`:
 
@@ -874,18 +811,131 @@ grails:
         format: simple
 ----
 
-====== Deprecation Timeline
+===== Deprecation Timeline
 
 * **7.0.2**: Legacy `EnumMarshaller` deprecated (default), `SimpleEnumMarshaller` available via config
 * **8.0**: `SimpleEnumMarshaller` will become the default
 
 The legacy `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` classes are marked as `@Deprecated(forRemoval = true, since = "7.0.2")` and will be removed in Grails 8.0.
 
-==== 13. Upgrading the Spring Security Plugin
+[[grails-7-0-3]]
+=== Grails 7.0.3
 
-If your application uses the Grails Spring Security plugin, please consult the https://apache.github.io/grails-spring-security/snapshot/guide/index.html#upgrading-from-previous-versions[Upgrading from Previous Versions] section of the Spring Security plugin documentation for specific upgrade instructions related to Grails 7.
+This release has no upgrade notes.
 
-==== 14. Changes in CLI- and Forge-generated configuration files
+[[grails-7-0-4]]
+=== Grails 7.0.4
+
+This release has no upgrade notes.
+
+[[grails-7-0-5]]
+=== Grails 7.0.5
+
+This release has no upgrade notes.
+
+[[grails-7-0-6]]
+=== Grails 7.0.6
+
+==== BOM Property Changes
+
+The initial Grails 7.0.0 release had an issue where properties in the bom were not correctly populated. The 7.0.4 release restored properties, but the naming was inconsistent and duplicated. Later versions of Grails 7 reworked the properties for the following reasons:
+
+* to follow previous naming strategies used by Grails 6 and earlier.
+* to remove duplicate properties.
+* to clearly delineate between profile dependencies.
+* to remove non-published projects.
+* to fix invalid versions for properties used by asciidoctor & rxjava.
+
+Detailed differences follow in subsequent sections.
+
+==== Property Name Standardization
+
+In the prior 7.0.0 Grails versions, there were numerous duplicated properties for third-party dependencies, with one variant using hyphens (e.g., byte-buddy.version) and an identical one using dots (e.g., byte.buddy.version), both set to the same value. This applies to properties like:
+
+    asset-pipeline-gradle.version / asset.pipeline.gradle.version
+    byte-buddy.version / byte.buddy.version
+    commons-text.version / commons.text.version
+    directory-watcher.version / directory.watcher.version
+    grails-publish-plugin.version / grails.publish.version (though this is slightly inconsistent in naming)
+    javaparser-core.version / javaparser.core.version
+    bootstrap-icons.version / bootstrap.icons.version (literal duplicate entries)
+    commons-codec.version / commons.codec.version
+    geb-spock.version / geb.spock.version
+    asset-pipeline-bom.version / asset.pipeline.bom.version
+    spock.version / spock.bom.version (values match but names differ slightly)
+    jackson.version / jackson.bom.version
+    groovy.version / groovy.bom.version
+    selenium.version / selenium.bom.version
+
+To resolve this duplication and standardize naming conventions, the Grails team has consolidated these properties. All dotted variants have been removed. Only the hyphenated forms are retained (e.g., byte-buddy.version, asset-pipeline-gradle.version).
+
+Additionally, Grails-specific properties in earlier Grails 7 versions used dots in their names (e.g., grails.async.version, grails.data.hibernate5.version). These have been refactored to use hyphens instead (e.g., grails-async.version, grails-data-hibernate5.version). This aligns them with the third-party property naming convention.
+
+These changes eliminate redundancy and enforce consistency across the Grails bom & the boms it inherits.
+
+==== Profile Properties are renamed
+
+In previous Grails 7 versions, profile-specific properties were not prefixed with `grails-profile`.  These have been corrected as follows:
+
+    base.version - grails-profile-base.version
+    plugin.version - grails-profile-plugin.version
+    profile.version - grails-profile-profile.version
+    rest.api.version - grails-profile-rest-api.version
+    rest.api.plugin.version - grails-profile-rest-api-plugin.version
+    web.version - grails-profile-web.version
+    web.plugin.version - grails-profile-web-plugin.version
+
+==== Removal of Redundant or Unused Properties
+
+Several groups of related properties have been consolidated or removed in later Grails 7 versions:
+
+* Liquibase: (liquibase-hibernate5.version, liquibase.version, liquibase.cdi.version, liquibase.core.version, liquibase5.hibernate.version) have been replaced by `liquibase-hibernate5.version`
+* MongoDB: (mongodb.version, bson.version, mongodb.driver.core.version, mongodb.driver.sync.version, bson.record.codec.version) have been replaced by `mongodb.version`
+* Sitemesh: (starter-sitemesh.version, spring.boot.starter.sitemesh.version) have been consolidated to `starter-sitemesh.version`
+* Ant: (ant.version and ant.junit.version) have been consolidated to `ant.version`
+* Spring Boot sub-components: (spring.boot.cli.version and spring.boot.gradle.plugin.version) have been consolidated to use `spring-boot.version`
+* Asciidoctor Gradle: asciidoctor.gradle.jvm.version was renamed to `asciidoctor-gradle-jvm.version`
+* Spring Boot dependencies: `spring.boot.dependencies.version` was renamed to `spring-boot.version`
+* Liquibase Hibernate: liquibase.hibernate5.version & liquibase-hibernate5.version were consolidated to liquibase-hibernate5.version
+
+==== Specific Property Value Changes
+
+rxjava properties were incorrect previously, they are now fixed per the below:
+
+* `rxjava.version` (for RxJava 1.x, groupId io.reactivex) was set to 3.1.11 instead of 1.3.8
+* `rxjava2.version` (for RxJava 2.x, groupId io.reactivex.rxjava2) was set to 3.1.11 instead of 2.2.21
+* `rxjava3.version` (for RxJava 3.x, groupId io.reactivex.rxjava3) was set to 3.1.11 and remains 3.1.11
+
+==== Additions and Refinements in <dependencyManagement>
+
+Several boms are imported and previously used customized property names for them. They now align with a single property name.  Most importantly, `spring-boot-dependencies` now uses `${spring-boot.version}` (aligning with the removal of spring.boot.dependencies.version).
+
+All published Grails projects continue to have separate properties to allow for overriding their versions individually.
+
+[[grails-7-0-7]]
+=== Grails 7.0.7
+
+This release has no upgrade notes.
+
+[[grails-7-0-8]]
+=== Grails 7.0.8
+
+This release has no upgrade notes.
+
+[[grails-7-0-9]]
+=== Grails 7.0.9
+
+This release has no upgrade notes.
+
+[[grails-7-0-10]]
+=== Grails 7.0.10
+
+This release has no upgrade notes.
+
+[[grails-7-0-11]]
+=== Grails 7.0.11
+
+==== Changes in CLI- and Forge-generated configuration files
 
 From Grails 7.0.11 onwards, the CLIs (`grails-shell-cli` and `grails-forge-cli`) and the https://start.grails.org[Grails Forge website] no longer include several previously generated properties in `application.yml`.
 
@@ -925,7 +975,7 @@ grails:
         staticparts: none # already framework default
 ----
 
-==== 15. grails-micronaut-bom Required when using Micronaut
+==== grails-micronaut-bom Required when using Micronaut
 
 Grails 7 introduces a dedicated `grails-micronaut-bom` for projects that integrate with Micronaut.
 The Micronaut platform declares its own managed versions for libraries such as `javaparser-core` that conflict with the versions managed by `grails-bom`.
@@ -959,3 +1009,416 @@ grails {
 ----
 
 NOTE: Applications generated by the Grails Forge automatically use `enforcedPlatform` on `grails-micronaut-bom` when the Micronaut feature is selected.
+
+[[grails-7-0-12]]
+=== Grails 7.0.12
+
+This release has no upgrade notes.
+
+[[grails-7-0-13]]
+=== Grails 7.0.13
+
+==== stop-app no longer uses JMX or the Actuator shutdown endpoint
+
+The interactive CLI `stop-app` command no longer stops a running application through JMX or the Spring Boot Actuator `/actuator/shutdown` endpoint. Both mechanisms were unreliable on current JDKs and default configurations.
+
+Instead, `run-app` records the application's process id in a PID file (`build/run-app.pid`) and `stop-app` reads that file to stop the process directly. As a result:
+
+* The `--host` and `--port` options of `stop-app` have been removed. `stop-app` now stops the application started by `run-app` for the current project. If you previously scripted `grails stop-app --host=... --port=...`, drop those options.
+* `stop-app` only stops an application that was started with `run-app` for the same project. It can be invoked from interactive mode or from a separate terminal.
+* On Linux and macOS the application is shut down gracefully (the equivalent of `SIGTERM`), so JVM shutdown hooks and Spring's orderly shutdown run. On Windows the application is terminated on a best-effort basis and a graceful shutdown is not guaranteed.
+* Every `bootRun` invocation (including a direct `./gradlew bootRun`) now writes `build/run-app.pid` while the application is running; the file is removed once the application stops. Customizing the Gradle build directory (`layout.buildDirectory`) is not supported by `stop-app`, which always looks for the PID file under the conventional `build` directory.
+
+[[grails-7-0-14]]
+=== Grails 7.0.14
+
+==== Upgrading the Spring Security Plugins
+
+As of Grails 7, the Spring Security plugins -- Core, ACL, CAS, LDAP, OAuth2, REST, and UI -- are part of Grails core and are documented in the xref:security.adoc#springSecurity[Security > Spring Security] section of this guide. This section covers upgrading an application from the Grails 6.x era (plugin versions 5.x/6.x, Spring Security 5.8.x) to Grails 7 (Spring Security 6.x).
+
+NOTE: Documentation for earlier, independently-versioned plugin releases remains available at the https://apache.github.io/grails-spring-security/[legacy Spring Security plugin documentation site].
+
+===== Dependency Changes
+
+All Spring Security plugin artifacts have moved to the `org.apache.grails` group. The most notable change is that `spring-security-core` has been renamed to `grails-spring-security` (dropping the `-core` suffix).
+
+Update your `build.gradle` dependencies as follows:
+
+[cols="1,1",options="header"]
+|===
+| Old Dependency | New Dependency
+
+| `org.grails.plugins:spring-security-core`
+| `org.apache.grails:grails-spring-security`
+
+| `org.grails.plugins:spring-security-acl`
+| `org.apache.grails:grails-spring-security-acl`
+
+| `org.grails.plugins:spring-security-cas`
+| `org.apache.grails:grails-spring-security-cas`
+
+| `org.grails.plugins:spring-security-ldap`
+| `org.apache.grails:grails-spring-security-ldap`
+
+| `org.grails.plugins:spring-security-oauth2`
+| `org.apache.grails:grails-spring-security-oauth2`
+
+| `org.grails.plugins:spring-security-rest`
+| `org.apache.grails:grails-spring-security-rest`
+
+| `org.grails.plugins:spring-security-rest-gorm`
+| `org.apache.grails:grails-spring-security-rest-datamapping`
+
+| `org.grails.plugins:spring-security-rest-grailscache`
+| `org.apache.grails:grails-spring-security-rest-grails-cache`
+
+| `org.grails.plugins:spring-security-rest-memcached`
+| `org.apache.grails:grails-spring-security-rest-memcached`
+
+| `org.grails.plugins:spring-security-rest-redis`
+| `org.apache.grails:grails-spring-security-rest-redis`
+
+| `org.grails.plugins:spring-security-ui`
+| `org.apache.grails:grails-spring-security-ui`
+|===
+
+The coordinate rename script described in the *Coordinate Changes* section above also updates these Spring Security artifacts automatically.
+
+====== Example
+
+A typical Spring Security Core dependency change:
+
+[source,groovy]
+.build.gradle
+----
+// Before (Grails 6)
+implementation 'org.grails.plugins:spring-security-core:6.1.1'
+
+// After (Grails 7)
+implementation 'org.apache.grails:grails-spring-security'
+----
+
+NOTE: With the unified Grails BOM, versions are managed automatically when using a Grails Gradle plugin. You no longer need to specify the version explicitly.
+
+===== REST Plugin Token Storage Submodules
+
+If you use the Spring Security REST plugin with a specific token storage backend, note the following renames:
+
+* `spring-security-rest-gorm` is now `grails-spring-security-rest-datamapping` (reflecting the rename of GORM to Grails Data Mapping)
+* `spring-security-rest-grailscache` is now `grails-spring-security-rest-grails-cache`
+* `spring-security-rest-memcached` is now `grails-spring-security-rest-memcached`
+* `spring-security-rest-redis` is now `grails-spring-security-rest-redis`
+
+===== Spring Security 6.x Changes
+
+The underlying Spring Security framework has been upgraded from 5.8.x to 6.x. Key changes that may affect your application:
+
+* **Jakarta EE namespace**: Spring Security 6 uses `jakarta.servlet` instead of `javax.servlet`. See the https://docs.spring.io/spring-security/reference/migration/index.html[Spring Security Migration Guide] for details.
+* **Security filter chain configuration**: The `WebSecurityConfigurerAdapter` has been removed in Spring Security 6. If you have custom security configurations extending this class, you will need to migrate to the component-based approach. The Grails Spring Security plugin handles the core filter chain configuration internally, but any custom Spring Security beans may need updating.
+* **Default security behaviors**: Some default behaviors have changed in Spring Security 6 (e.g., CSRF protection, session management). Review the https://docs.spring.io/spring-security/reference/migration-7/index.html[Spring Security reference documentation] for the complete list of changes.
+
+===== Configuration Compatibility
+
+The `grails.plugin.springsecurity.*` configuration namespace remains unchanged. Your existing `application.groovy` or `application.yml` security configuration should work without modification after updating the dependencies.
+
+If you encounter any issues during the upgrade, please file an issue at https://github.com/apache/grails-core/issues[the grails-core GitHub repository].
+
+[[grails-7-0-15]]
+=== Grails 7.0.15
+
+This release has no upgrade notes.
+
+[[grails-7-0-16]]
+=== Grails 7.0.16
+
+==== Upgrading the Quartz Plugin
+
+As of Grails 7, the Quartz plugin is part of Grails core and is documented in the xref:backgroundJobs.adoc#backgroundJobsAdvanced[Background Jobs > Advanced Scheduling] section of this guide.
+
+NOTE: Documentation for earlier, independently-versioned plugin releases remains available at the https://apache.github.io/grails-quartz/[legacy Quartz plugin documentation site].
+
+===== Coordinate Changes
+
+The plugin artifact has moved to the `org.apache.grails` group and has been renamed from `quartz` to `grails-quartz`, matching the naming convention used by the other Grails plugins.
+
+[cols="1,1"]
+|===
+| Grails 6 Coordinate | Grails 7 Coordinate
+
+| `org.grails.plugins:quartz`
+| `org.apache.grails:grails-quartz`
+|===
+
+The coordinate rename script described in the *Coordinate Changes* section above also updates this artifact automatically.
+
+The version is now managed by the Grails BOM, so it should be removed from the dependency declaration:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    // Grails 6
+    // implementation 'org.grails.plugins:quartz:2.0.13'
+
+    // Grails 7
+    implementation 'org.apache.grails:grails-quartz'
+}
+----
+
+===== spring-context-support
+
+The plugin builds its scheduler from `SchedulerFactoryBean` and its job factory from `AdaptableJobFactory`, both of which live in `org.springframework:spring-context-support`. Plugin version 4.0.x did not declare that dependency, and it is not reliably inherited from the rest of the stack, so an application failed at startup with:
+
+[source]
+----
+java.lang.NoClassDefFoundError: org/springframework/scheduling/quartz/AdaptableJobFactory
+----
+
+until `spring-context-support` was added by hand. This affected any application using the standalone plugin releases, including one generated with the `grails-quartz` feature.
+
+The dependency is now declared by the plugin and comes in transitively. If you added it explicitly as a workaround, it can be removed:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'org.apache.grails:grails-quartz'
+
+    // no longer required -- provided transitively by grails-quartz
+    // implementation 'org.springframework:spring-context-support'
+}
+----
+
+===== Job Class Properties
+
+Job configuration properties such as `concurrent`, `sessionRequired`, `description`, and `group` must be declared as `static` rather than `def`. This changed in plugin version 2.0.13, so applications coming from an older release need to update their job classes:
+
+[source,groovy]
+----
+class MyJob {
+
+    // Grails 6 and earlier
+    // def concurrent = false
+
+    static concurrent = false
+
+    static triggers = {
+        simple repeatInterval: 5000L
+    }
+
+    void execute() {
+        // ...
+    }
+}
+----
+
+See the xref:backgroundJobs.adoc#quartzJobProperties[Job Properties] section for the full set of supported properties and their defaults.
+
+[[grails-7-0-17]]
+=== Grails 7.0.17
+
+==== GORM for MongoDB rejects Map criterion values that contain `$` keys
+
+`findWhere`, `findAllWhere`, criteria queries, the `where` DSL and dynamic finders now throw `InvalidDataAccessResourceUsageException` when a `Map` passed as a criterion value contains a key starting with `$` at any level, on any property type including enums. MongoDB interprets such a value document as an operator expression rather than as a value. Maps without such keys are still sent as literal subdocument comparisons, so exact matches on `Map` properties, dotted paths and array elements are unchanged, and geospatial criteria are exempt. Code that deliberately passed an operator document through a criteria value should use the native `find(Bson)` API instead.
+
+[[grails-7-0-18]]
+=== Grails 7.0.18
+
+==== Interceptor URI Matching Uses the Dispatched Path
+
+Interceptors that match on `uri`, with `match(uri: ...)` or `excludes(uri: ...)`, now match the same path that URL
+mappings route on: percent escapes are decoded, matrix parameters (`;name=value`) are removed and the context path is
+stripped before the pattern is applied. Previously the raw request URI was matched, so an encoded (`/%61dmin/users`)
+or matrix-parameter (`/admin;x=1/users`) request could reach a controller without triggering an interceptor declared
+for `/admin/**`. Interceptors matched by controller, action or namespace are unaffected.
+
+Review interceptors that use `uri` matching for the following changes:
+
+* **Interceptors combining `match(uri:)` with an `excludes(...)` now run under a context path.**
+In earlier versions a matcher that paired a `uri` pattern with any exclusion (`excludes(uri:)`, `excludes(controller:)`,
+`excludes(action:)` or a closure) never matched when the application was deployed under a non-root context path (for
+example `server.servlet.context-path=/app`), because the exclusion check required the pattern to match both the
+context-prefixed and the context-relative request URI, which a pattern such as `/api/**` cannot do. Only that shape was
+affected: `matchAll()` with exclusions, `match(controller:)` and other name-based matchers, `match(uri:)` without an
+exclusion, and `uri` patterns that match both forms such as `/**` all ran as expected. The affected shape now behaves
+as configured, so an interceptor written that way starts executing under a context path.
+
+* **Patterns are matched against the path within the application only.**
+A pattern is no longer also compared with the context-prefixed request URI, so `+match(uri: '/*/*')+` no longer matches
+`/app/save` under the context path `/app`. Patterns that begin with the context path, such as
+`match(uri: '/app/admin/**')`, are still accepted for backwards compatibility.
+
+* **Includes are matched against the included path.**
+During a `<g:include>` or `RequestDispatcher` include, `uri` matchers see the included path rather than the URI of the
+outer request. This is consistent with the controller selected for the include and with `match(controller:)`
+matchers, which already matched the included controller.
+
+* **Custom `grails.interceptors.Matcher` implementations receive the canonical path.**
+The `uri` argument passed to `doesMatch` is now the decoded, application-relative path without matrix parameters.
+
+The Spring Security plugin applies the same canonicalization when matching `ipRestrictions` patterns, so an encoded or
+matrix-parameter variant of a restricted path is subject to the same restriction as the plain path.
+
+The canonical form follows the URI and Servlet specifications, with two deliberate exceptions. Path parameters are
+removed from each segment before percent-decoding, as Jakarta Servlet 6.0 section 3.5.2 requires of containers, so an
+encoded semicolon (`%3B`) is a literal character and not a parameter delimiter (RFC 3986 section 2.2). Percent-encoded
+unreserved characters such as `%61` are decoded (RFC 3986 section 2.3), and the path is decoded exactly once
+(RFC 3986 section 2.4). The exceptions are inherited from Spring's `UrlPathHelper`, which Grails URL mapping dispatch
+has used since Grails 3: the context path is compared case-insensitively although RFC 3986 section 6.2.2.1 and
+RFC 9110 section 4.2.3 define paths as case-sensitive, and during a `RequestDispatcher` include the included path is
+matched. Interceptors and the Spring Security plugin follow dispatch on both points because a matcher that disagrees
+with dispatch lets a request reach a controller without its interceptors or restrictions.
+
+==== Only Tenants.withoutId runs without a tenant with DISCRIMINATOR multi-tenancy
+
+With `DISCRIMINATOR` multi-tenancy, only `Tenants.withoutId` and `@WithoutTenant` run without a tenant. A tenant id of `DEFAULT` is a tenant id like any other, whether a `TenantResolver` returns it or it is passed to `Tenants.withId`. Queries return the instances of the tenant `DEFAULT`, and a saved instance gets the tenant id `DEFAULT`.
+
+* Code that relied on a resolver returning `DEFAULT` to work with every tenant has to run inside `Tenants.withoutId` or in a method annotated with `@WithoutTenant`. Examples are `SubDomainTenantResolver` on `localhost` during development, and `new FixedTenantResolver()`.
+* With GORM for MongoDB and GORM's in-memory datastore, queries inside `Tenants.withoutId` still return only the instances of the tenant `DEFAULT`. There, `Tenants.withoutId` only lets a saved instance keep the tenant id that is set on it.
+* With a tenant id property that isn't a `String`, such as a `Long`, a tenant id of `DEFAULT` now fails. A save throws a `TenantException`, and a query with GORM for Hibernate throws an `IllegalArgumentException`. Have the resolver return a tenant id of the property's type.
+* Inside `Tenants.withoutId`, `Tenants.currentId()` returns `DEFAULT`, and `Tenants.withCurrent` and `@CurrentTenant` keep running without a tenant. `Tenants.isWithoutId()` tells whether the current code runs without a tenant id.
+* GORM for Hibernate also restricts a collection of a multi-tenant entity to the current tenant when it is loaded lazily or fetched by join, also when it is a many-to-many collection or a query fetches it by join through another association, and `load` and `proxy` of a multi-tenant entity run a query, as `get` does. Like `get`, they return `null` when no instance is found, instead of a proxy that fails when it is used. A collection of a multi-tenant entity that is mapped with `fetch: 'join'` is loaded eagerly with a select of its own instead, and loading one lazily without a current tenant, outside `Tenants.withoutId`, throws `TenantNotFoundException`.
+* Before a query on an entity that isn't multi-tenant but has a collection of a multi-tenant entity, directly or through its associations, GORM for Hibernate now calls the `TenantResolver` and activates the filter for the current tenant, so that a collection the query fetches by join is restricted. When there is no current tenant, because the resolver throws a `TenantNotFoundException` or returns `null`, such a query runs as before. Any other exception from the resolver fails the query. A query that the resolver runs on an entity that isn't multi-tenant while GORM resolves the tenant does not call the resolver again. A query on a multi-tenant entity does, so a resolver must not run one.
+* A `TenantResolver` that returns `null` now causes a `TenantNotFoundException`, as a resolver that finds no tenant does, in every multi-tenancy mode.
+* The `DATABASE` and `SCHEMA` modes are otherwise unchanged.
+
+==== Lookups by id are restricted to the current tenant with DISCRIMINATOR multi-tenancy
+
+With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB and GORM's in-memory datastore used by unit tests now restrict `get`, `read`, `exists`, `getAll`, `load` and `proxy` to the current tenant, as queries and dynamic finders already were. Previously these methods looked an instance up by its id alone, so they returned an instance that belongs to another tenant. GORM for Hibernate is unchanged: it already restricts `get`, `read`, `exists` and `getAll` to the current tenant, and `load` and `proxy` since the previous note.
+
+* The id of another tenant's instance is treated like an id that does not exist: `get` and `read` return `null`, `exists` returns `false`, `getAll` returns `null` in its place, and the proxy returned by `load` or `proxy` throws when it is initialized.
+* Without a current tenant, these methods throw `TenantNotFoundException`, as a query does. `getAll` without ids still returns an empty list.
+* Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `DEFAULT` restricts a lookup by id to that tenant as it restricts a query.
+* A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
+
+==== A sort by an association uses the left join that a query requests for it
+
+With GORM for Hibernate, a where query, a detached criteria or a dynamic finder that requests a left join of an association, with `join('owner', JoinType.LEFT)` or `fetch: [owner: JoinType.LEFT]`, and sorts by a property of that association, as with `sort: 'owner.lastName'`, now returns the instances without the association. As of Grails 7.0.18 the sort uses the left join that the query requests. Previously the sort joined the association again with an inner join, so those instances were left out, although the same query without the sort returned them.
+
+* The `totalCount` of a paged list counts the same instances as the list.
+* To leave out the instances without the association, as before, request an inner join with `JoinType.INNER`, or add a criterion such as `owner != null`.
+* A sort by an association for which the query requests no join type, or the fetch mode `join`, still joins it with an inner join.
+
+==== Data binding white lists apply wherever a class is compiled
+
+As of Grails 7.0.18, the list of bindable properties that Grails generates for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields, is generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no list and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got the list, and a class without one was bound without restriction.
+
+* A command object compiled apart from the controller that binds it, in a plugin or in a shared module, a `Validateable` object bound as a nested property, and a command object declared inside another class are now bound by their `bindable` constraints and their `transients`, like a command object compiled with its controller. As a consequence, their dynamically typed properties, declared with `def` or as `Object`, are no longer bound by default. Declare a type for such a property, or mark it `bindable: true`.
+* A GORM entity compiled outside `grails-app/domain`, such as an `@Entity` class in `src/main/groovy` or in a shared module, now gets the list a domain class in `grails-app/domain` gets, as GORM declares a `transients` list on every entity, and is bound by the same rules. In particular, `bindData` no longer binds its `id`, `version`, `dateCreated` and `lastUpdated`. Previously such a class was bound without restriction, its `id` and `version` included.
+* A class compiled against an already compiled parent takes the parent's bindable properties from the compiled parent. When the parent was compiled by an earlier version of Grails, or without the data binding library on its compile classpath, the compiler warns that the list of the subclass is derived from the parent's bytecode and asks for the parent to be recompiled. Recompile the plugin or module that holds the parent with Grails 7.0.18 or later to clear the warning.
+* A property of type `org.springframework.validation.Errors`, such as the `errors` property of a domain class or of a `Validateable` object, is never bound from request data, whatever a generated list names.
+* `bindData` with an `exclude` list, including the `bindData(target, source, List excludes)` overloads, keeps the generated list in effect and removes the excluded properties from it. Previously an `exclude` list without an `include` list set the generated list aside, so that only the excluded properties were kept out. An empty `include` list still binds every property that is not excluded.
+* Request data bound into an association that was loaded lazily, as `book.properties = params` binds the nested `author` parameters into the book's author, is bound by the list generated for the association's class. Previously an association that was still a proxy was bound without restriction.
+* A class that gets the list now carries it as a new `public static final` field. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
+* A controller compiled against a command object that was compiled without the list, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+==== The OAuth `callback` parameter of the Spring Security REST plugin needs allowed origins
+
+The Spring Security REST plugin redirects to the URL in the `callback` parameter of `/oauth/authenticate/<provider>`, with the token appended, only when the URL's origin, that is its scheme, host and port, is listed in the new setting `grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins`, and the URL has a path, a query or a fragment after the host. It ignores any other `callback` URL, and every `callback` URL when the setting is missing, and redirects to the `frontendCallbackUrl` instead, as it does without the parameter. It checks the URL when the login starts and again when it completes, and a new login drops the `callback` URL of an earlier login that was not completed. An application that passes the `callback` parameter lists the origins of its frontend:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins = ['https://my.frontend-app.com']
+----
+
+Since the plugin became part of Grails, the `callback` parameter failed with a `MissingMethodException`. It works again within these limits.
+
+==== Encrypted JWTs of the Spring Security REST plugin are signed
+
+As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.useEncryptedJwt` enabled, the Spring Security REST plugin signs the claims with the RSA private key, using RS256, before it encrypts them with the RSA public key, and it accepts an encrypted JWT only when the JWT inside carries a valid signature made with the private key.
+
+* Access and refresh tokens issued before the upgrade are no longer accepted, so users have to log in again. When several instances of an application share the keys, upgrade them together: an instance that was not upgraded rejects the tokens of an upgraded one, and the other way round.
+* An application that generates or validates encrypted JWTs needs both keys, also when a custom `RSAKeyProvider` provides them. The private key must be at least 2048 bits long. A shorter key fails with an `IllegalArgumentException` when a token is generated. Use the key pair for these tokens only: the plugin accepts any JWT that is signed with the private key and encrypted with the public key, whatever issued it.
+* For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
+* With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
+* An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+==== `list` sorts by every property of a sort map
+
+With GORM for Hibernate, `list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, sorted by the last entry of the map only. As of Grails 7.0.18, it sorts by every entry, in the order of the map. The same applies to a default sort that the mapping declares for more than one property, as in `sort author: 'asc', title: 'desc'`: `list` sorted by its last property only. An association is joined once for all the entries that sort by it. `list` joined it once for each entry, and `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path`. To sort by one property, as before, pass that property alone.
+
+The rows on a page can change because every sort property now participates before `max` and `offset` are applied. Sorting by two properties of the same collection also returns fewer duplicate rows: a book with three chapters occurs three times for `Book.list(sort: ['chapters.title': 'asc', 'chapters.id': 'asc'])`, rather than nine times from two joins of the chapters. There is no compatibility setting: both changes apply the sort that the call requests. Pass just the last sort property to retain the former single-property ordering.
+
+==== A setting makes a sort by an association keep every instance
+
+With GORM for Hibernate, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join. The sort therefore leaves out the instances whose association is `null`, and the `totalCount` of a paged list and `count` do not count them. That is unchanged by default. As of Grails 7.0.18, the new `grails.gorm.leftJoinAssociationSort` setting makes such a sort join the association with a left join, so that a sort no longer changes which instances a query returns:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        leftJoinAssociationSort: true
+----
+
+The setting applies to `list`, to `find` and `findAll` with an example, to `findWhere` and `findAllWhere`, to dynamic finders, to a criteria query that is passed pagination arguments, such as `Book.createCriteria().list(sort: 'author.name', max: 10) { ... }`, and to where queries and detached criteria.
+
+* With the setting, the instances whose association is `null` are returned and counted. Whether they come first or last depends on how the database sorts nulls. To leave them out, add a criterion that the association is not `null`, such as `Book.where { author != null }.list(sort: 'author.name')`.
+* A where query or a detached criteria that has criteria on the association still joins it for those criteria, with an inner join by default, and the sort uses that join.
+* A sort by a property of a collection, such as `Author.list(sort: 'books.title')`, still joins the collection with an inner join, and leaves out the instances whose collection is empty.
+* The setting is disabled by default in Grails 7 and in Grails 8.0. Explicitly setting it to `false` logs a startup warning that Grails 9 removes the setting. The planned default in Grails 8.1 is `true`. It is listed with the other settings of this kind in link:upgrading.html#compatibilitySettings[Compatibility Settings].
+
+==== A join type requested for an association is always applied
+
+With GORM for Hibernate, a where query, a detached criteria, a dynamic finder or a criteria query can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, with `join('author', JoinType.INNER)`, or, on a data service method that queries by its parameters, such as `Book find(String title)`, with `@Join(value = 'author', type = JoinType.INNER)`. In a where query, a detached criteria and a dynamic finder, the requested join type was only used when the query also had criteria on the association, and a criteria query never used it. The association was otherwise fetched with an outer join, whatever join type was requested, so the query also returned the instances whose association is `null`. As of Grails 7.0.18, a requested join type other than `JoinType.LEFT` is applied whether or not anything else in the query uses the association.
+
+* With `JoinType.INNER`, the instances whose association is `null`, or whose collection is empty, are no longer returned by `list`, `get` and `find`, and no longer counted by `count` or by the `totalCount` of a paged list. The association is still fetched. This also applies to a collection of a basic type, such as `static hasMany = [tags: String]`, for which the requested join type was ignored. To return these instances as before, request `JoinType.LEFT` or `'join'`.
+* `JoinType.RIGHT` is applied as well. It leaves out the same instances as `JoinType.INNER` and still fetches the association. For an association to a single instance, a right join also has a row for each associated instance that none of the queried instances refers to, such as an author without a book, unless the criteria of the query exclude it. When returning entities, `list` keeps one `null` per such row, and `count` and `totalCount` count each of them. A property projection still returns repeated values, including `null`, once when the query joins; this existing behavior can make its result size differ from the count. For a collection, a right join returns the same instances as an inner join. This now also applies when a where query or a detached criteria has criteria on the collection, as in `Author.where { books { title ==~ 'The%' } }.join('books', JoinType.RIGHT)`: such a query returned `null` for each element that no instance has, and counted it.
+* A query that is used as a subquery applies the join type that it requests as well, so a subquery with `join('author', JoinType.INNER)` no longer selects the instances without an author.
+* `updateAll` and `deleteAll` apply the join type that the where query or the detached criteria requests too, so they leave out the instances that the join type leaves out of `list`: `Book.where { title ==~ 'Draft%' }.join('author', JoinType.INNER).deleteAll()` no longer deletes the drafts without an author. To update or delete those as well, as before, do not request a join type for the association, or request `JoinType.LEFT`. A sort is not applied to an update or a delete: while `grails.gorm.leftJoinAssociationSort` is off, a sort by a property of an association leaves the instances whose association is `null` out of `list`, and `updateAll` and `deleteAll` still change them. MySQL, and MariaDB before version 10.3, do not allow an update or a delete to select from the table that it modifies. With a MySQL dialect, or a MariaDB dialect older than `MariaDB103Dialect`, `updateAll` and `deleteAll` therefore select the identifiers of the instances first, and then update or delete the instances with those identifiers, when the join type is requested for a path that leads back to the queried class, such as the `parent` of a category, or that starts with a collection of a basic type.
+* A join type requested for a path through more than one association, such as `fetch: ['author.publisher': JoinType.INNER]`, was ignored unless the query had criteria on the path. Every association on the path is now joined and fetched, with the requested join type for the last one, so `JoinType.INNER` leaves out the instances without an author as well as those whose author has no publisher. When the path passes through a collection, such as `books` in `fetch: ['books.publisher': JoinType.INNER]`, the query is restricted to the instances for which the join returns a row, and counts each of them once. The collection and the other associations on the path are fetched as well, with outer joins, so the collection holds all of its elements, also the books without a publisher: a join type decides which instances a query returns, and never leaves elements out of a fetched collection. A where query and a dynamic finder return each author once, and a criteria query returns an author once for each of the books that it fetches. A `JoinType.LEFT` requested for such a path, as in `fetch: ['books.publisher': JoinType.LEFT]`, now fetches the associations on the path as well: it fetched none of them.
+* Bulk operations also apply join types requested inside a subquery, including a subquery in an `or` or `and` block. They first select the matching root identifiers with the query's join restrictions and tenant filters, then update or delete those identifiers in batches. A bidirectional collection is correlated through its owning property so the tenant filter remains bound. Criteria on an association that already failed in bulk operations remain unsupported.
+* A query with a property projection applies the requested join type too.
+* Sorting a where query, detached criteria or dynamic finder through a nested `JoinType.LEFT` request also keeps intermediate associations outer when only the sort uses them. For example, `fetch: ['books.publisher': JoinType.LEFT], sort: 'books.publisher.name'` keeps an author without books, and books without a publisher, even with `grails.gorm.leftJoinAssociationSort` disabled. Explicit intermediate join types, replacement fetch modes and association criteria keep their existing precedence. Paged collection sorts load the complete collection separately rather than initializing it from limited joined rows.
+* When `max` or a positive `offset` pages the query, collections on a requested join path are loaded separately when accessed. Fetching them from the limited joined rows would leave the session with incomplete collections. The requested join type still restricts the root instances and their count.
+* For a collection joined only by that request, pagination now applies to root instances rather than joined collection rows, so a page can contain more distinct instances than before, up to `max`. For example, `Author.where { ... }.list(fetch: [books: JoinType.LEFT], max: 2, sort: 'name')` can now return two authors where it previously returned only the first author's joined rows. The fetch mode `'join'`, including `join('books')` without a type, still pages joined rows and can load an incomplete collection, as before. `JoinType.LEFT` and `'join'` therefore preserve the same unrestricted root selection but no longer necessarily return the same page.
+* On data services, this applies to methods that query by their parameters, such as `Book find(String title)`. Methods named as dynamic finders, such as `findByTitle` and `findAllByTitleLike`, still treat `@Join` as a fetch mode and do not apply its join type.
+* `select('author')` or `join('author')` after a requested left join keeps that join for the query's criteria, in a criteria query as well as in a where query or a detached criteria, so an alternative criterion on the book can now return a book without an author. A later fetch mode that replaces an inner join also applies to property projections: `property('author.name').join('author', JoinType.INNER).join('author')` can now include `null`.
+
+==== A where query uses the join type that it requests for each join of the association
+
+With GORM for Hibernate, a where query, a detached criteria or a dynamic finder can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, or with `join('author', JoinType.INNER)`. The join type is used when the criteria, a projection or a sort of the query join the association. As of Grails 7.0.18, it no longer matters in which order the query was put together.
+
+* A join type that the `fetch` argument requests is now also used for an association that the where query or the detached criteria itself has criteria or a projection on. Such an association was joined before the argument was read: with an inner join for criteria and with a left join for a projection, whatever the argument requested. `Book.where { author.name == 'Stephen King' || title == 'Anonymous' }.list(fetch: [author: JoinType.LEFT])` now also returns the book without an author that matches the title, as it already did when the join type was requested with `join('author', JoinType.LEFT)`.
+* A join type for a nested association is requested by its path. `join('author.publisher', JoinType.LEFT)` is now used for the join that criteria on `author.publisher` make, which was an inner join whatever was requested. A join type requested for an association of the queried class, such as `publisher`, is no longer used for a nested association of the same name.
+* In a criteria query, `join('author', JoinType.INNER)` fetched the association with an outer join, and a `JoinType` in the `fetch` argument of `list`, as in `Book.createCriteria().list(fetch: [author: JoinType.INNER]) { ... }`, did not fetch the association at all. Both now use the requested type, including for an association block or a declared alias, regardless of whether `join` appears before or after the block. A requested left join also keeps books without an author when another branch of an `or` matches them, or when the query sorts by the author. Without pagination the association is fetched; with pagination, collections load separately as described above.
+* A requested join type also replaces an explicit join type on `createAlias`. For example, `createAlias('author', 'a', CriteriaSpecification.LEFT_JOIN)` followed by `join('author', JoinType.INNER)` now leaves out books without an author; the alias's left join previously kept them.
+* A paged criteria query with `join('books', JoinType.LEFT)` now pages root instances when the collection is joined only for fetching. A page that previously contained the same author twice can now contain two authors. This is the same pagination change described above for where queries. Plain `join('books')` and `fetch: [books: 'join']` still page joined rows and can repeat a root on the page, as before.
+* An unpaged criteria query whose `fetch` argument now fetches a collection can return an instance once per collection element. Previously a join type in that argument fetched nothing and did not multiply those rows. Its `totalCount` counts root instances when the requested collection join is applied through a subquery, so it can differ from the number of unpaged fetched rows.
+* A sort stored on the query with `sort()`, as in `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])`, now uses the join type requested by the `fetch` argument. It also returns books without an author. The same holds for a nested association path. Request `JoinType.INNER` to keep leaving those books out.
+
+==== More GSP tags HTML-encode the attribute values they write
+
+These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:
+
+* `<g:form>`, `<g:uploadForm>` and `<g:formActionSubmit>`: the URL in `action` and `formaction`, and the hidden fields that a `RequestDataValueProcessor` adds to a form.
+* `<g:checkBox>`: `name`, `value`, `form`, and the `id` taken from the name, on the checkbox and on its hidden field.
+* `<g:actionSubmit>` and `<g:actionSubmitImage>`: `value`, the `action` in the button's name, and `src`.
+* `<g:datePicker>`: `name`, `id` and `selectDateClass`, on the labels, the hidden field and each select.
+* `<g:radio>` and `<g:radioGroup>`: `name`, and on `<g:radio>` the `id` taken from it.
+* `<g:select>`: the key of `noSelection`.
+* `<g:field>`: `type`.
+* `<g:withTag>`: the values of `attrs` that are not closures.
+* `<g:external>`: `uri`, and `<g:javascript>`: `src`.
+* `<g:paginate>`: `class`, on the current step.
+* `<g:sortableColumn>`: `title`, which it writes as the text of the column's link. A text from `titleKey` is written as the message source returns it. Mark a `title` that holds markup with `raw()`.
+* `<g:renderException>`: `detailsClass`, `stackClass`, `filenameClass`, `snippetClass`, `lineClass`, `lineNumberClass` and `lineErrorClass`.
+
+The browser decodes the attribute, so a value without a character reference reaches it unchanged. The markup changes, though: an `&` in the URL of a form is written as `+&amp;+`, as `<g:link>` writes it in an `href`.
+
+A value encoded with `encodeAsHTML()` before it reaches the tag is written once, not encoded again. That holds for a String, for a value captured from a GSP body with `<g:set>`, and for the output of a tag such as `fieldValue()`, also when a `RequestDataValueProcessor` returns the value unchanged. When the processor changes the value, the tag encodes what the processor returns, so a value encoded beforehand is encoded twice, as `<g:textField>` already did. There is one more exception: `<g:form>` and `<g:formActionSubmit>` build their URL from `uri`, `base`, `controller` and their other link attributes and only then encode it, so a value encoded beforehand is encoded twice there, as it already was in the `href` of `<g:link>`. Pass those values unencoded. A `url` attribute that the tag writes as it is given is written once. A character reference written in the page, as in `+name="a&amp;b"+`, is encoded as well: write the character itself.
+
+A value marked with `raw()` is still written as given by the tags that wrote it so before, and so are the text and the `default` of `message()`, which comes back marked raw. Where a `RequestDataValueProcessor` is registered, `<g:textField>` and the other field tags encode what the processor returns, as before, and `<g:radio>` encodes such a value in any case, as before. Do not pass request data through `raw()` or as the `default` of `message()`.
+
+`<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
+
+A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== An enum stored as a string takes the length of its maxSize constraint
+
+With Hibernate 5, an enum property stored as a string ignored a `maxSize` constraint, so its column was always
+`VARCHAR(255)` while a `String` property honoured it. The column now takes the same length constraints as a `String`
+property, and a column created from an `inList` of enum constants is as long as the longest constant name. The length
+only shows in a schema that Hibernate creates: an application that manages its schema by hand or with a migration tool
+keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
+The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
+enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
