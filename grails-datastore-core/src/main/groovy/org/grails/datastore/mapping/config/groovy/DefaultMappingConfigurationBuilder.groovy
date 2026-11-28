@@ -83,6 +83,7 @@ class DefaultMappingConfigurationBuilder implements MappingConfigurationBuilder 
 
                 def binder = new DataBinder(instance)
                 binder.bind(new MutablePropertyValues(args[0]))
+                Property.refuseInvalidCascadeValidate(binder)
                 properties[name] = instance
             }
         }

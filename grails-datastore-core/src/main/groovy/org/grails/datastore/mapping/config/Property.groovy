@@ -28,8 +28,10 @@ import jakarta.persistence.CascadeType
 import jakarta.persistence.EnumType
 import jakarta.persistence.FetchType
 
+import org.grails.datastore.mapping.validation.CascadeValidateType
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
+import org.springframework.validation.FieldError
 
 /**
  * Base class for classes returned from {@link org.grails.datastore.mapping.model.PropertyMapping#getMappedForm()}
@@ -121,6 +123,31 @@ class Property implements Cloneable {
      * if the property is an association.
      */
     String cascadeValidate
+
+    /**
+     * Sets the cascade validation mode, refusing a name that is not one when the mapping is read.
+     *
+     * @param cascadeValidate default, none, owned or dirty, in any letter case, or null for the default
+     * @throws IllegalArgumentException when the value names no mode
+     */
+    void setCascadeValidate(String cascadeValidate) {
+        if (cascadeValidate != null) {
+            CascadeValidateType.fromMappedName(cascadeValidate)
+        }
+        this.@cascadeValidate = cascadeValidate
+    }
+
+    /**
+     * The fluent form of {@link #setCascadeValidate(String)}, so the builder method checks the value too.
+     *
+     * @param cascadeValidate default, none, owned or dirty, in any letter case, or null for the default
+     * @return This property
+     * @throws IllegalArgumentException when the value names no mode
+     */
+    Property cascadeValidate(String cascadeValidate) {
+        setCascadeValidate(cascadeValidate)
+        return this
+    }
     /**
      * For specifying the cascade type using {@link CascadeType}
      */
@@ -326,7 +353,26 @@ class Property implements Cloneable {
     static <T extends Property> T configureExisting(T property, Map config) {
         DataBinder dataBinder = new DataBinder(property)
         dataBinder.bind(new MutablePropertyValues(config))
+        refuseInvalidCascadeValidate(dataBinder)
 
         return property
+    }
+
+    /**
+     * Refuses a mapping whose {@code cascadeValidate} names no mode. A binder collects the exception of a setter in its
+     * binding result instead of throwing it, so a mapping read through one would otherwise succeed and keep the default.
+     *
+     * @param dataBinder A binder that has bound a mapping to a property
+     * @throws IllegalArgumentException when the bound value names no mode
+     */
+    static void refuseInvalidCascadeValidate(DataBinder dataBinder) {
+        FieldError error = dataBinder.bindingResult.getFieldError('cascadeValidate')
+        if (error != null) {
+            String name = error.rejectedValue == null ? null : String.valueOf(error.rejectedValue)
+            CascadeValidateType.fromMappedName(name)
+            // the value names a mode but is not a String, such as a GString or an enum constant, which the binder does not
+            // convert: it is applied by name, as plain assignment applies it
+            ((Property) dataBinder.target).setCascadeValidate(name)
+        }
     }
 }

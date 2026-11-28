@@ -34,7 +34,22 @@ public enum CascadeValidateType {
     /** In addition to the default cascade requirement, only cascade to entities that are DirtyCheckable and hasChanged **/
     DIRTY;
 
+    /**
+     * Reads the name a mapping gives for cascadeValidate, in any letter case.
+     *
+     * @param name The mapped name
+     * @return The mode it names
+     * @throws IllegalArgumentException when the name is not one of default, none, owned or dirty, with a message that
+     *         lists them; a Boolean such as {@code true} is not a mode
+     */
     public static CascadeValidateType fromMappedName(String name) {
-        return CascadeValidateType.valueOf(name.toUpperCase());
+        if (name != null) {
+            for (CascadeValidateType type : values()) {
+                if (type.name().equalsIgnoreCase(name)) {
+                    return type;
+                }
+            }
+        }
+        throw new IllegalArgumentException("cascadeValidate must be one of default, none, owned or dirty, but was '" + name + "'");
     }
 }

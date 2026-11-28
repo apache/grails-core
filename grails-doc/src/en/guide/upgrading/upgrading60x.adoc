@@ -1406,3 +1406,9 @@ only shows in a schema that Hibernate creates: an application that manages its s
 keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
 The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
 enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
+
+==== A cascadeValidate that names no mode is refused when the mapping is read
+
+`cascadeValidate` is one of `default`, `none`, `owned` or `dirty`, in any letter case. As of Grails 7.0.18 a value that names none of them, such as `true`, `false` or a misspelling, is refused when the mapping is read: the application fails to start with `cascadeValidate must be one of default, none, owned or dirty, but was 'true'`, in a `mapping` block, in a mapping map and as the global default.
+
+Previously such a value was accepted when the mapping was read, and `validate()` failed with `No enum constant ...CascadeValidateType.TRUE` the first time it reached the association, so an application that relied on it was already failing on its first validation of that association and now fails at startup instead. Name one of the four modes, or remove the option to get the default.

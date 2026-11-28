@@ -144,6 +144,8 @@ The following table presents all options, which can be used:
 |Only cascade validation if the entity <<gormAssociation, owns>> the referenced object. 
 |===
 
+The option is one of these four names, in any letter case. Anything else, including a Boolean such as `cascadeValidate: true`, is refused when the mapping is read, on the association or as the global option, and the message lists the four names.
+
 It is possible to set the global option for the `cascadeValidate`:
 [source,groovy]
 .grails-app/conf/application.groovy
