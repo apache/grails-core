@@ -130,6 +130,30 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
     }
 
+    void '#api sorted by the identifier of a nested association applies the inner join that the query requests for the association'() {
+        when:
+        final List<Player> results = query.call()
+
+        then: 'the player whose team has no club is left out, and the others are in the order of the identifiers of their clubs'
+        results*.name == ['MU Player', 'Arsenal Player', 'Chelsea Player']
+
+        where:
+        api                       | query
+        'a where query with sort' | { Player.where { name ==~ '%Player%' }.sort('team.club.id').list(fetch: ['team.club': JoinType.INNER]) }
+        'a where query'           | { Player.where { name ==~ '%Player%' }.list(sort: 'team.club.id', fetch: ['team.club': JoinType.INNER]) }
+        'a detached criteria'     | { new DetachedCriteria(Player).like('name', '%Player%').join('team.club', JoinType.INNER).list(sort: 'team.club.id') }
+        'a dynamic finder'        | { Player.findAllByNameLike('%Player%', [sort: 'team.club.id', fetch: ['team.club': JoinType.INNER]]) }
+    }
+
+    void 'the total of a paged where query sorted by the identifier of a nested association applies the inner join that it requests'() {
+        when:
+        final results = Player.where { name ==~ '%Player%' }.list(sort: 'team.club.id', max: 2, fetch: ['team.club': JoinType.INNER])
+
+        then:
+        results*.name == ['MU Player', 'Arsenal Player']
+        results.totalCount == 3
+    }
+
     void 'list sorted by a map sorts by every entry of the map before paging'() {
         given:
         new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
@@ -250,6 +274,25 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         new AssociationSortEmployee(name: 'e1', manager: managerOne, department: departmentX).save(failOnError: true)
         new AssociationSortEmployee(name: 'e2', manager: managerTwo, department: departmentY).save(failOnError: true, flush: true)
         manager.session.clear()
+    }
+
+    void 'an inner join requested for a nested path is not made through an alias that has the name of the first association'() {
+        given:
+        saveEmployees()
+        final departmentZ = new AssociationSortDepartment(name: 'Z dept', manager: AssociationSortEmployee.findByName('m1')).save(failOnError: true)
+        final managerThree = new AssociationSortEmployee(name: 'm3').save(failOnError: true)
+        new AssociationSortEmployee(name: 'e3', manager: managerThree, department: departmentZ).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final names = AssociationSortEmployee.createCriteria().list {
+            createAlias('department', 'd')
+            createAlias('d.manager', 'manager')
+            join('manager.department', JoinType.INNER)
+        }*.name.sort()
+
+        then: 'e3, whose own manager has no department, is left out'
+        names == ['e1', 'e2']
     }
 
     /**
@@ -483,6 +526,21 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
         new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)
         manager.session.clear()
+    }
+
+    void 'a projection of a property of an embedded component of an association uses the join of the association'() {
+        given:
+        final ground = new AssociationSortGround(name: 'Ground', address: new AssociationSortAddress(city: 'London')).save(failOnError: true)
+        new AssociationSortVenue(name: 'Venue', ground: ground).save(failOnError: true)
+        new AssociationSortVenue(name: 'Venue without a ground').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        AssociationSortVenue.where { name ==~ 'Venue%' }.property('ground.address.city').list() as Set == ['London', null] as Set
+
+        and: 'the sort leaves out the venue without a ground, unless the leftJoinAssociationSort setting is enabled'
+        AssociationSortVenue.where { name ==~ 'Venue%' }.list(sort: 'ground.address.city')*.name as Set ==
+                (leftJoinSort ? ['Venue', 'Venue without a ground'] : ['Venue']) as Set
     }
 
     void 'a criteria query ordered by the identifier of an association can be distinct on it or group by it'() {
