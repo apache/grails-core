@@ -1406,3 +1406,15 @@ only shows in a schema that Hibernate creates: an application that manages its s
 keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
 The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
 enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
+
+==== UPGRADE-NUMBER. A remember-me login is redirected only for a GET page request
+
+Before, every request that logged in through the remember-me cookie was handed to the authentication success handler, which redirected it and stopped the filter chain. A POST, PUT, PATCH, DELETE, HEAD or Ajax request was turned into a GET, or into the Ajax success URL, and its action never ran. The request for the login form was redirected as well, which sent a remembered user from the login form back to the page that had asked for a full login, and back again.
+
+Now only a GET that is not an Ajax call and not the request for the login form is redirected:
+
+* a remember-me login on a POST, PUT, PATCH, DELETE or HEAD request, or on an Ajax request, goes on to the controller as the remembered user, and nothing is saved in the request cache for it;
+* a remember-me login on the request for the login form (`auth.loginFormUrl`, compared by its path) reaches the login controller;
+* `GrailsRememberMeAuthenticationFilter.setAuthenticationSuccessHandler` no longer sets Spring Security's handler. The redirect is decided in `onSuccessfulAuthentication`, so a subclass that overrides that method without calling `super` no longer redirects at all.
+
+To keep the old result for a kind of request, extend `GrailsRememberMeAuthenticationFilter`, override `redirects(request)` to return `true` for it, and register the subclass as the `rememberMeAuthenticationFilter` bean.
