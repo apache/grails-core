@@ -21,8 +21,11 @@ package org.apache.grails.buildsrc
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 
+import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 
+import org.cyclonedx.Version
+import org.cyclonedx.parsers.JsonParser
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.logging.Logging
@@ -132,7 +135,33 @@ class SbomPluginSpec extends Specification {
     void "antlr 2.7.7 is recorded under the BSD-3-Clause license its POM links to"() {
         expect: 'the BSD-4-Clause that cyclonedx-core-java reads from its license name is replaced'
         SbomPlugin.pickLicense(LOGGER, 'grails-data-hibernate5-core', 'grails-data-hibernate5-core',
-                'pkg:maven/antlr/antlr@2.7.7?type=jar', [[license: [id: 'BSD-4-Clause']]]).id == 'BSD-3-Clause'
+                'pkg:maven/antlr/antlr@2.7.7?type=jar', [[license: [id: 'BSD-4-Clause']]]) ==
+                [license: [id: 'BSD-3-Clause', url: 'https://opensource.org/license/bsd-3-clause/']]
+    }
+
+    void "the license picked for #bomRef is valid in a CycloneDX 1.6 BOM"() {
+        given: 'a BOM with one component that has the picked license'
+        final bom = [
+                bomFormat  : 'CycloneDX',
+                specVersion: '1.6',
+                version    : 1,
+                components : [[
+                        type     : 'library',
+                        'bom-ref': bomRef,
+                        name     : 'dependency',
+                        licenses : [SbomPlugin.pickLicense(LOGGER, projectName, projectName, bomRef, choices)],
+                ]],
+        ]
+
+        expect: 'the CycloneDX schema finds no error in it'
+        new JsonParser().validate(JsonOutput.toJson(bom), Version.VERSION_16).empty
+
+        where: 'the license comes from the mapping with an id or a name, is looked up by its name, or is preferred'
+        projectName                   | bomRef                                           | choices
+        'grails-data-hibernate5-core' | 'pkg:maven/antlr/antlr@2.7.7?type=jar'           | [[license: [id: 'BSD-4-Clause']]]
+        'grails-layout'               | 'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar' | [[license: [name: 'OpenSymphony']]]
+        'grails-data-hibernate5-core' | HIBERNATE_COMMONS                                | lgplChoice()
+        'grails-core'                 | 'pkg:maven/org.example/example@1.0?type=jar'     | [[license: [id: 'Apache-2.0']]]
     }
 
     void "the sbom is written and made reproducible with the configuration cache, also when it is reused"() {
