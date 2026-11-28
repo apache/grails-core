@@ -764,7 +764,10 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     grails.gorm.DetachedCriteria<D> where(Closure callable) {
-        new grails.gorm.DetachedCriteria<D>(persistentClass).withConnection(qualifier).where(callable)
+        grails.gorm.DetachedCriteria<D> criteria = new grails.gorm.DetachedCriteria<D>(persistentClass)
+        // A connection the caller named, as in Entity.archive.where, is chosen. The default one is the one nobody
+        // chose: a criteria that has it already, so it is left alone, and as a subquery it follows the query that holds it.
+        (qualifier == ConnectionSource.DEFAULT ? criteria : criteria.withConnection(qualifier)).where(callable)
     }
 
     @Override
