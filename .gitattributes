@@ -31,6 +31,8 @@ Dockerfile     text eol=lf
 # the bytes the compiler writes for a command it describes: one line that ends with LF. With CRLF a
 # jar built on Windows differs from one built elsewhere.
 **/META-INF/grails-commands/*.json text eol=lf
+# the descriptor of a tool is compared with what the compiler writes, byte for byte
+**/META-INF/grails-tools/*.json text eol=lf
 
 # The templates the generator of Forge writes applications from go into its jar as they are checked out,
 # and the generator keeps the line ends of a template: the pages are compiled with theirs and the files of
