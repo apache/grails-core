@@ -49,7 +49,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         manager.configuration['grails.gorm.leftJoinAssociationSort'] = leftJoinSort
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationSortLeague, AssociationSortEmployee, AssociationSortDepartment,
                                       AssociationSortSquad, AssociationSortMember, AssociationSortBagSquad, AssociationSortBagMember,
-                                      AssociationSortMixedSquad, AssociationSortMixedMember,
+                                      AssociationSortMixedSquad, AssociationSortMixedMember, AssociationSortTrophy,
                                       AssociationSortAuthor, AssociationSortBook, AssociationSortPublisher, AssociationSortAward, AssociationSortCategory,
                                       AssociationSortMappedAuthor, AssociationSortMappedBook, AssociationSortEagerAuthor, AssociationSortEagerBook,
                                       AssociationSortMappedPublisher, AssociationSortMappedAward, AssociationSortMappedNode, AssociationSortMappedLeaf,
@@ -215,6 +215,48 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
     }
 
     @Requires({ instance.leftJoinSort })
+    void 'a criteria query with pagination arguments sorted by a nested association property keeps a player whose team has no club'() {
+        when:
+        final results = Player.createCriteria().list(sort: 'team.club.name', max: 10) {
+            like('name', '%Player%')
+        }
+
+        then:
+        'Unattached Player' in results*.name
+        results*.name - 'Unattached Player' == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+
+        and: 'the count joins the nested association as the list does'
+        results.totalCount == 4
+    }
+
+    void 'a criteria query with pagination arguments sorted by a nested association property reuses a join of the criteria'() {
+        when:
+        final results = Player.createCriteria().list(sort: 'team.club.name', order: 'desc', max: 10) {
+            team {
+                like('name', '%First%')
+            }
+        }
+
+        then: 'the player whose team has no club is kept with the leftJoinAssociationSort setting, and left out without it'
+        ('Unattached Player' in results*.name) == leftJoinSort
+        results*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+        results.totalCount == (leftJoinSort ? 4 : 3)
+    }
+
+    void 'a criteria query with pagination arguments sorted by a nested association property reuses a join that the criteria make through an alias'() {
+        when:
+        final results = Player.createCriteria().list(sort: 'team.club.name', order: 'desc', max: 10) {
+            createAlias('team', 't')
+            createAlias('t.club', 'c')
+            like('c.name', '%e%')
+        }
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+        results.totalCount == 3
+    }
+
+    @Requires({ instance.leftJoinSort })
     void 'a dynamic finder sorted by an association property keeps a team without a club'() {
         when:
         final results = Team.findAllByNameLike('%First%', [sort: 'club.name'])
@@ -262,6 +304,287 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results.count { it.name == 'Squad' } == 3
     }
 
+    @Requires({ instance.leftJoinSort })
+    void 'a criteria query ordered by an association property #direction keeps a team without a club'() {
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%First%')
+            order('club.name', direction)
+        }
+
+        then:
+        'Unattached First Team' in results*.name
+        results*.name - 'Unattached First Team' == expected
+
+        where:
+        direction || expected
+        'asc'     || ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'desc'    || ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'a criteria query can be ordered by an association property with #description'() {
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%First%')
+            order(sortOrder)
+        }
+
+        then: 'the team without a club is kept with the leftJoinAssociationSort setting, and left out without it'
+        ('Unattached First Team' in results*.name) == leftJoinSort
+        results*.name - 'Unattached First Team' == expected
+
+        where:
+        description             | sortOrder                     || expected
+        'the name of the path'  | 'club.name'                   || ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'an order for the path' | Query.Order.desc('club.name') || ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void 'a criteria query ordered by a nested association property keeps a player whose team has no club'() {
+        when:
+        final fromRoot = Player.createCriteria().list {
+            order('team.club.name', 'desc')
+        }
+        final fromAssociation = Player.createCriteria().list {
+            team {
+                order('club.name', 'desc')
+            }
+        }
+
+        then:
+        'Unattached Player' in fromRoot*.name
+        fromRoot*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+
+        and: 'an order inside the criteria of an association is relative to that association'
+        fromAssociation*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void 'a paged criteria query ordered by an association property counts a team without a club'() {
+        when:
+        final results = Team.createCriteria().list(max: 10) {
+            like('name', '%First%')
+            order('club.name')
+        }
+
+        then:
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        results.totalCount == 4
+    }
+
+    void 'a criteria query ordered by an association property uses the join that the criteria make #description'() {
+        when:
+        final results = Player.createCriteria().list(criteria)
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+
+        where:
+        description                            | criteria
+        'for the association'                  | { team { club { like('name', '%e%') } }; order('team.club.name', 'desc') }
+        'for the association, after the order' | { order('team.club.name', 'desc'); team { club { like('name', '%e%') } } }
+        'through an alias'                     | { createAlias('team', 't'); createAlias('t.club', 'c'); like('c.name', '%e%'); order('team.club.name', 'desc') }
+        'through an alias, after the order'    | { order('team.club.name', 'desc'); createAlias('team', 't'); createAlias('t.club', 'c'); like('c.name', '%e%') }
+    }
+
+    void 'a paged criteria query can be sorted through the alias that the criteria give an association: #sort'() {
+        when:
+        final results = Player.createCriteria().list(sort: sort, order: 'desc', max: 10) {
+            createAlias('team', 't')
+            createAlias('t.club', 'c')
+        }
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+
+        where:
+        sort << ['t.club.name', 'team.club.name']
+    }
+
+    void 'a criteria order joins the remaining path after an alias with pagination #paged and Query Order #queryOrder'() {
+        when:
+        final results = Player.createCriteria().list(paged ? [max: 10] : [:]) {
+            createAlias('team', 't')
+            isNotNull('t.club')
+            if (queryOrder) {
+                order(org.grails.datastore.mapping.query.Query.Order.desc('t.club.name'))
+            }
+            else {
+                order('t.club.name', 'desc')
+            }
+        }
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+        !paged || results.totalCount == 3
+
+        where:
+        paged | queryOrder
+        false | false
+        false | true
+        true  | false
+        true  | true
+    }
+
+    void 'an unpaged criteria #ordering keeps a requested left collection join'() {
+        given:
+        new Team(name: 'Playerless Team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = Team.createCriteria().list {
+            if (ordering == 'Query.Order') {
+                order(Query.Order.desc('players.name'))
+            }
+            else {
+                order('players.name', 'desc')
+            }
+            join('players', JoinType.LEFT)
+        }
+
+        then:
+        'Playerless Team' in results*.name
+        results*.name - 'Playerless Team' == ['Unattached First Team', 'MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+        results.every { Hibernate.isInitialized(it.players) }
+        results.find { it.name == 'Playerless Team' }.players.empty
+
+        where:
+        ordering << ['order', 'Query.Order']
+    }
+
+    void 'a paged criteria query can be sorted by a map of properties'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
+
+        when:
+        final results = Team.createCriteria().list(sort: ['club.name': 'asc', name: 'desc'], max: 10) {
+            isNotNull('club')
+        }
+
+        then:
+        results*.name == ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        results.totalCount == 4
+    }
+
+    void 'a paged criteria query can be sorted by the alias that the criteria give an association, with #description'() {
+        when:
+        final results = Team.createCriteria().list(arguments + [max: 10]) {
+            createAlias('club', 'c')
+            like('c.name', '%')
+        }
+
+        then:
+        results*.name == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+        results.totalCount == 3
+
+        where:
+        description           | arguments
+        'a property name'     | [sort: 'c.name', order: 'desc']
+        'a map of properties' | [sort: ['c.name': 'desc', name: 'asc']]
+    }
+
+    void 'a paged criteria query sorted by a map keeps the sort by an alias when it returns one row'() {
+        when:
+        final results = Team.createCriteria().list(max: 1, sort: ['c.name': 'desc', name: 'asc']) {
+            createAlias('club', 'c')
+            like('c.name', '%')
+        }
+
+        then:
+        results*.name == ['MU First Team']
+        results.totalCount == 3
+    }
+
+    void 'a paged criteria query sorted through an alias joins the association that follows the alias, with #description'() {
+        when:
+        final results = Player.createCriteria().list(arguments + [max: 10]) {
+            createAlias('team', 't')
+            isNotNull('t.club')
+        }
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+        results.totalCount == 3
+
+        where:
+        description           | arguments
+        'a property name'     | [sort: 't.club.name', order: 'desc']
+        'a map of properties' | [sort: ['t.club.name': 'desc', name: 'asc']]
+    }
+
+    void 'a paged criteria query sorted by a nested path is not resolved through an alias that has the name of the first association'() {
+        given:
+        saveEmployees()
+
+        when:
+        final results = AssociationSortEmployee.createCriteria().list(max: 10, sort: 'manager.department.name') {
+            createAlias('department', 'd')
+            createAlias('d.manager', 'manager')
+        }
+
+        then: 'sorted by the department of the manager of each employee, not by that of the manager of their department'
+        results*.name == ['e2', 'e1']
+        results.totalCount == 2
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api can sort an unfetched bag beside a fetched set of another class'() {
+        given:
+        final squad = new AssociationSortMixedSquad(name: 'Full squad')
+        squad.addToRegulars(name: 'Member A').addToRegulars(name: 'Member B')
+        squad.addToTrophies(title: 'Trophy A').addToTrophies(title: 'Trophy B')
+        squad.save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = query.call()
+
+        then:
+        results*.name.unique() == ['Full squad']
+        results.every { Hibernate.isInitialized(it.trophies) }
+        results.every { it.regulars*.name.sort() == ['Member A', 'Member B'] }
+        results.every { it.trophies*.title.sort() == ['Trophy A', 'Trophy B'] }
+
+        where:
+        api        | query
+        'list'     | { AssociationSortMixedSquad.list(sort: 'regulars.name', fetch: [trophies: 'join']) }
+        'where'    | { AssociationSortMixedSquad.where { name == 'Full squad' }.join('trophies').sort('regulars.name').list() }
+        'criteria' | { AssociationSortMixedSquad.createCriteria().list { join('trophies'); order('regulars.name') } }
+        'finder'   | { AssociationSortMixedSquad.findAllByName('Full squad', [sort: 'regulars.name', fetch: [trophies: 'join']]) }
+    }
+
+    void '#api preserves a fetched bag beside a collection sort with #fetch and pagination #paged'() {
+        given:
+        final squad = new AssociationSortMixedSquad(name: 'Full squad')
+        squad.addToRegulars(name: 'Member A').addToRegulars(name: 'Member B')
+        squad.addToTrophies(title: 'Trophy A').addToTrophies(title: 'Trophy B')
+        squad.save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final arguments = [sort: 'trophies.title', fetch: [regulars: fetch]] + (paged ? [max: 1] : [:])
+        final results = query.call(arguments)
+
+        then:
+        results*.name.unique() == ['Full squad']
+        results.every { Hibernate.isInitialized(it.regulars) }
+        results.every { it.regulars*.name.sort() == ['Member A', 'Member B'] }
+
+        where:
+        [api, fetch, paged] << [['list', 'where', 'finder', 'example', 'findAllWhere', 'criteria'], ['join', 'eager', JoinType.LEFT], [false, true]].combinations().findAll { row ->
+            // Legacy requested joins already load paged collections lazily, independently of sorting.
+            row[0] == 'list' || row[1] != JoinType.LEFT || !row[2]
+        }
+        query = [
+                list: { Map args -> AssociationSortMixedSquad.list(args) },
+                where: { Map args -> AssociationSortMixedSquad.where { name == 'Full squad' }.list(args) },
+                finder: { Map args -> AssociationSortMixedSquad.findAllByName('Full squad', args) },
+                example: { Map args -> AssociationSortMixedSquad.findAll(new AssociationSortMixedSquad(name: 'Full squad'), args) },
+                findAllWhere: { Map args -> AssociationSortMixedSquad.findAllWhere([name: 'Full squad'], args) },
+                criteria: { Map args -> AssociationSortMixedSquad.createCriteria().list(args) { eq('name', 'Full squad') } },
+        ][api]
+    }
+
     protected void saveEmployees() {
         final departmentA = new AssociationSortDepartment(name: 'A dept').save(failOnError: true)
         final departmentB = new AssociationSortDepartment(name: 'B dept').save(failOnError: true)
@@ -274,6 +597,24 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         new AssociationSortEmployee(name: 'e1', manager: managerOne, department: departmentX).save(failOnError: true)
         new AssociationSortEmployee(name: 'e2', manager: managerTwo, department: departmentY).save(failOnError: true, flush: true)
         manager.session.clear()
+    }
+
+    void 'a sort map can also order by the bag whose fetch is deferred'() {
+        given:
+        final squad = new AssociationSortMixedSquad(name: 'Full squad')
+        squad.addToRegulars(name: 'Member A').addToRegulars(name: 'Member B')
+        squad.addToTrophies(title: 'Trophy A').addToTrophies(title: 'Trophy B')
+        squad.save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = AssociationSortMixedSquad.list(sort: ['regulars.name': 'asc', 'trophies.title': 'asc'], fetch: [regulars: 'join'], max: 2)
+
+        then:
+        results*.name == ['Full squad']
+        results.totalCount == 4
+        Hibernate.isInitialized(results.first().regulars)
+        results.first().regulars*.name == ['Member A', 'Member B']
     }
 
     void 'an inner join requested for a nested path is not made through an alias that has the name of the first association'() {
@@ -295,6 +636,105 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         names == ['e1', 'e2']
     }
 
+    void '#api sorted by a collection keeps the elements of another collection of the same class that the query fetches'() {
+        given:
+        final squad = new AssociationSortSquad(name: 'Squad').save(failOnError: true)
+        new AssociationSortMember(name: 'Regular', squad: squad).save(failOnError: true)
+        new AssociationSortMember(name: 'Reserve', reserveSquad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final List<AssociationSortSquad> results = query.call()
+
+        then:
+        results*.name == ['Squad']
+        Hibernate.isInitialized(results.first().reserves)
+        results.first().reserves*.name == ['Reserve']
+        results.first().players*.name == ['Regular']
+
+        where:
+        api                         | query
+        'a where query'             | { AssociationSortSquad.where { name == 'Squad' }.join('reserves').list(sort: 'players.name') }
+        'a paged criteria query'    | { AssociationSortSquad.createCriteria().list(sort: 'players.name', max: 10) { join('reserves') } }
+        'order in a criteria query' | { AssociationSortSquad.createCriteria().list { join('reserves'); order('players.name') } }
+        'findAll by example'        | { AssociationSortSquad.findAll(new AssociationSortSquad(name: 'Squad'), [sort: 'players.name', fetch: [reserves: 'join']]) }
+        'a dynamic finder'          | { AssociationSortSquad.findAllByName('Squad', [sort: 'players.name', fetch: [reserves: 'join']]) }
+    }
+
+    void '#api sorted by a collection on a page keeps that collection complete when the query fetches another collection of the same class'() {
+        given:
+        final first = new AssociationSortSquad(name: 'S1').save(failOnError: true)
+        final second = new AssociationSortSquad(name: 'S2').save(failOnError: true)
+        new AssociationSortSquad(name: 'S3').save(failOnError: true)
+        ['p1', 'p2'].each { new AssociationSortMember(name: it, squad: first).save(failOnError: true) }
+        ['r1', 'r2'].each { new AssociationSortMember(name: it, reserveSquad: first).save(failOnError: true) }
+        new AssociationSortMember(name: 'p3', squad: second).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final List<AssociationSortSquad> results = query.call()
+        final squad = results.find { it.name == 'S1' }
+
+        then:
+        results*.name == names
+        squad.players*.name.sort() == ['p1', 'p2']
+
+        and: 'with the setting, the fetch of the other collection is loaded after the query, with all of its elements'
+        !leftJoinSort || squad.reserves*.name.sort() == ['r1', 'r2']
+
+        where:
+        api                                       | names        | query
+        'a where query with the fetch argument'   | ['S1']       | { AssociationSortSquad.where { name ==~ 'S%' }.list(max: 1, offset: 1, sort: 'players.name', fetch: [reserves: 'join']) }
+        'a where query with join'                 | ['S1']       | { AssociationSortSquad.where { name ==~ 'S%' }.join('reserves').list(max: 1, offset: 1, sort: 'players.name') }
+        'a descending where query'                | ['S2', 'S1'] | { AssociationSortSquad.where { name ==~ 'S%' }.list(max: 2, sort: 'players.name', order: 'desc', fetch: [reserves: 'join']) }
+        'a dynamic finder'                        | ['S1']       | { AssociationSortSquad.findAllByNameLike('S%', [max: 1, offset: 1, sort: 'players.name', fetch: [reserves: 'join']]) }
+        'findAll by example'                      | ['S1']       | { AssociationSortSquad.findAll(new AssociationSortSquad(), [max: 1, offset: 1, sort: 'players.name', fetch: [reserves: 'join']]) }
+        'a criteria query with the sort argument' | ['S1']       | { AssociationSortSquad.createCriteria().list(max: 1, offset: 1, sort: 'players.name') { join('reserves') } }
+        'a criteria query with order'             | ['S1']       | { AssociationSortSquad.createCriteria().list { join('reserves'); order('players.name'); maxResults(1); firstResult(1) } }
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a bag initializes the other fetched bag after the query'() {
+        given:
+        saveSquadWithASubstituteOnly()
+
+        when:
+        final results = query.call()
+
+        then:
+        results*.name.unique() == ['Squad']
+        results.every { Hibernate.isInitialized(it.substitutes) }
+        results.every { it.substitutes.size() == 1 }
+
+        where:
+        api                         | query
+        'a where query'             | { AssociationSortBagSquad.where { name == 'Squad' }.join('substitutes').list(sort: 'regulars.name') }
+        'order in a criteria query' | { AssociationSortBagSquad.createCriteria().list { join('substitutes'); order('regulars.name') } }
+        'a paged criteria query'    | { AssociationSortBagSquad.createCriteria().list(sort: 'regulars.name', max: 10) { join('substitutes') } }
+        'findAll by example'        | { AssociationSortBagSquad.findAll(new AssociationSortBagSquad(), [sort: 'regulars.name', fetch: [substitutes: 'join']]) }
+        'a dynamic finder'          | { AssociationSortBagSquad.findAllByName('Squad', [sort: 'regulars.name', fetch: [substitutes: 'join']]) }
+        'a list'                    | { AssociationSortBagSquad.list(sort: 'regulars.name', fetch: [substitutes: 'join']) }
+        'a paged list'              | { AssociationSortBagSquad.list(sort: 'regulars.name', max: 10, fetch: [substitutes: 'join']) }
+        'a list with a join type'   | { AssociationSortBagSquad.list(sort: 'regulars.name', fetch: [substitutes: JoinType.LEFT]) }
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by an empty bag keeps the instance when the query fetches no other bag'() {
+        given:
+        saveSquadWithASubstituteOnly()
+
+        expect:
+        query.call()*.name.unique() == ['Squad']
+
+        where:
+        api                                         | query
+        'a where query'                             | { AssociationSortBagSquad.where { name == 'Squad' }.list(sort: 'regulars.name') }
+        'a where query that fetches the sorted bag' | { AssociationSortBagSquad.where { name == 'Squad' }.join('regulars').list(sort: 'regulars.name') }
+        'order in a criteria query'                 | { AssociationSortBagSquad.createCriteria().list { eq('name', 'Squad'); order('regulars.name') } }
+        'a list'                                    | { AssociationSortBagSquad.list(sort: 'regulars.name') }
+        'a list that fetches the sorted bag'        | { AssociationSortBagSquad.list(sort: 'regulars.name', fetch: [regulars: 'join']) }
+    }
+
     /**
      * A sort by a property of a collection, in a query that fetches another collection of the same class:
      *
@@ -305,12 +745,69 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
      * | a set               | another set       | every squad, and the fetched set holds its own elements once    |
      * | a set               | a list            | every squad, and the fetched list holds its own elements once   |
      * | a list              | a set             | every squad, and the fetched set holds its own elements once    |
-     * | a set               | a bag             | UnsupportedOperationException: the rows repeat, the bag cannot tell |
+     * | a set               | a bag             | the fetched bag is initialized after the query                 |
      * | a bag               | nothing           | every squad, also one whose bag is empty                        |
-     * | a bag               | a set             | UnsupportedOperationException: the rows repeat, the bag cannot tell |
-     * | a bag               | another bag       | UnsupportedOperationException: the rows repeat, the bag cannot tell |
+     * | a bag               | a set             | legacy criteria defer the fetch; static list keeps the sort unfetched |
+     * | a bag               | another bag       | the fetched bag is initialized after the query                 |
      * </pre>
      */
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by #sort preserves the complete fetch of #fetched'() {
+        given: 'a full squad with two members in each collection, and a squad with a substitute only'
+        final full = new AssociationSortMixedSquad(name: 'Full squad').save(failOnError: true)
+        FETCHED_ELEMENTS.regulars.each { new AssociationSortMixedMember(name: it, squad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.substitutes.each { new AssociationSortMixedMember(name: it, substituteSquad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.reserves.each { new AssociationSortMixedMember(name: it, reserveSquad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.benched.each { new AssociationSortMixedMember(name: it, benchSquad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.lineup.each { full.addToLineup(new AssociationSortMixedMember(name: it)) }
+        full.save(failOnError: true)
+        final empty = new AssociationSortMixedSquad(name: 'Empty squad').save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Lone substitute', substituteSquad: empty).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = query.call(sort, fetched)
+
+        then:
+        results*.name.unique().sort() == ['Empty squad', 'Full squad']
+        fetched == 'nothing' || results.every { Hibernate.isInitialized(it."$fetched") }
+        fetched == 'nothing' || results.find { it.name == 'Full squad' }."$fetched"*.name.sort() == FETCHED_ELEMENTS[fetched]
+
+        where:
+        [api, sort, fetched] << [
+                ['a where query', 'order in a criteria query', 'a list'],
+                [
+                        ['reserves.name', 'nothing'],
+                        ['reserves.name', 'benched'],
+                        ['reserves.name', 'lineup'],
+                        ['lineup.name', 'reserves'],
+                        ['reserves.name', 'regulars'],
+                        ['regulars.name', 'nothing'],
+                        ['regulars.name', 'reserves'],
+                        ['regulars.name', 'substitutes'],
+                ]
+        ].combinations().collect { List row -> [row[0]] + row[1] }
+        query = MIXED_QUERIES[api]
+    }
+
+    void '#api that fetches the collection it sorts by is not rejected next to a bag, since the sort makes no join of its own'() {
+        given:
+        final squad = new AssociationSortMixedSquad(name: 'Squad').save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Regular', squad: squad).save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Reserve', reserveSquad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        query.call()*.name.unique() == ['Squad']
+
+        where:
+        api                         | query
+        'a where query'             | { AssociationSortMixedSquad.where { name == 'Squad' }.join('reserves').join('regulars').list(sort: 'reserves.name') }
+        'order in a criteria query' | { AssociationSortMixedSquad.createCriteria().list { join('reserves'); join('regulars'); order('reserves.name') } }
+        'a dynamic finder'          | { AssociationSortMixedSquad.findAllByName('Squad', [sort: 'reserves.name', fetch: [reserves: 'join', regulars: 'join']]) }
+        'a list'                    | { AssociationSortMixedSquad.list(sort: 'reserves.name', fetch: [reserves: 'join', regulars: 'join']) }
+    }
+
     /**
      * A sort by a property of a collection that the mapping fetches with {@code fetch: 'join'}, in a query
      * that fetches another collection of the same class:
@@ -320,14 +817,43 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
      * |-----------|-------------|------------------------------------------------------|--------------------------------|
      * | a bag     | a set       | the collections of the same query without the sort   | the same                       |
      * | a bag     | a list      | the collections of the same query without the sort   | the same                       |
-     * | a bag     | another bag | UnsupportedOperationException                        | UnsupportedOperationException  |
-     * | a set     | a bag       | the collections of the same query without the sort   | UnsupportedOperationException  |
+     * | a bag     | another bag | complete collections, using a deferred fetch         | the same                       |
+     * | a set     | a bag       | complete collections, using a deferred fetch         | the same                       |
      * </pre>
      *
      * A query fetches the collection that the mapping fetches anyway, so the sort makes no join of its own and
      * leaves the rows of the query as they are. A list does not fetch what the mapping fetches, so its sort
      * joins the collection, and the rows of that join would repeat the elements of a bag that it fetches.
      */
+    @Requires({ instance.leftJoinSort })
+    void '#api preserves the fetched #fetched beside a sort by a mapped #sorted'() {
+        given:
+        saveMappedSquads(squadClass)
+
+        when:
+        final results = query.call(squadClass, 'regulars.name', fetched)
+
+        then:
+        results*.name.unique() == ['Small squad', 'Full squad']
+        results.every { Hibernate.isInitialized(it."$fetched") }
+        results.find { it.name == 'Full squad' }.regulars*.name.sort() == ['Regular B', 'Regular C']
+        results.find { it.name == 'Full squad' }."$fetched".size() == 2
+        results.find { it.name == 'Small squad' }."$fetched".size() == 1
+
+        where:
+        [api, sorted, fetched] << [
+                MAPPED_FETCH_QUERIES.keySet(),
+                [
+                        ['bag', 'reserves'],
+                        ['bag', 'lineup'],
+                        ['bag', 'substitutes'],
+                        ['set', 'substitutes'],
+                ]
+        ].combinations().collect { List row -> [row[0]] + row[1] }
+        squadClass = sorted == 'bag' ? AssociationSortMappedSquad : AssociationSortMappedSetSquad
+        query = MAPPED_FETCH_QUERIES[api]
+    }
+
     protected void saveMappedSquads(Class squadClass) {
         final full = squadClass.newInstance(name: 'Full squad')
         ['Regular B', 'Regular C'].each { full.addToRegulars(name: it) }
@@ -382,6 +908,26 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         sort ? [sort: sort, fetch: [(fetched): 'join']] : [fetch: [(fetched): 'join']]
     }
 
+    void '#api sorted by an association to a single instance is not rejected next to a fetched bag'() {
+        given:
+        final squad = new AssociationSortMixedSquad(name: 'Squad', league: new AssociationSortLeague(league: 'L', name: 'League').save(failOnError: true)).save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Regular', squad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = query.call()
+
+        then:
+        results*.name == ['Squad']
+        results.first().regulars*.name == ['Regular']
+
+        where:
+        api                         | query
+        'a where query'             | { AssociationSortMixedSquad.where { name == 'Squad' }.join('regulars').list(sort: 'league.name') }
+        'order in a criteria query' | { AssociationSortMixedSquad.createCriteria().list { join('regulars'); order('league.name') } }
+        'a list'                    | { AssociationSortMixedSquad.list(sort: 'league.name', fetch: [regulars: 'join']) }
+    }
+
     private static final Map<String, List<String>> FETCHED_ELEMENTS = [
             regulars   : ['Regular A', 'Regular B'],
             substitutes: ['Substitute A', 'Substitute B'],
@@ -411,6 +957,18 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
                 fetched == 'nothing' ? AssociationSortMixedSquad.list(sort: sort) : AssociationSortMixedSquad.list(sort: sort, fetch: [(fetched): 'join'])
             },
     ]
+
+    void 'the total of a list that fetches a collection counts each instance once when a sort joins another collection'() {
+        given:
+        saveSquadsToPage()
+
+        when:
+        final results = AssociationSortSquad.list(sort: 'players.name', max: 10, fetch: [reserves: 'join'])
+
+        then:
+        results*.name.sort() == ['First squad', 'Second squad']
+        results.totalCount == 2
+    }
 
     void 'the total of #api sorted by a collection counts the rows that it pages through'() {
         given:
@@ -458,6 +1016,54 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         fetch << ['join', JoinType.LEFT, JoinType.INNER]
     }
 
+    @Requires({ instance.leftJoinSort })
+    void 'the total of a list sorted through an association that it fetches keeps an instance without the association: #fetch'() {
+        given: 'an author whose publisher has two awards, and an author without a publisher'
+        saveAuthorAndCategories()
+        new AssociationSortAuthor(name: 'No publisher').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = AssociationSortAuthor.list(max: 10, sort: 'publisher.awards.title', fetch: [publisher: fetch])
+
+        then:
+        results.size() == rows
+        results.totalCount == rows
+
+        where:
+        fetch          || rows
+        'join'         || 3
+        JoinType.LEFT  || 3
+        JoinType.INNER || 2
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a collection initializes the complete nested fetch #fetched'() {
+        given:
+        saveAuthorAndCategories()
+
+        when:
+        final results = query.call()
+
+        then:
+        !results.empty
+        results.every { item ->
+            final collection = fetched.tokenize('.').inject(item) { owner, property -> owner?."$property" }
+            collection == null || Hibernate.isInitialized(collection) && collection.size() == 2
+        }
+
+        where:
+        api                                 | fetched            | query
+        'a where query'                     | 'publisher.awards' | { AssociationSortAuthor.where { name ==~ '%' }.list(sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]) }
+        'a where query that joins the path' | 'publisher.awards' | { AssociationSortAuthor.where { name ==~ '%' }.join('publisher').join('publisher.awards').list(sort: 'books.title') }
+        'order in a criteria query'         | 'publisher.awards' | { AssociationSortAuthor.createCriteria().list { join('publisher'); join('publisher.awards'); order('books.title') } }
+        'a dynamic finder'                  | 'publisher.awards' | { AssociationSortAuthor.findAllByNameLike('%', [sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]]) }
+        'findAll by example'                | 'publisher.awards' | { AssociationSortAuthor.findAll(new AssociationSortAuthor(), [sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]]) }
+        'a list'                            | 'publisher.awards' | { AssociationSortAuthor.list(sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]) }
+        'a where query on a self-reference' | 'parent.children'  | { AssociationSortCategory.where { name == 'Left' }.list(sort: 'children.name', fetch: ['parent.children': JoinType.LEFT]) }
+        'a list on a self-reference'        | 'parent.children'  | { AssociationSortCategory.list(sort: 'children.name', fetch: ['parent.children': JoinType.LEFT]) }
+    }
+
     void '#api that fetches a bag through an association holds each element once when no collection is sorted'() {
         given:
         saveAuthorAndCategories()
@@ -473,6 +1079,49 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'a where query'                     | { AssociationSortAuthor.where { name ==~ '%' }.list(fetch: ['publisher.awards': JoinType.LEFT]) }
         'a where query sorted by a property' | { AssociationSortAuthor.where { name ==~ '%' }.list(sort: 'name', fetch: ['publisher.awards': JoinType.LEFT]) }
         'a list'                            | { AssociationSortAuthor.list(fetch: ['publisher.awards': JoinType.LEFT]) }
+    }
+
+    void '#api that projects a value next to a fetched collection returns it, since a projection loads no collection'() {
+        given: 'a squad with two regulars and a substitute'
+        final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
+        ['Regular A', 'Regular B'].each { new AssociationSortBagMember(name: it, squad: squad).save(failOnError: true) }
+        new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        query.call().toUnique().sort() == expected
+
+        where:
+        api                                        | query                                                                                                                                       || expected
+        'a detached criteria with a property'      | { new DetachedCriteria(AssociationSortBagSquad).join('substitutes').property('regulars.name').list() }                                      || ['Regular A', 'Regular B']
+        'a where query with a property'            | { AssociationSortBagSquad.where { name == 'Squad' }.join('substitutes').property('regulars.name').list() }                                  || ['Regular A', 'Regular B']
+        'a detached criteria with a distinct'      | { new DetachedCriteria(AssociationSortBagSquad).join('substitutes').distinct('regulars.name').list() }                                      || ['Regular A', 'Regular B']
+        'a property and a sort by the bag'         | { new DetachedCriteria(AssociationSortBagSquad).join('substitutes').property('name').list(sort: 'regulars.name') }                          || ['Squad']
+        'a criteria query ordered by the bag'      | { AssociationSortBagSquad.createCriteria().list { projections { property('name') }; join('substitutes'); order('regulars.name') } }         || ['Squad']
+        'a paged criteria query sorted by the bag' | { AssociationSortBagSquad.createCriteria().list(sort: 'regulars.name', max: 10) { projections { property('name') }; join('substitutes') } } || ['Squad']
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a collection initializes a complete bag fetched by a nested mapping'() {
+        given:
+        saveMappedAuthors()
+
+        when:
+        final results = query.call()
+
+        then:
+        !results.empty
+        results.every { Hibernate.isInitialized(it.publisher.awards) }
+        results.every { it.publisher.awards*.title.sort() == ['W1', 'W2'] }
+
+        where:
+        api                                                   | query
+        'a where query that fetches the association'          | { AssociationSortMappedAuthor.where { name ==~ '%' }.join('publisher').list(sort: 'books.title') }
+        'a where query with the fetch argument'               | { AssociationSortMappedAuthor.where { name ==~ '%' }.list(sort: 'books.title', fetch: [publisher: JoinType.LEFT]) }
+        'a where query whose mapping fetches the association' | { AssociationSortEagerAuthor.where { name ==~ '%' }.list(sort: 'books.title') }
+        'order in a criteria query'                           | { AssociationSortEagerAuthor.createCriteria().list { order('books.title') } }
+        'a dynamic finder'                                    | { AssociationSortEagerAuthor.findAllByNameLike('%', [sort: 'books.title']) }
+        'findAll by example'                                  | { AssociationSortEagerAuthor.findAll(new AssociationSortEagerAuthor(name: 'Eager'), [sort: 'books.title']) }
     }
 
     void 'a bag that a mapping fetches below the root holds each element once #description'() {
@@ -498,6 +1147,23 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         expect:
         AssociationSortEagerAuthor.list(sort: 'books.title')*.name.unique() == ['Eager']
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void 'a sort by a collection comes to an end when a class fetches itself through its mapping'() {
+        given:
+        final first = new AssociationSortMappedNode(name: 'First').save(failOnError: true)
+        final second = new AssociationSortMappedNode(name: 'Second', next: first).save(failOnError: true)
+        first.next = second
+        first.save(failOnError: true)
+        new AssociationSortMappedLeaf(name: 'Leaf', node: first).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = AssociationSortMappedNode.where { name ==~ '%' }.list(sort: 'leaves.name')
+
+        then:
+        results*.name.unique().sort() == ['First', 'Second']
     }
 
     protected void saveMappedAuthors() {
@@ -528,6 +1194,20 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         manager.session.clear()
     }
 
+    @Requires({ instance.leftJoinSort })
+    void 'a criteria query ordered by the identifier of a hasOne association keeps a player without it'() {
+        given:
+        new Player(name: 'Player without contract', team: Team.findByName('MU First Team')).save(validate: false, flush: true)
+        manager.session.clear()
+
+        when:
+        final names = Player.createCriteria().list { order('contract.id') }*.name
+
+        then:
+        names.size() == 5
+        'Player without contract' in names
+    }
+
     void 'a projection of a property of an embedded component of an association uses the join of the association'() {
         given:
         final ground = new AssociationSortGround(name: 'Ground', address: new AssociationSortAddress(city: 'London')).save(failOnError: true)
@@ -541,6 +1221,23 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         and: 'the sort leaves out the venue without a ground, unless the leftJoinAssociationSort setting is enabled'
         AssociationSortVenue.where { name ==~ 'Venue%' }.list(sort: 'ground.address.city')*.name as Set ==
                 (leftJoinSort ? ['Venue', 'Venue without a ground'] : ['Venue']) as Set
+    }
+
+    void 'a criteria query adds its orders in the sequence in which it requests them: #description'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
+
+        when:
+        final results = Team.createCriteria().list(criteria)
+
+        then:
+        results*.name == expected
+
+        where:
+        description                              | criteria                                                              || expected
+        'an association, then a Hibernate order' | { isNotNull('club'); order('club.name'); order(Order.desc('name')) } || ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'a Hibernate order, then an association' | { isNotNull('club'); order(Order.desc('name')); order('club.name') } || ['MU First Team', 'Chelsea First Team', 'Arsenal Second Team', 'Arsenal First Team']
+        'a property, then an association'        | { isNotNull('club'); order('name', 'desc'); order('club.name') }     || ['MU First Team', 'Chelsea First Team', 'Arsenal Second Team', 'Arsenal First Team']
     }
 
     void 'a criteria query ordered by the identifier of an association can be distinct on it or group by it'() {
@@ -580,6 +1277,81 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name - 'Unattached First Team' == ['MU First Team', 'Arsenal First Team', 'Chelsea First Team']
     }
 
+    void 'an order with a Query.Order inside the criteria of an association is relative to that association'() {
+        given:
+        savePlayer('Zed Player', new Team(name: 'A Team').save(failOnError: true))
+
+        when:
+        final results = Player.createCriteria().list {
+            team {
+                order(Query.Order.asc('name'))
+            }
+        }
+
+        then:
+        results*.name == ['Zed Player', 'Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+    }
+
+    void 'a criteria query ordered by a property of a collection does not fetch the collection'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Team.createCriteria().list {
+            eq('name', 'Squad')
+            order('players.name')
+            maxResults(2)
+        }
+
+        then: 'the row limit does not leave players out of the collection'
+        !Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void 'a criteria query ordered by a property of a collection fetches the collection when #description'() {
+        given:
+        saveSquad()
+
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name.unique() == ['Squad']
+        results.every { Hibernate.isInitialized(it.players) }
+        results.first().players.size() == 3
+
+        where:
+        description                          | query
+        'join requests it before the order'  | { Team.createCriteria().list { eq('name', 'Squad'); join('players'); order('players.name') } }
+        'join requests it after the order'   | { Team.createCriteria().list { eq('name', 'Squad'); order('players.name'); join('players') } }
+        'a fetch mode requests it'           | { Team.createCriteria().list { eq('name', 'Squad'); fetchMode('players', FetchMode.JOIN); order('players.name') } }
+        'the fetch argument requests it'     | { Team.createCriteria().list(fetch: [players: 'join']) { eq('name', 'Squad'); order('players.name') } }
+        'listDistinct requests it with join' | { Team.createCriteria().listDistinct { eq('name', 'Squad'); join('players'); order('players.name') } }
+        'join requests it for a Query.Order' | { Team.createCriteria().list { eq('name', 'Squad'); join('players'); order(Query.Order.asc('players.name')) } }
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a property of a collection fetches the collection when the fetch argument requests it'() {
+        given:
+        saveSquad()
+
+        when:
+        final Team team = query.call()
+
+        then:
+        team.name == 'Squad'
+        Hibernate.isInitialized(team.players)
+        team.players.size() == 3
+
+        where:
+        api                                | query
+        'a dynamic finder'                 | { Team.findAllByName('Squad', [sort: 'players.name', fetch: [players: 'join']]).first() }
+        'findAll by example'               | { Team.findAll(new Team(name: 'Squad'), [sort: 'players.name', fetch: [players: 'join']]).first() }
+        'findAllWhere'                     | { Team.findAllWhere([name: 'Squad'], [sort: 'players.name', fetch: [players: 'join']]).first() }
+        'a criteria query with pagination' | { Team.createCriteria().list(sort: 'players.name', fetch: [players: 'join']) { eq('name', 'Squad') }.first() }
+    }
+
     void 'list sorts by every property of the default sort of the mapping'() {
         given:
         [['Second', 'B'], ['First', 'B'], ['First', 'A'], ['Second', 'C']].each { String league, String name ->
@@ -589,6 +1361,26 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         expect:
         AssociationSortLeague.list().collect { it.league + ' ' + it.name } == ['First B', 'First A', 'Second C', 'Second B']
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a property of a collection keeps a team without players'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Playerless First Team').save(failOnError: true, flush: true)
+
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        'Playerless First Team' in results*.name
+        results*.name - 'Playerless First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team', 'Unattached First Team']
+
+        where:
+        api                                | query
+        'list'                             | { Team.list(sort: 'players.name') }
+        'a dynamic finder'                 | { Team.findAllByNameLike('%First%', [sort: 'players.name']) }
+        'findAll by example'               | { Team.findAll(new Team(), [sort: 'players.name']) }
+        'a criteria query with pagination' | { Team.createCriteria().list(sort: 'players.name', max: 10) { like('name', '%First%') } }
     }
 
     void '#api sorted by a property of a collection does not fetch the collection'() {
@@ -793,12 +1585,18 @@ class AssociationSortMixedSquad {
     List<AssociationSortMixedMember> lineup
     AssociationSortLeague league
     static hasMany = [regulars: AssociationSortMixedMember, substitutes: AssociationSortMixedMember, reserves: AssociationSortMixedMember,
-                      benched: AssociationSortMixedMember, lineup: AssociationSortMixedMember]
+                      benched: AssociationSortMixedMember, lineup: AssociationSortMixedMember, trophies: AssociationSortTrophy]
     static mappedBy = [regulars: 'squad', substitutes: 'substituteSquad', reserves: 'reserveSquad', benched: 'benchSquad', lineup: 'lineupSquad']
 
     static constraints = {
         league nullable: true
     }
+}
+
+@Entity
+class AssociationSortTrophy {
+    String title
+    static belongsTo = [squad: AssociationSortMixedSquad]
 }
 
 @Entity

@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -144,7 +145,11 @@ public abstract class AbstractHibernateQuery extends Query {
      * still has it: see {@link #createJoin(CriteriaAndAlias)}.
      */
     private final Map<String, JoinType> supersededJoinTypes = new HashMap<>();
-
+    /**
+     * The paths of the collections that are initialized once the query has run: see
+     * {@link #loadFetchedCollectionsAfterQuery()}.
+     */
+    private final Set<String> collectionsLoadedAfterQuery = new LinkedHashSet<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -624,6 +629,12 @@ public abstract class AbstractHibernateQuery extends Query {
      * that criteria use keeps a join type that the query requested before a fetch mode replaced it,
      * as it did when the join was made at once. A right join of a collection is made as an inner join:
      * it would return a row without an instance for each element that no instance has.
+     * <p>
+     * A left join of a collection is kept from fetching the collection when criteria use it, since
+     * its rows lack the elements that the criteria leave out, and when only a sort or a projection
+     * uses it, unless the query fetches the collection or another one: see
+     * {@link GrailsHibernateUtil#keepsSortedCollectionUnfetched(Criteria, String)} and
+     * {@link GrailsHibernateUtil#deferSortedCollectionFetches(Criteria)}.
      */
     private void createJoin(CriteriaAndAlias join) {
         String associationPath = join.associationPath;
@@ -636,6 +647,15 @@ public abstract class AbstractHibernateQuery extends Query {
             joinType = JoinType.INNER;
         }
         org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);
+        String joinPath = associationPath;
+        int dot = associationPath.lastIndexOf('.');
+        if (dot > 0) {
+            CriteriaAndAlias parent = createdAssociationPaths.get(associationPath.substring(0, dot));
+            if (parent != null) {
+                // Qualify through the parent join: the first association may also name the root alias.
+                joinPath = parent.alias + associationPath.substring(dot);
+            }
+        }
         if (hibernateJoinType == org.hibernate.sql.JoinType.RIGHT_OUTER_JOIN && join.criteria != null) {
             rightJoinMade = true;
         }
@@ -645,11 +665,15 @@ public abstract class AbstractHibernateQuery extends Query {
                     (root.getMaxResults() != null || root.getFirstResult() != null && root.getFirstResult() > 0);
             // Hibernate fetches an unrestricted left collection join even with FetchMode.SELECT.
             // Keep this a sort join so limited rows cannot initialize an incomplete collection.
-            join.criteria.createAlias(associationPath, join.alias, hibernateJoinType,
+            join.criteria.createAlias(joinPath, join.alias, hibernateJoinType,
                     pagedIntermediateCollection ? Restrictions.sqlRestriction("1=1") : null);
+            if (hibernateJoinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN && collection &&
+                    (join.usedByCriteria || GrailsHibernateUtil.keepsSortedCollectionUnfetched(join.criteria, associationPath))) {
+                GrailsHibernateUtil.keepCollectionUnfetched(join.criteria, join.alias);
+            }
         }
         else if (join.detachedCriteria != null) {
-            join.detachedCriteria.createAlias(associationPath, join.alias, hibernateJoinType);
+            join.detachedCriteria.createAlias(joinPath, join.alias, hibernateJoinType);
         }
     }
 
@@ -657,6 +681,38 @@ public abstract class AbstractHibernateQuery extends Query {
         // a path that the query is restricted to with a subquery is joined, and fetched, with a left join
         JoinType joinType = subqueryJoinedPaths.contains(join.associationPath) ? JoinType.LEFT : joinTypes.get(join.associationPath);
         return joinType == null && join.usedByCriteria ? supersededJoinTypes.get(join.associationPath) : joinType;
+    }
+
+    /**
+     * Has the collections that the query fetches initialized once it has run, when it requests a left
+     * join of a collection that criteria use. Hibernate does not fetch a collection through such a join,
+     * since its rows lack the elements that the criteria leave out, but it then reads a collection that
+     * it does fetch from the columns of that join when both hold elements of the same table. A collection
+     * that is initialized after the query is not read from those columns, and the left join keeps
+     * returning the instances without an element when the criteria accept that. A collection that
+     * criteria use is left alone: it is loaded when it is read.
+     */
+    private void loadFetchedCollectionsAfterQuery() {
+        if (criteria == null || (hibernateProjectionList != null && !hibernateProjectionList.isEmpty())) {
+            return;
+        }
+        Set<String> joinedByCriteria = new HashSet<>();
+        boolean leftJoinRequested = false;
+        for (CriteriaAndAlias join : pendingJoins) {
+            if (join.usedByCriteria && getAssociation(join.associationPath) instanceof ToMany) {
+                joinedByCriteria.add(join.associationPath);
+                leftJoinRequested |= getRequestedJoinType(join) == JoinType.LEFT;
+            }
+        }
+        if (!leftJoinRequested) {
+            return;
+        }
+        for (String path : GrailsHibernateUtil.findFetchedCollections(criteria)) {
+            if (!joinedByCriteria.contains(path)) {
+                criteria.setFetchMode(path, FetchMode.SELECT);
+                collectionsLoadedAfterQuery.add(path);
+            }
+        }
     }
 
     /**
@@ -754,6 +810,12 @@ public abstract class AbstractHibernateQuery extends Query {
     private void applyOrder(Order order) {
         String property = order.getProperty();
         int i = property.indexOf('.');
+        String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria.getAlias();
+        if (i > 0 && property.substring(0, i).equals(rootAlias) && !isAssociationSortPath(property)) {
+            // Strip the root alias once: the remaining path can start with a property of the same name.
+            property = property.substring(i + 1);
+            i = property.indexOf('.');
+        }
         if (i < 0) {
             addSimpleOrder(order, property);
             return;
@@ -762,8 +824,12 @@ public abstract class AbstractHibernateQuery extends Query {
         String sortHead = property.substring(0, i);
         if (!createdAssociationPaths.containsKey(sortHead)) {
             PersistentProperty persistentProperty = entity.getPropertyByName(sortHead);
+            if (persistentProperty == null) {
+                // neither an alias of this query nor a property of the entity, so there is nothing to sort by: the sort is ignored
+                return;
+            }
             if (!(persistentProperty instanceof Association)) {
-                // neither an alias of this query nor an association, so there is nothing to sort by: the sort is ignored
+                // a property that is not an association has no properties to sort by: the sort is ignored
                 return;
             }
             if (persistentProperty instanceof Embedded) {
@@ -774,6 +840,10 @@ public abstract class AbstractHibernateQuery extends Query {
         }
 
         addAliasedOrder(order, calculateSortPropertyName(property));
+    }
+
+    private boolean isAssociationSortPath(String path) {
+        return GrailsHibernateUtil.isPropertyPath(entity, path);
     }
 
     /**
@@ -830,10 +900,9 @@ public abstract class AbstractHibernateQuery extends Query {
             }
             boolean joined = joinsByPath.containsKey(path);
             CriteriaAndAlias join = getOrRegisterJoinAt(path, token);
-            if (!joined && (!leftJoin || persistentProperty instanceof ToMany) && !hasRequestedLeftJoinBelow(path)) {
+            if (!joined && !leftJoin && !hasRequestedLeftJoinBelow(path)) {
                 // without the leftJoinAssociationSort setting, an association is joined for a sort as it is
-                // for criteria, with an inner join. A collection always is: Hibernate would fetch it through
-                // a left join
+                // for criteria, with an inner join
                 join.usedByCriteria = true;
             }
             currentAlias = join.alias;
@@ -869,9 +938,12 @@ public abstract class AbstractHibernateQuery extends Query {
      * detached criteria are handed to the query that embeds them.
      * <p>
      * Each association is joined once, by its path from the root entity, with the join type that
-     * {@link #createJoin(CriteriaAndAlias)} describes. A requested join type other than a left join is
-     * applied whether or not anything else in the query uses the association: a fetch mode alone always
-     * joins with an outer join.
+     * {@link #createJoin(CriteriaAndAlias)} describes. With the
+     * <code>grails.gorm.leftJoinAssociationSort</code> setting, a sort does not change which rows the
+     * query returns or what it fetches: an association that only a sort uses is joined with a left
+     * join, and a collection is not fetched through that join. A requested join type other than a
+     * left join is applied whether or not anything else in the query uses the association: a fetch
+     * mode alone always joins with an outer join.
      */
     protected void applyDeferredJoins() {
         for (Map.Entry<String, JoinType> requestedJoin : joinTypes.entrySet()) {
@@ -882,7 +954,7 @@ public abstract class AbstractHibernateQuery extends Query {
         }
         pendingOrders.clear();
         removeOrdersOfRowCount();
-
+        loadFetchedCollectionsAfterQuery();
         for (CriteriaAndAlias join : pendingJoins) {
             createJoin(join);
         }
@@ -970,7 +1042,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     private Association getAssociation(String associationPath) {
         String path = associationPath;
-        if (alias != null && path.startsWith(alias + '.')) {
+        if (alias != null && path.startsWith(alias + '.') && !isAssociationSortPath(path)) {
             path = path.substring(alias.length() + 1);
         }
         PersistentEntity currentEntity = entity;
@@ -1103,6 +1175,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query join(String property) {
+        property = normalizeFetchPath(property);
         this.hasJoins = true;
         supersedeJoinType(property);
         if (criteria != null)
@@ -1114,6 +1187,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query join(String property, JoinType joinType) {
+        property = normalizeFetchPath(property);
         this.hasJoins = true;
         this.joinTypes.put(property, joinType);
         this.supersededJoinTypes.remove(property);
@@ -1137,6 +1211,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query select(String property) {
+        property = normalizeFetchPath(property);
         this.hasJoins = true;
         supersedeJoinType(property);
         if (criteria != null)
@@ -1144,6 +1219,16 @@ public abstract class AbstractHibernateQuery extends Query {
         else if (detachedCriteria != null)
             detachedCriteria.setFetchMode(property, FetchMode.SELECT);
         return this;
+    }
+
+    /**
+     * Uses the same root-relative path for a fetch request and for a sort through that association.
+     * Preserve a valid association path when its first segment also names the root alias, and strip
+     * a qualifying root alias only once.
+     */
+    private String normalizeFetchPath(String property) {
+        String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria != null ? detachedCriteria.getAlias() : null;
+        return GrailsHibernateUtil.stripRootAlias(entity, rootAlias, property);
     }
 
     @Override
@@ -1184,6 +1269,7 @@ public abstract class AbstractHibernateQuery extends Query {
         if (keepNullRows) {
             criteria.setResultTransformer(CriteriaSpecification.ROOT_ENTITY);
         }
+        collectionsLoadedAfterQuery.addAll(GrailsHibernateUtil.deferSortedCollectionFetches(criteria));
         List results = criteria.list();
         if (keepNullRows) {
             Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -1196,6 +1282,7 @@ public abstract class AbstractHibernateQuery extends Query {
             results = distinct;
         }
 
+        GrailsHibernateUtil.initializeCollections(entity, results, collectionsLoadedAfterQuery);
         if (publisher != null) {
             publisher.publishEvent(new PostQueryEvent(datastore, this, results));
         }
@@ -1280,6 +1367,7 @@ public abstract class AbstractHibernateQuery extends Query {
         }
         applyDeferredJoins();
 
+        collectionsLoadedAfterQuery.addAll(GrailsHibernateUtil.deferSortedCollectionFetches(criteria));
         Object result;
         if (hasJoins) {
             try {
@@ -1291,7 +1379,7 @@ public abstract class AbstractHibernateQuery extends Query {
         else {
             result = singleResultViaListCall();
         }
-
+        GrailsHibernateUtil.initializeCollections(entity, Collections.singletonList(result), collectionsLoadedAfterQuery);
         if (publisher != null) {
             publisher.publishEvent(new PostQueryEvent(datastore, this, Collections.singletonList(result)));
         }

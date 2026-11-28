@@ -21,11 +21,21 @@ package grails.gorm.tests
 import grails.gorm.DetachedCriteria
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.hibernate.Hibernate
+
+import jakarta.persistence.criteria.JoinType
 
 class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
+    protected boolean isLeftJoinSort() {
+        true
+    }
+
     void setupSpec() {
-        manager.domainClasses.addAll([Club, Team, Player, Contract])
+        // a sort through an association keeps the instances without it with this setting
+        manager.configuration['grails.gorm.leftJoinAssociationSort'] = leftJoinSort
+        manager.domainClasses.addAll([Club, Team, Player, Contract,
+                                      AssociationSortAuthor, AssociationSortBook, AssociationSortPublisher, AssociationSortAward])
     }
 
     void setup() {
@@ -37,7 +47,267 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         manager.session.clear()
     }
 
+    void '#api sorts by a path that starts with the alias of the queried class'() {
+        given: 'a team without a club'
+        new Team(name: 'Unattached First Team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        query.call()*.name == expected
+
+        where:
+        api                                                                       | query                                                                                          || expected
+        'a detached criteria'                                                     | { new DetachedCriteria(Team, 't').list(sort: 't.name') }                                       || TEAMS_BY_NAME
+        'a detached criteria in descending order'                                 | { new DetachedCriteria(Team, 't').list(sort: 't.name', order: 'desc') }                        || TEAMS_BY_NAME.reverse()
+        'the sort of a detached criteria'                                         | { new DetachedCriteria(Team, 't').sort('t.name').list() }                                      || TEAMS_BY_NAME
+        'a detached criteria with a criterion'                                    | { new DetachedCriteria(Team, 't').build { like('name', '%First Team') }.list(sort: 't.name') } || TEAMS_BY_NAME
+        'a where query, through the alias Hibernate gives it'                     | { Team.where { name ==~ '%' }.list(sort: 'this.name') }                                        || TEAMS_BY_NAME
+        'a dynamic finder, through the alias Hibernate gives it'                  | { Team.findAllByNameLike('%', [sort: 'this.name']) }                                           || TEAMS_BY_NAME
+        'findAll by example, through the alias Hibernate gives it'                | { Team.findAll(new Team(), [sort: 'this.name']) }                                              || TEAMS_BY_NAME
+        'a criteria query, through the alias Hibernate gives it'                  | { Team.createCriteria().list(sort: 'this.name') { } }                                          || TEAMS_BY_NAME
+        'a static list, through the alias Hibernate gives it'                     | { Team.list(sort: 'this.name') }                                                               || TEAMS_BY_NAME
+        'a static list in descending order, through the alias Hibernate gives it' | { Team.list(sort: 'this.name', order: 'desc') }                                                || TEAMS_BY_NAME.reverse()
+        'a static list with a map, through the alias Hibernate gives it'          | { Team.list(sort: ['this.name': 'desc']) }                                                     || TEAMS_BY_NAME.reverse()
+    }
+
+    void 'a paged detached criteria sorted through the alias of the queried class counts every team'() {
+        when:
+        final results = new DetachedCriteria(Team, 't').list(max: 2, sort: 't.name', order: 'desc')
+
+        then:
+        results*.name == ['Manchester United First Team', 'Chelsea First Team']
+        results.totalCount == 3
+    }
+
+    void 'a root alias named #alias is used when the path does not resolve through a property'() {
+        given:
+        final criteria = new DetachedCriteria(Team, alias)
+
+        expect:
+        criteria.list(sort: property, order: 'desc')*.name == expected
+        criteria.sort(property, 'desc').list()*.name == expected
+
+        where:
+        alias  | property         | expected
+        'club' | 'club.club.name' | ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+        'name' | 'name.name'      | ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    void 'a one-row descending root-alias page returns Chelsea before Arsenal'() {
+        given:
+        final criteria = new DetachedCriteria(Team, 't').inList('name', ['Arsenal First Team', 'Chelsea First Team'])
+
+        when:
+        final results = criteria.list(max: 1, sort: 't.name', order: 'desc')
+
+        then:
+        results*.name == ['Chelsea First Team']
+        results.totalCount == 2
+    }
+
+    void 'an association path keeps its meaning when the root alias has the same name'() {
+        given:
+        new Team(name: 'Alias Z', club: Club.findByName('Arsenal')).save(failOnError: true)
+        new Team(name: 'Alias A', club: Club.findByName('Chelsea')).save(failOnError: true)
+        new Team(name: 'Alias M').save(failOnError: true, flush: true)
+        manager.session.clear()
+        final criteria = new DetachedCriteria(Team, 'club').like('name', 'Alias%')
+
+        expect:
+        criteria.list(sort: 'club.name')*.name - 'Alias M' == ['Alias Z', 'Alias A']
+        criteria.sort('club.name').list()*.name - 'Alias M' == ['Alias Z', 'Alias A']
+        criteria.list(sort: 'club.name', max: 10).totalCount == (leftJoinSort ? 3 : 2)
+    }
+
+    void 'a root-alias sort through an association of #api follows the compatibility setting'() {
+        given:
+        new Team(name: 'Unattached First Team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = query.call()
+
+        then:
+        ('Unattached First Team' in results*.name) == leftJoinSort
+        results*.name - 'Unattached First Team' == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+
+        where:
+        api                   | query
+        'a detached criteria' | { new DetachedCriteria(Team, 't').list(sort: 't.club.name', order: 'desc') }
+        'a static list'       | { Team.list(sort: 'this.club.name', order: 'desc') }
+    }
+
+    void '#operation changes the teams that list returns when #description'() {
+        given: 'a team without a club'
+        new Team(name: 'Unattached First Team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final listed = query.call().list()*.name.sort()
+        final counted = query.call().count()
+        final changed = operation == 'updateAll' ? query.call().updateAll(name: 'Changed Team') : query.call().deleteAll()
+        manager.session.clear()
+
+        then:
+        listed == expected
+        counted == expected.size()
+        changed == expected.size()
+        Team.list()*.name.findAll { it != 'Changed Team' }.sort() == TEAMS_BY_NAME - expected
+
+        where:
+        [operation, description, query, expected] << [
+                ['updateAll', 'deleteAll'],
+                [
+                        ['the root alias qualifies an inner join', { new DetachedCriteria(Team, 't').join('t.club', JoinType.INNER) }, TEAMS_WITH_A_CLUB],
+                        ['an alias named like the association qualifies an inner join', { new DetachedCriteria(Team, 'club').join('club.club', JoinType.INNER) }, TEAMS_WITH_A_CLUB],
+                        ['the alias Hibernate gives a where query qualifies an inner join', { Team.where { name ==~ '%' }.join('this.club', JoinType.INNER) }, TEAMS_WITH_A_CLUB],
+                        ['a fetch mode through the root alias replaces an inner join', { new DetachedCriteria(Team, 't').join('club', JoinType.INNER).join('t.club') }, TEAMS_BY_NAME],
+                ],
+        ].combinations().collect { List row -> [row[0]] + row[1] }
+    }
+
+    void 'a root alias matching #alias preserves the full #property path with #sortForm and pagination #paged'() {
+        given:
+        final first = new Team(name: 'Collision Z', club: Club.findByName('Arsenal')).save(failOnError: true)
+        final second = new Team(name: 'Collision A', club: Club.findByName('Chelsea')).save(failOnError: true)
+        [first, second].eachWithIndex { Team team, int index ->
+            final player = new Player(name: "Collision player ${index}", team: team)
+            player.contract = new Contract(salary: 100G, player: player)
+            player.save(failOnError: true)
+        }
+        manager.session.flush()
+        manager.session.clear()
+        def criteria = new DetachedCriteria(domain, alias).like('name', 'Collision%')
+        final arguments = paged ? [max: 1] : [:]
+        if (sortForm == 'stored') {
+            criteria = criteria.sort(property)
+        }
+        else {
+            arguments.sort = sortForm == 'map' ? [(property): 'asc'] : property
+        }
+
+        when:
+        final results = criteria.list(arguments)
+
+        then:
+        results*.name == (paged ? expected.take(1) : expected)
+        !paged || results.totalCount == 2
+
+        where:
+        [domain, alias, property, expected, sortForm, paged] << [
+                [
+                        [Team, 'players', 'players.team.name', ['Collision A', 'Collision Z']],
+                        [Player, 'team', 'team.club.name', ['Collision player 0', 'Collision player 1']],
+                ],
+                ['argument', 'stored', 'map'],
+                [false, true],
+        ].combinations().collect { List row -> row[0] + row[1..2] }
+    }
+
+    void 'a nested LEFT sort keeps an empty collection with root alias #rootAlias and fetch #fetchPath using #sortForm and pagination #paged'() {
+        given:
+        new Team(name: 'Nested empty').save(failOnError: true)
+        final populated = new Team(name: 'Nested populated').save(failOnError: true)
+        ['Nested player A', 'Nested player B'].each { String playerName ->
+            final player = new Player(name: playerName, team: populated)
+            player.contract = new Contract(salary: 100G, player: player)
+            player.save(failOnError: true)
+        }
+        manager.session.flush()
+        manager.session.clear()
+        def criteria = (rootAlias == null ? new DetachedCriteria(Team) : new DetachedCriteria(Team, rootAlias)).like('name', 'Nested%')
+        final arguments = [fetch: [(fetchPath): JoinType.LEFT]] + (paged ? [max: 10] : [:])
+        if (sortForm == 'stored') {
+            criteria = criteria.sort(sortProperty)
+        }
+        else {
+            arguments.sort = sortForm == 'map' ? [(sortProperty): 'asc'] : sortProperty
+        }
+
+        when:
+        final results = criteria.list(arguments)
+
+        then:
+        results*.name.sort() == ['Nested empty', 'Nested populated']
+        results.every { Hibernate.isInitialized(it.players) == !paged }
+        results.find { it.name == 'Nested empty' }.players.empty
+        results.find { it.name == 'Nested populated' }.players*.name.sort() == ['Nested player A', 'Nested player B']
+
+        where:
+        [rootAlias, fetchPath, sortProperty, sortForm, paged] << [
+                [
+                        [null, 'players.team', 'players.team.name'],
+                        ['players', 'players.team', 'players.team.name'],
+                        ['t', 't.players.team', 't.players.team.name'],
+                        ['t', 't.players.team', 'players.team.name'],
+                        ['t', 'players.team', 't.players.team.name'],
+                        ['players', 'players.players.team', 'players.players.team.name'],
+                ],
+                ['argument', 'stored', 'map'],
+                [false, true],
+        ].combinations().collect { List row -> row[0] + row[1..2] }
+    }
+
+    void 'a LEFT #request of #joinPath keeps a book whose author has no publisher with root alias author and sort #sortPath using #sortForm and pagination #paged'() {
+        given: 'books whose authors have a publisher, and a book whose author has none'
+        final x = new AssociationSortPublisher(name: 'Publisher X').save(failOnError: true)
+        final y = new AssociationSortPublisher(name: 'Publisher Y').save(failOnError: true)
+        new AssociationSortBook(title: 'Published by Y', author: new AssociationSortAuthor(name: 'Ann', publisher: y).save(failOnError: true)).save(failOnError: true)
+        new AssociationSortBook(title: 'Published by X', author: new AssociationSortAuthor(name: 'Bob', publisher: x).save(failOnError: true)).save(failOnError: true)
+        new AssociationSortBook(title: 'Unpublished', author: new AssociationSortAuthor(name: 'Cat').save(failOnError: true)).save(failOnError: true)
+        manager.session.flush()
+        manager.session.clear()
+        def criteria = new DetachedCriteria(AssociationSortBook, 'author')
+        final arguments = paged ? [max: 10] : [:]
+        if (request == 'join') {
+            criteria = criteria.join(joinPath, JoinType.LEFT)
+        }
+        else {
+            arguments.fetch = [(joinPath): JoinType.LEFT]
+        }
+        if (sortForm == 'stored') {
+            criteria = criteria.sort(sortPath)
+        }
+        else {
+            arguments.sort = sortPath
+        }
+
+        when:
+        final results = criteria.list(arguments)
+
+        then: 'the sort uses the requested left join, with the compatibility setting or without it'
+        'Unpublished' in results*.title
+        results*.title - 'Unpublished' == ['Published by X', 'Published by Y']
+        !paged || results.totalCount == 3
+
+        where:
+        [request, joinPath, sortPath, sortForm, paged] << [
+                ['join', 'fetch'],
+                [
+                        ['author.publisher', 'author.publisher.name'],
+                        ['author.author.publisher', 'author.author.publisher.name'],
+                ],
+                ['argument', 'stored'],
+                [false, true],
+        ].combinations().collect { List row -> [row[0]] + row[1] + row[2..3] }
+    }
+
+    void 'a root-qualified #replacement replaces a canonical INNER fetch request'() {
+        given:
+        new Team(name: 'Fetch alias empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+        def criteria = new DetachedCriteria(Team, 't').eq('name', 'Fetch alias empty').join('club', JoinType.INNER)
+        criteria = replacement == 'join' ? criteria.join('t.club') : criteria.select('t.club')
+
+        expect:
+        criteria.list(sort: 't.name')*.name == ['Fetch alias empty']
+
+        where:
+        replacement << ['join', 'select']
+    }
+
     private static final List<String> TEAMS_BY_NAME = ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']
+    private static final List<String> TEAMS_WITH_A_CLUB = TEAMS_BY_NAME - 'Unattached First Team'
 
     void 'a sort by an alias that the query defines still sorts'() {
         when:

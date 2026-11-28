@@ -134,7 +134,7 @@ class NestedRequestedLeftJoinSpec extends GrailsDataTckSpec<GrailsDataHibernate5
 
         then:
         !results.empty
-        !('Empty' in results*.name)
+        ('Empty' in results*.name) == leftJoinSort
 
         where:
         request << ['similar prefix', 'selected intermediate', 'join replacement', 'select replacement']

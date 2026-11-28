@@ -21,11 +21,13 @@ package org.grails.orm.hibernate;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import jakarta.persistence.FetchType;
 import jakarta.persistence.FlushModeType;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -35,6 +37,7 @@ import jakarta.persistence.criteria.Root;
 import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.CriteriaSpecification;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.MariaDB103Dialect;
 import org.hibernate.dialect.MySQLDialect;
@@ -65,6 +68,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder;
 import org.grails.datastore.mapping.query.jpa.JpaQueryInfo;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.orm.hibernate.query.HibernateHqlQuery;
 import org.grails.orm.hibernate.query.HibernateQuery;
@@ -263,7 +267,7 @@ public class HibernateSession extends AbstractHibernateSession {
             selection.add((Query.Criterion) criterion);
         }
         if (source instanceof AbstractDetachedCriteria) {
-            for (Map.Entry<String, JoinType> join : ((AbstractDetachedCriteria<?>) source).getJoinTypes().entrySet()) {
+            for (Map.Entry<String, JoinType> join : getRequestedJoinTypes((AbstractDetachedCriteria<?>) source).entrySet()) {
                 selection.join(join.getKey(), join.getValue());
             }
         }
@@ -320,7 +324,7 @@ public class HibernateSession extends AbstractHibernateSession {
             return Collections.emptyList();
         }
         List<RequestedJoinRestriction> restrictions = new ArrayList<>();
-        for (Map.Entry<String, JoinType> requestedJoin : ((AbstractDetachedCriteria<?>) criteria).getJoinTypes().entrySet()) {
+        for (Map.Entry<String, JoinType> requestedJoin : getRequestedJoinTypes((AbstractDetachedCriteria<?>) criteria).entrySet()) {
             if (requestedJoin.getValue() == null || requestedJoin.getValue() == JoinType.LEFT) {
                 continue;
             }
@@ -330,6 +334,29 @@ public class HibernateSession extends AbstractHibernateSession {
             }
         }
         return restrictions;
+    }
+
+    /**
+     * Returns the join types that the criteria request, by the path of each association from the
+     * queried class, as a query of the criteria applies them: a path can start with the alias of the
+     * queried class, and a fetch mode requested for an association replaces a join type that was
+     * requested for it before, in the order in which a query applies them.
+     */
+    private static Map<String, JoinType> getRequestedJoinTypes(AbstractDetachedCriteria<?> criteria) {
+        PersistentEntity entity = criteria.getPersistentEntity();
+        String rootAlias = criteria.getAlias() != null ? criteria.getAlias() : CriteriaSpecification.ROOT_ALIAS;
+        Map<String, JoinType> requested = new LinkedHashMap<>();
+        for (Map.Entry<String, FetchType> fetch : criteria.getFetchStrategies().entrySet()) {
+            String path = GrailsHibernateUtil.stripRootAlias(entity, rootAlias, fetch.getKey());
+            JoinType joinType = fetch.getValue() == FetchType.EAGER ? criteria.getJoinTypes().get(fetch.getKey()) : null;
+            if (joinType != null) {
+                requested.put(path, joinType);
+            }
+            else {
+                requested.remove(path);
+            }
+        }
+        return requested;
     }
 
     /**
