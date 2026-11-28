@@ -103,6 +103,10 @@ class SbomPlugin implements Plugin<Project> {
     ]
 
     private static Map<String, String> LICENSE_MAPPING = [
+            // antlr 2.7.7, which Hibernate 5 pulls in, declares only "BSD License" and links to
+            // https://www.antlr.org/license.html, which has three numbered clauses and no advertising clause.
+            // cyclonedx-core-java 13 maps the name to BSD-4-Clause, as it does for mongo-java-server below.
+            'pkg:maven/antlr/antlr@2.7.7?type=jar'                            : 'BSD-3-Clause',
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.1?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.2?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
@@ -138,32 +142,40 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/org.bouncycastle/bcutil-jdk18on@1.84?type=jar'         : 'MIT',
     ]
 
+    // cyclonedx-core-java gives a license only its name when it cannot tell the SPDX id from the POM. These names
+    // say which license they are, so the id is looked up and the license checked against PREFERRED_LICENSES and
+    // LICENSE_EXCEPTIONS like one that comes with its id.
+    private static Map<String, String> LICENSE_IDS_BY_NAME = [
+            // hibernate-core-jakarta and hibernate-commons-annotations of Hibernate 5
+            'GNU Library General Public License v2.1 or later': 'LGPL-2.1-or-later',
+    ]
+
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
     // Require a whitelist of any case of category X licenses to prevent accidental inclusion in a distributed artifact
     // this list will need to be updated anytime we change versions so we can revise the licenses
     private static Map<String, LinkedHashMap<String, String>> LICENSE_EXCEPTIONS = [
             'grails-data-hibernate5-core'       : [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
             'grails-data-hibernate5'            : [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
             'grails-data-hibernate5-spring-boot': [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
             'grails-data-hibernate5-spring-orm' : [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
             'grails-data-hibernate5-dbmigration': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],
             'grails-data-hibernate5-dbmigration-cli': [
-                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-or-later', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
             'grails-data-hibernate7-dbmigration-core': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
@@ -499,7 +511,7 @@ class SbomPlugin implements Plugin<Project> {
         }
 
         def defaultLicense = licenseChoices[0] // pick the first one found
-        def defaultLicenseId = defaultLicense.license.id as String
+        def defaultLicenseId = (defaultLicense.license?.id ?: LICENSE_IDS_BY_NAME[defaultLicense.license?.name]) as String
         if (defaultLicenseId == null) {
             throw new GradleException("Could not determine License id for dependency: ${bomRef} in ${sbomComponent} for value ${defaultLicense}")
         }
@@ -513,6 +525,10 @@ class SbomPlugin implements Plugin<Project> {
             }
         }
 
+        if (!defaultLicense.license.id) {
+            // record the id that was looked up by the license name
+            return [license: [id: defaultLicenseId, url: defaultLicense.license.url]]
+        }
         return defaultLicense
     }
 
