@@ -346,7 +346,7 @@ grails:
         leftJoinAssociationSort: true
 ----
 
-An association that is joined only for a sort is then joined with a left join, so a sort by `owner.lastName` keeps the pets that have no owner. Whether they come first or last depends on how the database sorts nulls. The setting applies to every query that takes a sort, such as `list` and dynamic finders, not only to `where` queries. A collection is the exception: a sort by a property of a collection joins it with an inner join, so it leaves out the instances whose collection is empty.
+An association that is joined only for a sort is then joined with a left join, so a sort by `owner.lastName` keeps the pets that have no owner. Whether they come first or last depends on how the database sorts nulls. If the query requests a join type for the association, for example with `fetch: [owner: JoinType.INNER]`, the association is joined with that join type, with and without the sort. The setting applies to every query that takes a sort, such as `list` and dynamic finders, not only to `where` queries. A collection is the exception: a sort by a property of a collection joins it with an inner join, so it leaves out the instances whose collection is empty.
 
 If the `where` query defines an explicit alias for the association, you can sort by the alias instead:
 
