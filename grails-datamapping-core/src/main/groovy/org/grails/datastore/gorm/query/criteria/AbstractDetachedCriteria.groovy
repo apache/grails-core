@@ -21,6 +21,7 @@ package org.grails.datastore.gorm.query.criteria
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.Internal
 import groovy.transform.TypeCheckingMode
 
 import jakarta.persistence.FetchType
@@ -59,6 +60,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected PersistentEntity persistentEntity
     protected Map<String, FetchType> fetchStrategies = [:]
     protected Map<String, JoinType> joinTypes = [:]
+    protected Map<String, JoinType> supersededJoinTypes = [:]
     protected Closure lazyQuery
     protected String alias
     protected String connectionName = ConnectionSource.DEFAULT
@@ -88,6 +90,19 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     Map<String, JoinType> getJoinTypes() {
         return Collections.unmodifiableMap(joinTypes)
+    }
+
+    /**
+     * The join types that were requested for an association before a fetch mode was requested for it
+     * with {@link #join(String)} or {@link #select(String)}. The fetch mode replaces the join type,
+     * but a datastore can still use the join type for the join that criteria on the association make.
+     * The datastore implementations read it; it is not meant to be called by applications.
+     *
+     * @return The join types that a later fetch mode replaced
+     */
+    @Internal
+    Map<String, JoinType> getSupersededJoinTypes() {
+        return Collections.unmodifiableMap(supersededJoinTypes)
     }
     /**
      * @return The root alias to be used for the query
@@ -157,6 +172,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     Criteria join(String property) {
         fetchStrategies[property] = FetchType.EAGER
+        supersedeJoinType(property)
         return this
     }
 
@@ -170,6 +186,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     Criteria join(String property, JoinType joinType) {
         fetchStrategies[property] = FetchType.EAGER
         joinTypes[property] = joinType
+        supersededJoinTypes.remove(property)
         return this
     }
 
@@ -181,7 +198,19 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
     Criteria select(String property) {
         fetchStrategies[property] = FetchType.LAZY
+        supersedeJoinType(property)
         return this
+    }
+
+    /**
+     * Replaces a join type that was requested for an association with the fetch mode that is now
+     * requested for it, see {@link #getSupersededJoinTypes()}.
+     */
+    private void supersedeJoinType(String property) {
+        JoinType joinType = joinTypes.remove(property)
+        if (joinType != null) {
+            supersededJoinTypes[property] = joinType
+        }
     }
 
     T getPersistentClass() {
@@ -881,6 +910,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         criteria.defaultOffset = defaultOffset
         criteria.@fetchStrategies = new HashMap<>(this.fetchStrategies)
         criteria.@joinTypes = new HashMap<>(this.joinTypes)
+        criteria.@supersededJoinTypes = new HashMap<>(this.supersededJoinTypes)
         criteria.@junctions = new ArrayList(this.junctions)
         criteria.@connectionName = this.connectionName
         criteria.@lazyQuery = this.lazyQuery

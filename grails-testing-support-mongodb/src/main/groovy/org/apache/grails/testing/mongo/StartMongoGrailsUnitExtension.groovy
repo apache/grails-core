@@ -37,6 +37,25 @@ class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension impleme
     DockerImageName desiredDockerImage = getDesiredMongoDockerName()
     MongoContainerHolder containerHolder
 
+    // the holder of the extension Spock started for this test JVM
+    private static volatile MongoContainerHolder activeHolder
+
+    /**
+     * The container the specifications run by the calling thread share, started if none of them has asked for it
+     * yet. It is the container an {@link AutoStartedMongoSpec} is given, for test support that is not a
+     * specification, such as a TCK manager. This extension stops it when the test run ends, so callers never do.
+     *
+     * @throws IllegalStateException if Spock has not started this unit-test extension, or it has stopped
+     * @since 7.0.18
+     */
+    static MongoDBContainer getSharedContainer() {
+        MongoContainerHolder holder = activeHolder
+        if (holder == null) {
+            throw new IllegalStateException('The shared MongoDB container is only available in a unit test run, once Spock has started its global extensions.')
+        }
+        holder.container as MongoDBContainer
+    }
+
     @Override
     void start() {
         if (isIntegrationTestRun()) {
@@ -44,6 +63,22 @@ class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension impleme
         }
 
         containerHolder = new MongoContainerHolder(desiredDockerImage)
+        synchronized (StartMongoGrailsUnitExtension) {
+            activeHolder = activeHolder ?: containerHolder
+        }
+    }
+
+    /**
+     * Stops the containers the specifications of this test run shared. Spock calls this once, when the test JVM ends.
+     */
+    @Override
+    void stop() {
+        containerHolder?.stop()
+        synchronized (StartMongoGrailsUnitExtension) {
+            if (activeHolder.is(containerHolder)) {
+                activeHolder = null
+            }
+        }
     }
 
     @Override

@@ -313,34 +313,54 @@ This sorts results first by `firstName` ascending and then by `lastName` descend
 
 ===== Sorting with Associations
 
-When sorting by properties of associated entities, you must define an explicit alias within the `where` query.
-Without an explicit alias, sorting on association properties may fail due to dynamically generated aliases.
-
-For example the following query will fail:
+To sort by a property of an associated entity, use the association path. This also works when the `where` query uses the same association:
 
 [source,groovy]
 ----
-// fails because a dynamic alias is used
-Pet.where {
+def results = Pet.where {
     owner.firstName == "Fred"
 }.list(sort: "owner.lastName")
 ----
 
-In this case GORM will generate an alias for the `owner` association such as `owner_alias_0`. These generated aliases are internal and are not suitable for later reference in sorting or projections.
+The path can cross more than one association, such as `owner.employer.name` where both `owner` and `employer` are associations. An association that the `where` query already joins is reused for the sort, and any other association on the path is joined for it.
 
-To avoid this problem, define an explicit alias:
+An association is joined with an inner join unless the query requests another join type for it, so a sort by `owner.lastName` leaves out the pets that have no owner. To keep them, request a left join with the `fetch` argument:
 
 [source,groovy]
 ----
-// 1. Define alias
+import jakarta.persistence.criteria.JoinType
+
+def results = Pet.where {
+    year(birthDate) == 2011
+}.list(sort: "owner.lastName", fetch: [owner: JoinType.LEFT])
+----
+
+A sort by the identifier of the last association on a longer path, such as `owner.employer.id`, does not join that association. It sorts by the foreign key that `owner` holds, and so keeps the pets whose owner has no employer. A `hasOne` association has no such foreign key and is joined.
+
+To make every sort keep the instances without the association, enable the `grails.gorm.leftJoinAssociationSort` setting:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        leftJoinAssociationSort: true
+----
+
+An association that is joined only for a sort is then joined with a left join, so a sort by `owner.lastName` keeps the pets that have no owner. Whether they come first or last depends on how the database sorts nulls. If the query requests a join type for the association, for example with `fetch: [owner: JoinType.INNER]`, the association is joined with that join type, with and without the sort. The setting applies to every query that takes a sort, such as `list` and dynamic finders, not only to `where` queries. A collection is the exception: a sort by a property of a collection joins it with an inner join, so it leaves out the instances whose collection is empty.
+
+If the `where` query defines an explicit alias for the association, you can sort by the alias instead:
+
+[source,groovy]
+----
 def query = Pet.where {
     def o = owner
     o.firstName == "Fred"
 }
 
-// 2. Execute query using alias for sorting
 def results = query.list(sort: "o.lastName")
 ----
+
+An alias exists only in a query that defines it, and a sort by an alias that the query does not define is ignored. When the same sort is applied to queries with different criteria, for example from a sortable table with optional filters, sort by the association path.
 
 
 ==== Subqueries
