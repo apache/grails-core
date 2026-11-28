@@ -111,6 +111,10 @@ public abstract class AbstractHibernateQuery extends Query {
     protected String alias;
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+    /** how many disjunctions the criterion being added is inside; a block in one is a branch of an or */
+    protected int disjunctionDepth;
+    /** the aliases of the joins made for a block that is a branch of an or: left joins, so an entity without the association is kept */
+    protected final Set<String> leftBlockAliases = new HashSet<>();
     /**
      * The joins of the query by their association path from the root entity. {@link #createdAssociationPaths}
      * also holds each join under its alias, so an alias named like an association, as in
@@ -258,6 +262,11 @@ public abstract class AbstractHibernateQuery extends Query {
 
                 CriteriaAndAlias criteriaAndAlias = getCriteriaAndAlias(associationCriteria);
 
+                if (associationCriteria.getAlias() == null && leftBlockAliases.contains(criteriaAndAlias.alias)) {
+                    // the join is the left join of a block in an or: a block outside it asks for an associated entity, as
+                    // it always did
+                    addToRootCriteria(Restrictions.isNotNull(criteriaAndAlias.alias + ".id"));
+                }
                 if (criteriaAndAlias.criteria != null) {
                     aliasInstanceStack.add(criteriaAndAlias.criteria);
                 }
@@ -630,7 +639,8 @@ public abstract class AbstractHibernateQuery extends Query {
         boolean collection = getAssociation(associationPath) instanceof ToMany;
         JoinType joinType = getRequestedJoinType(join);
         if (joinType == null) {
-            joinType = join.usedByCriteria ? JoinType.INNER : JoinType.LEFT;
+            // the join of a block that is a branch of an or is a left join, so an entity without the association is kept
+            joinType = join.usedByCriteria && !leftBlockAliases.contains(join.alias) ? JoinType.INNER : JoinType.LEFT;
         }
         else if (joinType == JoinType.RIGHT && collection) {
             joinType = JoinType.INNER;
@@ -1313,6 +1323,38 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     protected List executeQuery(PersistentEntity entity, Junction criteria) {
         return list();
+    }
+
+    /**
+     * The join of an association block that is a branch of an or: a left join, so that an entity without the association
+     * is still found by the other branches. A join that already exists for the path is reused, and stays what it was.
+     */
+    String handleOrBranchAssociationQuery(Association<?> association) {
+        String associationName = calculatePropertyName(association.getName());
+        boolean existed = joinsByPath.containsKey(getAssociationPath(associationName));
+        CriteriaAndAlias block = getOrCreateAlias(associationName, generateAlias(associationName));
+        if (!existed) {
+            leftBlockAliases.add(block.alias);
+        }
+        return block.alias;
+    }
+
+    boolean isInDisjunction() {
+        return disjunctionDepth > 0;
+    }
+
+    boolean isLeftBlockAlias(String alias) {
+        return leftBlockAliases.contains(alias);
+    }
+
+    /** Adds a criterion to the query itself, whatever junction or association block is being added. */
+    void addToRootCriteria(org.hibernate.criterion.Criterion criterion) {
+        if (criteria != null) {
+            criteria.add(criterion);
+        }
+        else if (detachedCriteria != null) {
+            detachedCriteria.add(criterion);
+        }
     }
 
     String handleAssociationQuery(Association<?> association, List<Criterion> criteriaList) {

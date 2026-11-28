@@ -679,6 +679,12 @@ class SimpleMapQuery extends Query {
     Map executeSubQuery(criteria, criteriaList) {
 
         def finalIdentifiers = executeSubQueryInternal(criteria, criteriaList)
+        // a block without criteria is no branch of the junction it stands in; it still asks for an associated entity,
+        // as it does where a join is made, so the entities without one are left out of the whole result
+        for (PersistentProperty required in associationsOfEmptyBlocks(criteria)) {
+            Set withAssociated = identifiersWhereEmpty(required, false) as Set
+            finalIdentifiers = finalIdentifiers.findAll { withAssociated.contains(it) }
+        }
 
         Map queryResult = [:]
         populateQueryResult(finalIdentifiers, queryResult)
@@ -688,6 +694,9 @@ class SimpleMapQuery extends Query {
     Collection executeSubQueryInternal(criteria, criteriaList) {
         SimpleMapResultList resultList = new SimpleMapResultList(this)
         for (Query.Criterion criterion in criteriaList) {
+            if (isEmptyBlock(criterion)) {
+                continue
+            }
             if (criterion instanceof Query.Junction) {
                 resultList.results << executeSubQueryInternal(criterion, criterion.criteria)
             }
@@ -707,7 +716,55 @@ class SimpleMapQuery extends Query {
                 }
             }
         }
+        if (resultList.results.isEmpty() && !criteriaList.isEmpty()) {
+            // only blocks without criteria: every entity, before the ones without an associated entity are left out
+            return datastore[family].keySet().toList()
+        }
         return applyJunctionToResults(criteria, resultList.results)
+    }
+
+    private static boolean isEmptyBlock(Query.Criterion criterion) {
+        criterion instanceof AssociationQuery && ((AssociationQuery) criterion).criteria.getCriteria().isEmpty()
+    }
+
+    private List<PersistentProperty> associationsOfEmptyBlocks(Query.Junction junction) {
+        List<PersistentProperty> found = []
+        for (Query.Criterion criterion in junction.getCriteria()) {
+            if (isEmptyBlock(criterion)) {
+                found << ((AssociationQuery) criterion).association
+            }
+            else if (criterion instanceof Query.Junction) {
+                found.addAll(associationsOfEmptyBlocks((Query.Junction) criterion))
+            }
+        }
+        found
+    }
+
+    /**
+     * The identifiers of the entities whose property holds no element. The elements of a to-many association are kept
+     * in its association index, any other value is on the entity.
+     */
+    protected List identifiersWhereEmpty(PersistentProperty property, boolean empty) {
+        List found = []
+        datastore[family].each { id, data ->
+            boolean propertyEmpty
+            if (property instanceof Association && !(property instanceof ToOne) && ((Association) property).associatedEntity != null) {
+                def indexer = entityPersister.getAssociationIndexer((Map) data, (Association) property)
+                propertyEmpty = indexer.query(id).isEmpty()
+            }
+            else {
+                propertyEmpty = data instanceof Map && isEmptyValue(data.get(property.name))
+            }
+            if (propertyEmpty == empty) {
+                found << id
+            }
+        }
+        found
+    }
+
+    protected static boolean isEmptyValue(Object value) {
+        value == null || (value instanceof Collection && value.isEmpty()) || (value instanceof Map && value.isEmpty()) ||
+                (value instanceof CharSequence && value.length() == 0) || (value.getClass().isArray() && java.lang.reflect.Array.getLength(value) == 0)
     }
 
     private List applyJunctionToResults(Query.Junction criteria, List resultList) {

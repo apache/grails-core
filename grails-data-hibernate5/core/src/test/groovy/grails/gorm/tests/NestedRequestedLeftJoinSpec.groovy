@@ -106,6 +106,16 @@ class NestedRequestedLeftJoinSpec extends GrailsDataTckSpec<GrailsDataHibernate5
             }
         }
 
+        expect: 'the children block is a branch of an or, so its left join keeps Empty, which matches by its name'
+        criteria.list(fetch: ['children.link': JoinType.LEFT], sort: 'children.link.name')*.name.sort() == ['Empty', 'Populated']
+    }
+
+    void 'a nested LEFT request does not replace a genuine intermediate association restriction outside an or'() {
+        given:
+        final criteria = new DetachedCriteria(NestedLeftSortRoot).build {
+            children { eq('name', 'A') }
+        }
+
         expect:
         criteria.list(fetch: ['children.link': JoinType.LEFT], sort: 'children.link.name')*.name == ['Populated']
     }

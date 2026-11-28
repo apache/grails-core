@@ -1406,3 +1406,11 @@ only shows in a schema that Hibernate creates: an application that manages its s
 keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
 The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
 enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
+
+==== GORM for Hibernate 5: an association block inside `or` is one branch of the `or`
+
+An association block written inside `or { }`, such as `or { child { eq('name', 'kid') }; eq('name', 'orphan') }`, was an inner join, so an entity without the association was dropped before the other branch could match it (issue https://github.com/apache/grails-core/issues/16924[#16924]). The block is a left join now, as the criteria guide describes the `or`, and the entities without the association are found by the other branches.
+
+* A criteria query with such a block can return more rows: search the criteria closures for an association block inside `or`.
+* A block that names its join type keeps it: `child(JoinType.INNER_JOIN) { }` still asks for an entity that has a child, also when it follows another block on the same association, and also for an association of the entity's own class. That last case used to return the entities without the association when an earlier block on it had been left-joined by default.
+* `createAlias` is unchanged: it is an inner join unless a join type is given.

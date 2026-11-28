@@ -986,8 +986,8 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
             team.club.name == 'Arsenal' || name == 'Unattached Player'
         }.join('club', JoinType.LEFT).list()
 
-        then:
-        results*.name == ['Arsenal Player']
+        then: 'the join of team.club is a left join, as a branch of an or, so the player without a team is found'
+        results*.name.sort() == ['Arsenal Player', 'Unattached Player']
     }
 
     void 'a join type requested for a collection at the end of a path fetches the collection'() {

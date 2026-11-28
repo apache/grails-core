@@ -936,6 +936,14 @@ With GORM for Hibernate, a where query, a detached criteria, a dynamic finder or
 - To keep the previous result of a query, remove the join type that it requests, or request `JoinType.LEFT`.
 - Check queries that store a sort with `sort()` before passing a `fetch` argument to `list` or `find`. `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])` now also returns books without an author. Request `JoinType.INNER` to keep leaving them out; nested paths follow the same rule.
 
+## GORM for Hibernate 5: association block inside `or`
+
+An association block inside `or { }` was an inner join, so an entity without the association was dropped before the other branch could match it. As of 7.0.19 the block is a left join, and the entities without the association are found by the other branches.
+
+- Search the criteria closures for an association block inside `or`: the query can return more rows.
+- A block that names its join type keeps it. `child(JoinType.INNER_JOIN) { }` still asks for an entity that has a child, after another block on the same association and for an association of the entity's own class too.
+- `createAlias` is unchanged: an inner join unless a join type is given.
+
 # After the Upgrade
 
 ## Verification Checklist
