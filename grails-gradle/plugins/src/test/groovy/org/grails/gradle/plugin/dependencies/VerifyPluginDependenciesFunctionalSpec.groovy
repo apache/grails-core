@@ -84,6 +84,30 @@ class VerifyPluginDependenciesFunctionalSpec extends GradleSpecification {
         result.output.contains('Grails plugin [generated] depends on [notOnTheClassPath]')
     }
 
+    def "a directory a view compiler registers into the output without naming its producer is not read"() {
+        given: 'a task that runs after the classes, as a view compiler does, writing a directory of the output'
+        def runner = setupTestResourceProject('plugin-dependencies')
+        new File(runner.projectDir, 'consumer/build.gradle') << '''
+            def views = layout.buildDirectory.dir('view-classes')
+            sourceSets.main.output.dir(views)
+            def compileViews = tasks.register('compileViews') {
+                dependsOn('classes')
+                outputs.dir(views)
+                doLast { views.get().file('views.properties').asFile.text = 'view=compiled\\n' }
+            }
+            tasks.named('jar') { dependsOn(compileViews) }
+            tasks.named('check') { dependsOn(compileViews) }
+        '''.stripIndent()
+
+        when:
+        def result = executeTask(':consumer:check')
+
+        then: 'the verification reads only the classes and resources, so Gradle reports no implicit dependency'
+        result.task(':consumer:compileViews').outcome == TaskOutcome.SUCCESS
+        result.task(':consumer:verifyPluginDependencies').outcome == TaskOutcome.SUCCESS
+        !result.output.contains('implicit dependency')
+    }
+
     def "a project without Grails plugins has nothing to verify"() {
         given:
         def runner = setupTestResourceProject('plugin-dependencies')

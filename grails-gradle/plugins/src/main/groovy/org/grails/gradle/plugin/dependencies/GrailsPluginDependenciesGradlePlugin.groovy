@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.SourceSet
@@ -55,7 +56,13 @@ class GrailsPluginDependenciesGradlePlugin implements Plugin<Project> {
                     VerifyPluginDependenciesTask) { VerifyPluginDependenciesTask task ->
                 task.group = LifecycleBasePlugin.VERIFICATION_GROUP
                 task.description = 'Checks that a dependency of the project provides every plugin a Grails plugin of it depends on.'
-                task.pluginDescriptors.from(main.output.asFileTree
+                // The compiled classes and the processed resources, each with the tasks that write them, and
+                // not the whole source set output: a view compiler registers its own directory into that output
+                // without naming itself as its producer, so reading it would consume a directory nothing says
+                // it produced. A descriptor is never in such a directory.
+                FileCollection descriptorDirectories = project.files(main.output.classesDirs,
+                        project.tasks.named(main.processResourcesTaskName))
+                task.pluginDescriptors.from(descriptorDirectories.asFileTree
                         .matching { PatternFilterable pattern ->
                             pattern.include(PluginDescriptorWriter.PLUGIN_DESCRIPTORS_PREFIX + '*/' +
                                     PluginDescriptorWriter.PLUGIN_PROPERTIES_FILE)
