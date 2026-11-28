@@ -35,6 +35,7 @@ import spock.lang.Requires
 import spock.lang.Shared
 
 import jakarta.persistence.criteria.JoinType
+import org.hibernate.FetchMode
 import org.hibernate.resource.jdbc.spi.StatementInspector
 
 /**
@@ -574,6 +575,33 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'a where query'    | { AssociationSortOwner.where { name ==~ '%' }.list(max: 10, sort: 'scores.score', fetch: [scores: JoinType.INNER]) }
         'a detached query' | { new DetachedCriteria(AssociationSortOwner).join('scores', JoinType.INNER).list(max: 10, sort: 'scores.score') }
         'a criteria query' | { AssociationSortOwner.createCriteria().list(max: 10) { join('scores', JoinType.INNER); order('scores.score') } }
+    }
+
+    void 'every row of a criteria query with a fetch mode for the collection it is sorted by is on a page of #max that its total reaches'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when: 'the pages that a pager asks for, which stops at the total'
+        final query = { int offset ->
+            AssociationSortOwner.createCriteria().list(max: max, offset: offset) {
+                fetchMode('scores', FetchMode.JOIN)
+                order('scores.score')
+                order('name')
+            }
+        }
+        final first = query.call(0)
+        final rows = []
+        for (int offset = 0; offset < first.totalCount; offset += max) {
+            rows.addAll(query.call(offset)*.name)
+        }
+
+        then: 'the list does not fetch the scores for the fetch mode, so it has a row for each score, and the total counts those rows'
+        first.totalCount == 4
+        rows == ['Ann', 'Bob', 'Ann', 'Bob']
+
+        where:
+        max << [10, 2]
     }
 
     void 'every row of #api sorted by a collection is on a page that its total reaches'() {

@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -332,7 +331,7 @@ public class JpaCriteriaQueryCreator<T> {
         // A count makes the joins of the sort, to count the rows that the list pages through, and joins a collection
         // that only the sort uses. A list that fetches a collection returns each instance once, so the count of its
         // instances counts them once. The count of a query with projections has no fetch
-        Set<String> fetchPaths = countOnly && cq != null && fetchesCollection() ? fetchPaths() : Collections.emptySet();
+        boolean fetchedCollection = countOnly && cq != null && fetchesCollection();
         boolean joinedCollection = false;
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
         if (countOnly && hibernateQuery != null) {
@@ -380,7 +379,7 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
         if (countOnly) {
-            if (!fetchPaths.isEmpty() && joinedCollection && isEntityCount()) {
+            if (fetchedCollection && joinedCollection && isEntityCount()) {
                 // the list fetches a collection, so it has each instance once, whatever rows the sort joins
                 ((CriteriaQuery<Long>) cq).select(criteriaBuilder.countDistinct(context.getRoot()));
             }
@@ -398,33 +397,22 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     /**
-     * Whether the query requests a fetch or a join type for a collection of the queried class. A path through the
-     * collection is not fetched, so the list has a row for each element of the collection that its sort joins.
+     * Whether the list that the query counts fetches a collection of the queried class. It fetches the paths without a
+     * dot that the query requests a fetch or a join type for, as {@code applyRequestedJoins} does, and the copy of the
+     * query that counts a page has those paths too. A fetch mode alone, as {@code fetchMode()} of a criteria query
+     * sets, and a path through the collection fetch nothing, so the list has a row for each element of a collection
+     * that its sort joins.
      */
     private boolean fetchesCollection() {
-        for (String path : fetchPaths()) {
+        if (hibernateQuery == null) {
+            return false;
+        }
+        for (String path : hibernateQuery.getFetchJoinPaths()) {
             if (path != null && path.indexOf('.') < 0 && entity.getPropertyByName(path) instanceof ToMany<?>) {
                 return true;
             }
         }
         return false;
-    }
-
-    /**
-     * The association paths that the query requests a fetch or a join type for.
-     */
-    private Set<String> fetchPaths() {
-        Set<String> paths = new HashSet<>(detachedCriteria.getJoinTypes().keySet());
-        if (hibernateQuery != null) {
-            paths.addAll(hibernateQuery.getFetchJoinPaths());
-        }
-        // the query that counts for a page is a copy, which has the fetches of the criteria only
-        detachedCriteria.getFetchStrategies().forEach((path, fetchType) -> {
-            if (fetchType == FetchType.EAGER) {
-                paths.add(path);
-            }
-        });
-        return paths;
     }
 
     /**
