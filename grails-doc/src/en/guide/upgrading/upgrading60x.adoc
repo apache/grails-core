@@ -1370,6 +1370,17 @@ With GORM for Hibernate, a where query, a detached criteria or a dynamic finder 
 * An unpaged criteria query whose `fetch` argument now fetches a collection can return an instance once per collection element. Previously a join type in that argument fetched nothing and did not multiply those rows. Its `totalCount` counts root instances when the requested collection join is applied through a subquery, so it can differ from the number of unpaged fetched rows.
 * A sort stored on the query with `sort()`, as in `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])`, now uses the join type requested by the `fetch` argument. It also returns books without an author. The same holds for a nested association path. Request `JoinType.INNER` to keep leaving those books out.
 
+==== Bulk deleteAll and updateAll reject max and offset
+
+With Hibernate 5, `deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or an `offset` used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16832[#16832]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value (an `offset` of 0 included), and write nothing.
+
+To keep writing every matching row, as before, call `deleteAll()` or `updateAll(Map)` on the query before `max` or `offset` are applied to it; a criteria cannot drop them once they are set. To limit the rows written, select the ids first, with the limit on that query, and delete or update by id:
+
+[source,groovy]
+----
+List<Long> ids = Person.where { age > 18 }.max(2).property('id').list()
+Person.where { id in ids }.deleteAll()
+----
 ==== More GSP tags HTML-encode the attribute values they write
 
 These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:
